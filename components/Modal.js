@@ -1,0 +1,54 @@
+import React, { useContext, useState, useEffect } from "react";
+import { useTailwind } from 'tailwind-rn';
+import { GlobalContext } from "../contexts/GlobalContext";
+import { Platform, Keyboard, SafeAreaView, StyleSheet, Text, View, TouchableOpacity, TextInput, KeyboardAvoidingView } from 'react-native';
+import Animated, {
+  withTiming,
+  useAnimatedStyle,
+  useSharedValue
+} from 'react-native-reanimated';
+
+export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100}) {
+  const tailwind = useTailwind();
+  const opacity = useSharedValue(0.25);
+  const bottom = useSharedValue(bottomStart);
+
+  useEffect(() => {
+    handleOpen();
+  }, [])
+
+  // Function to trigger the fadeout animation
+  const handleOpen = () => {
+    opacity.value = withTiming(0.75, { duration: 150 });
+    bottom.value = withTiming(0, {
+      duration: bottomDuration
+    });
+  };
+
+  // Animated style for the fading effect
+  const animatedBgStyle = useAnimatedStyle(() => {
+    return {
+      opacity: opacity.value,
+    };
+  });
+
+  const animatedModalStyle = useAnimatedStyle(() => {
+    return {
+      bottom: animateModal ? bottom.value : 0,
+    };
+  });
+
+  const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+  return(
+    <KeyboardAvoidingView style={[tailwind('absolute h-full w-full'), { elevation: 20 }]} behavior={Platform.OS === 'ios' ? 'height' : 'height'}>
+      {/** Background */}
+      <AnimatedTouchable activeOpacity={0.8} onPress={() => hide()} style={[tailwind('h-full w-full bg-slate-950'), animatedBgStyle]}></AnimatedTouchable>
+
+      {/** Modal content */}
+      <Animated.View style={[tailwind('absolute w-full bg-white rounded-t-xl px-4 py-2 pb-6'), animatedModalStyle]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        {children}
+      </Animated.View>
+    </KeyboardAvoidingView>
+  )
+}
