@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
-import { SafeAreaView, StyleSheet, Text, View, TouchableOpacity, TouchableHighlight } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View, TouchableOpacity, TouchableHighlight, Image } from 'react-native';
 import { useTailwind } from 'tailwind-rn';
 import User, { UserPfp, Username } from "./User";
 import Svg, { Circle, Rect, Path } from 'react-native-svg';
@@ -11,7 +11,7 @@ moment.updateLocale('en', {
   relativeTime: {
     s: 'sec.',
     m: '1m',
-    mm: '%d m',
+    mm: '%dm',
     h: '1h',
     hh: '%dh',
     d: '1d',
@@ -23,7 +23,7 @@ moment.updateLocale('en', {
   },
 });
 
-export default function Post({post, isReply = false, showParent = true, verticalDivider = false}) {
+export default function Post({post, isReply = false, showParent = true, verticalDivider = false, style, showRepostDetails = true, fontSize = 13.5}) {
   const { setPostDetailsVis, setProfileSelected } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
@@ -39,10 +39,14 @@ export default function Post({post, isReply = false, showParent = true, vertical
     setProfileSelected(did)
   }
 
+  if(!post?.content) {
+    return null;
+  }
+
   return(
     <>
-
-      <View style={tailwind(`flex flex-col w-full mb-2 ${!verticalDivider ? "border-b border-slate-200" : "" } ${isReply ? "" : "p-5 pt-4"}`)}>
+      <View style={[tailwind(`flex w-full flex-col mb-2 ${!verticalDivider ? "border-b border-slate-200" : "" } ${isReply ? "" : "px-5 py-4"}`), style]}>
+        {/** Will show the parent post if any */}
         {(showParent && post.content.reply_to && post.reply_to_details) &&
           <Post post={{stream_id: post.reply_to, content: post.reply_to_details, creator_details: post.reply_to_creator_details}} isReply={true} verticalDivider={true} />
         }
@@ -73,19 +77,30 @@ export default function Post({post, isReply = false, showParent = true, vertical
 
             {/** Post content */}
             <TouchableHighlight style={[tailwind('ml-1 px-1 flex flex-1 rounded-md mr-8')]} onPress={() => showPostDetails()} underlayColor="#f8fafc">
-              <Text style={[tailwind('text-slate-900 font-normal'), { fontFamily: "GmarketMedium", marginTop: 5, paddingBottom: 10, fontSize: 13.5, lineHeight: 19 }]}>
-                {post.content.body}
-              </Text>
+              <>
+                <Text style={[tailwind('text-slate-900 font-normal'), { fontFamily: "GmarketMedium", marginTop: 5, paddingBottom: 5, fontSize: fontSize, lineHeight: 19 }]}>
+                  {post.content.body}
+                </Text>
+
+                {/** Display media attached if any */}
+                <Media media={post.content.media} />
+              </>
             </TouchableHighlight>
 
-            {/** Post CTAs */}
-            {!isReply &&
-              <View style={[tailwind('flex flex-row mt-0')]}>
-                <CommentIcon post={post} />
-                <LikeIcon post={post} />
-                <RepostIcon post={post} />
+            {/** Quoted post details if any */}
+            {(showRepostDetails && post.content.repost != null) &&
+              <View >
+                <Post post={post.repost_details} style={[tailwind('rounded-md border border-secondary p-3'), {width: "95%"}]} />
               </View>
             }
+
+
+            {/** Post CTAs */}
+            <View style={[tailwind('flex flex-row mt-0')]}>
+              <CommentIcon post={post} />
+              <LikeIcon post={post} />
+              <RepostIcon post={post} />
+            </View>
           </View>
         </View>
       </View>
@@ -94,11 +109,17 @@ export default function Post({post, isReply = false, showParent = true, vertical
 }
 
 export const CommentIcon = ({post}) => {
-  const { setPostDetailsVis } = useContext(GlobalContext);
+  const { setPostDetailsVis, showPostbox, setReplyTo } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
+  /** Open postbox and save reply to */
+  function openReplyBox() {
+    showPostbox();
+    setReplyTo(post);
+  }
+
   return(
-    <TouchableHighlight style={[tailwind('flex flex-row items-center rounded-md py-1 px-2')]} onPress={() => setPostDetailsVis(post.stream_id)} underlayColor="#f1f5f9">
+    <TouchableHighlight style={[tailwind('flex flex-row items-center rounded-md py-1 px-2')]} onPress={() => openReplyBox()} underlayColor="#f1f5f9">
       <>
         <Svg width="18" height="16" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg">
           <Path d="M5.31095 15.8137C5.86525 15.4098 6.58283 15.3066 7.22736 15.5387C8.36603 15.9512 9.6422 16.1875 11 16.1875C16.3582 16.1875 19.9375 12.7285 19.9375 9.3125C19.9375 5.89648 16.3582 2.4375 11 2.4375C5.64181 2.4375 2.06252 5.89648 2.06252 9.3125C2.06252 10.6875 2.59533 12.0109 3.5965 13.1453C3.96603 13.5621 4.1465 14.1121 4.10353 14.6707C4.04338 15.4484 3.85861 16.1617 3.61799 16.7934C4.34845 16.4539 4.95431 16.0758 5.31095 15.818V15.8137ZM0.910954 17.5582C0.988298 17.4422 1.06134 17.3262 1.13009 17.2102C1.55978 16.4969 1.96799 15.5602 2.04963 14.5074C0.760564 13.0422 1.69175e-05 11.2504 1.69175e-05 9.3125C1.69175e-05 4.37539 4.92424 0.375 11 0.375C17.0758 0.375 22 4.37539 22 9.3125C22 14.2496 17.0758 18.25 11 18.25C9.40588 18.25 7.89338 17.975 6.52697 17.4809C6.01564 17.8547 5.18205 18.366 4.19377 18.7957C3.54494 19.0793 2.80588 19.3371 2.04103 19.4875C2.00666 19.4961 1.97228 19.5004 1.93791 19.509C1.74884 19.5434 1.56408 19.5734 1.37072 19.5906C1.36213 19.5906 1.34924 19.5949 1.34064 19.5949C1.1215 19.6164 0.902361 19.6293 0.68322 19.6293C0.403923 19.6293 0.154704 19.4617 0.0472825 19.2039C-0.0601393 18.9461 1.69086e-05 18.6539 0.193376 18.4563C0.369548 18.2758 0.528533 18.0824 0.678923 17.8762C0.75197 17.7773 0.82072 17.6785 0.885173 17.5797C0.88947 17.5711 0.893767 17.5668 0.898064 17.5582H0.910954Z" fill="black"/>
@@ -134,6 +155,10 @@ export const LikeIcon = ({post}) => {
 
   /** Will like the post */
   async function like() {
+    if(hasLiked == true) {
+      console.log("User already liked post.");
+      return;
+    }
     if(user) {
       setHasLiked(true);
       Haptics.selectionAsync();
@@ -161,7 +186,6 @@ export const LikeIcon = ({post}) => {
           </Svg>
         }
 
-
         <Text style={[tailwind('text-sm font-normal ml-1'), { fontFamily: "GmarketMedium", color: hasLiked ? "#FF6B17" : "#0F172A" }]}>
           {countLikes}
         </Text>
@@ -171,7 +195,7 @@ export const LikeIcon = ({post}) => {
 }
 
 export const RepostIcon = ({post}) => {
-  const { user, orbis, showConnectModal, setShowConnectModal, setRepostVis } = useContext(GlobalContext);
+  const { user, orbis, showConnectModal, setShowConnectModal, setRepost } = useContext(GlobalContext);
   const [hasLiked, setHasLiked] = useState(false);
   const [countReposts, setCountReposts] = useState(post.count_repost);
   const tailwind = useTailwind();
@@ -185,14 +209,14 @@ export const RepostIcon = ({post}) => {
     async function getReaction() {
       let { data, error } = await orbis.getReaction(post.stream_id, user.did);
       if(data && data.type && data.type == "like") {
-        setHasLiked(true);
+        //setHasLiked(true);
       }
     }
   }, [user]);
 
   /** Will render the repost pane */
   function showRepostPane() {
-    setRepostVis(true);
+    setRepost(post);
     Haptics.selectionAsync();
   }
 
@@ -217,6 +241,24 @@ export const RepostIcon = ({post}) => {
     </TouchableHighlight>
   )
 }
+
+const Media = ({media}) => {
+  const tailwind = useTailwind();
+  if(media && media.length > 0) {
+    return(
+      <View style={[tailwind('rounded-md border border-secondary'), { marginBottom: 6, marginTop: 2 }]}>
+        <Image
+          style={[tailwind('rounded-md'), { height: 200, width: 200 }]}
+          source={{
+            uri: media[0].url,
+          }} />
+      </View>
+    )
+  } else {
+    return null
+  }
+}
+
 
 const TimeAgo = ({ timestamp }) => {
   const tailwind = useTailwind();

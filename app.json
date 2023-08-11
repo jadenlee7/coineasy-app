@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "coineasy",
+    "name": "Coineasy",
     "slug": "coineasy",
     "scheme": "coineasy",
     "version": "1.0.0",
@@ -16,7 +16,9 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "buildNumber": "9",
+      "bundleIdentifier": "com.baptistegr.coineasy"
     },
     "android": {
       "adaptiveIcon": {
@@ -26,6 +28,20 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4be52a0b-427f-4757-89a6-d40b2a4e505c"
+      }
+    },
+    "plugins": [
+      ["expo-apple-authentication"],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with your friends."
+        }
+      ]
+    ]
   }
 }

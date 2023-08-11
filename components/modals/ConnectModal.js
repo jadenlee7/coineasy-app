@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import { ActivityIndicator, StyleSheet, Text, View, ScrollView, Image, SafeAreaView, TouchableOpacity, Dimensions, TextInput } from 'react-native';
-import { BarCodeScanner } from 'expo-barcode-scanner';
-import { isValidEmail } from "../../utils"
 import Button from "../Button";
 import { useTailwind } from 'tailwind-rn';
+import Modal from "../Modal";
+import Svg, { Circle, Rect, Path } from 'react-native-svg';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import * as Haptics from 'expo-haptics';
 
@@ -14,256 +16,157 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GlobalContext } from "../../contexts/GlobalContext";
 
 /** Modal explaining what connecting is on mobile */
-export default function ConnectModal({connect, visible, checkIsConnected}) {
+export default function ConnectModal({hide}) {
+  const { user, setUser, orbis, callbackConnect } = useContext(GlobalContext);
   const tailwind = useTailwind();
   const { width } = Dimensions.get('window');
+  const [loading, setLoading] = useState(false);
+  const url = Linking.useURL();
 
-  return(
-    <View style={tailwind('absolute h-full w-full z-50')}>
-      {/**<ConnectWithQR />*/}
-      <ConnectFlow />
-    </View>
-  )
-}
-
-/** Will render two CTAs (one to connect with Apple, the other on to connect with email) */
-function ConnectFlow() {
-  const { user, setUser, orbis, setShowConnectModal } = useContext(GlobalContext);
-  const tailwind = useTailwind();
-
-
-  /** Hide connect modal */
-  function back() {
-    setShowConnectModal(false);
-  }
-
-  async function connectWithApple() {
-
-  }
-
-
-
-  return(
-    <View style={tailwind('h-full w-full z-50 absolute')}>
-      {/** BG to hide modal */}
-      <TouchableOpacity onPress={() => back()} activeOpacity={0.9} style={[tailwind('h-full w-full absolute'), { backgroundColor: 'rgba(0,0,0,0.7)' }]}></TouchableOpacity>
-
-      {/** Content of the connect flow */}
-      <View style={[tailwind('bg-white m-6 p-6 mt-24 rounded-md flex-col')]}>
-        <Text style={tailwind('text-lg font-medium text-gray-900 text-center')}>Connect to your account</Text>
-        <View style={{flexDirection: "row", alignItems: "flex-start", justifyContent:"center", marginBottom: 20}}>
-          <Text style={tailwind('text-sm text-gray-600 text-center mt-1')}>Connecting will automatically create a wallet for you which can be used to receive rewards.</Text>
-        </View>
-
-        <View style={[tailwind('items-center flex-col'), {justifyContent: "center"}]}>
-          {/**<Button onPress={() => connectWithApple()} color="black" title="Connect with Apple" style={{marginBottom: 5}} />*/}
-          <EmailFlow />
-        </View>
-      </View>
-
-    </View>
-  )
-}
-
-/** Will mange the different steps required to connect to Orbis using an email account */
-const EmailFlow = () => {
-  const { user, setUser, orbis, setShowConnectModal, confetti } = useContext(GlobalContext);
-  const tailwind = useTailwind();
-  const [emailStep, setEmailStep] = useState(0);
-  const [loading, setLoading] = useState(0);
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-
-
-  async function connectWithEmail() {
-    console.log("Enter connectWithEmail");
-    Haptics.selectionAsync();
-
-    /** Make sure we don't submit the request twice */
-    if(loading) {
-      console.log("Connect is already loading.");
-      return;
+  /** Will be triggered when a new deeplink is received */
+  useEffect(() => {
+    if (url) {
+      handleURL(url);
     }
+  }, [url]);
 
-    /** Follow login steps */
-    switch (emailStep) {
-      /** Trigger verification email flow */
-      case 0:
-        if(isValidEmail(email)) {
-          /** Start loading state */
-          setLoading(true);
+  async function handleURL(url) {
+    const { hostname, path, queryParams } = Linking.parse(url);
+    if(path === 'google-auth') {
+      let token = queryParams.token;
+      WebBrowser.dismissBrowser();
+      setLoading(true);
+      console.log("Connecting with Google with token:" + token);
+      if(token) {
+        try {
+          let resUser = await orbis.connect_v2({
+             provider: "oauth",
+             oauth: {
+               type: "google",
+               token: token
+             }
+           });
+           console.log("resUser:", resUser);
 
-          /** Will trigger the connection flow by sending an OTP code to this email address */
-          try {
-            let resUser = await orbis.connect_v2({
-              provider: "oauth",
-              oauth: {
-                type: "email",
-                userId: email
-              }
-            });
-            console.log("resUser:", resUser);
-
-            /** Show success state and open step 2 */
-            setEmailStep(1);
-            setLoading(false);
-
-          } catch(e) {
-            console.log("Error logging in:", e);
-            alert("There was an error logging in.");
-          }
-
-        } else {
-          alert("You must use a valid email address.");
-        }
-        break;
-
-      /** Submit email address with OTP */
-      case 1:
-        if(isValidEmail(email)) {
-          setLoading(true);
-
-          /* Submit OTP and Email to receive session string if valid */
-          res = await orbis.connect_v2({
-            provider: "oauth",
-            oauth: {
-              type: "email",
-              userId: email,
-              code: otp
-            }
-          })
-          console.log("res connect:", res);
-          if(res.status == 200) {
-            console.log("Successfully connect user.");
-            setUser(res.details);
-            setShowConnectModal(false);
-            confetti.current.start();
-            Haptics.notificationAsync(
-              Haptics.NotificationFeedbackType.Success
-            );
-          } else {
-            console.log("res:", res);
-            alert('Error logging in, please retry.');
-          }
+           if(resUser.status == 200) {
+             alert("Success connecting to account.");
+             setUser(resUser.details);
+             callbackConnect();
+           } else {
+             setLoading(false);
+           }
+        } catch(e) {
+          console.log("Error authenticating with Pkp:", e);
+          alert("There was an error logging you in, please retry.");
           setLoading(false);
-        } else {
-          alert('Invalid email:' + email);
         }
-        break;
-
+      }
     }
   }
 
-  switch (emailStep) {
-    case 0:
-      return(
-        <>
-          <TextInput value={email} onChangeText={setEmail} style={[tailwind('bg-white px-5 py-3 rounded-full border-slate-300 border w-full mb-1')]} placeholder="Your email address" placeholderTextColor="#94a3b8" />
-          <Button onPress={() => connectWithEmail()} color="black" title={loading ? <ActivityIndicator size="small" color="#fff" /> : "Verify email" } />
-        </>
-      );
-    case 1:
-      return(
-        <>
-          <TextInput inputMode="email" value={email} disabled style={[tailwind('bg-slate-50 text-slate-500 px-5 py-3 rounded-full border-slate-300 border w-full mb-1')]} placeholder="Your email address" placeholderTextColor="#94a3b8" />
-          <Text style={tailwind('text-sm text-gray-600 text-center mt-2 mb-1')}>Enter your login code here:</Text>
-          <TextInput autoFocus={true} value={otp} onChangeText={setOtp} style={[tailwind('bg-white px-5 py-3 rounded-full border-slate-300 border w-full mb-1')]} placeholder="Enter your code here" placeholderTextColor="#94a3b8" />
-          <Button onPress={() => connectWithEmail()} color="black" title={loading ? <ActivityIndicator size="small" color="#fff" /> : "Connect" } />
-        </>
-      );
-    default:
-      return null
-  }
-}
-
-/** Connect using QR code scanning with camera */
-function ConnectWithQR() {
-  const { user, setUser, orbis, setShowConnectModal } = useContext(GlobalContext);
-  const [hasPermission, setHasPermission] = useState(null);
-  const [scanned, setScanned] = useState(false);
-  const tailwind = useTailwind();
-  const { width } = Dimensions.get('window');
-
-  /** Will trigger a native modal to ask for camera's permission */
-  async function askCameraPermission() {
-    (async () => {
-      const { status } = await BarCodeScanner.requestPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-  }
-
-  /** Triggered when qr code is scanned with success, we use the data to connect the user */
-  async function handleBarCodeScanned({ type, data }) {
-    let { path, queryParams } = Linking.parse(data);
-    setScanned(true);
-
-    /** Save did and encrypted seed in localStorage */
-    await AsyncStorage.setItem('ceramic-session', queryParams.sessionString);
-
-    /** Connect to account */
-    let res = await orbis.isConnected();
-    if(res.status == 200) {
-      setUser(res.details);
+  /** Will trigget the auth flow for Apple */
+  async function connectWithApple(identityToken, userId, email) {
+    setLoading(true);
+    Haptics.selectionAsync();
+    try {
+      let resUser = await orbis.connect_v2({
+         provider: "oauth",
+         oauth: {
+           type: "apple",
+           token: identityToken
+         }
+       });
+       if(resUser.status == 200) {
+         setUser(resUser.details);
+         callbackConnect()
+       } else {
+         alert("There was an error logging you in, please retry. Error: " + resUser.status);
+         setLoading(false);
+       }
+    } catch(e) {
+      console.log("Error authenticating with Pkp:", e);
+      alert("There was an error logging you in, please retry.");
+      setLoading(false);
     }
-
-    /** Hide connect modal */
-    setShowConnectModal(false);
-  };
-
-  /** Hide connect modal */
-  function back() {
-    setShowConnectModal(false);
   }
 
-  /** BarCode Scanner container */
-  if(hasPermission) {
-    return(
-      <View style={[tailwind('absolute w-full h-full flex'), { backgroundColor: "rgba(0,0,0,0.7)" }]}>
-        <SafeAreaView style={[tailwind('w-full flex flex-col justify-center'), { top: 100, borderRadius: 26, height: width }]} >
-          <View style={tailwind("w-full flex items-end pr-6")}>
-            <Button color="gray-100" title="Close" onPress={() => back()} />
-          </View>
-          <View style={[tailwind('bg-white w-full rounded-md m-4'), {overflow: "hidden", marginLeft: width * 0.05, width: width * 0.9, height: width * 0.9}]}>
-            {scanned ?
-              <Text style={tailwind("text-gray-900 text-sm text-center pt-3")}>Connecting...</Text>
-            :
-              <BarCodeScanner onBarCodeScanned={scanned ? undefined : handleBarCodeScanned} style={[tailwind('w-full h-full'), {  }]} />
-            }
-          </View>
-        </SafeAreaView>
-      </View>
-    )
+  /** Will open WebBrowser to connect with Google using our Oauth API */
+  async function connectWithGoogle() {
+    Haptics.selectionAsync();
+    let result = await WebBrowser.openBrowserAsync('https://lit.orbis.club/oauth-google/' + encodeURIComponent("coineasy://"));
+  }
+
+  /** Will hide modal only if user isn't currently logging in */
+  function hideModal() {
+    if(loading) {
+      alert("Can't close now.");
+      return;
+    } else {
+      hide();
+    }
   }
 
   return(
-    <View style={tailwind('h-full w-full p-6 bg-white z-50')}>
-      <View style={{flexDirection: "column", paddingHorizontal: 35, marginTop: 25}}>
-        <Text style={tailwind('text-lg font-medium text-gray-900 text-center mt-4')}>Connect to your account</Text>
-        <View style={{flexDirection: "row", alignItems: "flex-start", justifyContent:"center", marginBottom: 20}}>
-          <Text style={tailwind('text-sm text-gray-600 text-center mt-1')}><Text style={tailwind('text-gray-900 font-medium')}>#1.</Text> Open app.orbis.club on your desktop.</Text>
-        </View>
+    <Modal hide={hideModal}>
+      <View style={[tailwind('flex flex-col w-full p-4 pb-12')]}>
+        {loading ?
+          <>
+            <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Connecting to your account:</Text>
+            <View style={[tailwind('flex w-full justify-center')]}>
+              <ActivityIndicator style={{marginTop: 15}} size="small" color="#020617" />
+            </View>
+          </>
+        :
+          <>
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={100}
+              style={{
+                width: "100%",
+                height: 47
+              }}
+              onPress={async () => {
+                try {
+                  /** Login with Apple */
+                  const credential = await AppleAuthentication.signInAsync({
+                    requestedScopes: [
+                      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                      AppleAuthentication.AppleAuthenticationScope.EMAIL
+                    ]
+                  });
 
-        <View style={{flexDirection: "row", alignItems: "flex-start", justifyContent:"center", marginBottom: 20}}>
-          <Text style={tailwind('text-sm text-gray-600 text-center mt-1')}><Text style={tailwind('text-gray-900 font-medium')}>#2.</Text> Connect and click on the three dots icon on the top-right.</Text>
-        </View>
+                  /** Authenticate with PKP */
+                  connectWithApple(credential.identityToken, credential.user, credential.email);
+                } catch (e) {
+                  console.log("Error connecting with Apple:", e);
+                }
+              }} />
 
-        <View style={{flexDirection: "row", alignItems: "flex-start", justifyContent:"center", marginBottom: 20}}>
-          <Text style={tailwind('text-sm text-gray-600 text-center mt-1')}><Text style={tailwind('text-gray-900 font-medium')}>#3.</Text> Click on "Connect with mobile" and scan the QR code.</Text>
-        </View>
+            {/** Connect with Apple
+            <Button color="rounded-gray" title="Continue with Apple" icon={<AppleIcon />} onPress={() => connectWithGoogle()} />*/}
+
+            {/** Connect with Google
+            <Button color="rounded-gray" title="Continue with Google" icon={<GoogleIcon />} onPress={connectWithGoogle} />*/}
+          </>
+        }
       </View>
+    </Modal>
+  )
+}
 
-      {hasPermission === null &&
-        <View style={{alignItems: "center", justifyContent: "center", marginTop: 10, flexDirection: "row"}}>
-          <View style={tailwind('mr-2')}>
-            <Button color="gray-100" title="Back" onPress={() => back()} />
-          </View>
-          <Button onPress={() => askCameraPermission()} color="blue" title="Open camera" />
-        </View>
-      }
+const AppleIcon = () => {
+  return(
+    <Svg width="18" height="22" viewBox="0 0 18 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <Path d="M15.0494 11.6258C15.0399 9.82322 15.8337 8.4627 17.4405 7.46073C16.5414 6.13951 15.1833 5.41259 13.39 5.27015C11.6923 5.13263 9.83688 6.28686 9.15781 6.28686C8.44049 6.28686 6.79543 5.31927 5.50425 5.31927C2.83581 5.36348 0 7.50494 0 11.8615C0 13.1484 0.229543 14.4778 0.688629 15.8498C1.30074 17.6523 3.5101 22.0728 5.81509 21.9991C7.02019 21.9696 7.87141 21.1199 9.43996 21.1199C10.9607 21.1199 11.7497 21.9991 13.0935 21.9991C15.4176 21.9647 17.4166 17.947 18 16.1395C14.882 14.6317 15.0494 11.7191 15.0494 11.6258ZM12.3427 3.56092C13.6482 1.96955 13.5287 0.52063 13.4904 0C12.3379 0.0687625 11.0037 0.805504 10.2434 1.71415C9.40648 2.68665 8.91392 3.88999 9.01913 5.2456C10.2673 5.34383 11.4054 4.68567 12.3427 3.56092Z" fill="black"/>
+    </Svg>
+  )
+}
 
-      {hasPermission === false &&
-        <Text style={tailwind('text-sm text-red-600 text-center mt-1')}>We don't have access to the camera. Please enable it.</Text>
-      }
-    </View>
-  );
+const GoogleIcon = () => {
+  return(
+    <Svg width="21" height="22" viewBox="0 0 21 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <Path d="M21 11.2573C21 17.5335 16.8301 22 10.6721 22C4.76803 22 0 17.0855 0 11C0 4.91452 4.76803 0 10.6721 0C13.5467 0 15.9652 1.08669 17.8285 2.87863L14.9238 5.75726C11.124 1.97823 4.05799 4.81694 4.05799 11C4.05799 14.8367 7.03156 17.946 10.6721 17.946C14.898 17.946 16.4816 14.8234 16.7311 13.2044H10.6721V9.42097H20.8322C20.9311 9.98427 21 10.5254 21 11.2573Z" fill="black"/>
+    </Svg>
+  )
 }

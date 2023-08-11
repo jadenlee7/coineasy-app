@@ -7,12 +7,15 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue
 } from 'react-native-reanimated';
-import Svg, { Circle, Rect, Path } from 'react-native-svg';
+import Header from "../components/Header";
+import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
 export default function Pane({children}) {
   const tailwind = useTailwind();
+  const statusBarHeight = useStatusBarHeight();
+
   return(
-    <KeyboardAvoidingView style={[tailwind('absolute h-full w-full bg-white flex flex-col'), { elevation: 10 }]} behavior={Platform.OS === 'ios' ? 'height' : 'height'}>
+    <KeyboardAvoidingView style={[tailwind('absolute flex flex-1 h-full w-full bg-white'), { elevation: 30, top: 40 + statusBarHeight }]} behavior={Platform.OS === 'ios' ? 'height' : 'height'}>
       {children}
     </KeyboardAvoidingView>
   )

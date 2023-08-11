@@ -29,7 +29,7 @@ export default function Profile() {
   }
   return(
     <>
-      <SecondHeader label="" showBack={false}  />
+      <SecondHeader label="" showBack={false} cta="settings" />
 
       {profile ?
         <ProfileDetails profile={user} />

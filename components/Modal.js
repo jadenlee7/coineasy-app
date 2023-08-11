@@ -8,7 +8,7 @@ import Animated, {
   useSharedValue
 } from 'react-native-reanimated';
 
-export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100}) {
+export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24}) {
   const tailwind = useTailwind();
   const opacity = useSharedValue(0.25);
   const bottom = useSharedValue(bottomStart);
@@ -41,12 +41,12 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
   const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
   return(
-    <KeyboardAvoidingView style={[tailwind('absolute h-full w-full'), { elevation: 20 }]} behavior={Platform.OS === 'ios' ? 'height' : 'height'}>
+    <KeyboardAvoidingView style={[tailwind('absolute h-full w-full'), { elevation: 50 }]} behavior={Platform.OS === 'ios' ? 'height' : 'height'}>
       {/** Background */}
-      <AnimatedTouchable activeOpacity={0.8} onPress={() => hide()} style={[tailwind('h-full w-full bg-slate-950'), animatedBgStyle]}></AnimatedTouchable>
+      <TouchableOpacity activeOpacity={0.8} onPress={() => hide()} style={[tailwind('h-full w-full bg-slate-950'), {opacity: 0.63}]}></TouchableOpacity>
 
       {/** Modal content */}
-      <Animated.View style={[tailwind('absolute w-full bg-white rounded-t-xl px-4 py-2 pb-6'), animatedModalStyle]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <Animated.View style={[tailwind('absolute w-full bg-white rounded-t-xl px-4 py-2'), { paddingBottom: paddingBottom}, animatedModalStyle ]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         {children}
       </Animated.View>
     </KeyboardAvoidingView>

@@ -4,6 +4,7 @@ import Pane from "../Pane";
 import ProfileDetails from "../ProfileDetails";
 import { GlobalContext } from "../../contexts/GlobalContext";
 import { useTailwind } from 'tailwind-rn';
+import SecondHeader from "../SecondHeader";
 
 export default function PostPane({did}) {
   const { user, orbis, showConnectModal, setShowConnectModal, postDetailsVis } = useContext(GlobalContext);
@@ -19,11 +20,11 @@ export default function PostPane({did}) {
     setProfile(data);
   }
 
-
   return(
     <Pane>
+      <SecondHeader label="" showBack={true} />
       {profile &&
-        <ProfileDetails profile={profile?.details} />
+        <ProfileDetails profile={profile?.details} pfpMarginTop={-10} />
       }
     </Pane>
   )

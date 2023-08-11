@@ -3,15 +3,15 @@ import { GlobalContext } from "../contexts/GlobalContext";
 import { useTailwind } from 'tailwind-rn';
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Image, SafeAreaView, ActivityIndicator, RefreshControl, TouchableHighlight } from 'react-native';
 import Header from "./Header";
+import Feed from "./Feed";
 import Post from "./Post";
 import Button from "./Button";
 import Modal from "./Modal";
 import { UserPfp, Username } from "./User";
-import SecondHeader from "./SecondHeader";
 import { context } from '../utils/config.js';
 
-export default function ProfileDetails({profile}) {
-  const { user, setUser, orbis, updateProfileVis, setUpdateProfileVis } = useContext(GlobalContext);
+export default function ProfileDetails({profile, pfpMarginTop = -10}) {
+  const { user, setUser, orbis, updateProfileVis, setUpdateProfileVis, setShareProfileVis } = useContext(GlobalContext);
   const tailwind = useTailwind();
   const [nav, setNav] = useState("feed");
 
@@ -26,8 +26,10 @@ export default function ProfileDetails({profile}) {
   return(
     <>
       {/** Display profile details */}
-      <View style={tailwind('flex flex-col items-center')}>
-        <UserPfp details={profile} height={50} />
+      <View style={[tailwind('flex flex-col items-center'), {marginTop: pfpMarginTop}]}>
+        <View style={tailwind("shadow-sm rounded-full")}>
+          <UserPfp details={profile} height={60} />
+        </View>
         <View style={tailwind('mt-2')}>
           <Username details={profile} fontSize={15} />
         </View>
@@ -41,7 +43,7 @@ export default function ProfileDetails({profile}) {
         <View style={tailwind('flex flex-row px-4 mt-3 items-center w-full justify-center')}>
             <Button title="Edit Profile" color="orange" size="sm" onPress={() => setUpdateProfileVis(true)} />
             <View style={{width: 10}} />
-            <Button title="Share Profile" color="sm-white" />
+            <Button title="Share Profile" color="white" size="sm" onPress={() => setShareProfileVis(true)} />
         </View>
       }
 
@@ -50,7 +52,7 @@ export default function ProfileDetails({profile}) {
         <ProfileItem count="50" title="Posts" />
         <ProfileItem count={profile.count_followers} title="Followers" />
         <ProfileItem count={profile.count_following} title="Following" />
-        <ProfileItem count="156" title="Orange" />
+        {/*<ProfileItem count="156" title="Oranges" />*/}
       </View>
 
       {/** Profile navigation */}
@@ -70,7 +72,7 @@ export default function ProfileDetails({profile}) {
 
 const Posts = ({type, profile}) => {
   const [posts, setPosts] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState(true);
   const { user, orbis } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
@@ -81,41 +83,47 @@ const Posts = ({type, profile}) => {
   /** Will retrieve all posts shared in the global context */
   async function loadPosts() {
     setRefreshing(true);
-    let query;
+    console.log("Enter loadPosts for:", type);
+    setPosts([]);
 
-    switch (data) {
+    let options;
+
+    switch (type) {
       /** Render posts shared by user */
       case "feed":
-        query = orbis.getPosts({
+        options = {
           did: profile.did,
           context
-        });
+        };
         break;
 
       /** Render replies from user */
       case "replies":
-        query = orbis.getPosts({
+        options = {
           did: profile.did,
-          context
-        });
+          context,
+          is_reply: true
+        };
         break;
 
       /** Render replies from user */
       case "reposts":
-        query = orbis.getPosts({
+        options = {
           did: profile.did,
-          context
-        });
+          context,
+          is_repost: true
+        };
         break;
       default:
-        query = orbis.getPosts({
+        options = {
           did: profile.did,
           context
-        });
+        };
         break;
     }
 
-    let { data } = await query;
+    console.log("options:", options);
+    let { data } = await orbis.getPosts(options);
     if(data) {
       console.log(data.length + " posts retrieved.");
       setPosts(data);
@@ -124,29 +132,7 @@ const Posts = ({type, profile}) => {
   }
 
   return(
-    <ScrollView
-      contentContainerStyle={tailwind('items-center w-full')}
-      refreshControl={
-        <RefreshControl refreshing={false} onRefresh={loadPosts} />
-      }>
-      {refreshing ?
-        <ActivityIndicator style={{marginTop: 25}} size="small" color="#020617" />
-      :
-        <>
-          {(posts && posts.length > 0) ?
-            <>
-              {posts.map((post) => {
-                return (
-                  <Post post={post} key={post.stream_id} />
-                );
-              })}
-            </>
-          :
-            <Text style={tailwind('text-gray-900 font-semibold mt-6')}></Text>
-          }
-        </>
-      }
-    </ScrollView>
+    <Feed posts={posts} refreshing={refreshing} onRefresh={loadPosts} />
   )
 }
 

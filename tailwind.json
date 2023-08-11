@@ -60,6 +60,11 @@
 			"marginRight": 12
 		}
 	},
+	"mr-4": {
+		"style": {
+			"marginRight": 16
+		}
+	},
 	"mr-8": {
 		"style": {
 			"marginRight": 32
@@ -395,12 +400,61 @@
 			"backgroundColor": "rgb(255 255 255 / var(--tw-bg-opacity))"
 		}
 	},
+	"shadow-xs": {
+		"style": {
+			"shadowColor": "#000",
+			"shadowOffset": {
+				"width": 0,
+				"height": 0,
+			},
+			"shadowOpacity": 0.05,
+			"shadowRadius": 2,
+		}
+	},
+	"shadow-sm": {
+		"style": {
+			"shadowColor": "#000",
+			"shadowOffset": {
+				"width": 0,
+				"height": 4,
+			},
+			"shadowOpacity": 0.31,
+			"shadowRadius": 5.11,
+		}
+	},
+	"shadow-md": {
+		"style": {
+			"shadowColor": "#000",
+			"shadowOffset": {
+				"width": 0,
+				"height": 7,
+			},
+			"shadowOpacity": 0.21,
+			"shadowRadius": 9.11,
+		}
+	},
+	"p-1": {
+		"style": {
+			"paddingTop": 4,
+			"paddingRight": 4,
+			"paddingBottom": 4,
+			"paddingLeft": 4
+		}
+	},
 	"p-2": {
 		"style": {
 			"paddingTop": 8,
 			"paddingRight": 8,
 			"paddingBottom": 8,
 			"paddingLeft": 8
+		}
+	},
+	"p-3": {
+		"style": {
+			"paddingTop": 12,
+			"paddingRight": 12,
+			"paddingBottom": 12,
+			"paddingLeft": 12
 		}
 	},
 	"p-4": {
@@ -507,6 +561,11 @@
 			"paddingBottom": 4
 		}
 	},
+	"pb-4": {
+		"style": {
+			"paddingBottom": 16
+		}
+	},
 	"pb-12": {
 		"style": {
 			"paddingBottom": 48
@@ -522,6 +581,11 @@
 			"paddingBottom": 24
 		}
 	},
+	"pt-1": {
+		"style": {
+			"paddingTop": 4
+		}
+	},
 	"pt-2": {
 		"style": {
 			"paddingTop": 8
@@ -535,6 +599,18 @@
 	"pt-4": {
 		"style": {
 			"paddingTop": 16
+		}
+	},
+	"mx-4": {
+		"style": {
+			"marginLeft": 16,
+			"marginRight": 16
+		}
+	},
+	"mx-6": {
+		"style": {
+			"marginLeft": 24,
+			"marginRight": 24
 		}
 	},
 	"text-center": {
@@ -561,12 +637,12 @@
 	},
 	"font-normal": {
 		"style": {
-			"fontWeight": "400"
+			"fontFamily": "GmarketMedium",
 		}
 	},
 	"font-semibold": {
 		"style": {
-			"fontWeight": "600"
+			"fontFamily": "GmarketBold",
 		}
 	},
 	"text-main": {
@@ -577,17 +653,17 @@
 	"text-primary": {
 		"style": {
 			"color": "#000000",
-			"fontSize": "15",
+			"fontSize": 15,
 			"fontFamily": "GmarketBold",
-			"lineHeight": "25"
+			"lineHeight": 25
 		}
 	},
 	"text-secondary": {
 		"style": {
 			"color": "#959595",
-			"fontSize": "13",
+			"fontSize": 13,
 			"fontFamily": "GmarketMedium",
-			"lineHeight": "19"
+			"lineHeight": 19
 		}
 	},
 	"text-gray-600": {

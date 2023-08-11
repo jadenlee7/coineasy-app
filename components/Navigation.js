@@ -28,11 +28,6 @@ const NavItem = ({icon, item}) => {
   const { user, setScreen, setProfileSelected, setPostDetailsVis } = useContext(GlobalContext);
 
   function selectScreen(item) {
-    if(item == "profile") {
-      setProfileSelected(user.did);
-    } else {
-      setProfileSelected(null);
-    }
     setScreen(item)
     setPostDetailsVis(null);
     Haptics.selectionAsync();

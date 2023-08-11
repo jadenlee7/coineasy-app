@@ -17,12 +17,12 @@ export default function User({height = 40, details}) {
 }
 
 /** Will render the user's pfp or empty state */
-export function UserPfp({height = 40, details}) {
+export function UserPfp({height = 40, details, style}) {
   const tailwind = useTailwind();
   if(details && details.profile && details.profile.pfp) {
     return(
       <Image
-        style={[tailwind('rounded-full'), { height: height, width: height }]}
+        style={[tailwind('rounded-full'), { height: height, width: height }, style]}
         source={{
           uri: details.profile.pfp,
         }} />
@@ -30,17 +30,17 @@ export function UserPfp({height = 40, details}) {
   } else {
     return(
       <Image
-        style={[tailwind('rounded-full'), { height: height, width: height }]}
+        style={[tailwind('rounded-full'), { height: height, width: height }, style]}
         source={require('../assets/empty-state-user.png')} />
     )
   }
 }
 
 /** Will render the username or generated username with address */
-export function Username({details, fontSize = 13}) {
+export function Username({details, fontSize = 13, style}) {
   const tailwind = useTailwind();
   const { address, chain } = useDidToAddress(details?.did);
   const username = useGetUsername(details?.profile, address, details?.did);
 
-  return (<Text style={[tailwind("text-main"), { fontFamily: "GmarketBold", fontSize: fontSize, lineHeight: 19 }]}>{username}</Text>);
+  return (<Text style={[tailwind("text-main"), { fontFamily: "GmarketBold", fontSize: fontSize, lineHeight: 19, ...style }]}>{username}</Text>);
 }

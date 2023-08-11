@@ -35,11 +35,11 @@ export default function Button({icon, size, title, onPress, color, style, loadin
       switch (size) {
         case "sm":
           return(
-            <TouchableOpacity activeOpacity={0.9}  style={[tailwind(`px-7 rounded-full border ${loading ? "bg-main-400" : "bg-main"}`), {borderColor: "transparent", paddingVertical: 5, ...style}]} onPress={onPress}>
+            <TouchableOpacity activeOpacity={0.9}  style={[tailwind(`px-5 rounded-full border ${loading ? "bg-main-400" : "bg-main"}`), {borderColor: "transparent", paddingVertical: 6, ...style}]} onPress={onPress}>
               {loading ?
                 <ActivityIndicator size="small" color="#fff" />
               :
-                <Text style={tailwind('text-white font-semibold')}>{title}</Text>
+                <Text style={[tailwind('text-white font-semibold'), {fontSize: 12}]}>{title}</Text>
               }
 
             </TouchableOpacity>
@@ -57,14 +57,19 @@ export default function Button({icon, size, title, onPress, color, style, loadin
             </TouchableOpacity>
           );
       }
-      
+
     /** White button */
-    case "sm-white":
-      return(
-        <TouchableOpacity activeOpacity={0.9}  style={[tailwind(`px-7 rounded-full border ${loading ? "bg-slate-100" : "bg-white"}`), {borderColor: "#FF6B17", paddingVertical: 5, ...style}]} onPress={onPress} underlayColor="#f8fafc">
-          <Text style={tailwind('text-slate-900 font-semibold')}>{title}</Text>
-        </TouchableOpacity>
-      );
+    case "white":
+      switch (size) {
+        case "sm":
+          return(
+            <TouchableOpacity activeOpacity={0.6} style={[tailwind(`px-5 rounded-full border ${loading ? "bg-slate-100" : "bg-white"}`), {borderColor: "#FF6B17", paddingVertical: 6, ...style}]} onPress={onPress}>
+              <Text style={[tailwind('text-main font-semibold'), {fontSize: 12}]}>{title}</Text>
+            </TouchableOpacity>
+          );
+        default:
+          return;
+      }
 
     /** Transparent small button */
     case "sm-transparent":
@@ -77,10 +82,21 @@ export default function Button({icon, size, title, onPress, color, style, loadin
     /** Bold & rounded gray button */
     case "rounded-gray":
       return(
-        <TouchableHighlight style={[tailwind('bg-slate-100 rounded-full py-4 px-8 mt-2 flex-row items-center')]} onPress={onPress} underlayColor="#f8fafc">
+        <TouchableHighlight style={[tailwind('bg-slate-100 rounded-full py-4 px-8 mt-2 flex-row items-center'), { ...style }]} onPress={onPress} underlayColor="#f8fafc">
           <>
             {icon}
-            <Text style={[tailwind('text-center flex-1'), { fontSize: 14, fontFamily: "GmarketBold" }]}>{title}</Text>
+            <Text style={[tailwind('text-center flex-1'), { fontSize: 14, fontFamily: "GmarketBold", lineHeight: 18 }]}>{title}</Text>
+          </>
+        </TouchableHighlight>
+      );
+
+    /** Bold & rounded red button */
+    case "rounded-red":
+      return(
+        <TouchableHighlight style={[tailwind('bg-slate-100 rounded-full py-4 px-8 mt-2 flex-row items-center'), { ...style }]} onPress={onPress} underlayColor="#f8fafc">
+          <>
+            {icon}
+            <Text style={[tailwind('text-center flex-1'), { fontSize: 14, fontFamily: "GmarketBold", lineHeight: 18, color: "#FF0000" }]}>{title}</Text>
           </>
         </TouchableHighlight>
       );
