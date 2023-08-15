@@ -2,14 +2,17 @@ import React, { useState, useContext, useEffect } from "react";
 import { SafeAreaView, StyleSheet, Text, View, TouchableOpacity, TouchableHighlight, Image } from 'react-native';
 import { useTailwind } from 'tailwind-rn';
 import User, { UserPfp, Username } from "./User";
+import Button from "./Button";
 import Svg, { Circle, Rect, Path } from 'react-native-svg';
 import { GlobalContext } from "../contexts/GlobalContext";
 import * as Haptics from 'expo-haptics';
 import moment from 'moment';
+import { context } from '../utils/config.js';
+import { CommentIcon } from "./Icons";
 
 moment.updateLocale('en', {
   relativeTime: {
-    s: 'sec.',
+    s: 'secs.',
     m: '1m',
     mm: '%dm',
     h: '1h',
@@ -24,7 +27,7 @@ moment.updateLocale('en', {
 });
 
 export default function Post({post, isReply = false, showParent = true, verticalDivider = false, style, showRepostDetails = true, fontSize = 13.5}) {
-  const { setPostDetailsVis, setProfileSelected } = useContext(GlobalContext);
+  const { setPostDetailsVis, setProfileSelected, setCategory } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
   /** Will open pane with post details */
@@ -39,7 +42,7 @@ export default function Post({post, isReply = false, showParent = true, vertical
     setProfileSelected(did)
   }
 
-  if(!post?.content) {
+  if(!post || !post.content) {
     return null;
   }
 
@@ -48,7 +51,15 @@ export default function Post({post, isReply = false, showParent = true, vertical
       <View style={[tailwind(`flex w-full flex-col mb-2 ${!verticalDivider ? "border-b border-slate-200" : "" } ${isReply ? "" : "px-5 py-4"}`), style]}>
         {/** Will show the parent post if any */}
         {(showParent && post.content.reply_to && post.reply_to_details) &&
-          <Post post={{stream_id: post.reply_to, content: post.reply_to_details, creator_details: post.reply_to_creator_details}} isReply={true} verticalDivider={true} />
+          <>
+            <TouchableOpacity activeOpacity={0.6} style={[tailwind('flex flex-row items-center mb-3')]} onPress={() => showPostDetails()}>
+              <>
+                <CommentIcon color="#959595" />
+                <Text style={tailwind('text-secondary items-center ml-1')}>Replied to <Username details={post.reply_to_creator_details} style={tailwind('text-secondary font-normal')} /></Text>
+              </>
+            </TouchableOpacity>
+            {/**<Post post={{stream_id: post.reply_to, content: post.reply_to_details, creator_details: post.reply_to_creator_details, context_details: post.context_details, context: post.context}} isReply={true} verticalDivider={true} />*/}
+          </>
         }
 
         <View style={[tailwind('flex flex-row items-start')]}>
@@ -64,7 +75,7 @@ export default function Post({post, isReply = false, showParent = true, vertical
 
             {/** Username and post metadata */}
             <View style={tailwind('ml-2 flex flex-row items-center')}>
-              <TouchableHighlight onPress={() => showProfileDetails(post.creator)} underlayColor="transparent">
+              <TouchableHighlight onPress={() => showProfileDetails(post.creator)} underlayColor="transparent" >
                 <Username details={post.creator_details} />
               </TouchableHighlight>
               <View style={[tailwind('ml-2 mr-2')]}>
@@ -72,7 +83,13 @@ export default function Post({post, isReply = false, showParent = true, vertical
                   <Circle cx="2" cy="2" r="2" fill="#959595"/>
                 </Svg>
               </View>
-              <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, color: "#959595"}]}><TimeAgo timestamp={post.timestamp} /></Text>
+              <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, color: "#959595", marginRight: 6}]}><TimeAgo timestamp={post.timestamp} /></Text>
+
+              {/** Display category name */}
+              {(post.context != context && post.context != undefined) &&
+                <Button title={post.context_details?.context_details?.displayName} color="orange" size="xs" onPress={() => setCategory({stream_id: post.context, content: post.context_details?.context_details})} />
+              }
+
             </View>
 
             {/** Post content */}
@@ -97,9 +114,9 @@ export default function Post({post, isReply = false, showParent = true, vertical
 
             {/** Post CTAs */}
             <View style={[tailwind('flex flex-row mt-0')]}>
-              <CommentIcon post={post} />
-              <LikeIcon post={post} />
-              <RepostIcon post={post} />
+              <CommentCTA post={post} />
+              <LikeCTA post={post} />
+              <RepostCTA post={post} />
             </View>
           </View>
         </View>
@@ -108,7 +125,7 @@ export default function Post({post, isReply = false, showParent = true, vertical
   )
 }
 
-export const CommentIcon = ({post}) => {
+export const CommentCTA = ({post}) => {
   const { setPostDetailsVis, showPostbox, setReplyTo } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
@@ -121,9 +138,7 @@ export const CommentIcon = ({post}) => {
   return(
     <TouchableHighlight style={[tailwind('flex flex-row items-center rounded-md py-1 px-2')]} onPress={() => openReplyBox()} underlayColor="#f1f5f9">
       <>
-        <Svg width="18" height="16" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <Path d="M5.31095 15.8137C5.86525 15.4098 6.58283 15.3066 7.22736 15.5387C8.36603 15.9512 9.6422 16.1875 11 16.1875C16.3582 16.1875 19.9375 12.7285 19.9375 9.3125C19.9375 5.89648 16.3582 2.4375 11 2.4375C5.64181 2.4375 2.06252 5.89648 2.06252 9.3125C2.06252 10.6875 2.59533 12.0109 3.5965 13.1453C3.96603 13.5621 4.1465 14.1121 4.10353 14.6707C4.04338 15.4484 3.85861 16.1617 3.61799 16.7934C4.34845 16.4539 4.95431 16.0758 5.31095 15.818V15.8137ZM0.910954 17.5582C0.988298 17.4422 1.06134 17.3262 1.13009 17.2102C1.55978 16.4969 1.96799 15.5602 2.04963 14.5074C0.760564 13.0422 1.69175e-05 11.2504 1.69175e-05 9.3125C1.69175e-05 4.37539 4.92424 0.375 11 0.375C17.0758 0.375 22 4.37539 22 9.3125C22 14.2496 17.0758 18.25 11 18.25C9.40588 18.25 7.89338 17.975 6.52697 17.4809C6.01564 17.8547 5.18205 18.366 4.19377 18.7957C3.54494 19.0793 2.80588 19.3371 2.04103 19.4875C2.00666 19.4961 1.97228 19.5004 1.93791 19.509C1.74884 19.5434 1.56408 19.5734 1.37072 19.5906C1.36213 19.5906 1.34924 19.5949 1.34064 19.5949C1.1215 19.6164 0.902361 19.6293 0.68322 19.6293C0.403923 19.6293 0.154704 19.4617 0.0472825 19.2039C-0.0601393 18.9461 1.69086e-05 18.6539 0.193376 18.4563C0.369548 18.2758 0.528533 18.0824 0.678923 17.8762C0.75197 17.7773 0.82072 17.6785 0.885173 17.5797C0.88947 17.5711 0.893767 17.5668 0.898064 17.5582H0.910954Z" fill="black"/>
-        </Svg>
+        <CommentIcon />
         <Text style={[tailwind('text-slate-900 text-sm font-normal ml-1'), { fontFamily: "GmarketMedium" }]}>
           {post.count_replies}
         </Text>
@@ -133,7 +148,7 @@ export const CommentIcon = ({post}) => {
 }
 
 
-export const LikeIcon = ({post}) => {
+export const LikeCTA = ({post}) => {
   const [hasLiked, setHasLiked] = useState(false);
   const [countLikes, setCountLikes] = useState(post.count_likes);
   const { user, orbis, showConnectModal, setShowConnectModal } = useContext(GlobalContext);
@@ -194,7 +209,7 @@ export const LikeIcon = ({post}) => {
   )
 }
 
-export const RepostIcon = ({post}) => {
+export const RepostCTA = ({post}) => {
   const { user, orbis, showConnectModal, setShowConnectModal, setRepost } = useContext(GlobalContext);
   const [hasLiked, setHasLiked] = useState(false);
   const [countReposts, setCountReposts] = useState(post.count_repost);

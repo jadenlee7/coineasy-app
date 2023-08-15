@@ -10,21 +10,41 @@ import * as Haptics from 'expo-haptics';
 import { context } from '../utils/config.js';
 import Svg, { Circle, Rect, Path } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
+import { BackIcon } from "./Icons";
 
 export default function Postbox({isReply = false}) {
-  const { user, orbis, showConnectModal, setShowConnectModal, hidePostbox, replyTo, repost, callbackPostShared } = useContext(GlobalContext);
+  const { user, orbis, showConnectModal, setShowConnectModal, hidePostbox, replyTo, repost, callbackPostShared, category, setCategory, categories } = useContext(GlobalContext);
   const tailwind = useTailwind();
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [media, setMedia] = useState(null);
   const [imageLoading, setImageLoading] = useState(false);
+  const [categoriesVis, setCategoriesVis] = useState(false);
+  const [categorySelected, setCategorySelected] = useState(false);
 
+  /** Pre-select category if one already selected in the feed */
+  useEffect(() => {
+    if(category) {
+      setCategorySelected(category);
+    }
+  }, [category])
+
+  /** Will share message with Orbis */
   async function send() {
     Haptics.selectionAsync();
+    let _context = context;
+    if(replyTo) {
+      _context = replyTo.context;
+    }
+    else if(repost) {
+      _context = repost.context;
+    } else if(categorySelected) {
+      _context = categorySelected.stream_id;
+    }
     setLoading(true);
     let content = {
       body: message,
-      context: context,
+      context: _context,
       media: media ? media : null,
       repost: repost ? repost.stream_id : null,
       reply_to: replyTo ? replyTo.stream_id : null,
@@ -119,70 +139,119 @@ export default function Postbox({isReply = false}) {
     }
   }
 
+  function openCategory() {
+    setCategoriesVis(true)
+  }
+
   return(
 		<View style={tailwind('items-center w-full pt-2')}>
       <View style={tailwind('flex flex-col items-start w-full')}>
-        {/** Top bar with user details and cancel button */}
-        <View style={tailwind('flex flex-row mb-2 w-full items-center')}>
-          <View style={tailwind('flex-1')}>
-            {replyTo ?
-              <View style={tailwind('flex flex-row items-center')}>
-                <UserPfp details={user} height={40} />
-                <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, lineHeight: 18, color: "#959595", marginLeft: 8, marginRight: 4}]}>Replying to:</Text>
-                <Username details={replyTo.creator_details} style={{fontSize: 13}} />
+        {categoriesVis ?
+          <>
+            <View style={tailwind('flex flex-row w-full mb-1')}>
+              <TouchableHighlight style={[tailwind('flex flex-row items-center rounded-md py-1 px-2')]} underlayColor="#f1f5f9" onPress={() => setCategoriesVis(false)}>
+                <>
+                  <BackIcon />
+                  <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
+                </>
+              </TouchableHighlight>
+            </View>
+            <View style={tailwind('flex flex-row w-full mb-6 flex-wrap')}>
+            {/** Loop and display categories */}
+            {categories.map((category, key) => {
+              return (
+                <Category key={key} category={category} setCategoriesVis={setCategoriesVis} setCategorySelected={setCategorySelected} />
+              );
+            })}
+            </View>
+          </>
+        :
+          <>
+            {/** Top bar with user details and cancel button */}
+            <View style={tailwind('flex flex-row mb-2 w-full items-center')}>
+              <View style={tailwind('flex-1')}>
+                {replyTo ?
+                  <View style={tailwind('flex flex-row items-center')}>
+                    <UserPfp details={user} height={40} />
+                    <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, lineHeight: 18, color: "#959595", marginLeft: 8, marginRight: 4}]}>Replying to:</Text>
+                    <Username details={replyTo.creator_details} style={{fontSize: 13}} />
+                  </View>
+                :
+                  <User details={user} height={40} />
+                }
+
               </View>
-            :
-              <User details={user} height={40} />
+              {!replyTo &&
+                <Button title={categorySelected ? categorySelected.content.displayName : "Category"} iconRight={<CaretDownIcon />} color="white" size="sm" onPress={() => openCategory()} />
+              }
+            </View>
+
+            {/** Show input container */}
+            <TextInput
+              onChangeText={loading ? () => console.log("Disbaled.") : setMessage}
+              autoFocus
+              numberOfLines={1}
+              value={message}
+              //editable={!loading}
+              style={[tailwind('w-full'), { fontSize: 14, fontFamily: "GmarketMedium", minHeight: 35, lineHeight: 17, paddingBottom: 10 }]}
+              placeholder={replyTo ? "Post your reply" : "What's happening?" }
+              placeholderTextColor="#64748b"
+              multiline={true} />
+
+            {/** Display media attached if any */}
+            <Media media={media} deleteMedia={() => setMedia(null)} />
+
+            {/** Show repost details if user is replying to a post */}
+            {(repost != false && repost != null) &&
+              <Post post={repost} style={tailwind('rounded-md border border-secondary p-4')} />
             }
 
-          </View>
-          {!replyTo &&
-            <Button title="Cancel" color="white" size="sm" onPress={() => hidePostbox()} />
-          }
-        </View>
+            <View style={tailwind('flex flex-row w-full pt-1' )}>
+              <View style={tailwind('flex flex-1 justify-end items-start' )}>
+                {imageLoading ?
+                  <ActivityIndicator size="small" color="#FF6B17" />
+                :
+                  <TouchableOpacity onPress={() => selectPhoto()}>
+                    <Svg width="19" height="17" viewBox="0 0 22 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <Path d="M0 2.71429C0 1.21719 1.2332 0 2.75 0H19.25C20.7668 0 22 1.21719 22 2.71429V16.2857C22 17.7828 20.7668 19 19.25 19H2.75C1.2332 19 0 17.7828 0 16.2857V2.71429ZM13.9133 7.23103C13.7199 6.95112 13.402 6.78571 13.0625 6.78571C12.723 6.78571 12.4008 6.95112 12.2117 7.23103L8.47344 12.6426L7.33477 11.2388C7.13711 10.9971 6.84062 10.8571 6.53125 10.8571C6.22188 10.8571 5.92109 10.9971 5.72773 11.2388L2.97773 14.6317C2.72852 14.9371 2.68125 15.3569 2.85313 15.7089C3.025 16.0609 3.38594 16.2857 3.78125 16.2857H7.90625H9.28125H18.2188C18.6012 16.2857 18.9535 16.0779 19.1297 15.7429C19.3059 15.4078 19.2844 15.0049 19.0695 14.6953L13.9133 7.23103ZM4.8125 6.78571C5.35951 6.78571 5.88411 6.57124 6.27091 6.18947C6.6577 5.8077 6.875 5.2899 6.875 4.75C6.875 4.21009 6.6577 3.6923 6.27091 3.31053C5.88411 2.92876 5.35951 2.71429 4.8125 2.71429C4.26549 2.71429 3.74089 2.92876 3.35409 3.31053C2.9673 3.6923 2.75 4.21009 2.75 4.75C2.75 5.2899 2.9673 5.8077 3.35409 6.18947C3.74089 6.57124 4.26549 6.78571 4.8125 6.78571Z" fill="#FF6E31"/>
+                    </Svg>
+                  </TouchableOpacity>
+                }
 
-        {/** Show input container */}
-        <TextInput
-          onChangeText={loading ? () => console.log("Disbaled.") : setMessage}
-          autoFocus
-          numberOfLines={1}
-          value={message}
-          //editable={!loading}
-          style={[tailwind('w-full'), { fontSize: 14, fontFamily: "GmarketMedium", minHeight: 35, lineHeight: 17, paddingBottom: 10 }]}
-          placeholder={replyTo ? "Post your reply" : "What's happening?" }
-          placeholderTextColor="#64748b"
-          multiline={true} />
+              </View>
 
-        {/** Display media attached if any */}
-        <Media media={media} deleteMedia={() => setMedia(null)} />
-
-        {/** Show repost details if user is replying to a post */}
-        {(repost != false && repost != null) &&
-          <Post post={repost} style={tailwind('rounded-md border border-secondary p-4')} />
+              {loading ?
+                <Button title={<ActivityIndicator size="small" color="#fff" />} color="orange" size="sm" />
+              :
+                <Button title="Post" color="orange" size="sm" onPress={() => send()} />
+              }
+            </View>
+          </>
         }
 
-        <View style={tailwind('flex flex-row w-full pt-1' )}>
-          <View style={tailwind('flex flex-1 justify-end items-start' )}>
-            {imageLoading ?
-              <ActivityIndicator size="small" color="#FF6B17" />
-            :
-              <TouchableOpacity onPress={() => selectPhoto()}>
-                <Svg width="19" height="17" viewBox="0 0 22 19" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <Path d="M0 2.71429C0 1.21719 1.2332 0 2.75 0H19.25C20.7668 0 22 1.21719 22 2.71429V16.2857C22 17.7828 20.7668 19 19.25 19H2.75C1.2332 19 0 17.7828 0 16.2857V2.71429ZM13.9133 7.23103C13.7199 6.95112 13.402 6.78571 13.0625 6.78571C12.723 6.78571 12.4008 6.95112 12.2117 7.23103L8.47344 12.6426L7.33477 11.2388C7.13711 10.9971 6.84062 10.8571 6.53125 10.8571C6.22188 10.8571 5.92109 10.9971 5.72773 11.2388L2.97773 14.6317C2.72852 14.9371 2.68125 15.3569 2.85313 15.7089C3.025 16.0609 3.38594 16.2857 3.78125 16.2857H7.90625H9.28125H18.2188C18.6012 16.2857 18.9535 16.0779 19.1297 15.7429C19.3059 15.4078 19.2844 15.0049 19.0695 14.6953L13.9133 7.23103ZM4.8125 6.78571C5.35951 6.78571 5.88411 6.57124 6.27091 6.18947C6.6577 5.8077 6.875 5.2899 6.875 4.75C6.875 4.21009 6.6577 3.6923 6.27091 3.31053C5.88411 2.92876 5.35951 2.71429 4.8125 2.71429C4.26549 2.71429 3.74089 2.92876 3.35409 3.31053C2.9673 3.6923 2.75 4.21009 2.75 4.75C2.75 5.2899 2.9673 5.8077 3.35409 6.18947C3.74089 6.57124 4.26549 6.78571 4.8125 6.78571Z" fill="#FF6E31"/>
-                </Svg>
-              </TouchableOpacity>
-            }
-
-          </View>
-
-          {loading ?
-            <Button title={<ActivityIndicator size="small" color="#fff" />} color="orange" size="sm" />
-          :
-            <Button title="Post" color="orange" size="sm" onPress={() => send()} />
-          }
-        </View>
       </View>
 		</View>
+  )
+}
+
+const Category = ({category, setCategoriesVis, setCategorySelected}) => {
+  const { setCategory } = useContext(GlobalContext);
+
+  function select() {
+    setCategorySelected(category);
+    setCategoriesVis(false);
+  }
+
+  return(
+    <Button title={category.content.displayName} style={{width: "48%", marginRight: "2%"}} color="rounded-gray" onPress={() => select()} />
+  )
+}
+
+const CaretDownIcon = ({style}) => {
+  return(
+    <Svg width="14" height="8" viewBox="0 0 14 8" fill="none" xmlns="http://www.w3.org/2000/svg" style={{marginLeft: 5}}>
+      <Path d="M12.919 0.179688H1.07902C0.119016 0.179688 -0.360984 1.33969 0.319016 2.01969L5.49902 7.19969C6.32902 8.02969 7.67902 8.02969 8.50902 7.19969L10.479 5.22969L13.689 2.01969C14.359 1.33969 13.879 0.179688 12.919 0.179688Z" fill="#000000"/>
+    </Svg>
   )
 }
 

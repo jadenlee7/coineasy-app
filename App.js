@@ -55,6 +55,7 @@ export default function App() {
   const [userConnecting, setUserConnecting] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [screen, setScreen] = useState("home");
+  const [category, setCategory] = useState(null);
   const [repost, setRepost] = useState(false);
   const [postDetailsVis, setPostDetailsVis] = useState();
   const [updateProfileVis, setUpdateProfileVis] = useState(false);
@@ -82,7 +83,6 @@ export default function App() {
   /** Will check if user is connected on load to automatically re-connect user */
   useEffect(() => {
     connect();
-    loadPosts();
     loadContexts();
     //logout();
 
@@ -98,11 +98,18 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    page = 0;
+    loadPosts();
+  }, [category])
+
   /** Will retrieve all posts shared in the global context */
   async function loadPosts() {
+    setPosts([]);
     setRefreshing(true);
     let { data } = await orbis.getPosts({
-      context: context
+      context: category ? category.stream_id : context,
+      include_child_contexts: true
     });
     if(data) {
       console.log(data.length + " posts retrieved.");
@@ -119,14 +126,15 @@ export default function App() {
     }
     if (posts.length % 50 === 0) {
       setRefreshingBottom(true);
-      page++;
-      console.log("Enter loadMorePosts with page:", page);
+      console.log("Enter loadMorePosts with page:", page + 1);
       let { data } = await orbis.getPosts(
         {
-          context: context,
+          context: category ? category.stream_id : context,
+          include_child_contexts: true
         },
         page
       );
+      page++;
       let _posts = [...posts, ...data];
       setRefreshingBottom(false);
       setPosts(_posts);
@@ -142,9 +150,11 @@ export default function App() {
   }
 
   const onRefresh = useCallback(async () => {
+    page = 0;
     setRefreshing(true);
     let { data } = await orbis.getPosts({
-      context: context
+      context: category ? category.stream_id : context,
+      include_child_contexts: true
     });
     console.log("Data loaded.");
     if(data) {
@@ -152,7 +162,7 @@ export default function App() {
       setPosts(data);
     }
     setRefreshing(false);
-  }, []);
+  }, [category]);
 
   async function callbackConnect() {
     setPushNotifsVis(true);
@@ -196,7 +206,7 @@ export default function App() {
   }
 
   return (
-    <GlobalContext.Provider value={{ user, setUser, updateProfileVis, setUpdateProfileVis, screen, setScreen, profileSelected, setProfileSelected, userConnecting, setUserConnecting, orbis, showConnectModal, setShowConnectModal, confetti, repost, setRepost, postDetailsVis, setPostDetailsVis, posts, setPosts, refreshing, refreshingBottom, onRefresh, loadPosts, loadMorePosts, categories, loadContexts, callbackConnect, pushNotifsVis, setPushNotifsVis, postboxVis, showPostbox, hidePostbox, callbackPostShared, replyTo, setReplyTo, setSettingsVis, setShareProfileVis }}>
+    <GlobalContext.Provider value={{ user, setUser, updateProfileVis, setUpdateProfileVis, screen, setScreen, profileSelected, setProfileSelected, userConnecting, setUserConnecting, orbis, showConnectModal, setShowConnectModal, confetti, repost, setRepost, postDetailsVis, setPostDetailsVis, posts, setPosts, refreshing, refreshingBottom, onRefresh, loadPosts, loadMorePosts, categories, loadContexts, callbackConnect, pushNotifsVis, setPushNotifsVis, postboxVis, showPostbox, hidePostbox, callbackPostShared, replyTo, setReplyTo, setSettingsVis, setShareProfileVis, category, setCategory }}>
       <TailwindProvider utilities={utilities}>
         {user ?
           <>

@@ -1,7 +1,7 @@
 import { TouchableOpacity, Text, TouchableHighlight, ActivityIndicator } from 'react-native';
 import { useTailwind } from 'tailwind-rn';
 
-export default function Button({icon, size, title, onPress, color, style, loading = false}) {
+export default function Button({icon, iconRight, size, title, onPress, color, style, loading = false}) {
   const tailwind = useTailwind();
 
   /** Display differnt button color based on parameter passed */
@@ -33,20 +33,31 @@ export default function Button({icon, size, title, onPress, color, style, loadin
     /** Orange button (coineasy branding) */
     case "orange":
       switch (size) {
-        case "sm":
+        case "xs":
           return(
-            <TouchableOpacity activeOpacity={0.9}  style={[tailwind(`px-5 rounded-full border ${loading ? "bg-main-400" : "bg-main"}`), {borderColor: "transparent", paddingVertical: 6, ...style}]} onPress={onPress}>
+            <TouchableOpacity activeOpacity={0.7}  style={[tailwind(`px-3 rounded-full border ${loading ? "bg-main-400" : "bg-main"}`), {borderColor: "transparent", paddingVertical: 4, ...style}]} onPress={onPress}>
               {loading ?
                 <ActivityIndicator size="small" color="#fff" />
               :
-                <Text style={[tailwind('text-white font-semibold'), {fontSize: 12}]}>{title}</Text>
+                <Text style={[tailwind('text-white font-normal'), {fontSize: 10, lineHeight: 14}]}>{title}</Text>
+              }
+
+            </TouchableOpacity>
+          );
+        case "sm":
+          return(
+            <TouchableOpacity activeOpacity={0.7}  style={[tailwind(`px-5 rounded-full border ${loading ? "bg-main-400" : "bg-main"}`), {borderColor: "transparent", paddingVertical: 4, ...style}]} onPress={onPress}>
+              {loading ?
+                <ActivityIndicator size="small" color="#fff" />
+              :
+                <Text style={[tailwind('text-white font-semibold'), {fontSize: 12, lineHeight: 16}]}>{title}</Text>
               }
 
             </TouchableOpacity>
           );
         case "md":
           return(
-            <TouchableOpacity activeOpacity={0.9}  style={[tailwind('px-7 py-3 rounded-full'), {backgroundColor: "#FF6B17", ...style}]} onPress={onPress}>
+            <TouchableOpacity activeOpacity={0.7}  style={[tailwind('px-7 py-3 rounded-full'), {backgroundColor: "#FF6B17", ...style}]} onPress={onPress}>
               <Text style={tailwind('text-white font-semibold')}>{title}</Text>
             </TouchableOpacity>
           );
@@ -63,8 +74,9 @@ export default function Button({icon, size, title, onPress, color, style, loadin
       switch (size) {
         case "sm":
           return(
-            <TouchableOpacity activeOpacity={0.6} style={[tailwind(`px-5 rounded-full border ${loading ? "bg-slate-100" : "bg-white"}`), {borderColor: "#FF6B17", paddingVertical: 6, ...style}]} onPress={onPress}>
-              <Text style={[tailwind('text-main font-semibold'), {fontSize: 12}]}>{title}</Text>
+            <TouchableOpacity activeOpacity={0.6} style={[tailwind(`px-5 rounded-full border flex-row items-center ${loading ? "bg-slate-100" : "bg-white"}`), {borderColor: "#FF6B17", paddingVertical: 4, ...style}]} onPress={onPress}>
+              <Text style={[tailwind('text-main font-semibold items-center'), {fontSize: 12, lineHeight: 16,}]}>{title}</Text>
+              {iconRight}
             </TouchableOpacity>
           );
         default:

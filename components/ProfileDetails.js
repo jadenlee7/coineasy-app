@@ -62,9 +62,9 @@ export default function ProfileDetails({profile, pfpMarginTop = -10}) {
         <NavItem slug="reposts" title="Reposts" nav={nav} setNav={setNav} />
       </View>
 
-      <ScrollView style={tailwind('flex flex-col flex-1')}>
+      <View style={tailwind('flex flex-col flex-1')}>
         <Posts type={nav} profile={profile} />
-      </ScrollView>
+      </View>
     </>
   )
 }
@@ -93,7 +93,8 @@ const Posts = ({type, profile}) => {
       case "feed":
         options = {
           did: profile.did,
-          context
+          context,
+          include_child_contexts: true
         };
         break;
 
@@ -102,7 +103,8 @@ const Posts = ({type, profile}) => {
         options = {
           did: profile.did,
           context,
-          is_reply: true
+          is_reply: true,
+          include_child_contexts: true
         };
         break;
 
@@ -111,18 +113,19 @@ const Posts = ({type, profile}) => {
         options = {
           did: profile.did,
           context,
-          is_repost: true
+          is_repost: true,
+          include_child_contexts: true
         };
         break;
       default:
         options = {
           did: profile.did,
-          context
+          context,
+          include_child_contexts: true
         };
         break;
     }
 
-    console.log("options:", options);
     let { data } = await orbis.getPosts(options);
     if(data) {
       console.log(data.length + " posts retrieved.");

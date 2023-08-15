@@ -27,7 +27,7 @@ export default function RepostModal() {
     setLoading(true);
     let content = {
       body: " ",
-      context,
+      context: repost.context,
       repost: repost.stream_id
     };
     let res = await orbis.createPost(content);
