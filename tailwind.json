@@ -453,6 +453,17 @@
 			"shadowRadius": 9.11,
 		}
 	},
+	"shadow-lg": {
+		"style": {
+			"shadowColor": "#000",
+			"shadowOffset": {
+				"width": 0,
+				"height": 5,
+			},
+			"shadowOpacity": 0.8,
+			"shadowRadius": 10,
+		}
+	},
 	"p-1": {
 		"style": {
 			"paddingTop": 4,
@@ -539,6 +550,12 @@
 		"style": {
 			"paddingLeft": 32,
 			"paddingRight": 32
+		}
+	},
+	"px-12": {
+		"style": {
+			"paddingLeft": 48,
+			"paddingRight": 48
 		}
 	},
 	"px-16": {

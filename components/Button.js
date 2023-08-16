@@ -69,6 +69,49 @@ export default function Button({icon, iconRight, size, title, onPress, color, st
           );
       }
 
+    case "green":
+      switch (size) {
+        case "sm":
+        return(
+          <TouchableOpacity activeOpacity={0.7}  style={[tailwind(`px-5 rounded-full items-center flex-row border ${loading ? "" : ""}`), {backgroundColor: "#87EE9B", borderColor: "transparent", paddingVertical: 4, ...style}]} onPress={onPress}>
+            {loading ?
+              <ActivityIndicator size="small" color="#fff" />
+            :
+              <>
+                {icon}
+                <Text style={[tailwind('font-semibold'), { fontSize: 12, lineHeight: 16, color: "#fff" }]}>{title}</Text>
+              </>
+            }
+
+          </TouchableOpacity>
+        );
+          break;
+        default:
+
+      }
+
+    case "green-border":
+      switch (size) {
+        case "sm":
+        return(
+          <TouchableOpacity activeOpacity={0.7}  style={[tailwind(`px-5 rounded-full items-center flex-row border ${loading ? "" : ""}`), {borderColor: "#46E57C", paddingVertical: 4, ...style}]} onPress={onPress}>
+            {loading ?
+              <ActivityIndicator size="small" color="#fff" />
+            :
+              <>
+                {icon}
+                <Text style={[tailwind('font-semibold'), { fontSize: 12, lineHeight: 16, color: "#46E57C" }]}>{title}</Text>
+              </>
+            }
+
+          </TouchableOpacity>
+        );
+          break;
+        default:
+
+      }
+
+
     /** White button */
     case "white":
       switch (size) {

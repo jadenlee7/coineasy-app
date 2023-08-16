@@ -3,12 +3,11 @@ import { SafeAreaView, StyleSheet, Text, View, TouchableOpacity, TouchableHighli
 import { useTailwind } from 'tailwind-rn';
 import User, { UserPfp, Username } from "./User";
 import Button from "./Button";
-import Svg, { Circle, Rect, Path } from 'react-native-svg';
 import { GlobalContext } from "../contexts/GlobalContext";
 import * as Haptics from 'expo-haptics';
 import moment from 'moment';
 import { context } from '../utils/config.js';
-import { CommentIcon } from "./Icons";
+import { CommentIcon, InterpunctIcon, LikeIcon, RepostIcon } from "./Icons";
 
 moment.updateLocale('en', {
   relativeTime: {
@@ -79,9 +78,7 @@ export default function Post({post, isReply = false, showParent = true, vertical
                 <Username details={post.creator_details} />
               </TouchableHighlight>
               <View style={[tailwind('ml-2 mr-2')]}>
-                <Svg width="4" height="4" viewBox="0 0 4 4" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <Circle cx="2" cy="2" r="2" fill="#959595"/>
-                </Svg>
+                <InterpunctIcon />
               </View>
               <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, color: "#959595", marginRight: 6}]}><TimeAgo timestamp={post.timestamp} /></Text>
 
@@ -110,7 +107,6 @@ export default function Post({post, isReply = false, showParent = true, vertical
                 <Post post={post.repost_details} style={[tailwind('rounded-md border border-secondary p-3'), {width: "95%"}]} />
               </View>
             }
-
 
             {/** Post CTAs */}
             <View style={[tailwind('flex flex-row mt-0')]}>
@@ -192,13 +188,9 @@ export const LikeCTA = ({post}) => {
     <TouchableHighlight style={[tailwind('flex flex-row items-center ml-1 rounded-md py-1 px-2')]} onPress={() => like()} underlayColor="#f1f5f9">
       <>
         {hasLiked ?
-          <Svg width="18" height="16" viewBox="0 0 22 19" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <Path d="M2.04531 11.2064L9.80977 18.527C10.132 18.8308 10.5574 19 11 19C11.4426 19 11.868 18.8308 12.1902 18.527L19.9547 11.2064C21.2609 9.9784 22 8.25566 22 6.45481V6.20313C22 3.16989 19.8301 0.58361 16.8695 0.0845793C14.9102 -0.245215 12.9164 0.401355 11.5156 1.816L11 2.33672L10.4844 1.816C9.08359 0.401355 7.08984 -0.245215 5.13047 0.0845793C2.16992 0.58361 0 3.16989 0 6.20313V6.45481C0 8.25566 0.739062 9.9784 2.04531 11.2064Z" fill="#FF6B17"/>
-          </Svg>
+          <LikeIcon active={true} />
         :
-          <Svg width="18" height="16" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <Path d="M9.70234 19.1178L9.59492 19.019L2.0668 12.028C0.747656 10.8034 0 9.08462 0 7.28423V7.14243C0 4.11743 2.14844 1.52212 5.12187 0.954928C6.81484 0.628366 8.54648 1.01938 9.92578 1.99048C10.3125 2.26548 10.6734 2.58344 11 2.94868C11.1805 2.74243 11.3738 2.55337 11.5801 2.37719C11.7391 2.23969 11.9023 2.11079 12.0742 1.99048C13.4535 1.01938 15.1852 0.628366 16.8781 0.950632C19.8516 1.51782 22 4.11743 22 7.14243V7.28423C22 9.08462 21.2523 10.8034 19.9332 12.028L12.4051 19.019L12.2977 19.1178C11.9453 19.4444 11.4812 19.6291 11 19.6291C10.5188 19.6291 10.0547 19.4487 9.70234 19.1178ZM10.2738 5.23032C10.2566 5.21743 10.2438 5.20024 10.2309 5.18305L9.46602 4.32368L9.46172 4.31938C8.46914 3.20649 6.96953 2.69946 5.50859 2.97876C3.50625 3.36118 2.0625 5.10571 2.0625 7.14243V7.28423C2.0625 8.50883 2.57383 9.68188 3.47188 10.5155L11 17.5065L18.5281 10.5155C19.4262 9.68188 19.9375 8.50883 19.9375 7.28423V7.14243C19.9375 5.11001 18.4937 3.36118 16.4957 2.97876C15.0348 2.69946 13.5309 3.21079 12.5426 4.31938C12.5426 4.31938 12.5426 4.31938 12.5383 4.32368C12.534 4.32798 12.5383 4.32368 12.534 4.32798L11.7691 5.18735C11.7562 5.20454 11.7391 5.21743 11.7262 5.23462C11.5328 5.42798 11.2707 5.5354 11 5.5354C10.7293 5.5354 10.4672 5.42798 10.2738 5.23462V5.23032Z" fill="black"/>
-          </Svg>
+          <LikeIcon active={false} />
         }
 
         <Text style={[tailwind('text-sm font-normal ml-1'), { fontFamily: "GmarketMedium", color: hasLiked ? "#FF6B17" : "#0F172A" }]}>
@@ -239,15 +231,10 @@ export const RepostCTA = ({post}) => {
     <TouchableHighlight style={[tailwind('flex flex-row items-center ml-1 rounded-md py-1 px-2')]} onPress={() => showRepostPane()} underlayColor="#f1f5f9">
       <>
         {hasLiked ?
-          <Svg width="23" height="17" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <Path d="M19.5 9C19.5 7.76808 19.4536 6.54699 19.3624 5.3384C19.2128 3.35425 17.6458 1.78724 15.6616 1.63757C14.453 1.54641 13.2319 1.5 12 1.5C10.7681 1.5 9.54699 1.54641 8.3384 1.63757C6.35425 1.78724 4.78724 3.35425 4.63757 5.3384C4.62097 5.55852 4.60585 5.77906 4.59222 6M19.5 9L22.5 6M19.5 9L16.5 6M4.5 9C4.5 10.2319 4.54641 11.453 4.63757 12.6616C4.78724 14.6458 6.35425 16.2128 8.3384 16.3624C9.54699 16.4536 10.7681 16.5 12 16.5C13.2319 16.5 14.453 16.4536 15.6616 16.3624C17.6458 16.2128 19.2128 14.6458 19.3624 12.6616C19.379 12.4415 19.3941 12.2209 19.4078 12M4.5 9L7.5 12M4.5 9L1.5 12" stroke="#FF6B17" strokeWidth="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </Svg>
+          <RepostIcon color="#FF6B17" />
         :
-          <Svg width="23" height="17" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <Path d="M19.5 9C19.5 7.76808 19.4536 6.54699 19.3624 5.3384C19.2128 3.35425 17.6458 1.78724 15.6616 1.63757C14.453 1.54641 13.2319 1.5 12 1.5C10.7681 1.5 9.54699 1.54641 8.3384 1.63757C6.35425 1.78724 4.78724 3.35425 4.63757 5.3384C4.62097 5.55852 4.60585 5.77906 4.59222 6M19.5 9L22.5 6M19.5 9L16.5 6M4.5 9C4.5 10.2319 4.54641 11.453 4.63757 12.6616C4.78724 14.6458 6.35425 16.2128 8.3384 16.3624C9.54699 16.4536 10.7681 16.5 12 16.5C13.2319 16.5 14.453 16.4536 15.6616 16.3624C17.6458 16.2128 19.2128 14.6458 19.3624 12.6616C19.379 12.4415 19.3941 12.2209 19.4078 12M4.5 9L7.5 12M4.5 9L1.5 12" stroke="#0F172A" strokeWidth="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-          </Svg>
+          <RepostIcon />
         }
-
 
         <Text style={[tailwind('text-sm font-normal ml-1'), { fontFamily: "GmarketMedium", color: hasLiked ? "#FF6B17" : "#0F172A" }]}>
           {countReposts}

@@ -5,7 +5,6 @@ import Button from "../Button";
 import { useTailwind } from 'tailwind-rn';
 import { Keyboard, StyleSheet, Text, View, TouchableHighlight, ActivityIndicator, Image } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import Svg, { Circle, Rect, Path } from 'react-native-svg';
 import { context } from '../../utils/config.js';
 import { sleep } from '../../utils';
 

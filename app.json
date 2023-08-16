@@ -17,7 +17,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "buildNumber": "12",
+      "buildNumber": "14",
       "bundleIdentifier": "com.baptistegr.coineasy"
     },
     "android": {

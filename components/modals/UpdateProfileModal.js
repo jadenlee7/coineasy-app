@@ -6,8 +6,8 @@ import { UserPfp, Username } from "../User";
 import { useTailwind } from 'tailwind-rn';
 import { GlobalContext } from "../../contexts/GlobalContext";
 import * as Haptics from 'expo-haptics';
-import Svg, { Circle, Rect, Path } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
+import { PlusIcon } from "../Icons";
 
 export default function UpdateProfileModal({callback}) {
   const { user, setUser, orbis, setUpdateProfileVis } = useContext(GlobalContext);
@@ -110,10 +110,7 @@ export default function UpdateProfileModal({callback}) {
             :
               <>
                 <UserPfp details={{ profile: { pfp: pfp }}} height={50} />
-                <Svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" style={[tailwind('absolute'), {bottom: 0, right: -5}]}>
-                  <Circle cx="12.5" cy="12.5" r="12.5" fill="white"/>
-                  <Path d="M12.5002 2.0835C6.76058 2.0835 2.0835 6.76058 2.0835 12.5002C2.0835 18.2397 6.76058 22.9168 12.5002 22.9168C18.2397 22.9168 22.9168 18.2397 22.9168 12.5002C22.9168 6.76058 18.2397 2.0835 12.5002 2.0835ZM16.6668 13.2814H13.2814V16.6668C13.2814 17.0939 12.9272 17.4481 12.5002 17.4481C12.0731 17.4481 11.7189 17.0939 11.7189 16.6668V13.2814H8.3335C7.90641 13.2814 7.55225 12.9272 7.55225 12.5002C7.55225 12.0731 7.90641 11.7189 8.3335 11.7189H11.7189V8.3335C11.7189 7.90641 12.0731 7.55225 12.5002 7.55225C12.9272 7.55225 13.2814 7.90641 13.2814 8.3335V11.7189H16.6668C17.0939 11.7189 17.4481 12.0731 17.4481 12.5002C17.4481 12.9272 17.0939 13.2814 16.6668 13.2814Z" fill="#FF6B17"/>
-                </Svg>
+                <PlusIcon />
               </>
             }
 

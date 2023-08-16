@@ -9,18 +9,39 @@ import Button from "./Button";
 import Modal from "./Modal";
 import { UserPfp, Username } from "./User";
 import { context } from '../utils/config.js';
+import { CheckIcon } from "./Icons";
 
 export default function ProfileDetails({profile, pfpMarginTop = -10}) {
   const { user, setUser, orbis, updateProfileVis, setUpdateProfileVis, setShareProfileVis } = useContext(GlobalContext);
   const tailwind = useTailwind();
   const [nav, setNav] = useState("feed");
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
     console.log("profile:", profile);
+    loadiIsFollowing();
+    setFollowLoading(true);
+    async function loadiIsFollowing() {
+      const res = await orbis.getIsFollowing(user.did, profile.did);
+      console.log("res isFollowing():", res);
+      setIsFollowing(res.data);
+      setFollowLoading(false);
+    }
   }, [profile])
 
   if(!profile) {
     return null;
+  }
+
+  /** Will follow the user */
+  async function follow(active) {
+    setFollowLoading(true);
+
+    const res = await orbis.setFollow(profile.did, active);
+    console.log("res:", res);
+    setFollowLoading(false);
+    setIsFollowing(active);
   }
 
   return(
@@ -38,22 +59,31 @@ export default function ProfileDetails({profile, pfpMarginTop = -10}) {
         }
       </View>
 
-      {/** Edit CTA (only if user is connected) */}
-      {user.did == profile.did &&
-        <View style={tailwind('flex flex-row px-4 mt-3 items-center w-full justify-center')}>
-            <Button title="Edit Profile" color="orange" size="sm" onPress={() => setUpdateProfileVis(true)} />
-            <View style={{width: 10}} />
-            <Button title="Share Profile" color="white" size="sm" onPress={() => setShareProfileVis(true)} />
-        </View>
-      }
-
       {/** KPI counts */}
-      <View style={tailwind('flex flex-row px-4 mt-2')}>
+      <View style={[tailwind('flex flex-row px-4'), {marginTop: -10}]}>
         <ProfileItem count="50" title="Posts" />
         <ProfileItem count={profile.count_followers} title="Followers" />
         <ProfileItem count={profile.count_following} title="Following" />
         {/*<ProfileItem count="156" title="Oranges" />*/}
       </View>
+
+      {/** Edit CTA (only if user is connected) */}
+      {user.did == profile.did ?
+        <View style={tailwind('flex flex-row px-4 mt-3 items-center w-full justify-center')}>
+            <Button title="Edit Profile" color="orange" size="sm" onPress={() => setUpdateProfileVis(true)} />
+            <View style={{width: 10}} />
+            <Button title="Share Profile" color="white" size="sm" onPress={() => setShareProfileVis(true)} />
+        </View>
+        :
+        <View style={tailwind('flex flex-row px-4 mt-3 items-center w-full justify-center')}>
+          {isFollowing ?
+            <Button title="Following" icon={<CheckIcon color="#fff" style={{marginRight: 5}} />} color="green" size="sm" onPress={() => follow(false)} />
+          :
+            <Button loading={followLoading} title="Follow" color="orange" size="sm" onPress={() => follow(true)} />
+          }
+        </View>
+      }
+
 
       {/** Profile navigation */}
       <View style={tailwind('flex flex-row px-4 mt-4 border-b border-slate-100 mt-6')}>

@@ -65,44 +65,36 @@ function replaceMentions(post) {
 }
 
 /** Will loop through rules and user credentials to check if the user has access to this context */
-export async function checkContextAccess(user, credentials, _accessRules, callback) {
-
+export async function checkContextAccess(user, accessRules) {
+  let hasAccess;
   /** Loop through all rules assigned to this context */
-  _accessRules.forEach(async (_rule, i) => {
+  accessRules.forEach((rule, i) => {
     /** Handle operators function */
-    if(_rule.operator) {
+    if(rule.operator) {
       //console.log("_rule.operator:", _rule.operator);
     }
 
     /** Manage verifications based on rules type */
-    switch (_rule.type) {
+    switch (rule.type) {
       case "credential":
-        /** Loop through all credentials required in this rule */
-        _rule.requiredCredentials.forEach((cred, i) => {
-          let _hasVc = checkCredentialOwnership(credentials, cred.identifier);
-          if(_hasVc) {
-            callback(true);
-          }
-        });
-
+        console.log("Credentials gating not supported yet.");
         break;
       case "did":
         /** Loop through all authorized users authorized in this rule */
-        _rule.authorizedUsers.forEach((_user, i) => {
+        rule.authorizedUsers.forEach((_user, i) => {
           if(_user.did == user.did) {
-            callback(true);
+            hasAccess = true;
           }
         });
         break;
       case "token":
-        const { address } = useDidToAddress(user.did);
-
-        /** Check if user owns requested balance for the token */
-        getTokenBalance(_rule.requiredToken, address, () => callback(true));
+        console.log("Token gating not supported yet.");
         break;
       default:
     }
   });
+
+  return hasAccess;
 }
 
 /** Check if the user owns the required credential */

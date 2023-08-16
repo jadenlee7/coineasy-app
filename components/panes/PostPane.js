@@ -64,42 +64,44 @@ export default function PostPane() {
   return(
     <Pane>
       <SecondHeader label="" showBack={true} />
-      <ScrollView style={tailwind('pt-4')}>
-        {post ?
-          <View style={{marginTop: -10}}>
-            {/** Show master post */}
-            <Post post={post} verticalDivider={true} fontSize={15} />
+      <View style={tailwind('flex pt-2 flex-1')}>
+        <ScrollView>
+          {post ?
+            <View style={{marginTop: -10}}>
+              {/** Show master post */}
+              <Post post={post} verticalDivider={true} fontSize={15} />
 
-            {/** Show replies */}
-            <View style={[tailwind('flex flex-col')]}>
-              {repliesLoading ?
-                <View style={{marginBottom: 30, marginTop: -10}}>
-                  <ActivityIndicator size="small" color="#020617" />
-                </View>
-              :
+              {/** Show replies */}
+              <View style={[tailwind('flex flex-col')]}>
+                {repliesLoading ?
+                  <View style={{marginBottom: 30, marginTop: -10}}>
+                    <ActivityIndicator size="small" color="#020617" />
+                  </View>
+                :
+                  <>
+                    {replies.map((reply) => {
+                      return (
+                        <Post post={reply} key={reply.stream_id} showParent={false} verticalDivider={true} style={{marginTop: -20}} />
+                      );
+                    })}
+                  </>
+                }
+
+              </View>
+
+              {/** Reply postbox CTA */}
+              <TouchableHighlight style={[tailwind('flex flex-row rounded-full mx-4 items-center'), { marginTop: -10, backgroundColor: "#F6F6F6", marginBottom: 25, padding: 5 }]} underlayColor="#EFEFEF" onPress={() => openReplyBox()}>
                 <>
-                  {replies.map((reply) => {
-                    return (
-                      <Post post={reply} key={reply.stream_id} showParent={false} verticalDivider={true} style={{marginTop: -20}} />
-                    );
-                  })}
+                  <UserPfp details={user} height={35} />
+                  <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, lineHeight: 18, color: "#959595", marginLeft: 6}]}>Reply</Text>
                 </>
-              }
-
+              </TouchableHighlight>
             </View>
-
-            {/** Reply postbox CTA */}
-            <TouchableHighlight style={[tailwind('flex flex-row rounded-full mx-4 items-center'), { marginTop: -10, backgroundColor: "#F6F6F6", marginBottom: 25, padding: 5 }]} underlayColor="#EFEFEF" onPress={() => openReplyBox()}>
-              <>
-                <UserPfp details={user} height={35} />
-                <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, lineHeight: 18, color: "#959595", marginLeft: 6}]}>Reply</Text>
-              </>
-            </TouchableHighlight>
-          </View>
-        :
-          <ActivityIndicator size="small" color="#020617" />
-        }
-      </ScrollView>
+          :
+            <ActivityIndicator size="small" color="#020617" />
+          }
+        </ScrollView>
+      </View>
     </Pane>
   )
 }

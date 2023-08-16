@@ -31,9 +31,14 @@ import Header from "./components/Header";
 import Modal from "./components/Modal";
 import Postbox from "./components/Postbox";
 import ConfettiCannon from 'react-native-confetti-cannon';
+
+/** Expo */
 import { useFonts } from 'expo-font';
 import * as Linking from 'expo-linking';
 import * as Haptics from 'expo-haptics';
+import * as Notifications from 'expo-notifications';
+
+
 /** Import Orbis SDK */
 import { Orbis } from "@orbisclub/orbis-sdk";
 
@@ -71,8 +76,9 @@ export default function App() {
   const [categories, setCategories] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshingBottom, setRefreshingBottom] = useState(false);
-
   const [profileSelected, setProfileSelected] = useState();
+  const url = Linking.useURL();
+  const responseListener = useRef();
 
   /** Load fonts */
   const [fontsLoaded] = useFonts({
@@ -101,7 +107,63 @@ export default function App() {
   useEffect(() => {
     page = 0;
     loadPosts();
-  }, [category])
+  }, [category]);
+
+  /** Will be triggered when a new deeplink is received */
+  useEffect(() => {
+    if (url) {
+      handleURL(url);
+    }
+  }, [url]);
+
+  /** Handle notifications received, will open right screen or pane based on the notification received */
+  useEffect(() => {
+   responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+     //console.log("response:", response);
+     let data = response.notification?.request?.content?.data;
+
+     switch (data?.type) {
+       /** Open post pane for reactions */
+       case "reaction":
+         console.log("Open post id:" + data.post_id);
+         hideModals();
+         setPostDetailsVis(data.post_id);
+         break;
+       /** Open post pane for replies */
+       case "reply":
+         console.log("Open post id:" + data.post_id);
+         hideModals();
+         setPostDetailsVis(data.post_id);
+         break;
+       default:
+
+     }
+   });
+
+   return () => {
+     Notifications.removeNotificationSubscription(responseListener.current);
+   };
+ }, []);
+
+  async function handleURL(url) {
+    const { path, queryParams } = Linking.parse(url);
+    console.log("queryParams:", queryParams);
+    console.log("path:", path);
+
+    switch (path) {
+      case "user":
+        setProfileSelected(queryParams.did);
+        setScreen("profile");
+        hideModals();
+        break;
+      default:
+
+    }
+  }
+
+  function hideModals() {
+    setShareProfileVis(false);
+  }
 
   /** Will retrieve all posts shared in the global context */
   async function loadPosts() {
