@@ -11,7 +11,7 @@ export default function Categories() {
 
   return(
     <>
-      <SecondHeader label="Highlights for You"  />
+      <SecondHeader label="Categories"  />
 
       <ScrollView
         contentContainerStyle={tailwind('flex flex-row flex-1 items-start px-5 py-2 w-full flex-wrap')}
@@ -21,7 +21,6 @@ export default function Categories() {
 
         {/** Loop and display categories */}
         {categories.map((category, key) => {
-          console.log("category:", category);
           return (
             <Category key={key} category={category} />
           );
@@ -32,24 +31,26 @@ export default function Categories() {
 }
 
 const Category = ({category}) => {
-  const { setCategory, setScreen } = useContext(GlobalContext);
+  const { setCategory, setScreen, setPreviousScreen } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
   function selectCat() {
     console.log("Selecting category.");
     setCategory(category);
+    setPreviousScreen("categories");
     setScreen("home");
   }
 
   return(
-    <TouchableHighlight style={[tailwind('flex flex-col border border-slate-200 rounded-md m-1.5 items-center'), {width: "29%", aspectRatio: 1}]} underlayColor="#f8fafc" onPress={() => selectCat()}>
+    <TouchableHighlight style={[tailwind('flex flex-col border border-slate-200 rounded-md mb-4 items-center'), {width: "29%", aspectRatio: 1, marginRight: "4%"}]} underlayColor="#f8fafc" onPress={() => selectCat()}>
       <View style={[tailwind("bg-slate-950 rounded-md mb-2 justify-center overflow-hidden"), { width: "100%", height: "100%", opacity: 1 }]} >
         {/** Category image */}
         {category.content.imageUrl &&
           <Image
             style={[tailwind("absolute"), { width: "100%", height: "100%" }]}
             source={{
-              uri: category.content.imageUrl
+              uri: category.content.imageUrl,
+              cache: 'force-cache'
             }}/>
         }
 

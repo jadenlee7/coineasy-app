@@ -1,47 +1,55 @@
 {
   "expo": {
-    "name": "Coineasy",
-    "slug": "coineasy",
-    "scheme": "coineasy",
+    "name": "CoinEasy",
+    "slug": "coineasy_app",
+    "scheme": "coineasyapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
-      "resizeMode": "contain",
+      "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
-      "buildNumber": "14",
-      "bundleIdentifier": "com.baptistegr.coineasy"
+      "supportsTablet": false,
+      "buildNumber": "27",
+      "bundleIdentifier": "com.coineasy.coineasysocial"
     },
     "android": {
+      "versionCode": "2",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "googleServicesFile": "./google-services.json",
+      "package": "com.coineasy.coineasy"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "4be52a0b-427f-4757-89a6-d40b2a4e505c"
-      }
-    },
     "plugins": [
-      ["expo-apple-authentication"],
+      [
+        "expo-apple-authentication"
+      ],
       [
         "expo-image-picker",
         {
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "92489131-f028-4eb8-96ef-453311e899ec"
+      }
+    }
   }
 }

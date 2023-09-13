@@ -33,7 +33,7 @@ export default function RepostModal() {
     setLoading(false);
     setSuccess(true);
     await sleep(1500);
-    setRepost(null);
+    setRepost(false);
   }
 
   /** Will open the postbox with the quoted tweet visible */
@@ -47,7 +47,7 @@ export default function RepostModal() {
   } else {
     return(
       <Modal hide={() => hideRepost()} animateModal={true} bottomDuration={200} bottomStart={-100}>
-        <View style={[tailwind('flex flex-col w-full p-4')]}>
+        <View style={[tailwind('flex flex-col w-full p-5')]}>
           {loading ?
             <>
               <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sharing post:</Text>
@@ -61,14 +61,14 @@ export default function RepostModal() {
                 <View style={[tailwind('flex w-full items-center')]}>
                 <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25, marginBottom: 8 }]}>Success!</Text>
                   <Image
-                    style={{height: 50, width: 50}}
+                  style={{height: 50, width: 50, marginBottom: 40}}
                     source={require('../../assets/check-icon.png')} />
                 </View>
               :
                 <>
                   {/** Repost CTA */}
                   <Button color="rounded-gray" onPress={() => shareRepost()} title="Repost" style={{marginBottom: 10}} />
-                  <Button color="rounded-gray" onPress={() => quote()} title="Quote" />
+                  <Button color="rounded-gray" onPress={() => quote()} title="Quote" style={{marginBottom: 40}} />
                 </>
               }
             </>

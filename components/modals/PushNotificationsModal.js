@@ -44,12 +44,12 @@ export default function PushNotificationsModal() {
 
   return(
     <Modal hide={() => setPushNotifsVis(false)}>
-      <View style={[tailwind('flex flex-col items-center justify-center p-4')]}>
+      <View style={[tailwind('flex flex-col items-center justify-center p-5 px-3')]}>
         <Text style={[tailwind(`text-primary px-8 mb-1 text-center`)]}>Push Notifications</Text>
-        <Text style={[tailwind(`text-secondary text-center`)]}>To stay in the loop with the latest news, content, videos, and more, allow CoinEasy to send you notifications.</Text>
+        <Text style={[tailwind(`text-secondary text-center text-slate-900`)]}>To stay in the loop with the latest news, content, videos, and more, allow CoinEasy to send you notifications.</Text>
         <View style={[tailwind('flex items-center mt-4 flex-col')]}>
           <Button size="md" color="orange" title="Notify me" onPress={enablePushNotifications} />
-          <Button color="sm-transparent" title="Do not notifiy me" onPress={skipNotifications} style={{marginTop: 5}} />
+          <Button color="sm-transparent" title="Do not notify me" onPress={skipNotifications} style={{marginTop: 5, marginBottom: 30}} />
         </View>
       </View>
     </Modal>

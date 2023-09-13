@@ -1,22 +1,38 @@
 import React, { useState, useContext, useEffect, useCallback } from "react";
 import { GlobalContext } from "../contexts/GlobalContext";
 import { useTailwind } from 'tailwind-rn';
-import { Text, View, TouchableOpacity, Image, TouchableHighlight, ScrollView, ActivityIndicator } from 'react-native';
+import { Text, View, TouchableOpacity, Image, TouchableHighlight, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import SecondHeader from "../components/SecondHeader";
+import { InterpunctIcon } from "../components/Icons";
 import * as Haptics from 'expo-haptics';
 import { onboard_context, edu_context } from '../utils/config.js';
+import fetch from 'cross-fetch';
+import * as WebBrowser from 'expo-web-browser';
 
 export default function Categories() {
   const { user, orbis } = useContext(GlobalContext);
   const tailwind = useTailwind();
-  const [nav, setNav] = useState("onboard");
+  const [nav, setNav] = useState("news");
   const [onboardCategories, setOnboardCategories] = useState([]);
   const [eduCategories, setEduCategories] = useState([]);
+  const [news, setNews] = useState([]);
 
   useEffect(() => {
+    loadData();
+  }, [])
+
+  async function loadData() {
+    loadNews();
     loadOnboard();
     loadEasEdu();
-  }, [])
+  }
+
+  /** Will load news from Coineasy RSS feed */
+  async function loadNews() {
+    let res = await fetch("https://rss.app/feeds/_z2HKiiCTPGaK4EIn.json");
+    let results = await res.json();
+    setNews(results.items);
+  }
 
   /** Will load onboard categories */
   async function loadOnboard() {
@@ -35,14 +51,19 @@ export default function Categories() {
       <SecondHeader label="Explore EASY World!"  />
 
       <View style={tailwind('flex flex-col flex-1')}>
-        <View style={tailwind('flex flex-row py-2 px-5 mb-1 px-12')}>
-          {/**<NavItem setNav={setNav} nav={nav} item="news" label="NEWS" />*/}
-          <NavItem setNav={setNav} nav={nav} item="onboard" label="ONBOARD" />
+        <View style={tailwind('flex flex-row mt-6 px-5 px-12')}>
+
+          <NavItem setNav={setNav} nav={nav} item="news" label="NEWS" />
+          <NavItem setNav={setNav} nav={nav} item="onboard" label="FEATURED" />
           <NavItem setNav={setNav} nav={nav} item="easy-edu" label="EASY EDU" />
+
         </View>
 
-        <ScrollView style={tailwind('flex flex-col w-full px-4')}>
-          <ActivityContent nav={nav} onboardCategories={onboardCategories} eduCategories={eduCategories} />
+        <ScrollView style={tailwind('flex flex-col w-full px-4 mt-20px')} refreshControl={
+          <RefreshControl refreshing={false} onRefresh={loadData} />
+        }>
+
+          <ActivityContent nav={nav} news={news} onboardCategories={onboardCategories} eduCategories={eduCategories} />
         </ScrollView>
       </View>
     </>
@@ -50,19 +71,22 @@ export default function Categories() {
 }
 
 /** Activity feed based on navigation selected */
-const ActivityContent = ({nav, onboardCategories, eduCategories}) => {
+const ActivityContent = ({nav, news, onboardCategories, eduCategories}) => {
   switch (nav) {
     case "news":
       return(
         <>
-          <NewsItem />
-          <NewsItem />
-          <NewsItem />
-          <NewsItem />
-          <NewsItem />
-          <NewsItem />
-          <NewsItem />
-          <NewsItem />
+        {news.length == 0 ?
+          <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
+        :
+          <>
+            {news.map((item, key) => {
+              return (
+                <NewsItem item={item} key={key} />
+              );
+            })}
+          </>
+        }
         </>
       )
     case "onboard":
@@ -73,9 +97,8 @@ const ActivityContent = ({nav, onboardCategories, eduCategories}) => {
           :
             <>
               {onboardCategories.map((item, key) => {
-                console.log("item:", item);
                 return (
-                  <OnboardItem item={item} key={key} />
+                  <OnboardItem item={item} key={item.stream_id} />
                 );
               })}
             </>
@@ -90,9 +113,8 @@ const ActivityContent = ({nav, onboardCategories, eduCategories}) => {
         :
           <>
             {eduCategories.map((item, key) => {
-              console.log("item:", item);
               return (
-                <OnboardItem item={item} key={key} />
+                <OnboardItem item={item} key={item.stream_id} />
               );
             })}
           </>
@@ -120,25 +142,38 @@ const NavItem = ({ setNav, nav, label, item }) => {
 }
 
 /** Rendering a news item */
-const NewsItem = () => {
+export const NewsItem = ({item}) => {
   const tailwind = useTailwind();
 
-  function openNews() {
-
+  async function openNews() {
+    let result = await WebBrowser.openBrowserAsync(item.url);
   }
 
   return(
-    <TouchableHighlight style={tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-3')} onPress={() => openNews()} underlayColor="#f8fafc">
+    <TouchableHighlight style={tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-10px')} onPress={() => openNews()} underlayColor="#f8fafc">
       <>
-        <Image
-          resizeMode="cover"
-          style={[tailwind('rounded-md'), { aspectRatio: 1, height: 100 }]}
-          source={{
-            uri: "https://images.cointelegraph.com/images/1434_aHR0cHM6Ly9zMy5jb2ludGVsZWdyYXBoLmNvbS91cGxvYWRzLzIwMjMtMDcvMjc4MTAzNTYtMDBjMi00OGE1LWJkMjYtMThmNDMxMTQwZWI0LmpwZw==.jpg"
-          }}  />
-        <View style={tailwind('flex flex-col ml-2 flex-1')}>
-          <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15 }]}>First Mover Asia: Why Is Tron Founder Justin Sun Keeping Some of His Coins in Valkyrie Digital Assets</Text>
-          <Text style={[tailwind(`text-slate-400 mt-3`), { fontSize: 11, fontFamily: "GmarketMedium", lineHeight: 15 }]}>By Coinbase - 26mins ago</Text>
+        {item.image &&
+          <Image
+            resizeMode="cover"
+            style={[tailwind('rounded-md'), { aspectRatio: 1, height: 100, marginRight: 3 }]}
+            source={{
+              uri: item.image
+            }}  />
+        }
+
+        <View style={tailwind('flex flex-col ml-2 flex-1 justify-center')}>
+          <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15 }]}>{item.title}</Text>
+          <View style={tailwind('flex flex-row items-center mt-2')}>
+            {item.author &&
+              <>
+                <Text style={[tailwind(`flex flex-row text-secondary`), { fontSize: 11, lineHeight: 15 }]}>{item.author}</Text>
+                <View style={tailwind('flex ml-2 mr-2')}>
+                  <InterpunctIcon />
+                </View>
+              </>
+            }
+            <Text style={[tailwind(`items-center flex flex-row text-secondary`), { fontSize: 11, lineHeight: 15 }]}>{item.hostname}</Text>
+          </View>
         </View>
       </>
     </TouchableHighlight>
@@ -147,19 +182,17 @@ const NewsItem = () => {
 
 /** Rendering onboard and easy edu items */
 const OnboardItem = ({item}) => {
-  const { setCategory, setScreen } = useContext(GlobalContext);
+  const { setCategory, setScreen, setPreviousScreen } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
-  console.log("item:", item);
-
   function selectCat() {
-    console.log("Selecting category.");
     setCategory(item);
+    setPreviousScreen("news");
     setScreen("home");
   }
 
   return(
-    <TouchableHighlight style={tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-2')} onPress={() => selectCat()} underlayColor="#f8fafc">
+    <TouchableHighlight style={tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-10px')} onPress={() => selectCat()} underlayColor="#f8fafc">
       <>
         {/** Display image if any */}
         {item.content.imageUrl &&

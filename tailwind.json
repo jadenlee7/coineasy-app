@@ -12,6 +12,14 @@
 			"marginLeft": 4
 		}
 	},
+	"m-2": {
+		"style": {
+			"marginTop": 8,
+			"marginRight": 8,
+			"marginBottom": 8,
+			"marginLeft": 8
+		}
+	},
 	"m-1.5": {
 		"style": {
 			"marginTop": 6,
@@ -25,9 +33,24 @@
 			"marginBottom": 4
 		}
 	},
+	"mb-1.5": {
+		"style": {
+			"marginBottom": 6
+		}
+	},
 	"mb-2": {
 		"style": {
 			"marginBottom": 8
+		}
+	},
+	"mb-4": {
+		"style": {
+			"marginBottom": 16
+		}
+	},
+	"mb-10px": {
+		"style": {
+			"marginBottom": 10
 		}
 	},
 	"mb-3": {
@@ -38,6 +61,11 @@
 	"mb-4": {
 		"style": {
 			"marginBottom": 16
+		}
+	},
+	"mb-5": {
+		"style": {
+			"marginBottom": 20
 		}
 	},
 	"mb-6": {
@@ -60,6 +88,11 @@
 			"marginLeft": 12
 		}
 	},
+	"-mr-1": {
+		"style": {
+			"marginRight": -4
+		}
+	},
 	"mr-2": {
 		"style": {
 			"marginRight": 8
@@ -73,6 +106,11 @@
 	"mr-4": {
 		"style": {
 			"marginRight": 16
+		}
+	},
+	"mr-1.5": {
+		"style": {
+			"marginRight": 6
 		}
 	},
 	"mr-8": {
@@ -118,6 +156,16 @@
 	"mt-7": {
 		"style": {
 			"marginTop": 28
+		}
+	},
+	"mt-20px": {
+		"style": {
+			"marginTop": 20
+		}
+	},
+	"mt-30px": {
+		"style": {
+			"marginTop": 30
 		}
 	},
 	"mt-8": {
@@ -576,6 +624,12 @@
 			"paddingBottom": 8
 		}
 	},
+	"py-2.5": {
+		"style": {
+			"paddingTop": 10,
+			"paddingBottom": 10
+		}
+	},
 	"py-3": {
 		"style": {
 			"paddingTop": 12,
@@ -642,6 +696,11 @@
 	"pt-4": {
 		"style": {
 			"paddingTop": 16
+		}
+	},
+	"pt-5": {
+		"style": {
+			"paddingTop": 20
 		}
 	},
 	"pt-6": {

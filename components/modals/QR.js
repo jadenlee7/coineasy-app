@@ -7,17 +7,20 @@ import SvgQRCode from 'react-native-qrcode-svg';
 import * as Linking from 'expo-linking';
 import * as Clipboard from 'expo-clipboard';
 import { CloseIcon, ShareIcon, CopyIcon } from "../Icons";
+import useStatusBarHeight from "../../hooks/useStatusBarHeight";
 
 export default function QR({hide}) {
   const { user, setUser, orbis, callbackConnect } = useContext(GlobalContext);
   const tailwind = useTailwind();
   const [connectModalVis, setConnectModalVis] = useState(false);
   const { width } = Dimensions.get('window');
+  const statusBarHeight = useStatusBarHeight();
 
   /** Will build follow link */
   let link = Linking.createURL('user', {
     queryParams: { did: user.did },
   });
+  console.log("link:", link);
 
   /** Will open the native sharing modal */
   const shareProfile = async () => {
@@ -45,7 +48,6 @@ export default function QR({hide}) {
     alert("Profile link copied!");
   }
 
-  console.log("link:", link);
   let logo = require('../../assets/qr-code-logo.png');
 
   return(
@@ -54,7 +56,7 @@ export default function QR({hide}) {
         resizeMode="cover"
         style={[tailwind('w-full h-full')]}
         source={require('../../assets/qr_code_bg.png')} />
-      <SafeAreaView style={[tailwind('absolute w-full flex flex-col')]}>
+      <View style={[tailwind('absolute w-full flex flex-col'), { paddingTop: statusBarHeight }]}>
         <View style={[tailwind('flex items-start')]}>
           <TouchableHighlight onPress={hide} style={{left: 20, top: 10}} underlayColor="transparent">
             <CloseIcon />
@@ -62,21 +64,21 @@ export default function QR({hide}) {
         </View>
 
         <View style={[tailwind('items-center justify-center'), {marginTop: 100}]}>
-          <View style={[tailwind('bg-white rounded-lg shadow-lg overflow-hidden items-center justify-center'), {width: width / 1.5, height: width / 1.5}]}>
+          <View style={[tailwind('bg-white rounded-lg shadow-lg overflow-hidden items-center justify-center'), {width: width / 1.4, height: width / 1.4}]}>
             <View style={tailwind("rounded-lg overflow-hidden")}>
               <SvgQRCode
                 value={link}
-                logoSize={75}
-                size={width / 1.5 - 70}
+                logoSize={65}
+                size={width / 1.4 - 50}
                 color="#FF6B17" logo={logo} />
             </View>
           </View>
-          <View style={[tailwind('flex flex-row'), {width: width / 1.5, marginTop: 15}]}>
+          <View style={[tailwind('flex flex-row'), {width: width / 1.4, marginTop: 15}]}>
             <WhiteAction style={{marginRight: 15}} label="Share" icon={<ShareIcon />} onPress={() => shareProfile()} />
             <WhiteAction label="Copy link" icon={<CopyIcon />} onPress={() => copyLink()} />
           </View>
         </View>
-      </SafeAreaView>
+      </View>
 
     </View>
   )

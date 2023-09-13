@@ -13,13 +13,13 @@ export const sleep = (milliseconds) => {
 }
 
 /** Returns a short address */
-export function shortAddress(_address) {
+export function shortAddress(_address, num = 5) {
   if(!_address) {
     return "-";
   }
 
-  const _firstChars = _address.substring(0, 5);
-  const _lastChars = _address.substr(_address.length - 5);
+  const _firstChars = _address.substring(0, num);
+  const _lastChars = _address.substr(_address.length - num);
   return _firstChars.concat('-', _lastChars);
 }
 
@@ -144,4 +144,53 @@ export function isValidEmail(email) {
 
   // Check if the email matches the regex pattern
   return emailRegex.test(email);
+}
+
+/** Return domain name for a URL */
+export function getDomainName(url) {
+  // Remove the protocol (http:// or https://) if present
+  let domain = url.replace(/(^\w+:|^)\/\//, '');
+
+  // Remove anything after the first forward slash "/"
+  domain = domain.split('/')[0];
+
+  // Remove port number if present
+  domain = domain.split(':')[0];
+
+  // Remove "www" subdomain if present
+  domain = domain.replace('www.', '');
+
+  return domain;
+}
+
+/** Return shortened description */
+export function getShorterString(text, length = 80) {
+  if(text.length < length) {
+    return text
+  } else {
+    return text.substring(0, length) + "...";
+  }
+}
+
+/** List of admins */
+let owners = [
+  "did:pkh:eip155:1:0x015777E15a7c27Bb888DF6CAB3755833Db0a722d",
+  "did:pkh:eip155:1:0x0bBb1eB4BBE7125188bC49aF55412172cb22C9aF"
+];
+
+let admins = [
+  "did:pkh:eip155:1:0x015777E15a7c27Bb888DF6CAB3755833Db0a722d",
+  "did:pkh:eip155:1:0x5EAa9faE7064E5E06b98DD51c2371c8b22bB2693"
+];
+
+/** Will return true if user is part of the owners list */
+export function isOwner(did) {
+  let _isOwner = owners.includes(did);
+  return _isOwner;
+}
+
+/** Will return true if user is part of the admin list */
+export function isAdmin(did) {
+  let _admin = admins.includes(did);
+  return _admin;
 }

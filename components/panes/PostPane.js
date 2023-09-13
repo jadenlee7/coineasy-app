@@ -46,7 +46,7 @@ export default function PostPane() {
         setRepliesLoading(false);
       }
     }
-  }, []);
+  }, [postDetailsVis]);
 
   /** Open postbox and save reply to */
   function openReplyBox() {

@@ -26,16 +26,23 @@ export default function Navigation() {
 /** Navigation component to select screen */
 const NavItem = ({icon, item}) => {
   const tailwind = useTailwind();
-  const { user, setScreen, setProfileSelected, setPostDetailsVis } = useContext(GlobalContext);
+  const { user, screen, setScreen, setPreviousScreen, setProfileSelected, setPostDetailsVis, scrollToTop, setCategory, translateY } = useContext(GlobalContext);
 
   function selectScreen(item) {
-    setScreen(item)
+    translateY.value = 0;
+    setPreviousScreen(screen);
+    setScreen(item);
     setPostDetailsVis(null);
+
+    if(item == "home") {
+      scrollToTop();
+      setCategory(null);
+    }
     Haptics.selectionAsync();
   }
 
   return(
-    <TouchableHighlight underlayColor="#f8fafc" style={[tailwind('flex flex-1 items-center py-2 rounded-md justify-center')]} onPress={() => selectScreen(item)}>
+    <TouchableHighlight underlayColor="transparent" style={[tailwind('flex flex-1 items-center py-2 rounded-md justify-center')]} onPress={() => selectScreen(item)}>
       {icon}
     </TouchableHighlight>
   )

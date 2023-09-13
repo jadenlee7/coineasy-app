@@ -3,6 +3,7 @@ import { useTailwind } from 'tailwind-rn';
 
 import useDidToAddress from "../hooks/useDidToAddress";
 import useGetUsername from "../hooks/useGetUsername";
+import { isAdmin } from "../utils";
 
 export default function User({height = 40, details}) {
   const tailwind = useTailwind();
@@ -19,13 +20,32 @@ export default function User({height = 40, details}) {
 /** Will render the user's pfp or empty state */
 export function UserPfp({height = 40, details, style}) {
   const tailwind = useTailwind();
+
+  function getProfilePicture() {
+    if(details.profile.pfp.includes("ipfs://")) {
+      return details.profile.pfp.replace("ipfs://", "https://ipfs.io/ipfs")
+    } else {
+      return details.profile.pfp
+    }
+  }
+
   if(details && details.profile && details.profile.pfp) {
     return(
-      <Image
-        style={[tailwind('rounded-full'), { height: height, width: height }, style]}
-        source={{
-          uri: details.profile.pfp,
-        }} />
+      <View>
+        <Image
+          style={[tailwind('rounded-full bg-slate-100'), { height: height, width: height }, style]}
+          loadingIndicatorSource={require("../assets/loader_001.gif")}
+          source={{
+            uri: getProfilePicture(),
+            cache: 'force-cache'
+          }} />
+        {/** Will display admin badge if available */}
+        {isAdmin(details.did) &&
+          <Image
+            style={{width: height / 2, height: height / 2, position: "absolute", right: -4, top: 0}}
+            source={require('../assets/AdminBadge.png')} />
+        }
+      </View>
     )
   } else {
     return(

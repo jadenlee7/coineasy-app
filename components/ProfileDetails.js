@@ -9,26 +9,84 @@ import Button from "./Button";
 import Modal from "./Modal";
 import { UserPfp, Username } from "./User";
 import { context } from '../utils/config.js';
-import { CheckIcon } from "./Icons";
+import { CheckIcon, CopyIconBadge } from "./Icons";
+import Animated, {
+  withTiming,
+  useAnimatedStyle,
+  useSharedValue,
+  useAnimatedScrollHandler
+} from 'react-native-reanimated';
+import useDidToAddress from "../hooks/useDidToAddress";
+import { shortAddress } from "../utils";
+import * as Clipboard from 'expo-clipboard';
 
 export default function ProfileDetails({profile, pfpMarginTop = -10}) {
-  const { user, setUser, orbis, updateProfileVis, setUpdateProfileVis, setShareProfileVis } = useContext(GlobalContext);
+  const { user, setUser, orbis, updateProfileVis, setUpdateProfileVis, setShareProfileVis, translateY, screen, profileSelected } = useContext(GlobalContext);
   const tailwind = useTailwind();
   const [nav, setNav] = useState("feed");
   const [isFollowing, setIsFollowing] = useState(false);
+  const [countPosts, setCountPosts] = useState("-");
   const [followLoading, setFollowLoading] = useState(false);
+  const lastContentOffset = useSharedValue(0);
+  const isScrolling = useSharedValue(false);
+  const { address } = useDidToAddress(profile?.did);
+
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      if (
+        lastContentOffset.value > event.contentOffset.y &&
+        isScrolling.value
+      ) {
+        translateY.value = 0;
+      } else if (
+        lastContentOffset.value < event.contentOffset.y &&
+        isScrolling.value
+      ) {
+        if(profileSelected && screen != "profile") {
+          translateY.value = 0;
+        } else {
+          translateY.value = -140;
+        }
+
+      }
+      lastContentOffset.value = event.contentOffset.y;
+    },
+    onBeginDrag: (e) => {
+      isScrolling.value = true;
+    },
+    onEndDrag: (e) => {
+      isScrolling.value = false;
+    },
+  });
 
   useEffect(() => {
-    console.log("profile:", profile);
     loadiIsFollowing();
+    getCountPosts();
     setFollowLoading(true);
+
+    /** Will check if the connected user is following this user */
     async function loadiIsFollowing() {
       const res = await orbis.getIsFollowing(user.did, profile.did);
       console.log("res isFollowing():", res);
       setIsFollowing(res.data);
       setFollowLoading(false);
     }
-  }, [profile])
+
+    /** Will retrieve the count of posts shared by this profile in the context */
+    async function getCountPosts() {
+      const { count } = await orbis.api.from('orbis_posts').select('*', { count: 'exact', head: true }).eq('context', context).eq('creator', profile.did);
+      if(count) {
+        setCountPosts(count);
+      }
+    }
+  }, [profile]);
+
+  /** Will copy link in Clipboard */
+  async function copy(val) {
+    await Clipboard.setStringAsync(val);
+    alert("Address copied!");
+  }
 
   if(!profile) {
     return null;
@@ -45,37 +103,40 @@ export default function ProfileDetails({profile, pfpMarginTop = -10}) {
   }
 
   return(
-    <>
+    <Animated.ScrollView onScroll={scrollHandler} scrollEventThrottle={16}>
       {/** Display profile details */}
-      <View style={[tailwind('flex flex-col items-center'), {marginTop: pfpMarginTop}]}>
-        <View style={tailwind("shadow-sm rounded-full")}>
+      <View style={[tailwind('flex flex-col items-center')]}>
+        <View style={tailwind("rounded-full")}>
           <UserPfp details={profile} height={60} />
         </View>
-        <View style={tailwind('mt-2')}>
+        <View style={tailwind('mt-2 flex flex-row items-center')}>
           <Username details={profile} fontSize={15} />
+          <Button color="badge-gray" icon={<CopyIconBadge style={{marginLeft: 4}} />} title={profile?.metadata?.ensName ? profile.metadata.ensName : shortAddress(address, 4)} style={{marginLeft: 8}} onPress={() => copy(address)} />
         </View>
         {profile?.profile?.description &&
-          <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{profile.profile.description}</Text>
+          <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>{profile.profile.description}</Text>
         }
       </View>
 
       {/** KPI counts */}
-      <View style={[tailwind('flex flex-row px-4'), {marginTop: -10}]}>
-        <ProfileItem count="50" title="Posts" />
-        <ProfileItem count={profile.count_followers} title="Followers" />
-        <ProfileItem count={profile.count_following} title="Following" />
+      <View style={[tailwind('flex flex-row px-4'), {paddingTop: 10}]}>
+        <ProfileItem count={countPosts} title="Posts" />
+        <ProfileItem count={profile ? profile.count_followers : "-"} title="Followers" />
+        <ProfileItem count={profile ? profile.count_following : "-"} title="Following" />
         {/*<ProfileItem count="156" title="Oranges" />*/}
       </View>
 
+
       {/** Edit CTA (only if user is connected) */}
       {user.did == profile.did ?
-        <View style={tailwind('flex flex-row px-4 mt-3 items-center w-full justify-center')}>
-            <Button title="Edit Profile" color="orange" size="sm" onPress={() => setUpdateProfileVis(true)} />
-            <View style={{width: 10}} />
-            <Button title="Share Profile" color="white" size="sm" onPress={() => setShareProfileVis(true)} />
+        <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
+          {/**<View style={{backgroundColor: "red", width: 200, height: 20, position: "absolute", top: 0, left:0}}></View>*/}
+          <Button title="Edit Profile" color="orange" size="sm" onPress={() => setUpdateProfileVis(true)} />
+          <View style={{width: 10}} />
+          <Button title="Share Profile" color="white" size="sm" onPress={() => setShareProfileVis(true)} />
         </View>
         :
-        <View style={tailwind('flex flex-row px-4 mt-3 items-center w-full justify-center')}>
+        <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
           {isFollowing ?
             <Button title="Following" icon={<CheckIcon color="#fff" style={{marginRight: 5}} />} color="green" size="sm" onPress={() => follow(false)} />
           :
@@ -86,16 +147,16 @@ export default function ProfileDetails({profile, pfpMarginTop = -10}) {
 
 
       {/** Profile navigation */}
-      <View style={tailwind('flex flex-row px-4 mt-4 border-b border-slate-100 mt-6')}>
+      <View style={tailwind('flex flex-row px-4 border-b border-slate-100 mt-30px')}>
         <NavItem slug="feed" title="Feed" setNav={setNav} nav={nav} />
         <NavItem slug="replies" selected={true} title="Replies" nav={nav} setNav={setNav} />
         <NavItem slug="reposts" title="Reposts" nav={nav} setNav={setNav} />
       </View>
 
-      <View style={tailwind('flex flex-col flex-1')}>
+      <View style={tailwind('flex flex-col')}>
         <Posts type={nav} profile={profile} />
       </View>
-    </>
+    </Animated.ScrollView>
   )
 }
 
@@ -108,7 +169,7 @@ const Posts = ({type, profile}) => {
 
   useEffect(() => {
     loadPosts();
-  }, [type])
+  }, [type, profile])
 
   /** Will retrieve all posts shared in the global context */
   async function loadPosts() {
@@ -164,21 +225,41 @@ const Posts = ({type, profile}) => {
     setRefreshing(false);
   }
 
-  return(
+  if(refreshing) {
+    return(
+      <ActivityIndicator style={{marginTop: 25}} size="small" color="#020617" />
+    )
+  }
+
+  if(posts.length == 0) {
+    return(
+      <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md')} >
+        <Text style={tailwind('text-secondary items-center ml-1')}>There isn't any post shared here.</Text>
+      </View>
+    )
+  }
+
+  return posts.map((post, key) => {
+    return (
+      <Post key={key} post={post} />
+    );
+  });
+
+  /*return(
     <Feed posts={posts} refreshing={refreshing} onRefresh={loadPosts} />
-  )
+  )*/
 }
 
 const NavItem = ({title, selected, nav, setNav, slug}) => {
   const tailwind = useTailwind();
 
   return(
-    <TouchableHighlight style={tailwind('flex flex-1 items-center rounded-md pt-2')} onPress={() => setNav(slug)} underlayColor="#f8fafc">
+    <TouchableOpacity style={tailwind('flex flex-1 items-center rounded-md')} onPress={() => setNav(slug)} activeOpacity={0.65}>
         <View style={tailwind('flex flex-col')}>
           <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15 }]}>{title}</Text>
           <View style={[tailwind(`rounded-full h-1 mt-2`), { backgroundColor: nav == slug ? "#FF6B17" : "transparent" }]}></View>
         </View>
-    </TouchableHighlight>
+    </TouchableOpacity>
   )
 }
 
@@ -187,7 +268,7 @@ const ProfileItem = ({title, count}) => {
 
   return(
     <View style={tailwind('flex flex-col flex-1 items-center')}>
-      <Text style={[tailwind(`text-slate-900 mt-5`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
+      <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
       <Text style={[tailwind(`text-slate-400 mt-2 text-center`), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{title}</Text>
     </View>
   )

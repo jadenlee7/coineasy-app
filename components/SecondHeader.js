@@ -4,9 +4,10 @@ import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import { GlobalContext } from "../contexts/GlobalContext";
 import { BackIcon, NotificationsIcon, SettingsIcon } from "./Icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SecondHeader({label, showBack = true, cta = "notifications", back}) {
-  const { setUser, orbis, postDetailsVis, setPostDetailsVis, setSettingsVis } = useContext(GlobalContext);
+  const { setUser, orbis, postDetailsVis, setPostDetailsVis, setSettingsVis, setNotificationsVis } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
   function hidePostPane() {
@@ -16,11 +17,15 @@ export default function SecondHeader({label, showBack = true, cta = "notificatio
 
   async function logout() {
     let res = await orbis.logout();
+    await AsyncStorage.removeItem("user-connected");
     setUser(null);
   }
 
   return(
-    <View style={[tailwind('flex flex-row items-center p-3 pt-2 pb-0')]}>
+    <>
+    {/**<View style={{backgroundColor: "red", width: 20, height: 150, position: "absolute", top: 90, left:0}}></View>*/}
+    <View style={[tailwind('flex flex-row items-center px-3 pt-3 pb-0'), {minHeight: 50}]}>
+
       {/** Back button */}
       <View style={[tailwind('flex flex-1 items-start pt-1')]}>
         <HeaderLabel label={label} showBack={showBack} back={back} />
@@ -28,18 +33,19 @@ export default function SecondHeader({label, showBack = true, cta = "notificatio
 
       {/** Notifications button */}
       {cta == "notifications" &&
-        <TouchableHighlight style={[tailwind('flex flex-row items-center rounded-md py-2 px-2')]} underlayColor="#f1f5f9">
+        <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2')]} activeOpacity={0.7} onPress={() => setNotificationsVis(true)}>
           <NotificationsIcon />
-        </TouchableHighlight>
+        </TouchableOpacity>
       }
 
       {/** Settings button */}
       {cta == "settings" &&
-        <TouchableHighlight style={[tailwind('flex flex-row items-center rounded-md py-2 px-2')]} underlayColor="#f1f5f9" onPress={() => setSettingsVis(true)}>
+        <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2')]} activeOpacity={0.7} onPress={() => setSettingsVis(true)}>
           <SettingsIcon />
-        </TouchableHighlight>
+        </TouchableOpacity>
       }
     </View>
+    </>
   )
 }
 
@@ -60,34 +66,34 @@ const HeaderLabel = ({label, showBack, back}) => {
 
   if(back) {
     return(
-      <TouchableHighlight style={[tailwind('flex flex-row items-center rounded-md py-1 px-2')]} underlayColor="#f1f5f9" onPress={() => back()}>
+      <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-3')]} activeOpacity={0.7} onPress={() => back()}>
         <>
           <BackIcon />
           <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
         </>
-      </TouchableHighlight>
+      </TouchableOpacity>
     )
   } else if(postDetailsVis && showBack) {
     return(
-      <TouchableHighlight style={[tailwind('flex flex-row items-center rounded-md py-1 px-2')]} underlayColor="#f1f5f9" onPress={() => hidePostPane()}>
+      <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-3')]} activeOpacity={0.7} onPress={() => hidePostPane()}>
         <>
           <BackIcon />
           <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
         </>
-      </TouchableHighlight>
+      </TouchableOpacity>
     )
   } else if(profileSelected && showBack) {
     return(
-      <TouchableHighlight style={[tailwind('flex flex-row items-center rounded-md py-1 px-2')]} underlayColor="#f1f5f9" onPress={() => hideProfilePane()}>
+      <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-3')]} activeOpacity={0.7} onPress={() => hideProfilePane()}>
         <>
           <BackIcon />
           <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
         </>
-      </TouchableHighlight>
+      </TouchableOpacity>
     )
   } else {
     return(
-      <Text style={[tailwind('text-slate-900'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20 }]}>{label}</Text>
+      <Text style={[tailwind('text-slate-900 px-2'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20 }]}>{label}</Text>
     )
   }
 

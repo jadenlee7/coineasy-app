@@ -17,8 +17,8 @@ export default function Pane({children}) {
 
 
   return(
-    <KeyboardAvoidingView style={[tailwind('absolute flex w-full bg-white'), { elevation: 30, top: 40 + statusBarHeight, height: height - (40 + statusBarHeight) }]} behavior={Platform.OS === 'ios' ? 'height' : 'height'}>
+    <Animated.View style={[tailwind('absolute flex w-full bg-white'), { elevation: 30, top: 40 + statusBarHeight, height: height - (40 + statusBarHeight) }]} behavior={Platform.OS === 'ios' ? 'height' : 'height'}>
       {children}
-    </KeyboardAvoidingView>
+    </Animated.View>
   )
 }

@@ -92,7 +92,7 @@ export default function UpdateProfileModal({callback}) {
 
   return(
     <Modal hide={() => setUpdateProfileVis(false)} animateModal={false}>
-      <View style={tailwind('flex flex-row px-4 mt-3 items-center w-full justify-center')}>
+      <View style={tailwind('flex flex-row px-4 items-center w-full justify-center p-5')}>
           <Button title="Cancel" color="white" size="sm" onPress={() => setUpdateProfileVis(false)} />
           <View style={tailwind('flex flex-1')} />
           <Button title="Save" color="orange" size="sm" loading={saving} onPress={saveProfile} />

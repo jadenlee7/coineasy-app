@@ -15,12 +15,17 @@ import * as Haptics from 'expo-haptics';
 import Profile from "./Profile";
 
 export default function Home() {
-  const { user, orbis, repostVis, setRepostVis, postDetailsVis, setPostDetailsVis, posts, setPosts, refreshing, refreshingBottom, onRefresh, loadPosts, profileSelected, showPostbox, hidePostbox, loadMorePosts, category, setCategory } = useContext(GlobalContext);
+  const { user, orbis, setScreen, repostVis, setRepostVis, postDetailsVis, setPostDetailsVis, posts, setPosts, refreshing, refreshingBottom, onRefresh, loadPosts, profileSelected, showPostbox, hidePostbox, loadMorePosts, category, setCategory, previousScreen } = useContext(GlobalContext);
   const tailwind = useTailwind();
+
+  function resetCategory() {
+    setCategory(null);
+    setScreen(previousScreen);
+  }
 
   return(
     <>
-      <SecondHeader label={"GM! CoinEasy Frens!"} back={category ? () => setCategory(null) : null} />
+      <SecondHeader label={"GM! CoinEasy Frens!"} back={category ? () => resetCategory() : null} />
 
       <View style={tailwind('flex flex-col flex-1')}>
         {/**<Postbox callback={() => loadPosts()} />*/}
