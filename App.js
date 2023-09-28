@@ -196,7 +196,7 @@ export default function App() {
              feedRef.current.scrollToItem({ animated: true, item: data.post_id });
            }
            break;
-           
+
          /** Open post pane for mentions */
          case "mention":
            console.log("Open post id:" + data.post_id);
