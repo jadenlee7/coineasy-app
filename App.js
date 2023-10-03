@@ -3,7 +3,7 @@ import './utils/polyfill';
 
 import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Keyboard, Platform } from 'react-native';
+import { StyleSheet, Text, View, Keyboard, Platform, BackHandler } from 'react-native';
 import { TailwindProvider, useTailwind } from 'tailwind-rn';
 import utilities from './tailwind.json';
 import { context, onboard_context, edu_context } from './utils/config.js';
@@ -423,6 +423,32 @@ export default function App() {
   if (!isReady) {
     return null;
   }
+
+  BackHandler.addEventListener('hardwareBackPress', function () {
+    if(profileSelected){
+        setProfileSelected(false)
+        return true
+    }else if(category){
+        setCategory(null)
+        setScreen(previousScreen)
+        return true
+    }else if (updateProfileVis){
+        console.log('la');
+        setUpdateProfileVis(false)
+        return true
+    }else if(shareProfileVis){
+        setShareProfileVis(false)
+        return true
+    }else if(settingsVis){
+        setSettingsVis(false)
+        return true
+    }else if(notificationsVis){
+        setNotificationsVis(false)
+        return true
+    }else{
+        BackHandler.exitApp()
+    }
+  })
 
   return (
     <>
