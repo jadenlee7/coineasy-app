@@ -4,7 +4,7 @@ import { GlobalContext } from "../contexts/GlobalContext";
 import User, { UserPfp, Username } from "./User";
 import Button from "./Button";
 import Post from "./Post";
-import { Text, View, TouchableOpacity, TouchableHighlight, TextInput, ActivityIndicator, Platform, Image, ScrollView } from 'react-native';
+import { Text, View, TouchableOpacity, TouchableHighlight, TextInput, ActivityIndicator, Platform, Image, ScrollView, BackHandler } from 'react-native';
 import { sleep, getTimestamp } from "../utils";
 import * as Haptics from 'expo-haptics';
 import { context } from '../utils/config.js';
@@ -299,6 +299,16 @@ export default function Postbox({isReply = false}) {
     setMentionsBoxVis(false);
     textInputRef?.current?.focus();
   }
+
+  BackHandler.addEventListener('hardwareBackPress', function () {
+    if(categoriesVis){
+        setCategoriesVis(false)
+        return true
+    }else{
+        hidePostbox()
+        return true
+    }
+  })
 
   return(
 		<View style={tailwind('items-center w-full')} keyboardShouldPersistTaps="always">
