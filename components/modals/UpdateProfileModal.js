@@ -8,6 +8,7 @@ import { GlobalContext } from "../../contexts/GlobalContext";
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { PlusIcon } from "../Icons";
+import mime from 'mime'
 
 export default function UpdateProfileModal({callback}) {
   const { user, setUser, orbis, setUpdateProfileVis } = useContext(GlobalContext);
@@ -61,10 +62,12 @@ export default function UpdateProfileModal({callback}) {
         setPfpLoading(true);
         setPfp(imagePath);
 
+        const imageType = mime.getType(imagePath)
+
         /** Create file object */
         let file = {
           name: "test",
-          type: "image",
+          type: imageType,
           uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
         }
 
