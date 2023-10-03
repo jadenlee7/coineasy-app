@@ -367,7 +367,7 @@ const Media = ({media}) => {
               } />
         </TouchableOpacity>
         {modalVis &&
-          <Modal visible={true} transparent={true} style={{backgroundColor: "#000"}}>
+          <Modal visible={true} transparent={true} style={{backgroundColor: "#000"}} statusBarTranslucent>
             <View style={[tailwind("h-full w-full"), {backgroundColor: "#000", paddingTop: statusBarHeight + 10}]}>
               <View style={[tailwind('flex justify-end w-full'), {height: 40}]}>
                 <TouchableOpacity onPress={() => setModalVis(!modalVis)} style={{left: 20}} activeOpacity={0.6}>
