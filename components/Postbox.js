@@ -11,6 +11,7 @@ import { context } from '../utils/config.js';
 import { checkContextAccess, isOwner } from "../utils";
 import * as ImagePicker from 'expo-image-picker';
 import { BackIcon, ImagePickerIcon, CaretDownIcon, CloseIcon, LockIcon, UnlockIcon } from "./Icons";
+import mime from 'mime'
 
 /** Init mentions object */
 let mentions = [];
@@ -185,10 +186,12 @@ export default function Postbox({isReply = false}) {
         let imagePath = result.assets[0].uri;
         setImageLoading(true);
 
+        const imageType = mime.getType(imagePath)
+
         /** Create file object */
         let file = {
           name: "test",
-          type: "image",
+          type: imageType,
           uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
         }
 
