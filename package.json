@@ -39,6 +39,7 @@
     "expo-web-browser": "~12.3.2",
     "install": "^0.13.0",
     "js-sha256": "^0.9.0",
+    "mime": "^3.0.0",
     "moment": "^2.29.4",
     "multiformats": "=9.9.0",
     "npx": "^10.2.2",
