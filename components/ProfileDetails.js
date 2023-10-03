@@ -103,7 +103,7 @@ export default function ProfileDetails({profile, pfpMarginTop = -10}) {
   }
 
   return(
-    <View>
+    <View style={{flex: 1}}>
       <Animated.ScrollView onScroll={scrollHandler} scrollEventThrottle={16} style={{backgroundColor: 'white'}}>
         {/** Display profile details */}
         <View style={[tailwind('flex flex-col items-center')]}>
