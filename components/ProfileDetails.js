@@ -103,60 +103,62 @@ export default function ProfileDetails({profile, pfpMarginTop = -10}) {
   }
 
   return(
-    <Animated.ScrollView onScroll={scrollHandler} scrollEventThrottle={16}>
-      {/** Display profile details */}
-      <View style={[tailwind('flex flex-col items-center')]}>
-        <View style={tailwind("rounded-full")}>
-          <UserPfp details={profile} height={60} />
-        </View>
-        <View style={tailwind('mt-2 flex flex-row items-center')}>
-          <Username details={profile} fontSize={15} />
-          <Button color="badge-gray" icon={<CopyIconBadge style={{marginLeft: 4}} />} title={profile?.metadata?.ensName ? profile.metadata.ensName : shortAddress(address, 4)} style={{marginLeft: 8}} onPress={() => copy(address)} />
-        </View>
-        {profile?.profile?.description &&
-          <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>{profile.profile.description}</Text>
-        }
-      </View>
-
-      {/** KPI counts */}
-      <View style={[tailwind('flex flex-row px-4'), {paddingTop: 10}]}>
-        <ProfileItem count={countPosts} title="Posts" />
-        <ProfileItem count={profile ? profile.count_followers : "-"} title="Followers" />
-        <ProfileItem count={profile ? profile.count_following : "-"} title="Following" />
-        {/*<ProfileItem count="156" title="Oranges" />*/}
-      </View>
-
-
-      {/** Edit CTA (only if user is connected) */}
-      {user.did == profile.did ?
-        <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
-          {/**<View style={{backgroundColor: "red", width: 200, height: 20, position: "absolute", top: 0, left:0}}></View>*/}
-          <Button title="Edit Profile" color="orange" size="sm" onPress={() => setUpdateProfileVis(true)} />
-          <View style={{width: 10}} />
-          <Button title="Share Profile" color="white" size="sm" onPress={() => setShareProfileVis(true)} />
-        </View>
-        :
-        <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
-          {isFollowing ?
-            <Button title="Following" icon={<CheckIcon color="#fff" style={{marginRight: 5}} />} color="green" size="sm" onPress={() => follow(false)} />
-          :
-            <Button loading={followLoading} title="Follow" color="orange" size="sm" onPress={() => follow(true)} />
+    <View>
+      <Animated.ScrollView onScroll={scrollHandler} scrollEventThrottle={16} style={{backgroundColor: 'white'}}>
+        {/** Display profile details */}
+        <View style={[tailwind('flex flex-col items-center')]}>
+          <View style={tailwind("rounded-full")}>
+            <UserPfp details={profile} height={60} />
+          </View>
+          <View style={tailwind('mt-2 flex flex-row items-center')}>
+            <Username details={profile} fontSize={15} />
+            <Button color="badge-gray" icon={<CopyIconBadge style={{marginLeft: 4}} />} title={profile?.metadata?.ensName ? profile.metadata.ensName : shortAddress(address, 4)} style={{marginLeft: 8}} onPress={() => copy(address)} />
+          </View>
+          {profile?.profile?.description &&
+            <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>{profile.profile.description}</Text>
           }
         </View>
-      }
-
-
-      {/** Profile navigation */}
-      <View style={tailwind('flex flex-row px-4 border-b border-slate-100 mt-30px')}>
-        <NavItem slug="feed" title="Feed" setNav={setNav} nav={nav} />
-        <NavItem slug="replies" selected={true} title="Replies" nav={nav} setNav={setNav} />
-        <NavItem slug="reposts" title="Reposts" nav={nav} setNav={setNav} />
-      </View>
-
-      <View style={tailwind('flex flex-col')}>
-        <Posts type={nav} profile={profile} />
-      </View>
-    </Animated.ScrollView>
+  
+        {/** KPI counts */}
+        <View style={[tailwind('flex flex-row px-4'), {paddingTop: 10}]}>
+          <ProfileItem count={countPosts} title="Posts" />
+          <ProfileItem count={profile ? profile.count_followers : "-"} title="Followers" />
+          <ProfileItem count={profile ? profile.count_following : "-"} title="Following" />
+          {/*<ProfileItem count="156" title="Oranges" />*/}
+        </View>
+  
+  
+        {/** Edit CTA (only if user is connected) */}
+        {user.did == profile.did ?
+          <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
+            {/**<View style={{backgroundColor: "red", width: 200, height: 20, position: "absolute", top: 0, left:0}}></View>*/}
+            <Button title="Edit Profile" color="orange" size="sm" onPress={() => setUpdateProfileVis(true)} />
+            <View style={{width: 10}} />
+            <Button title="Share Profile" color="white" size="sm" onPress={() => setShareProfileVis(true)} />
+          </View>
+          :
+          <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
+            {isFollowing ?
+              <Button title="Following" icon={<CheckIcon color="#fff" style={{marginRight: 5}} />} color="green" size="sm" onPress={() => follow(false)} />
+            :
+              <Button loading={followLoading} title="Follow" color="orange" size="sm" onPress={() => follow(true)} />
+            }
+          </View>
+        }
+  
+  
+        {/** Profile navigation */}
+        <View style={tailwind('flex flex-row px-4 border-b border-slate-100 mt-30px')}>
+          <NavItem slug="feed" title="Feed" setNav={setNav} nav={nav} />
+          <NavItem slug="replies" selected={true} title="Replies" nav={nav} setNav={setNav} />
+          <NavItem slug="reposts" title="Reposts" nav={nav} setNav={setNav} />
+        </View>
+  
+        <View style={tailwind('flex flex-col')}>
+          <Posts type={nav} profile={profile} />
+        </View>
+      </Animated.ScrollView>
+    </View>
   )
 }
 
@@ -227,7 +229,9 @@ const Posts = ({type, profile}) => {
 
   if(refreshing) {
     return(
-      <ActivityIndicator style={{marginTop: 25}} size="small" color="#020617" />
+      <View style={{backgroundColor: 'white',height: 900}}>
+        <ActivityIndicator style={{marginTop: 25}} size="small" color="#020617" />
+      </View>
     )
   }
 
