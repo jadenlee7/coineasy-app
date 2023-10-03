@@ -23,9 +23,11 @@ export default function PostPane({did}) {
   return(
     <Pane>
       <SecondHeader label="" showBack={true} />
-      {profile &&
-        <ProfileDetails profile={profile?.details} pfpMarginTop={-10} />
-      }
+      {profile ? (
+        <ProfileDetails profile={profile?.details} />
+      ) : (
+        <View style={{backgroundColor: 'white',height: 800, width:'100%'}} />
+      )}
     </Pane>
   )
 }
