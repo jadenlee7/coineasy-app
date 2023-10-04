@@ -24,22 +24,18 @@ export default function Home() {
   }
 
   return(
-    <>
-      <SecondHeader label={"GM! CoinEasy Frens!"} back={category ? () => resetCategory() : null} />
+    <View style={tailwind('flex flex-col flex-1')}>
+      {/**<Postbox callback={() => loadPosts()} />*/}
+      <View style={tailwind('flex flex-1 bg-white')}>
+        <Feed posts={posts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMorePosts} />
 
-      <View style={tailwind('flex flex-col flex-1')}>
-        {/**<Postbox callback={() => loadPosts()} />*/}
-        <View style={tailwind('flex flex-1 bg-white')}>
-          <Feed posts={posts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMorePosts} />
-
-          {/** Share button */}
-          <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 0, right: 15} ]} onPress={() => showPostbox()}>
-            <Image
-              style={{ height: 70, width: 70 }}
-              source={require('../assets/share_btn.png')} />
-          </TouchableOpacity>
-        </View>
+        {/** Share button */}
+        <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 0, right: 15} ]} onPress={() => showPostbox()}>
+          <Image
+            style={{ height: 70, width: 70 }}
+            source={require('../assets/share_btn.png')} />
+        </TouchableOpacity>
       </View>
-    </>
+    </View>
   )
 }
