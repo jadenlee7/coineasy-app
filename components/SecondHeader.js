@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
 export default function SecondHeader({label, showBack = true, cta = "notifications", back}) {
-  const { setUser, orbis, postDetailsVis, setPostDetailsVis, setSettingsVis, setNotificationsVis, screen } = useContext(GlobalContext);
+  const { setUser, orbis, postDetailsVis, setPostDetailsVis, setSettingsVis, setNotificationsVis, screen, profileSelected } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
   function hidePostPane() {
@@ -24,7 +24,7 @@ export default function SecondHeader({label, showBack = true, cta = "notificatio
 
   return(
     <View style={{marginTop: screen == 'home' ? 0 : 40 + useStatusBarHeight(),}}>
-        <View style={[tailwind('flex flex-row items-center px-3 pt-3'), {minHeight: 50, backgroundColor: screen == 'home' ? '#f7f7f7' : 'white', paddingBottom: screen == 'home' ? 30 : 0 }]}>
+        <View style={[tailwind('flex flex-row items-center px-3 pt-3'), {minHeight: 50, backgroundColor: screen == 'home' && !profileSelected ? '#f7f7f7' : 'white', paddingBottom: screen == 'home' && !profileSelected ? 30 : 0 }]}>
 
         {/** Back button */}
         <View style={[tailwind('flex flex-1 items-start pt-1'),]}>
