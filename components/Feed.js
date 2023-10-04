@@ -3,10 +3,10 @@ import { useTailwind } from 'tailwind-rn';
 import { GlobalContext } from "../contexts/GlobalContext";
 import User, { Username } from "./User";
 import Post from "./Post";
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, RefreshControl, Image, ActivityIndicator, FlatList } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity, RefreshControl, Image, ActivityIndicator, FlatList, Animated } from 'react-native';
 import Svg, { Circle, Rect, Path } from 'react-native-svg';
 import { RepostIcon } from "./Icons";
-import Animated, {
+import {
   withTiming,
   useAnimatedStyle,
   useSharedValue,
@@ -19,7 +19,7 @@ const isCloseToBottom = ({layoutMeasurement, contentOffset, contentSize}) => {
 };
 
 export default function Feed({posts, refreshing, refreshingBottom, onRefresh, loadMore, header}) {
-  const { user, orbis, setScrolled, screen, feedRef, translateY } = useContext(GlobalContext);
+  const { user, orbis, setScrolled, screen, feedRef, translateY, scrollAnim } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
   const lastContentOffset = useSharedValue(0);
@@ -72,7 +72,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
   return(
     <>
       {(refreshing && posts.length == 0) ?
-        <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
+        <ActivityIndicator style={{marginTop: 160}} size="small" color="#020617" />
       :
         <>
           {posts.length > 0 ?
@@ -86,7 +86,18 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
               ListHeaderComponentStyle={tailwind('flex flex-1')}
               onScroll={scrollHandler}
               //ListFooterComponent={<View style={tailwind("h-3")}></View>}
-              renderItem={({item}) => <PostInFeed post={item} key={item.stream_id} />}
+              renderItem={({item, index}) => {
+                if(index == 0){
+                    return (
+                        <>
+                            <View style={{height: 129, width: '100%', backgroundColor: 'white',}} />
+                            <PostInFeed post={item} key={item.stream_id} />
+                        </>
+                    )
+                }else{
+                    return (<PostInFeed post={item} key={item.stream_id} />)
+                }
+              }}
               keyExtractor={item => item.stream_id}
               refreshing={refreshing}
               scrollEventThrottle={16}
@@ -94,7 +105,12 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
               onEndReached={onEndReached}
               onStartReachedThreshold={4} // optional
               onEndReachedThreshold={1} // optional
-              onRefresh={onRefresh} />
+              onRefresh={onRefresh} 
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { y: scrollAnim }} }],
+                { useNativeDriver: true }
+              )}
+            />
           :
             <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md')} >
               <Text style={tailwind('text-secondary items-center ml-1')}>There isn't any post shared here.</Text>
