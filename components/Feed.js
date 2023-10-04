@@ -84,7 +84,6 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
               data={posts}
               ListHeaderComponent={header}
               ListHeaderComponentStyle={tailwind('flex flex-1')}
-              onScroll={scrollHandler}
               //ListFooterComponent={<View style={tailwind("h-3")}></View>}
               renderItem={({item, index}) => {
                 if(index == 0){
