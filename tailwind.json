@@ -168,6 +168,11 @@
 			"marginTop": 30
 		}
 	},
+	"mt-160px": {
+		"style": {
+			"marginTop": 160
+		}
+	},
 	"mt-8": {
 		"style": {
 			"marginTop": 32
