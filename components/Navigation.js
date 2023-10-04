@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
-import { Dimensions, SafeAreaView, StyleSheet, Text, View, TouchableHighlight, Image } from 'react-native';
+import { Dimensions, SafeAreaView, StyleSheet, Text, View, TouchableHighlight, Image, Animated } from 'react-native';
 import Svg, { Circle, Rect, Path } from 'react-native-svg';
 import { useTailwind } from 'tailwind-rn';
 import { GlobalContext } from "../contexts/GlobalContext";
@@ -26,10 +26,12 @@ export default function Navigation() {
 /** Navigation component to select screen */
 const NavItem = ({icon, item}) => {
   const tailwind = useTailwind();
-  const { user, screen, setScreen, setPreviousScreen, setProfileSelected, setPostDetailsVis, scrollToTop, setCategory, translateY } = useContext(GlobalContext);
+  const { user, screen, setScreen, setPreviousScreen, setProfileSelected, setPostDetailsVis, scrollToTop, setCategory, translateY, setOffsetAnim, setScrollAnim } = useContext(GlobalContext);
 
   function selectScreen(item) {
-    translateY.value = 0;
+    setOffsetAnim(new Animated.Value(0))
+    setScrollAnim(new Animated.Value(0))
+    
     setPreviousScreen(screen);
     setScreen(item);
     setPostDetailsVis(null);
