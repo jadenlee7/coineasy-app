@@ -111,7 +111,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
               )}
             />
           :
-            <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md')} >
+            <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md mt-160px')} >
               <Text style={tailwind('text-secondary items-center ml-1')}>There isn't any post shared here.</Text>
             </View>
           }
