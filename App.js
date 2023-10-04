@@ -3,13 +3,13 @@ import './utils/polyfill';
 
 import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Keyboard, Platform, BackHandler } from 'react-native';
+import { StyleSheet, Text, View, Keyboard, Platform, BackHandler, Animated } from 'react-native';
 import { TailwindProvider, useTailwind } from 'tailwind-rn';
 import utilities from './tailwind.json';
 import { context, onboard_context, edu_context } from './utils/config.js';
 import { sleep } from './utils';
 import * as SplashScreen from 'expo-splash-screen';
-import Animated, {
+import {
   withTiming,
   useAnimatedStyle,
   useSharedValue,
@@ -104,6 +104,24 @@ export default function App() {
   const responseListener = useRef();
   const feedRef = useRef();
   const translateY = useSharedValue(0);
+
+  const [scrollAnim, setScrollAnim] = useState(new Animated.Value(0));
+  const [offsetAnim, setOffsetAnim] = useState(new Animated.Value(0));
+  const [clampedScroll, setClampedScroll] = useState(Animated.diffClamp(
+    Animated.add(
+      scrollAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 1],
+        extrapolateLeft: 'clamp'
+      }),
+      offsetAnim
+    ), 0, 1
+  ));
+  const navbarTranslate = clampedScroll.interpolate({
+    inputRange: [0, 130],
+    outputRange: [0, -130],
+    extrapolate: 'clamp'
+  });
 
   /** Load fonts */
   const [fontsLoaded] = useFonts({
@@ -454,7 +472,7 @@ export default function App() {
     <>
       <StatusBar translucent={true} backgroundColor="#00000000" />
       <View onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
-        <GlobalContext.Provider value={{ user, setUser, updateProfileVis, setUpdateProfileVis, screen, setScreen, profileSelected, setProfileSelected, userConnecting, setUserConnecting, orbis, showConnectModal, setShowConnectModal, confetti, repost, setRepost, postDetailsVis, setPostDetailsVis, posts, setPosts, refreshing, refreshingBottom, onRefresh, loadPosts, loadMorePosts, categories, loadContexts, callbackConnect, pushNotifsVis, setPushNotifsVis, postboxVis, showPostbox, hidePostbox, callbackPostShared, replyTo, setReplyTo, setSettingsVis, setShareProfileVis, category, setCategory, setNotificationsVis, scrolled, setScrolled, feedRef, scrollToTop, translateY, setPostSettingsModalVis, editedPost, setEditedPost, previousScreen, setPreviousScreen }}>
+        <GlobalContext.Provider value={{ user, setUser, updateProfileVis, setUpdateProfileVis, screen, setScreen, profileSelected, setProfileSelected, userConnecting, setUserConnecting, orbis, showConnectModal, setShowConnectModal, confetti, repost, setRepost, postDetailsVis, setPostDetailsVis, posts, setPosts, refreshing, refreshingBottom, onRefresh, loadPosts, loadMorePosts, categories, loadContexts, callbackConnect, pushNotifsVis, setPushNotifsVis, postboxVis, showPostbox, hidePostbox, callbackPostShared, replyTo, setReplyTo, setSettingsVis, setShareProfileVis, category, setCategory, setNotificationsVis, scrolled, setScrolled, feedRef, scrollToTop, translateY, setPostSettingsModalVis, editedPost, setEditedPost, previousScreen, setPreviousScreen, scrollAnim, offsetAnim, setClampedScroll, navbarTranslate, setOffsetAnim, setScrollAnim }}>
           <TailwindProvider utilities={utilities}>
             {user ?
               <>
