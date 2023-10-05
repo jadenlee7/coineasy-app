@@ -1,49 +1,31 @@
 import './utils/polyfill';
-//import './expo-crypto-shim.js'
 
-import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { StyleSheet, View, Keyboard, Platform, Animated } from 'react-native';
+
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Keyboard, Platform, BackHandler, Animated } from 'react-native';
-import { TailwindProvider, useTailwind } from 'tailwind-rn';
-import utilities from './tailwind.json';
-import { context, onboard_context, edu_context } from './utils/config.js';
-import { sleep } from './utils';
+import { TailwindProvider } from 'tailwind-rn';
 import * as SplashScreen from 'expo-splash-screen';
-import {
-  withTiming,
-  useAnimatedStyle,
-  useSharedValue,
-  useAnimatedScrollHandler
-} from 'react-native-reanimated';
-
-/** Profile */
-import Home from "./screens/Home";
-import Categories from "./screens/Categories";
-import News from "./screens/News";
-import Profile from "./screens/Profile";
-import Login from "./screens/Login";
-
+import { useSharedValue } from 'react-native-reanimated';
+import ConfettiCannon from 'react-native-confetti-cannon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GlobalContext } from "./contexts/GlobalContext";
 
-import ConnectModal from "./components/modals/ConnectModal";
-import PostSettingsModal from "./components/modals/PostSettingsModal";
-import UpdateProfileModal from "./components/modals/UpdateProfileModal";
-import PushNotificationsModal from "./components/modals/PushNotificationsModal";
+import { sleep } from './utils';
+import Login from "./screens/Login";
+import utilities from './tailwind.json';
+import QR from "./components/modals/QR.js";
+import PostPane from "./components/panes/PostPane";
+import AppNavigator from './navigation/AppNavigator';
+import { GlobalContext } from "./contexts/GlobalContext";
 import RepostModal from "./components/modals/RepostModal";
+import ConnectModal from "./components/modals/ConnectModal";
 import PostboxModal from "./components/modals/PostboxModal";
 import SettingsModal from "./components/modals/SettingsModal";
-import PostPane from "./components/panes/PostPane";
-import ProfilePane from "./components/panes/ProfilePane";
 import NotificationsPane from "./components/panes/NotificationsPane";
-import QR from "./components/modals/QR.js";
-
-import Navigation from "./components/Navigation";
-import Header from "./components/Header";
-import Modal from "./components/Modal";
-import Postbox from "./components/Postbox";
-
-import ConfettiCannon from 'react-native-confetti-cannon';
+import PostSettingsModal from "./components/modals/PostSettingsModal";
+import UpdateProfileModal from "./components/modals/UpdateProfileModal";
+import { context, onboard_context, edu_context } from './utils/config.js';
+import PushNotificationsModal from "./components/modals/PushNotificationsModal";
 
 /** Expo */
 import { useFonts } from 'expo-font';
@@ -122,7 +104,7 @@ export default function App() {
     outputRange: [0, -130],
     extrapolate: 'clamp'
   });
-
+  
   /** Load fonts */
   const [fontsLoaded] = useFonts({
     'GmarketMedium': require('./assets/fonts/GmarketSansMedium.ttf'),
@@ -442,32 +424,6 @@ export default function App() {
     return null;
   }
 
-  BackHandler.addEventListener('hardwareBackPress', function () {
-    if(profileSelected){
-        setProfileSelected(false)
-        return true
-    }else if(category){
-        setCategory(null)
-        setScreen(previousScreen)
-        return true
-    }else if (updateProfileVis){
-        console.log('la');
-        setUpdateProfileVis(false)
-        return true
-    }else if(shareProfileVis){
-        setShareProfileVis(false)
-        return true
-    }else if(settingsVis){
-        setSettingsVis(false)
-        return true
-    }else if(notificationsVis){
-        setNotificationsVis(false)
-        return true
-    }else{
-        BackHandler.exitApp()
-    }
-  })
-
   return (
     <>
       <StatusBar translucent={true} backgroundColor="#00000000" />
@@ -475,24 +431,15 @@ export default function App() {
         <GlobalContext.Provider value={{ user, setUser, updateProfileVis, setUpdateProfileVis, screen, setScreen, profileSelected, setProfileSelected, userConnecting, setUserConnecting, orbis, showConnectModal, setShowConnectModal, confetti, repost, setRepost, postDetailsVis, setPostDetailsVis, posts, setPosts, refreshing, refreshingBottom, onRefresh, loadPosts, loadMorePosts, categories, loadContexts, callbackConnect, pushNotifsVis, setPushNotifsVis, postboxVis, showPostbox, hidePostbox, callbackPostShared, replyTo, setReplyTo, setSettingsVis, setShareProfileVis, category, setCategory, setNotificationsVis, scrolled, setScrolled, feedRef, scrollToTop, translateY, setPostSettingsModalVis, editedPost, setEditedPost, previousScreen, setPreviousScreen, scrollAnim, offsetAnim, setClampedScroll, navbarTranslate, setOffsetAnim, setScrollAnim }}>
           <TailwindProvider utilities={utilities}>
             {user ?
-              <>
-                <Header />
-                <ActiveScreen />
-                <Navigation />
-              </>
+              <AppNavigator />
             :
               <Login />
             }
 
             {/** Show selected post details in a pane */}
-            {postDetailsVis != null &&
+            {/* {postDetailsVis != null &&
               <PostPane />
-            }
-
-            {/** Show user profile selected */}
-            {profileSelected &&
-              <ProfilePane did={profileSelected} />
-            }
+            } */}
 
             {/** Display connect modal if user clicked on connect button */}
             {showConnectModal &&
@@ -500,11 +447,6 @@ export default function App() {
             }
 
             {/** Display the edit profile details modal */}
-            {updateProfileVis &&
-              <UpdateProfileModal />
-            }
-
-            {/** Display Push notifications visibility */}
             {updateProfileVis &&
               <UpdateProfileModal />
             }
@@ -552,34 +494,7 @@ export default function App() {
   );
 }
 
-/** Display active screen */
-const ActiveScreen = () => {
-  const { screen, setScreen, profileSelected } = useContext(GlobalContext);
-  switch (screen) {
-    case "home":
-      return(
-        <Home />
-      );
-    case "categories":
-      return(
-        <Categories />
-      );
-    case "news":
-      return(
-        <News />
-      );
-    case "profile":
-      return(
-        <Profile />
-      );
-    default:
-      return;
-  }
-}
-
 const Confetti = ({confetti}) => {
-  const tailwind = useTailwind();
-
   return(
       <ConfettiCannon fadeOut={true} fallSpeed={2500} count={150} origin={{x: -400, y: 0}} autoStart={false} ref={confetti} />
   )
