@@ -43,11 +43,7 @@ const PostDisplay = (props) => {
 
     let list_images;
     if(post.content.media?.length > 1){
-        list_images = post.content.media.map((elt) => {
-            console.log('LAAA');
-            console.log(elt[0]);
-            return({'url': elt[0].url})
-        })
+        list_images = post.content.media.map((elt) => {return({'url': elt[0].url})})
 
     }
 
