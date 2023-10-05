@@ -1,165 +1,129 @@
-import React, { useState, useContext, useEffect, useCallback } from "react";
-import { GlobalContext } from "../contexts/GlobalContext";
+import React, { useState, useContext, useEffect } from "react";
+import { Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+
 import { useTailwind } from 'tailwind-rn';
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Image, SafeAreaView, ActivityIndicator, RefreshControl, TouchableHighlight } from 'react-native';
-import Header from "./Header";
-import Feed from "./Feed";
+import * as Clipboard from 'expo-clipboard';
+import Animated from 'react-native-reanimated';
+
 import Post from "./Post";
 import Button from "./Button";
-import Modal from "./Modal";
+import { shortAddress } from "../utils";
 import { UserPfp, Username } from "./User";
 import { context } from '../utils/config.js';
 import { CheckIcon, CopyIconBadge } from "./Icons";
-import Animated, {
-  withTiming,
-  useAnimatedStyle,
-  useSharedValue,
-  useAnimatedScrollHandler
-} from 'react-native-reanimated';
 import useDidToAddress from "../hooks/useDidToAddress";
-import { shortAddress } from "../utils";
-import * as Clipboard from 'expo-clipboard';
+import { GlobalContext } from "../contexts/GlobalContext";
 
 export default function ProfileDetails({profile, pfpMarginTop = -10}) {
-  const { user, setUser, orbis, updateProfileVis, setUpdateProfileVis, setShareProfileVis, translateY, screen, profileSelected } = useContext(GlobalContext);
-  const tailwind = useTailwind();
-  const [nav, setNav] = useState("feed");
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [countPosts, setCountPosts] = useState("-");
-  const [followLoading, setFollowLoading] = useState(false);
-  const lastContentOffset = useSharedValue(0);
-  const isScrolling = useSharedValue(false);
-  const { address } = useDidToAddress(profile?.did);
+    const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen } = useContext(GlobalContext);
+    const tailwind = useTailwind();
+    const [nav, setNav] = useState("feed");
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [countPosts, setCountPosts] = useState("-");
+    const [followLoading, setFollowLoading] = useState(false);
+    const { address } = useDidToAddress(profile?.did);
 
 
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      if (
-        lastContentOffset.value > event.contentOffset.y &&
-        isScrolling.value
-      ) {
-        translateY.value = 0;
-      } else if (
-        lastContentOffset.value < event.contentOffset.y &&
-        isScrolling.value
-      ) {
-        if(profileSelected && screen != "profile") {
-          translateY.value = 0;
-        } else {
-          translateY.value = -140;
+    useEffect(() => {
+        loadiIsFollowing();
+        getCountPosts();
+        setFollowLoading(true);
+
+        /** Will check if the connected user is following this user */
+        async function loadiIsFollowing() {
+            const res = await orbis.getIsFollowing(user.did, profile.did);
+            console.log("res isFollowing():", res);
+            setIsFollowing(res.data);
+            setFollowLoading(false);
         }
 
-      }
-      lastContentOffset.value = event.contentOffset.y;
-    },
-    onBeginDrag: (e) => {
-      isScrolling.value = true;
-    },
-    onEndDrag: (e) => {
-      isScrolling.value = false;
-    },
-  });
-
-  useEffect(() => {
-    loadiIsFollowing();
-    getCountPosts();
-    setFollowLoading(true);
-
-    /** Will check if the connected user is following this user */
-    async function loadiIsFollowing() {
-      const res = await orbis.getIsFollowing(user.did, profile.did);
-      console.log("res isFollowing():", res);
-      setIsFollowing(res.data);
-      setFollowLoading(false);
-    }
-
-    /** Will retrieve the count of posts shared by this profile in the context */
-    async function getCountPosts() {
-      const { count } = await orbis.api.from('orbis_posts').select('*', { count: 'exact', head: true }).eq('context', context).eq('creator', profile.did);
-      if(count) {
-        setCountPosts(count);
-      }
-    }
-  }, [profile]);
-
-  /** Will copy link in Clipboard */
-  async function copy(val) {
-    await Clipboard.setStringAsync(val);
-    alert("Address copied!");
-  }
-
-  if(!profile) {
-    return null;
-  }
-
-  /** Will follow the user */
-  async function follow(active) {
-    setFollowLoading(true);
-
-    const res = await orbis.setFollow(profile.did, active);
-    console.log("res:", res);
-    setFollowLoading(false);
-    setIsFollowing(active);
-  }
-
-  return(
-    <View style={{flex: screen === 'home' ? 1 : 0}}>
-      <Animated.ScrollView onScroll={scrollHandler} scrollEventThrottle={16} style={{backgroundColor: 'white'}}>
-        {/** Display profile details */}
-        <View style={[tailwind('flex flex-col items-center')]}>
-          <View style={tailwind("rounded-full")}>
-            <UserPfp details={profile} height={60} />
-          </View>
-          <View style={tailwind('mt-2 flex flex-row items-center')}>
-            <Username details={profile} fontSize={15} />
-            <Button color="badge-gray" icon={<CopyIconBadge style={{marginLeft: 4}} />} title={profile?.metadata?.ensName ? profile.metadata.ensName : shortAddress(address, 4)} style={{marginLeft: 8}} onPress={() => copy(address)} />
-          </View>
-          {profile?.profile?.description &&
-            <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>{profile.profile.description}</Text>
-          }
-        </View>
-  
-        {/** KPI counts */}
-        <View style={[tailwind('flex flex-row px-4'), {paddingTop: 10}]}>
-          <ProfileItem count={countPosts} title="Posts" />
-          <ProfileItem count={profile ? profile.count_followers : "-"} title="Followers" />
-          <ProfileItem count={profile ? profile.count_following : "-"} title="Following" />
-          {/*<ProfileItem count="156" title="Oranges" />*/}
-        </View>
-  
-  
-        {/** Edit CTA (only if user is connected) */}
-        {user.did == profile.did ?
-          <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
-            {/**<View style={{backgroundColor: "red", width: 200, height: 20, position: "absolute", top: 0, left:0}}></View>*/}
-            <Button title="Edit Profile" color="orange" size="sm" onPress={() => setUpdateProfileVis(true)} />
-            <View style={{width: 10}} />
-            <Button title="Share Profile" color="white" size="sm" onPress={() => setShareProfileVis(true)} />
-          </View>
-          :
-          <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
-            {isFollowing ?
-              <Button title="Following" icon={<CheckIcon color="#fff" style={{marginRight: 5}} />} color="green" size="sm" onPress={() => follow(false)} />
-            :
-              <Button loading={followLoading} title="Follow" color="orange" size="sm" onPress={() => follow(true)} />
+        /** Will retrieve the count of posts shared by this profile in the context */
+        async function getCountPosts() {
+            const { count } = await orbis.api.from('orbis_posts').select('*', { count: 'exact', head: true }).eq('context', context).eq('creator', profile.did);
+            if(count) {
+                setCountPosts(count);
             }
-          </View>
         }
-  
-  
-        {/** Profile navigation */}
-        <View style={tailwind('flex flex-row px-4 border-b border-slate-100 mt-30px')}>
-          <NavItem slug="feed" title="Feed" setNav={setNav} nav={nav} />
-          <NavItem slug="replies" selected={true} title="Replies" nav={nav} setNav={setNav} />
-          <NavItem slug="reposts" title="Reposts" nav={nav} setNav={setNav} />
+    }, [profile]);
+
+    /** Will copy link in Clipboard */
+    async function copy(val) {
+        await Clipboard.setStringAsync(val);
+        alert("Address copied!");
+    }
+
+    if(!profile) {
+        return null;
+    }
+
+    /** Will follow the user */
+    async function follow(active) {
+        setFollowLoading(true);
+
+        const res = await orbis.setFollow(profile.did, active);
+        console.log("res:", res);
+        setFollowLoading(false);
+        setIsFollowing(active);
+    }
+
+    return(
+        <View style={{flex: screen === 'home' ? 1 : 0}}>
+            <Animated.ScrollView scrollEventThrottle={16} style={{backgroundColor: 'white',}}>
+                {/** Display profile details */}
+                <View style={[tailwind('flex flex-col items-center')]}>
+                    <View style={[tailwind("rounded-full"),{marginTop: 20,}]}>
+                        <UserPfp details={profile} height={60} />
+                    </View>
+                    <View style={tailwind('mt-2 flex flex-row items-center')}>
+                        <Username details={profile} fontSize={15} />
+                        <Button color="badge-gray" icon={<CopyIconBadge style={{marginLeft: 4}} />} title={profile?.metadata?.ensName ? profile.metadata.ensName : shortAddress(address, 4)} style={{marginLeft: 8}} onPress={() => copy(address)} />
+                    </View>
+                    {profile?.profile?.description &&
+                        <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>{profile.profile.description}</Text>
+                    }
+                </View>
+        
+                {/** KPI counts */}
+                <View style={[tailwind('flex flex-row px-4'), {paddingTop: 10}]}>
+                    <ProfileItem count={countPosts} title="Posts" />
+                    <ProfileItem count={profile ? profile.count_followers : "-"} title="Followers" />
+                    <ProfileItem count={profile ? profile.count_following : "-"} title="Following" />
+                    {/*<ProfileItem count="156" title="Oranges" />*/}
+                </View>
+        
+        
+                {/** Edit CTA (only if user is connected) */}
+                {user.did == profile.did ?
+                    <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
+                        {/**<View style={{backgroundColor: "red", width: 200, height: 20, position: "absolute", top: 0, left:0}}></View>*/}
+                        <Button title="Edit Profile" color="orange" size="sm" onPress={() => setUpdateProfileVis(true)} />
+                        <View style={{width: 10}} />
+                        <Button title="Share Profile" color="white" size="sm" onPress={() => setShareProfileVis(true)} />
+                    </View>
+                :
+                    <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
+                        {isFollowing ?
+                            <Button title="Following" icon={<CheckIcon color="#fff" style={{marginRight: 5}} />} color="green" size="sm" onPress={() => follow(false)} />
+                        :
+                            <Button loading={followLoading} title="Follow" color="orange" size="sm" onPress={() => follow(true)} />
+                        }
+                    </View>
+                }
+        
+        
+                {/** Profile navigation */}
+                <View style={tailwind('flex flex-row px-4 border-b border-slate-100 mt-30px')}>
+                    <NavItem slug="feed" title="Feed" setNav={setNav} nav={nav} />
+                    <NavItem slug="replies" selected={true} title="Replies" nav={nav} setNav={setNav} />
+                    <NavItem slug="reposts" title="Reposts" nav={nav} setNav={setNav} />
+                </View>
+        
+                <View style={tailwind('flex flex-col')}>
+                    <Posts type={nav} profile={profile} />
+                </View>
+            </Animated.ScrollView>
         </View>
-  
-        <View style={tailwind('flex flex-col')}>
-          <Posts type={nav} profile={profile} />
-        </View>
-      </Animated.ScrollView>
-    </View>
-  )
+    )
 }
 
 
