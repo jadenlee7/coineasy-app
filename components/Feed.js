@@ -2,6 +2,7 @@ import React, { useContext } from "react";
 import { Text, View, ActivityIndicator, Animated } from 'react-native';
 
 import { useTailwind } from 'tailwind-rn';
+import { useScrollToTop } from "@react-navigation/native";
 
 import Post from "./Post";
 import { Username } from "./User";
@@ -17,6 +18,8 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
       loadMore()
     }
   }
+
+  useScrollToTop(feedRef);
 
   return(
     <>
