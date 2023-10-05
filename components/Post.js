@@ -1,204 +1,221 @@
-import React, { useState, useContext, useEffect, memo } from "react";
-import { SafeAreaView, StyleSheet, Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Image, Modal, ActivityIndicator, Dimensions } from 'react-native';
-import { useTailwind } from 'tailwind-rn';
-import User, { UserPfp, Username } from "./User";
-import Button from "./Button";
-import { GlobalContext } from "../contexts/GlobalContext";
+import React, { useState, useContext, useEffect } from "react";
+import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Image, Modal, ActivityIndicator, Dimensions } from 'react-native';
+
 import * as Haptics from 'expo-haptics';
-import { context } from '../utils/config.js';
-import { CommentIcon, InterpunctIcon, LikeIcon, RepostIcon, PostMenuIcon, CloseIcon } from "./Icons";
+import { useTailwind } from 'tailwind-rn';
+import * as WebBrowser from 'expo-web-browser';
+import reactStringReplace from 'react-string-replace';
+import { useNavigation } from '@react-navigation/core';
+import ImageViewer from 'react-native-image-zoom-viewer';
+
+import Button from "./Button";
 import TimeAgo from "./TimeAgo";
 import { NewsItem } from "../screens/News";
+import { UserPfp, Username } from "./User";
+import { context } from '../utils/config.js';
+import { GlobalContext } from "../contexts/GlobalContext";
 import { getDomainName, getShorterString } from '../utils';
-import reactStringReplace from 'react-string-replace';
-import * as WebBrowser from 'expo-web-browser';
 import useGetMentionedDid from "../hooks/useGetMentionedDid";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
-import ImageViewer from 'react-native-image-zoom-viewer';
+import { CommentIcon, InterpunctIcon, LikeIcon, RepostIcon, PostMenuIcon, CloseIcon } from "./Icons";
 
 const Post = React.memo((props) => {
   return <PostDisplay {...props}/>;
 });
 
-function PostDisplay({post, isReply = false, showParent = true, verticalDivider = false, style, showRepostDetails = true, showReactions= true, fontSize = 13.5, stylePostContent}) {
-  const { user, setPostDetailsVis, setProfileSelected, setCategory, translateY, setEditedPost, hidePostbox } = useContext(GlobalContext);
-  const [body, setBody] = useState(post?.content?.body);
-  const [isDeleted, setIsDeleted] = useState(false);
-  const tailwind = useTailwind();
+// function PostDisplay({post, isReply = false, showParent = true, verticalDivider = false, style, showRepostDetails = true, showReactions= true, fontSize = 13.5, stylePostContent}) {
+const PostDisplay = (props) => {
 
-  /** Will open pane with post details */
-  function showPostDetails() {
-    Haptics.selectionAsync();
-    translateY.value = 0;
-    setPostDetailsVis(post.content.master ? post.content.master : post.stream_id)
-  }
+    const navigation = useNavigation();
 
-  /** Will open pane with post details */
-  function showProfileDetails(did) {
-    Haptics.selectionAsync();
-    translateY.value = 0;
-    setProfileSelected(did)
-  }
+    const { user, setPostDetailsVis, setCategory, translateY, setEditedPost, hidePostbox } = useContext(GlobalContext);
+    const {
+        post,
+        isReply = false,
+        showParent = true,
+        verticalDivider = false,
+        style,
+        showRepostDetails = true,
+        showReactions= true,
+        fontSize = 13.5,
+        stylePostContent
+    } = props
 
-  /** Will select the post's category and display its feed */
-  function selectCategory(category) {
-    Haptics.selectionAsync();
-    translateY.value = 0;
-    setCategory(category);
-  }
+    const [body, setBody] = useState(post?.content?.body);
+    const [isDeleted, setIsDeleted] = useState(false);
+    const tailwind = useTailwind();
 
-  /** Will update the body of the post */
-  function callbackEditPost(_body) {
-    setBody(_body);
-    hidePostbox();
-  }
+    /** Will open pane with post details */
+    function showPostDetails() {
+        Haptics.selectionAsync();
+        setPostDetailsVis(post.content.master ? post.content.master : post.stream_id)
+        navigation.navigate('PostDetails')
+    }
 
-  /** Will hide the deleted post from the UI */
-  function callbackDeletePost(_body) {
-    setIsDeleted(true);
-  }
+    /** Will open pane with post details */
+    function showProfileDetails(did) {
+        Haptics.selectionAsync();
 
-  /** Will open link in WebBrowser */
-  async function openNews(url) {
-    await WebBrowser.openBrowserAsync(url);
-  }
+        console.log('ici');
+        navigation.navigate('ProfileSelected', { did })
+        // translateY.value = 0;
+        // setProfileSelected(did)
+    }
 
-  const cleanBody = () => {
-    let replacedText;
+    /** Will select the post's category and display its feed */
+    function selectCategory(category) {
+        Haptics.selectionAsync();
+        translateY.value = 0;
+        setCategory(category);
+    }
 
-    // Match @-mentions
-    replacedText = reactStringReplace(body, /@(\w+)/g, (match, i) => (
-      <InteractiveMention mentions={post.content.mentions} key={match + i} match={match} i={i} showProfileDetails={showProfileDetails} />
-    ));
+    /** Will update the body of the post */
+    function callbackEditPost(_body) {
+        setBody(_body);
+        hidePostbox();
+    }
 
-    // Match URLs
-    replacedText = reactStringReplace(replacedText, /(https?:\/\/\S+)/g, (match, i) => (
-      <TouchableWithoutFeedback key={match + i} onPress={() => openNews(match)}>
-        <View>
-          <Text style={{ color: '#ff6b17', fontFamily: "GmarketMedium", backgroundColor: "#FFF" }}>{match}</Text>
-        </View>
-      </TouchableWithoutFeedback>
-    ));
+    /** Will hide the deleted post from the UI */
+    function callbackDeletePost(_body) {
+        setIsDeleted(true);
+    }
 
-    return replacedText;
-  };
+    /** Will open link in WebBrowser */
+    async function openNews(url) {
+        await WebBrowser.openBrowserAsync(url);
+    }
 
-  if(!post || !post.content) {
-    return null;
-  }
+    const cleanBody = () => {
+        let replacedText;
 
-  if(isDeleted) {
-    return null;
-  }
+        // Match @-mentions
+        replacedText = reactStringReplace(body, /@(\w+)/g, (match, i) => (
+            <InteractiveMention mentions={post.content.mentions} key={match + i} match={match} i={i} showProfileDetails={showProfileDetails} />
+        ));
 
-  return(
-    <>
-      <View style={[tailwind(`flex w-full flex-col mb-2 ${!verticalDivider ? "border-b border-slate-200" : "" } ${isReply ? "" : "px-5 py-4"}`), style]}>
-        {/** Will show the parent post if any */}
-        {(showParent && post.content.reply_to && post.reply_to_details) &&
-          <>
-            {/**<TouchableOpacity activeOpacity={0.6} style={[tailwind('flex flex-row items-center mb-3')]} onPress={() => showPostDetails()}>
-              <>
-                <CommentIcon color="#959595" />
-                <Text style={tailwind('text-secondary items-center ml-1')}>Replied to <Username details={post.reply_to_creator_details} style={tailwind('text-secondary font-normal')} /></Text>
-              </>
-            </TouchableOpacity>*/}
-              <Post stylePostContent={{paddingBottom: 20}} showReactions={false} post={{stream_id: post.reply_to, content: post.reply_to_details, creator_details: post.reply_to_creator_details, context_details: post.context_details, context: post.context}} isReply={true} verticalDivider={true} />
-          </>
-        }
-
-        <View style={[tailwind('flex flex-row items-start')]}>
-          <View style={[tailwind('justify-center flex flex-col items-center')]}>
-            <TouchableHighlight onPress={() => showProfileDetails(post.creator_details.did)} underlayColor="transparent">
-              <UserPfp height={37} details={post.creator_details} />
-            </TouchableHighlight>
-            {verticalDivider &&
-              <View style={[tailwind('bg-slate-200 flex-1 mt-2 mb-1'), {width: 1}]} />
-            }
-          </View>
-          <View style={[tailwind('flex flex-1 flex-col')]}>
-
-            {/** Username and post metadata */}
-            <View style={tailwind('ml-2 flex flex-row items-center')}>
-              <View style={tailwind('flex flex-1 flex-row items-center flex-wrap')}>
-                <TouchableHighlight onPress={() => showProfileDetails(post.creator)} underlayColor="transparent" >
-                  <Username details={post.creator_details} />
-                </TouchableHighlight>
-                <View style={[tailwind('ml-2 mr-2')]}>
-                  <InterpunctIcon />
-                </View>
-
-                {/** Display time */}
-                <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, color: "#959595", marginRight: 6}]}><TimeAgo timestamp={post.timestamp} /></Text>
-
-                {/** Display category name */}
-                {(post.context != context && post.context != undefined) &&
-                  <Button title={post.context_details?.context_details?.displayName} color="orange" size="xs" onPress={() => selectCategory({stream_id: post.context, content: post.context_details?.context_details})} />
-                }
-              </View>
-
-              {/** Show post menu if user is creator */}
-              {user?.did == post.creator &&
-                <TouchableOpacity onPress={() => setEditedPost({value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost})} style={[tailwind('flex flex-row items-center rounded-md py-2 px-1 -mr-1')]}>
-                  <PostMenuIcon />
-                </TouchableOpacity>
-              }
-
+        // Match URLs
+        replacedText = reactStringReplace(replacedText, /(https?:\/\/\S+)/g, (match, i) => (
+        <TouchableWithoutFeedback key={match + i} onPress={() => openNews(match)}>
+            <View>
+                <Text style={{ color: '#ff6b17', fontFamily: "GmarketMedium", backgroundColor: "#FFF" }}>{match}</Text>
             </View>
+        </TouchableWithoutFeedback>
+        ));
 
-            {/** Post content */}
-            <TouchableOpacity activeOpacity={0.7} style={[tailwind('ml-1 px-1 flex flex-1 rounded-md mr-8')]} onPress={() => showPostDetails()}>
-              <>
-                {(body && body != "") ?
-                  <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: 5, paddingBottom: 5, fontSize: fontSize, lineHeight: fontSize * 1.47 }, stylePostContent]}>
-                    {cleanBody()}
-                  </Text>
-                :
-                  <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-1 mb-1 rounded-md')} >
-                    <Text style={tailwind('text-secondary items-center ml-1 text-center')}>This post isn't available or has been deleted.</Text>
-                  </View>
+        return replacedText;
+    };
+
+    if(!post || !post.content) {
+        return null;
+    }
+
+    if(isDeleted) {
+        return null;
+    }
+
+    return(
+        <>
+            <View style={[tailwind(`flex w-full flex-col mb-2 ${!verticalDivider ? "border-b border-slate-200" : "" } ${isReply ? "" : "px-5 py-4"}`), style]}>
+                {/** Will show the parent post if any */}
+                {(showParent && post.content.reply_to && post.reply_to_details) &&
+                    <Post stylePostContent={{paddingBottom: 20}} showReactions={false} post={{stream_id: post.reply_to, content: post.reply_to_details, creator_details: post.reply_to_creator_details, context_details: post.context_details, context: post.context}} isReply={true} verticalDivider={true} />
                 }
 
+                <View style={[tailwind('flex flex-row items-start')]}>
+                    <View style={[tailwind('justify-center flex flex-col items-center')]}>
+                        <TouchableHighlight onPress={() => showProfileDetails(post.creator_details.did)} underlayColor="transparent">
+                            <UserPfp height={37} details={post.creator_details} />
+                        </TouchableHighlight>
 
-                {/** Display media attached if any */}
-                <View style={tailwind("items-start")}>
-                  <Media media={post.content.media} />
+                        {verticalDivider && <View style={[tailwind('bg-slate-200 flex-1 mt-2 mb-1'), {width: 1}]} />}
+                    </View>
+
+                    <View style={[tailwind('flex flex-1 flex-col')]}>
+                        {/** Username and post metadata */}
+                        <View style={tailwind('ml-2 flex flex-row items-center')}>
+                            <View style={tailwind('flex flex-1 flex-row items-center flex-wrap')}>
+                                <TouchableHighlight onPress={() => showProfileDetails(post.creator)} underlayColor="transparent" >
+                                    <Username details={post.creator_details} />
+                                </TouchableHighlight>
+                                
+                                <View style={[tailwind('ml-2 mr-2')]}>
+                                    <InterpunctIcon />
+                                </View>
+
+                                {/** Display time */}
+                                <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, color: "#959595", marginRight: 6}]}>
+                                    <TimeAgo timestamp={post.timestamp} />
+                                </Text>
+
+                                {/** Display category name */}
+                                {(post.context != context && post.context != undefined) &&
+                                <Button title={post.context_details?.context_details?.displayName} color="orange" size="xs" onPress={() => selectCategory({stream_id: post.context, content: post.context_details?.context_details})} />
+                                }
+                            </View>
+
+                            {/** Show post menu if user is creator */}
+                            {user?.did == post.creator &&
+                                <TouchableOpacity onPress={() => setEditedPost({value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost})} style={[tailwind('flex flex-row items-center rounded-md py-2 px-1 -mr-1')]}>
+                                    <PostMenuIcon />
+                                </TouchableOpacity>
+                            }
+                        </View>
+
+                        {/** Post content */}
+                        <TouchableOpacity activeOpacity={0.7} style={[tailwind('ml-1 px-1 flex flex-1 rounded-md mr-8')]} onPress={() => showPostDetails()}>
+                            <>
+                                {(body && body != "") ?
+                                <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: 5, paddingBottom: 5, fontSize: fontSize, lineHeight: fontSize * 1.47 }, stylePostContent]}>
+                                    {cleanBody()}
+                                </Text>
+                                :
+                                <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-1 mb-1 rounded-md')} >
+                                    <Text style={tailwind('text-secondary items-center ml-1 text-center')}>This post isn't available or has been deleted.</Text>
+                                </View>
+                                }
+
+
+                                {/** Display media attached if any */}
+                                <View style={tailwind("items-start")}>
+                                    <Media media={post.content.media} />
+                                </View>
+                            </>
+                        </TouchableOpacity>
+
+                        {/** Display URL Metadata */}
+                        {(post.indexing_metadata?.urlMetadata && post.indexing_metadata?.urlMetadata.title) &&
+                        <View style={tailwind("w-full")}>
+                            <NewsItem 
+                                item={{
+                                    title: getShorterString(post.indexing_metadata.urlMetadata.title, 60),
+                                    image: post.indexing_metadata.urlMetadata.image,
+                                    url: post.indexing_metadata.urlMetadata.source,
+                                    hostname: getDomainName(post.indexing_metadata.urlMetadata.source)
+                                }} 
+                            />
+                        </View>
+                        }
+
+                        {/** Quoted post details if any */}
+                        {(showRepostDetails && post.content.repost != null) &&
+                        <View >
+                            <Post post={post.repost_details} style={[tailwind('rounded-md border border-secondary p-3'), {width: "95%"}]} />
+                        </View>
+                        }
+
+                        {/** Post CTAs */}
+                        {showReactions &&
+                        <View style={[tailwind('flex flex-row mt-0')]}>
+                            <CommentCTA post={post} />
+                            <LikeCTA post={post} />
+                            <RepostCTA post={post} />
+                        </View>
+                        }
+                    </View>
                 </View>
-              </>
-            </TouchableOpacity>
-
-            {/** Display URL Metadata */}
-            {(post.indexing_metadata?.urlMetadata && post.indexing_metadata?.urlMetadata.title) &&
-              <View style={tailwind("w-full")}>
-                <NewsItem item={{
-                  title: getShorterString(post.indexing_metadata.urlMetadata.title, 60),
-                  image: post.indexing_metadata.urlMetadata.image,
-                  url: post.indexing_metadata.urlMetadata.source,
-                  hostname: getDomainName(post.indexing_metadata.urlMetadata.source)
-                }} />
-              </View>
-            }
-
-            {/** Quoted post details if any */}
-            {(showRepostDetails && post.content.repost != null) &&
-              <View >
-                <Post post={post.repost_details} style={[tailwind('rounded-md border border-secondary p-3'), {width: "95%"}]} />
-              </View>
-            }
-
-            {/** Post CTAs */}
-            {showReactions &&
-              <View style={[tailwind('flex flex-row mt-0')]}>
-                <CommentCTA post={post} />
-                <LikeCTA post={post} />
-                <RepostCTA post={post} />
-              </View>
-            }
-          </View>
-        </View>
-      </View>
-    </>
-  )
+            </View>
+        </>
+    )
 }
 
 const InteractiveMention = ({match, showProfileDetails, mentions}) => {
