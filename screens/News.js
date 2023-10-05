@@ -1,73 +1,99 @@
-import React, { useState, useContext, useEffect, useCallback } from "react";
-import { GlobalContext } from "../contexts/GlobalContext";
-import { useTailwind } from 'tailwind-rn';
-import { Text, View, TouchableOpacity, Image, TouchableHighlight, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
-import SecondHeader from "../components/SecondHeader";
-import { InterpunctIcon } from "../components/Icons";
-import * as Haptics from 'expo-haptics';
-import { onboard_context, edu_context } from '../utils/config.js';
+import React, { useState, useContext, useEffect } from "react";
+import { Text, View, TouchableOpacity, Image, TouchableHighlight, ScrollView, ActivityIndicator, RefreshControl, Dimensions } from 'react-native';
+
 import fetch from 'cross-fetch';
+import * as Haptics from 'expo-haptics';
+import { useTailwind } from 'tailwind-rn';
 import * as WebBrowser from 'expo-web-browser';
 
-export default function Categories() {
-  const { user, orbis } = useContext(GlobalContext);
-  const tailwind = useTailwind();
-  const [nav, setNav] = useState("news");
-  const [onboardCategories, setOnboardCategories] = useState([]);
-  const [eduCategories, setEduCategories] = useState([]);
-  const [news, setNews] = useState([]);
+import { GlobalContext } from "../contexts/GlobalContext";
+import useStatusBarHeight from "../hooks/useStatusBarHeight";
+import { onboard_context, edu_context } from '../utils/config.js';
+import { InterpunctIcon, NotificationsIcon } from "../components/Icons";
 
-  useEffect(() => {
-    loadData();
-  }, [])
+const News = ({ navigation, route }) => {
 
-  async function loadData() {
-    loadNews();
-    loadOnboard();
-    loadEasEdu();
-  }
+    const {  orbis } = useContext(GlobalContext);
+    const tailwind = useTailwind();
 
-  /** Will load news from Coineasy RSS feed */
-  async function loadNews() {
-    let res = await fetch("https://rss.app/feeds/_z2HKiiCTPGaK4EIn.json");
-    let results = await res.json();
-    setNews(results.items);
-  }
+    const [news, setNews] = useState([]);
+    const [nav, setNav] = useState("news");
+    const [eduCategories, setEduCategories] = useState([]);
+    const [onboardCategories, setOnboardCategories] = useState([]);
 
-  /** Will load onboard categories */
-  async function loadOnboard() {
-    let { data, error } = await orbis.api.from("orbis_contexts").select().eq('context', onboard_context).order('created_at', { ascending: false });
-    setOnboardCategories(data);
-  }
+    const statusBarHeight = useStatusBarHeight();
 
-  /** Will load easy edu categories */
-  async function loadEasEdu() {
-    let { data, error } = await orbis.api.from("orbis_contexts").select().eq('context', edu_context).order('created_at', { ascending: false });
-    setEduCategories(data);
-  }
 
-  return(
-    <>
-      <SecondHeader label="Explore EASY World!"  />
+    useEffect(() => {
+        loadData();
 
-      <View style={tailwind('flex flex-col flex-1')}>
-        <View style={tailwind('flex flex-row mt-6 px-5 px-12')}>
+        navigation.addListener('tabPress', (e) => {
+            Haptics.selectionAsync();
+        });
+    }, [])
 
-          <NavItem setNav={setNav} nav={nav} item="news" label="NEWS" />
-          <NavItem setNav={setNav} nav={nav} item="onboard" label="FEATURED" />
-          <NavItem setNav={setNav} nav={nav} item="easy-edu" label="EASY EDU" />
+    async function loadData() {
+        loadNews();
+        loadOnboard();
+        loadEasEdu();
+    }
 
-        </View>
+    /** Will load news from Coineasy RSS feed */
+    async function loadNews() {
+        let res = await fetch("https://rss.app/feeds/_z2HKiiCTPGaK4EIn.json");
+        let results = await res.json();
+        setNews(results.items);
+    }
 
-        <ScrollView style={tailwind('flex flex-col w-full px-4 mt-20px')} refreshControl={
-          <RefreshControl refreshing={false} onRefresh={loadData} />
-        }>
+    /** Will load onboard categories */
+    async function loadOnboard() {
+        let { data, error } = await orbis.api.from("orbis_contexts").select().eq('context', onboard_context).order('created_at', { ascending: false });
+        setOnboardCategories(data);
+    }
 
-          <ActivityContent nav={nav} news={news} onboardCategories={onboardCategories} eduCategories={eduCategories} />
-        </ScrollView>
-      </View>
-    </>
-  )
+    /** Will load easy edu categories */
+    async function loadEasEdu() {
+        let { data, error } = await orbis.api.from("orbis_contexts").select().eq('context', edu_context).order('created_at', { ascending: false });
+        setEduCategories(data);
+    }
+
+    return(
+        <>
+            <Image
+                style={{ 
+                    width: Dimensions.get('window').width,
+                    height: 40 + statusBarHeight,
+                    paddingTop: statusBarHeight,
+                }}
+                source={require('../assets/HeaderBg.png')} 
+            />
+
+            <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: 20,}}>
+                <Text style={[tailwind('text-slate-900 px-2'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20,marginLeft: 10, }]}>Explore EASY World!</Text>
+
+                <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('Notifications')} style={{marginRight: 30,}}>
+                    <NotificationsIcon />
+                </TouchableOpacity>
+            </View>
+
+            <View style={tailwind('flex flex-col flex-1')}>
+                <View style={tailwind('flex flex-row mt-6 px-5 px-12')}>
+                    <NavItem setNav={setNav} nav={nav} item="news" label="NEWS" />
+                    <NavItem setNav={setNav} nav={nav} item="onboard" label="FEATURED" />
+                    <NavItem setNav={setNav} nav={nav} item="easy-edu" label="EASY EDU" />
+                </View>
+
+                <ScrollView 
+                    style={tailwind('flex flex-col w-full px-4 mt-20px')} 
+                    refreshControl={
+                        <RefreshControl refreshing={false} onRefresh={loadData} />
+                    }
+                >
+                    <ActivityContent nav={nav} news={news} onboardCategories={onboardCategories} eduCategories={eduCategories} />
+                </ScrollView>
+            </View>
+        </>
+    )
 }
 
 /** Activity feed based on navigation selected */
@@ -210,3 +236,5 @@ const OnboardItem = ({item}) => {
     </TouchableHighlight>
   )
 }
+
+export default News
