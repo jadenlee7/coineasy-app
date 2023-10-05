@@ -67,6 +67,7 @@ const PostDisplay = (props) => {
         Haptics.selectionAsync();
         translateY.value = 0;
         setCategory(category);
+        navigation.replace('Navigator')
     }
 
     /** Will update the body of the post */
