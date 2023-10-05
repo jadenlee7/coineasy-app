@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Image, Modal, ActivityIndicator, Dimensions } from 'react-native';
+import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Image, Modal, ActivityIndicator, Dimensions, ScrollView } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -41,9 +41,23 @@ const PostDisplay = (props) => {
         stylePostContent
     } = props
 
+    let list_images;
+    if(post.content.media?.length > 1){
+        list_images = post.content.media.map((elt) => {
+            console.log('LAAA');
+            console.log(elt[0]);
+            return({'url': elt[0].url})
+        })
+
+    }
+
     const [body, setBody] = useState(post?.content?.body);
     const [isDeleted, setIsDeleted] = useState(false);
+    const [modalVis, setModalVis] = useState(false);
+    const [imageIndex, setImageIndex] = useState(0)
     const tailwind = useTailwind();
+
+    const statusBarHeight = useStatusBarHeight();
 
     /** Will open pane with post details */
     function showPostDetails() {
@@ -114,6 +128,42 @@ const PostDisplay = (props) => {
         return null;
     }
 
+    const onImagePress = (index) => {
+        setModalVis(true)
+        setImageIndex(index)
+    }
+
+    const Media = ({media, index}) => {
+        const tailwind = useTailwind();
+        const [loaded, setLoaded] = useState(false);
+        const { width } = Dimensions.get('window');
+    
+        if(media && media.length > 0) {
+            return(
+                <View style={{marginLeft: index != 0 ? 8 : 0}} key={Math.random()}>
+                    <TouchableOpacity 
+                        activeOpacity={0.8} 
+                        style={[tailwind('rounded-md border border-secondary'), { marginBottom: 6, marginTop: 2 }]} 
+                        onPress={() => onImagePress(index)}
+                    >
+                        <Image
+                            style={[tailwind('rounded-md'), { height: width - 87, width: width - 87 }]}
+                            onLoad={() => setLoaded(true)}
+                            loadingIndicatorSource={require("../assets/loader_001.gif")}
+                            source={loaded ?
+                                { uri: media[0].url }
+                                :
+                                require("../assets/loader_001.gif")
+                            } 
+                        />
+                    </TouchableOpacity>
+                </View>
+            )
+        } else {
+            return null
+        }
+    }
+
     return(
         <>
             <View style={[tailwind(`flex w-full flex-col mb-2 ${!verticalDivider ? "border-b border-slate-200" : "" } ${isReply ? "" : "px-5 py-4"}`), style]}>
@@ -150,7 +200,7 @@ const PostDisplay = (props) => {
 
                                 {/** Display category name */}
                                 {(post.context != context && post.context != undefined) &&
-                                <Button title={post.context_details?.context_details?.displayName} color="orange" size="xs" onPress={() => selectCategory({stream_id: post.context, content: post.context_details?.context_details})} />
+                                    <Button title={post.context_details?.context_details?.displayName} color="orange" size="xs" onPress={() => selectCategory({stream_id: post.context, content: post.context_details?.context_details})} />
                                 }
                             </View>
 
@@ -177,9 +227,43 @@ const PostDisplay = (props) => {
 
 
                                 {/** Display media attached if any */}
-                                <View style={tailwind("items-start")}>
-                                    <Media media={post.content.media} />
-                                </View>
+                                {post.content.media?.length == 1 ? (
+                                    <View style={tailwind("items-start")}>
+                                        <Media media={post.content.media} />
+                                    </View>
+                                ) : post.content.media?.length > 1 ? (
+                                        <ScrollView horizontal={true} style={{width: Dimensions.get('window').width}}>
+                                            { post.content.media?.map((item, index) => {
+                                                return(
+                                                    <Media media={item} index={index} key={Math.random()}/>
+                                                )
+                                            })}
+                                            <View style={{width: 70}} key={Math.random()}/>
+                                        </ScrollView>
+                                ) : null}
+                                {modalVis && list_images.length > 0 &&
+                                    <Modal visible={true} transparent={true} style={{backgroundColor: "#000"}} statusBarTranslucent>
+                                        <View style={[tailwind("h-full w-full"), {backgroundColor: "#000", paddingTop: statusBarHeight + 10}]}>
+                                            <View style={[tailwind('flex justify-end w-full'), {height: 40}]}>
+                                                <TouchableOpacity onPress={() => setModalVis(!modalVis)} style={{left: 20}} activeOpacity={0.6}>
+                                                    <CloseIcon />
+                                                </TouchableOpacity>
+                                            </View>
+                                            <ImageViewer 
+                                                imageUrls={list_images}
+                                                index={imageIndex}
+                                                onSwipeDown={() => setModalVis(!modalVis)} 
+                                                enableSwipeDown={true} 
+                                                loadingRender={() => { return (
+                                                    <ActivityIndicator style={{marginTop: 10}} 
+                                                        size="small" 
+                                                        color="#fff" 
+                                                    /> 
+                                                )}}
+                                            />
+                                        </View>
+                                    </Modal>
+                                }
                             </>
                         </TouchableOpacity>
 
@@ -361,46 +445,6 @@ export const RepostCTA = ({post}) => {
       </>
     </TouchableOpacity>
   )
-}
-
-const Media = ({media}) => {
-  const tailwind = useTailwind();
-  const statusBarHeight = useStatusBarHeight();
-  const [loaded, setLoaded] = useState(false);
-  const [modalVis, setModalVis] = useState(false);
-  const { width } = Dimensions.get('window');
-
-  if(media && media.length > 0) {
-    return(
-      <>
-        <TouchableOpacity activeOpacity={0.8} style={[tailwind('rounded-md border border-secondary'), { marginBottom: 6, marginTop: 2 }]} onPress={() => setModalVis(true)}>
-          <Image
-            style={[tailwind('rounded-md'), { height: width - 87, width: width - 87 }]}
-            onLoad={() => setLoaded(true)}
-            loadingIndicatorSource={require("../assets/loader_001.gif")}
-            source={loaded ?
-                { uri: media[0].url }
-              :
-                require("../assets/loader_001.gif")
-              } />
-        </TouchableOpacity>
-        {modalVis &&
-          <Modal visible={true} transparent={true} style={{backgroundColor: "#000"}} statusBarTranslucent>
-            <View style={[tailwind("h-full w-full"), {backgroundColor: "#000", paddingTop: statusBarHeight + 10}]}>
-              <View style={[tailwind('flex justify-end w-full'), {height: 40}]}>
-                <TouchableOpacity onPress={() => setModalVis(!modalVis)} style={{left: 20}} activeOpacity={0.6}>
-                  <CloseIcon />
-                </TouchableOpacity>
-              </View>
-              <ImageViewer imageUrls={media} onSwipeDown={() => setModalVis(!modalVis)} enableSwipeDown={true} loadingRender={() => { return <ActivityIndicator style={{marginTop: 10}} size="small" color="#fff" /> }}/>
-            </View>
-          </Modal>
-        }
-      </>
-    )
-  } else {
-    return null
-  }
 }
 
 export default Post;
