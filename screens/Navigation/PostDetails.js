@@ -91,7 +91,7 @@ const PostDetails = ({navigation, route}) => {
                 </TouchableOpacity>
             </View>
 
-            <View style={[tailwind('flex pt-2 flex-1'),{marginTop: 50,}]}>
+            <View style={[tailwind('flex pt-2 flex-1'),{backgroundColor: 'white',}]}>
                 <ScrollView>
                 {post ?
                     <View style={{marginTop: -10}}>
