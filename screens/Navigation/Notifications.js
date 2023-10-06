@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import { View, ActivityIndicator, ScrollView, Text, TouchableHighlight, Dimensions, Image, TouchableOpacity } from 'react-native';
 
+import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 
 import { context } from "../../utils/config";
@@ -110,11 +111,18 @@ const Notifications = ({navigation, route}) => {
                 source={require('../../assets/HeaderBg.png')} 
             />
 
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-                <View style={{zIndex:100000, width:40,height: 40, borderRadius: 50,justifyContent: 'center',alignItems: 'center',margin: 15,marginBottom: 0, elevation:8, backgroundColor: 'white',}}>
-                    <BackIcon />
-                </View>
-            </TouchableOpacity>
+            <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 5}}>
+                <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
+                    <View style={{zIndex:100000, justifyContent: 'center',alignItems: 'center',margin: 15, backgroundColor: 'white',flexDirection:'row',}}>
+                        <BackIcon />
+                        <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
+                    </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
+                    <NotificationsIcon />
+                </TouchableOpacity>
+            </View>
 
             {notificationsLoading ?
                 <ActivityIndicator style={{marginTop: 50}} size="small" color="#020617" />
