@@ -8,10 +8,13 @@ import Post from "./Post";
 import { Username } from "./User";
 import { RepostIcon } from "./Icons";
 import { GlobalContext } from "../contexts/GlobalContext";
+import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
 export default function Feed({posts, refreshing, refreshingBottom, onRefresh, loadMore, header}) {
   const { feedRef, scrollAnim } = useContext(GlobalContext);
   const tailwind = useTailwind();
+
+  const statusBarHeight = useStatusBarHeight();
 
   const onEndReached = async () => {
     if(loadMore) {
@@ -38,7 +41,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                 if(index == 0){
                     return (
                         <>
-                            <View style={{height: 129, width: '100%', backgroundColor: 'white',}} />
+                            <View style={{height: 100 + statusBarHeight, width: '100%', backgroundColor: 'white',}} />
                             <PostInFeed post={item} key={item.stream_id} />
                         </>
                     )
@@ -48,6 +51,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
               }}
               keyExtractor={item => item.stream_id}
               refreshing={refreshing}
+              progressViewOffset={130}
               scrollEventThrottle={16}
               onEndReached={onEndReached}
               onStartReachedThreshold={4} // optional
