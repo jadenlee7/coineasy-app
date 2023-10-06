@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Home from '../screens/Home';
@@ -18,13 +19,21 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                 tabBarLabel: '',
                 tabBarIcon: ({ focused, color, size }) => (
                     title == 'home' ? 
-                        <NavHomeIcon color={focused ? "#FF6E31" : "#959595" }/> 
+                        <View style={{marginTop: '20%',}}>
+                            <NavHomeIcon color={focused ? "#FF6E31" : "#959595" } /> 
+                        </View>
                     : title == 'cat' ? 
-                        <NavCategoriesIcon color={focused ? "#FF6E31" : "#959595" }/> 
+                        <View style={{marginTop: '20%',}}>
+                            <NavCategoriesIcon color={focused ? "#FF6E31" : "#959595" }/> 
+                        </View>
                     : title == 'news' ? 
-                        <NavChartIcon color={focused ? "#FF6E31" : "#959595" }/> 
+                        <View style={{marginTop: '20%',}}>
+                            <NavChartIcon color={focused ? "#FF6E31" : "#959595" }/> 
+                        </View>
                     : 
-                        <NavProfileIcon color={focused ? "#FF6E31" : "#959595" }/>
+                        <View style={{marginTop: '20%',}}>
+                            <NavProfileIcon color={focused ? "#FF6E31" : "#959595" }/>
+                        </View>
                 ),
                 tabBarStyle: {minHeight: 60},
                 tabBarActiveTintColor: "#FF6E31",
