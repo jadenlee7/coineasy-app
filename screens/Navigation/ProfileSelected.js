@@ -54,7 +54,7 @@ const ProfileSelected = ({navigation, route}) => {
             </View>
 
             {profile ? (
-                <ProfileDetails profile={profile?.details} />
+                <ProfileDetails profile={profile?.details} pfpMarginTop={0}/>
             ) : (
                 <View style={{backgroundColor: 'white',height: 800, width:'100%'}} />
             )}
