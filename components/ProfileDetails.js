@@ -14,7 +14,7 @@ import { CheckIcon, CopyIconBadge } from "./Icons";
 import useDidToAddress from "../hooks/useDidToAddress";
 import { GlobalContext } from "../contexts/GlobalContext";
 
-export default function ProfileDetails({profile, pfpMarginTop = -10}) {
+export default function ProfileDetails({profile, pfpMarginTop = 20}) {
     const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen } = useContext(GlobalContext);
     const tailwind = useTailwind();
     const [nav, setNav] = useState("feed");
@@ -70,7 +70,7 @@ export default function ProfileDetails({profile, pfpMarginTop = -10}) {
         <View style={{flex: screen === 'home' ? 1 : 0}}>
             <Animated.ScrollView scrollEventThrottle={16} style={{backgroundColor: 'white',}}>
                 {/** Display profile details */}
-                <View style={[tailwind('flex flex-col items-center')]}>
+                <View style={[tailwind('flex flex-col items-center'), {marginTop: pfpMarginTop,}]}>
                     <View style={[tailwind("rounded-full")]}>
                         <UserPfp details={profile} height={60} />
                     </View>
