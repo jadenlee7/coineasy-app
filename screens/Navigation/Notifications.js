@@ -101,7 +101,7 @@ const Notifications = ({navigation, route}) => {
 
 
     return(
-        <View style={tailwind('flex flex-1 flex-col')}>
+        <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
             <Image
                 style={{ 
                     width: Dimensions.get('window').width,
