@@ -67,7 +67,7 @@ const SecondHeader = (props) => {
 
   return(
     <View style={{marginTop: screen == 'home' ? 0 : 40 + useStatusBarHeight(),}}>
-        <View style={[tailwind('flex flex-row items-center px-3 pt-3'), {minHeight: 50, backgroundColor: screen == 'home' && !profileSelected ? '#f7f7f7' : 'white', paddingBottom: screen == 'home' && !profileSelected ? 30 : 0 }]}>
+        <View style={[tailwind('flex flex-row items-center px-3 pt-3'), {minHeight: 50, backgroundColor: 'white', paddingBottom: screen == 'home' && !profileSelected ? 30 : 0 }]}>
 
         {/** Back button */}
         <View style={[tailwind('flex flex-1 items-start pt-1'),]}>
