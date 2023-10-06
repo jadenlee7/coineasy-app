@@ -71,7 +71,7 @@ export default function ProfileDetails({profile, pfpMarginTop = -10}) {
             <Animated.ScrollView scrollEventThrottle={16} style={{backgroundColor: 'white',}}>
                 {/** Display profile details */}
                 <View style={[tailwind('flex flex-col items-center')]}>
-                    <View style={[tailwind("rounded-full"),{marginTop: 20,}]}>
+                    <View style={[tailwind("rounded-full")]}>
                         <UserPfp details={profile} height={60} />
                     </View>
                     <View style={tailwind('mt-2 flex flex-row items-center')}>
