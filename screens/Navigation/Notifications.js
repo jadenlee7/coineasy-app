@@ -9,7 +9,7 @@ import TimeAgo from "../../components/TimeAgo";
 import { UserPfp, Username } from "../../components/User";
 import { GlobalContext } from "../../contexts/GlobalContext";
 import useStatusBarHeight from "../../hooks/useStatusBarHeight";
-import { BackIcon, InterpunctIcon } from "../../components/Icons";
+import { BackIcon, InterpunctIcon, NotificationsIcon } from "../../components/Icons";
 
 const Notifications = ({navigation, route}) => {
     const { orbis } = useContext(GlobalContext);
