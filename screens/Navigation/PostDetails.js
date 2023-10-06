@@ -1,8 +1,9 @@
 import React, { useContext, useState, useEffect } from "react";
 import { View, ActivityIndicator, ScrollView, Text, TouchableHighlight, Image, Dimensions, TouchableOpacity } from 'react-native';
 
-import Post from "../../components/Post";
+import * as Haptics from 'expo-haptics';
 
+import Post from "../../components/Post";
 import { UserPfp } from "../../components/User";
 import { GlobalContext } from "../../contexts/GlobalContext";
 import { useTailwind } from 'tailwind-rn';
@@ -77,15 +78,18 @@ const PostDetails = ({navigation, route}) => {
                 source={require('../../assets/HeaderBg.png')} 
             />
 
-            <TouchableOpacity onPress={() => navigation.goBack()} style={{position: 'absolute', top:65, left: 0,zIndex: 2}}>
-                <View style={{zIndex:100000, width:40,height: 40, borderRadius: 50,justifyContent: 'center',alignItems: 'center',margin: 15, elevation:8, backgroundColor: 'white',}}>
-                    <BackIcon />
-                </View>
-            </TouchableOpacity>
+            <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 5,maxHeight:60}}>
+                <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
+                    <View style={{zIndex:100000, justifyContent: 'center',alignItems: 'center',margin: 15, backgroundColor: 'white',flexDirection:'row',}}>
+                        <BackIcon />
+                        <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
+                    </View>
+                </TouchableOpacity>
 
-            <TouchableOpacity style={{position: 'absolute',top: 90,right: 30,zIndex: 2,}} activeOpacity={0.7} onPress={() => navigation.navigate('Notifications')}>
-                <NotificationsIcon />
-            </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
+                    <NotificationsIcon />
+                </TouchableOpacity>
+            </View>
 
             <View style={[tailwind('flex pt-2 flex-1'),{marginTop: 50,}]}>
                 <ScrollView>
