@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from "react";
-import { Dimensions, Image, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, Text, TouchableOpacity, View } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from "tailwind-rn";
