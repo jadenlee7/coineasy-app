@@ -100,7 +100,7 @@ export default function App() {
     ), 0, 1
   ));
   const navbarTranslate = clampedScroll.interpolate({
-    inputRange: [0, 130],
+    inputRange: [50, 130],
     outputRange: [0, -130],
     extrapolate: 'clamp'
   });
