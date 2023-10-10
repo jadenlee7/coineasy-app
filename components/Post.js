@@ -42,10 +42,11 @@ const PostDisplay = (props) => {
         isRepost = false
     } = props
 
-    let list_images;
+    let list_images = [];
     if(post.content.media?.length > 1){
         list_images = post.content.media.map((elt) => {return({'url': elt[0].url})})
-
+    }else if(post.content.media?.length == 1){
+        list_images = [{'url': post.content.media[0].url}]
     }
 
     const [body, setBody] = useState(post?.content?.body);
