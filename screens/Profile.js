@@ -2,6 +2,8 @@ import React, { useState, useContext, useEffect } from "react";
 import { View, TouchableOpacity, Image, ActivityIndicator, Dimensions, Text, Keyboard } from 'react-native';
 
 import { useTailwind } from 'tailwind-rn';
+import * as WebBrowser from 'expo-web-browser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { GlobalContext } from "../contexts/GlobalContext";
 import ProfileDetails from "../components/ProfileDetails";
