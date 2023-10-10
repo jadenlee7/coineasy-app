@@ -58,7 +58,7 @@ const News = ({ navigation, route }) => {
     }
 
     return(
-        <>
+        <View style={tailwind('flex flex-1 bg-white')}>
             <Image
                 style={{ 
                     width: Dimensions.get('window').width,
@@ -92,7 +92,7 @@ const News = ({ navigation, route }) => {
                     <ActivityContent nav={nav} news={news} onboardCategories={onboardCategories} eduCategories={eduCategories} />
                 </ScrollView>
             </View>
-        </>
+        </View>
     )
 }
 
