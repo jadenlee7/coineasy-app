@@ -77,7 +77,7 @@ const News = ({ navigation, route }) => {
             </View>
 
             <View style={tailwind('flex flex-col flex-1')}>
-                <View style={tailwind('flex flex-row mt-6 px-5 px-12')}>
+                <View style={tailwind('flex flex-row mt-30px px-5')}>
                     <NavItem setNav={setNav} nav={nav} item="news" label="NEWS" />
                     <NavItem setNav={setNav} nav={nav} item="onboard" label="FEATURED" />
                     <NavItem setNav={setNav} nav={nav} item="easy-edu" label="EASY EDU" />
