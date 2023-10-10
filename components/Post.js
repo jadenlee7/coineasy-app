@@ -288,7 +288,7 @@ const PostDisplay = (props) => {
                         {/** Quoted post details if any */}
                         {(showRepostDetails && post.content.repost != null) &&
                         <View >
-                            <Post post={post.repost_details} style={[tailwind('rounded-md border border-secondary p-3'), {width: "100%",marginLeft: -10,}]} />
+                            <Post post={post.repost_details} isRepost={true} style={[tailwind('rounded-md border border-secondary p-3'), {width: "100%",marginLeft: -10,}]} />
                         </View>
                         }
 
