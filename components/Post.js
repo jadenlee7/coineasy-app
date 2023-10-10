@@ -143,7 +143,14 @@ const PostDisplay = (props) => {
                         onPress={() => onImagePress(index)}
                     >
                         <Image
-                            style={[tailwind('rounded-md'), { height: width - 87, width: width - 87 }]}
+                            style={[
+                                tailwind('rounded-md'), 
+                                { 
+                                    height: width - 87,
+                                    width: showRepostDetails ? width - 135  : width - 87 ,
+                                    marginLeft: showRepostDetails ? -20 : 0,
+                                }
+                            ]}
                             onLoad={() => setLoaded(true)}
                             loadingIndicatorSource={require("../assets/loader_001.gif")}
                             source={loaded ?
@@ -280,7 +287,7 @@ const PostDisplay = (props) => {
                         {/** Quoted post details if any */}
                         {(showRepostDetails && post.content.repost != null) &&
                         <View >
-                            <Post post={post.repost_details} style={[tailwind('rounded-md border border-secondary p-3'), {width: "95%"}]} />
+                            <Post post={post.repost_details} style={[tailwind('rounded-md border border-secondary p-3'), {width: "100%",marginLeft: -10,}]} />
                         </View>
                         }
 
