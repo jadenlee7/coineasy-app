@@ -60,7 +60,7 @@ const Categories = ({ navigation, route }) => {
     }
 
     return(
-        <>
+        <View style={tailwind('flex flex-1 bg-white')}>
             <Image
                 style={{ 
                     width: Dimensions.get('window').width,
@@ -91,7 +91,7 @@ const Categories = ({ navigation, route }) => {
                     );
                 })}
             </ScrollView>
-        </>
+        </View>
     )
 }
 
