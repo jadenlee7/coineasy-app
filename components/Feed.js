@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { Text, View, ActivityIndicator, Animated } from 'react-native';
+import { Text, View, ActivityIndicator, Animated, RefreshControl, Platform } from 'react-native';
 
 import { useTailwind } from 'tailwind-rn';
 import { useScrollToTop } from "@react-navigation/native";
@@ -41,7 +41,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                 if(index == 0){
                     return (
                         <>
-                            <View style={{height: 100 + statusBarHeight, width: '100%', backgroundColor: 'white',}} />
+                            <View style={{height: Platform.isPad ? statusBarHeight : 100 + statusBarHeight, width: '100%', backgroundColor: 'white',}} />
                             <PostInFeed post={item} key={item.stream_id} />
                         </>
                     )
@@ -51,12 +51,19 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
               }}
               keyExtractor={item => item.stream_id}
               refreshing={refreshing}
-              progressViewOffset={130}
               scrollEventThrottle={16}
               onEndReached={onEndReached}
               onStartReachedThreshold={4} // optional
               onEndReachedThreshold={1} // optional
-              onRefresh={onRefresh} 
+              refreshControl={
+                <RefreshControl
+                  colors={["#020617"]}
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  progressViewOffset={100 + statusBarHeight}
+                  style={{marginTop: 100 + statusBarHeight}}
+                />
+              }
               onScroll={Animated.event(
                 [{ nativeEvent: { contentOffset: { y: scrollAnim }} }],
                 { useNativeDriver: true }
