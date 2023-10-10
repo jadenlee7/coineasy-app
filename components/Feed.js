@@ -41,7 +41,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                 if(index == 0){
                     return (
                         <>
-                            <View style={{height: Platform.OS == 'ios ? 0 : 100 + statusBarHeight, width: '100%', backgroundColor: 'white',}} />
+                            <View style={{height: Platform.OS == 'ios' ? 0 : 100 + statusBarHeight, width: '100%', backgroundColor: 'white',}} />
                             <PostInFeed post={item} key={item.stream_id} />
                         </>
                     )
