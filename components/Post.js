@@ -38,7 +38,8 @@ const PostDisplay = (props) => {
         showRepostDetails = true,
         showReactions= true,
         fontSize = 13.5,
-        stylePostContent
+        stylePostContent,
+        isRepost = false
     } = props
 
     let list_images;
@@ -129,7 +130,7 @@ const PostDisplay = (props) => {
         setImageIndex(index)
     }
 
-    const Media = ({media, index}) => {
+    const Media = ({media, index, isRepost}) => {
         const tailwind = useTailwind();
         const [loaded, setLoaded] = useState(false);
         const { width } = Dimensions.get('window');
@@ -147,7 +148,8 @@ const PostDisplay = (props) => {
                                 tailwind('rounded-md'), 
                                 { 
                                     height: width - 87,
-                                    width: width - 87 ,
+                                    width: isRepost ? width - 135  : width - 87 ,
+                                    marginLeft: isRepost ? -20 : 0,
                                 }
                             ]}
                             onLoad={() => setLoaded(true)}
@@ -286,7 +288,7 @@ const PostDisplay = (props) => {
                         {/** Quoted post details if any */}
                         {(showRepostDetails && post.content.repost != null) &&
                         <View >
-                            <Post post={post.repost_details} style={[tailwind('rounded-md border border-secondary p-3'), {width: "95%"}]} />
+                            <Post post={post.repost_details} style={[tailwind('rounded-md border border-secondary p-3'), {width: "100%",marginLeft: -10,}]} />
                         </View>
                         }
 
