@@ -233,13 +233,13 @@ const PostDisplay = (props) => {
                                 {/** Display media attached if any */}
                                 {post.content.media?.length == 1 ? (
                                     <View style={tailwind("items-start")}>
-                                        <Media media={post.content.media} />
+                                        <Media media={post.content.media} isRepost={isRepost}/>
                                     </View>
                                 ) : post.content.media?.length > 1 ? (
                                         <ScrollView horizontal={true} style={{width: Dimensions.get('window').width}}>
                                             { post.content.media?.map((item, index) => {
                                                 return(
-                                                    <Media media={item} index={index} key={Math.random()}/>
+                                                    <Media media={item} index={index} key={Math.random()} isRepost={isRepost}/>
                                                 )
                                             })}
                                             <View style={{width: 70}} key={Math.random()}/>
