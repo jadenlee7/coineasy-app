@@ -1,21 +1,28 @@
-import React, { useState, useContext, useEffect } from "react";
-import { Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useContext, useEffect, useRef } from "react";
+import { Text, View, TouchableOpacity, ActivityIndicator, Dimensions, Image, Keyboard } from 'react-native';
 
+import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as Clipboard from 'expo-clipboard';
 import Animated from 'react-native-reanimated';
+import * as WebBrowser from 'expo-web-browser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Post from "./Post";
 import Button from "./Button";
 import { shortAddress } from "../utils";
 import { UserPfp, Username } from "./User";
 import { context } from '../utils/config.js';
-import { CheckIcon, CopyIconBadge } from "./Icons";
+import { BackIcon, CheckIcon, CopyIconBadge, NotificationsIcon, SettingsIcon } from "./Icons";
 import useDidToAddress from "../hooks/useDidToAddress";
 import { GlobalContext } from "../contexts/GlobalContext";
+import useStatusBarHeight from "../hooks/useStatusBarHeight";
+import { useNavigation } from "@react-navigation/core";
+import Modal from "./Modal";
+import { useScrollToTop } from "@react-navigation/native";
 
-export default function ProfileDetails({profile, pfpMarginTop = 20}) {
-    const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen } = useContext(GlobalContext);
+export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
+    const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, setUser } = useContext(GlobalContext);
     const tailwind = useTailwind();
     const [nav, setNav] = useState("feed");
     const [isFollowing, setIsFollowing] = useState(false);
@@ -23,6 +30,14 @@ export default function ProfileDetails({profile, pfpMarginTop = 20}) {
     const [followLoading, setFollowLoading] = useState(false);
     const { address } = useDidToAddress(profile?.did);
 
+    const scrollRef = useRef()
+
+    const navigation = useNavigation()
+
+    const statusBarHeight = useStatusBarHeight();
+    const [showModal, setShowModal] = useState(false)
+
+    useScrollToTop(scrollRef);
 
     useEffect(() => {
         loadiIsFollowing();
@@ -66,11 +81,92 @@ export default function ProfileDetails({profile, pfpMarginTop = 20}) {
         setIsFollowing(active);
     }
 
+
+    function hideSettings() {
+        setShowModal(false);
+        Keyboard.dismiss()
+        Haptics.selectionAsync();
+    }
+
+    async function logout() {
+        Haptics.selectionAsync();
+        setSettingsVis(false);
+        AsyncStorage.removeItem("user-connected");
+        let res = await orbis.logout();
+        console.log("res:", res);
+
+        let providerType = await AsyncStorage.getItem("provider-type");
+        if(providerType == "wallet-connect") {
+            provider?.disconnect();
+        }
+
+        setUser(null);
+    }
+
+    async function openHelp() {
+        Haptics.selectionAsync();
+        let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1x8ZvprutJSuv96KVz3vLyXHWXwi8AaVS/view?usp=sharing");
+    }
+
+    function openPrivacyPolicy() {
+        Haptics.selectionAsync();
+        alert("Coming soon");
+    }
+
+    function openTerms() {
+        Haptics.selectionAsync();
+        alert("Coming soon");
+    }
+
     return(
-        <View style={{flex: screen === 'home' ? 1 : 0}}>
-            <Animated.ScrollView scrollEventThrottle={16} style={{backgroundColor: 'white',}}>
+        <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
+            { type == 'selected' && (
+                <>
+                    <Image
+                        style={{ 
+                            width: Dimensions.get('window').width,
+                            height: 40 + statusBarHeight,
+                            paddingTop: statusBarHeight,
+                        }}
+                        source={require('../assets/HeaderBg.png')} 
+                    />
+
+                    <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 10,paddingRight: 20,paddingTop: 5,}}>
+                        <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
+                            <View style={{zIndex:100000, justifyContent: 'center',alignItems: 'center',margin: 15, backgroundColor: 'white',flexDirection:'row',}}>
+                                <BackIcon />
+                                <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
+                            <NotificationsIcon />
+                        </TouchableOpacity>
+                    </View>
+                </>
+            )}
+
+            <Animated.ScrollView scrollEventThrottle={16} style={{backgroundColor: 'white',}} ref={scrollRef}>
+                { type !== 'selected' && (
+                    <>
+                        <Image
+                            style={{ 
+                                width: Dimensions.get('window').width,
+                                height: 40 + statusBarHeight,
+                                paddingTop: statusBarHeight,
+                            }}
+                            source={require('../assets/HeaderBg.png')} 
+                        />
+                        <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'flex-end',alignItems: 'center',paddingLeft: 10,paddingRight: 20,paddingTop: 15,minHeight: 50}}>
+                            <TouchableOpacity activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();setShowModal(true)}}>
+                                <SettingsIcon />
+                            </TouchableOpacity>
+                        </View>
+                    </>
+                )}
+
                 {/** Display profile details */}
-                <View style={[tailwind('flex flex-col items-center'), {marginTop: pfpMarginTop,}]}>
+                <View style={[tailwind('flex flex-col items-center'), {marginTop: type == 'selected' ? pfpMarginTop : -20,}]}>
                     <View style={[tailwind("rounded-full")]}>
                         <UserPfp details={profile} height={60} />
                     </View>
@@ -122,6 +218,18 @@ export default function ProfileDetails({profile, pfpMarginTop = 20}) {
                     <Posts type={nav} profile={profile} />
                 </View>
             </Animated.ScrollView>
+
+            {showModal && (
+                <Modal visible hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100}>
+                    <View style={[tailwind('flex flex-col w-full p-5')]}>
+                        <Text style={[tailwind('text-primary mb-5')]}>Settings & Privacy</Text>
+                        <Button color="rounded-gray" title="Help" style={{marginBottom: 10}} onPress={() => openHelp()} />
+                        <Button color="rounded-gray" title="Privacy Policy" style={{marginBottom: 10}} onPress={() => openPrivacyPolicy()} />
+                        <Button color="rounded-gray" title="Terms and Conditions" style={{marginBottom: 10}} onPress={() => openTerms()} />
+                        <Button color="rounded-red" title="Logout" onPress={() => logout()} style={{marginBottom: 30}}  />
+                    </View>
+                </Modal>
+            )}
         </View>
     )
 }
