@@ -35,7 +35,13 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                             <NavProfileIcon color={focused ? "#FF6E31" : "#959595" }/>
                         </View>
                 ),
-                tabBarStyle: {minHeight: 60},
+                tabBarStyle: {
+                    minHeight: 60,
+                    borderTopWidth: 0,
+                    elevation: 0,
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0,
+                },
                 tabBarActiveTintColor: "#FF6E31",
                 tabBarInactiveTintColor: "#959595"
             }
