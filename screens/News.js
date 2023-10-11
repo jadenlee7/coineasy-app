@@ -209,33 +209,34 @@ export const NewsItem = ({item}) => {
 
 /** Rendering onboard and easy edu items */
 const OnboardItem = ({item}) => {
-  const { setCategory, setScreen, setPreviousScreen } = useContext(GlobalContext);
-  const tailwind = useTailwind();
-  const navigation = useNavigation()
+    const { setCategory, setScreen, setPreviousScreen } = useContext(GlobalContext);
+    const tailwind = useTailwind();
+    const navigation = useNavigation()
 
-  function selectCat() {
-    setCategory(item);
-    navigation.replace('Navigator')
-  }
+    function selectCat() {
+        setCategory(item);
+        navigation.replace('Navigator')
+    }
 
-  return(
-    <TouchableHighlight style={tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-10px')} onPress={() => selectCat()} underlayColor="#f8fafc">
-      <>
-        {/** Display image if any */}
-        {item.content.imageUrl &&
-          <Image
-            resizeMode="cover"
-            style={[tailwind('rounded-md'), { aspectRatio: 1, width: 70 }]}
-            source={{
-              uri: item.content.imageUrl
-            }}  />
-        }
-        <View style={tailwind('flex flex-col ml-2 flex-1 justify-center')}>
-          <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15 }]}>{item.content.displayName}</Text>
-        </View>
-      </>
-    </TouchableHighlight>
-  )
+    return(
+        <TouchableHighlight style={tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-10px')} onPress={() => selectCat()} underlayColor="#f8fafc">
+            <>
+                {/** Display image if any */}
+                {item.content.imageUrl &&
+                    <Image
+                        resizeMode="cover"
+                        style={[tailwind('rounded-md'), { aspectRatio: 1, width: 70 }]}
+                        source={{
+                            uri: item.content.imageUrl
+                        }}  
+                    />
+                }
+                <View style={tailwind('flex flex-col ml-2 flex-1 justify-center')}>
+                    <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15 }]}>{item.content.displayName}</Text>
+                </View>
+            </>
+        </TouchableHighlight>
+    )
 }
 
 export default News
