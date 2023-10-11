@@ -5,6 +5,7 @@ import fetch from 'cross-fetch';
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as WebBrowser from 'expo-web-browser';
+import { useNavigation } from "@react-navigation/core";
 
 import { GlobalContext } from "../contexts/GlobalContext";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
@@ -210,11 +211,11 @@ export const NewsItem = ({item}) => {
 const OnboardItem = ({item}) => {
   const { setCategory, setScreen, setPreviousScreen } = useContext(GlobalContext);
   const tailwind = useTailwind();
+  const navigation = useNavigation()
 
   function selectCat() {
     setCategory(item);
-    setPreviousScreen("news");
-    setScreen("home");
+    navigation.replace('Navigator')
   }
 
   return(
