@@ -70,10 +70,10 @@ const Categories = ({ navigation, route }) => {
                 source={require('../assets/HeaderBg.png')} 
             />
 
-            <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: 20,marginBottom: 10,}}>
+            <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: 19,marginBottom: 10,}}>
                 <Text style={[tailwind('text-slate-900 px-2'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20,marginLeft: 10, }]}>Categories</Text>
 
-                <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('Notifications')} style={{marginRight: 30,}}>
+                <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('Notifications')} style={{marginRight: 20,}}>
                     <NotificationsIcon />
                 </TouchableOpacity>
             </View>
