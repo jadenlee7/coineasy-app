@@ -156,7 +156,7 @@ const PostDisplay = (props) => {
                             onLoad={() => setLoaded(true)}
                             loadingIndicatorSource={require("../assets/loader_001.gif")}
                             source={loaded ?
-                                { uri: media[0].url }
+                                { uri: media[0].url ? media[0].url : media[0][0].url}
                                 :
                                 require("../assets/loader_001.gif")
                             } 
