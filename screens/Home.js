@@ -26,7 +26,7 @@ const Home = ({ navigation, route }) => {
                 <Feed posts={posts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMorePosts}/>
 
                 {/** Share button */}
-                <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 0, right: 15} ]} onPress={() => showPostbox()}>
+                <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => showPostbox()}>
                     <Image
                     style={{ height: 70, width: 70 }}
                     source={require('../assets/share_btn.png')} />
