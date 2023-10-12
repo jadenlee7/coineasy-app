@@ -19,19 +19,19 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                 tabBarLabel: '',
                 tabBarIcon: ({ focused, color, size }) => (
                     title == 'home' ? 
-                        <View style={{marginTop: '20%',}}>
+                        <View style={{marginTop: '20%',marginLeft: 24,}}>
                             <NavHomeIcon color={focused ? "#FF6E31" : "#959595" } /> 
                         </View>
                     : title == 'cat' ? 
-                        <View style={{marginTop: '20%',}}>
+                        <View style={{marginTop: '20%',marginLeft: 10,}}>
                             <NavCategoriesIcon color={focused ? "#FF6E31" : "#959595" }/> 
                         </View>
                     : title == 'news' ? 
-                        <View style={{marginTop: '20%',}}>
+                        <View style={{marginTop: '20%',marginRight: 10,}}>
                             <NavChartIcon color={focused ? "#FF6E31" : "#959595" }/> 
                         </View>
                     : 
-                        <View style={{marginTop: '20%',}}>
+                        <View style={{marginTop: '20%',marginRight: 24,}}>
                             <NavProfileIcon color={focused ? "#FF6E31" : "#959595" }/>
                         </View>
                 ),
