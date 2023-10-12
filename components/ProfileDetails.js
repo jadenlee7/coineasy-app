@@ -158,7 +158,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                             source={require('../assets/HeaderBg.png')} 
                         />
                         <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'flex-end',alignItems: 'center',paddingLeft: 10,paddingRight: 20,paddingTop: 15,minHeight: 50}}>
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();setShowModal(true)}}>
+                            <TouchableOpacity activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();setShowModal(true)}} style={{width: 50,height: 50,alignItems: 'center',justifyContent: 'center',}}>
                                 <SettingsIcon />
                             </TouchableOpacity>
                         </View>
