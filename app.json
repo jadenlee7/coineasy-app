@@ -18,11 +18,11 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "28",
+      "buildNumber": "29",
       "bundleIdentifier": "com.coineasy.coineasysocial"
     },
     "android": {
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
