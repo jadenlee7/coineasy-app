@@ -27,10 +27,6 @@ const News = ({ navigation, route }) => {
 
     useEffect(() => {
         loadData();
-
-        navigation.addListener('tabPress', (e) => {
-            Haptics.selectionAsync();
-        });
     }, [])
 
     async function loadData() {

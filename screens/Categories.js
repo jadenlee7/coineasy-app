@@ -1,7 +1,6 @@
-import React, { useContext, useEffect } from "react";
+import React, { useContext } from "react";
 import { ScrollView, RefreshControl, Text, View, TouchableOpacity, Image, TouchableHighlight, Animated, Dimensions } from 'react-native';
 
-import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 
 import { NotificationsIcon } from "../components/Icons";
@@ -12,14 +11,6 @@ const Categories = ({ navigation, route }) => {
     const { categories, loadContexts } = useContext(GlobalContext);
     const tailwind = useTailwind();
     const statusBarHeight = useStatusBarHeight();
-
-
-    useEffect(() => {
-        navigation.addListener('tabPress', (e) => {
-            Haptics.selectionAsync();
-        });
-    }, [])
-
 
     const Category = ({category}) => {
         const { setCategory, setScreen, setPreviousScreen } = useContext(GlobalContext);

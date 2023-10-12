@@ -6,6 +6,7 @@ import Home from '../screens/Home';
 import Categories from '../screens/Categories';
 import News from "../screens/News";
 import Profile from '../screens/Profile';
+import * as Haptics from 'expo-haptics';
 
 import { NavHomeIcon, NavCategoriesIcon, NavChartIcon, NavProfileIcon } from "../components/Icons";
 
@@ -43,17 +44,46 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                     shadowOpacity: 0,
                 },
                 tabBarActiveTintColor: "#FF6E31",
-                tabBarInactiveTintColor: "#959595"
+                tabBarInactiveTintColor: "#959595",
+                lazy: 'false'
             }
         )
     }
 
+    // useEffect(() => {
+    //     navigation.addListener('tabPress', (e) => {
+    //         Haptics.selectionAsync();
+    //     });
+    // }, [])
+    
+
     return (
         <Tab.Navigator screenOptions={{ headerShown: false }} style={{minHeight: 150}}>
-            <Tab.Screen name="Home" component={Home} options={showIcons('home')}/>
-            <Tab.Screen name="Categories" component={Categories} options={showIcons('cat')}/>
-            <Tab.Screen name="News" component={News} options={showIcons('news')}/>
-            <Tab.Screen name="Profile" component={Profile} options={showIcons('profile')}/>
+            <Tab.Screen name="Home" component={Home} options={showIcons('home')}
+                listeners={{
+                    tabPress: (e) => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    },
+                }}
+            />
+            <Tab.Screen name="Categories" component={Categories} options={showIcons('cat')}
+                listeners={{
+                    tabPress: (e) => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    },
+                }}                />
+            <Tab.Screen name="News" component={News} options={showIcons('news')}
+                listeners={{
+                    tabPress: (e) => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    },
+                }}                />
+            <Tab.Screen name="Profile" component={Profile} options={showIcons('profile')}
+                listeners={{
+                    tabPress: (e) => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    },
+                }}                />
         </Tab.Navigator>
     )
 };

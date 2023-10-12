@@ -6,7 +6,6 @@ import { useTailwind } from 'tailwind-rn';
 import { GlobalContext } from "../contexts/GlobalContext";
 import ProfileDetails from "../components/ProfileDetails";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
-import * as Haptics from 'expo-haptics';
 
 const Profile = ({ navigation, route }) => {
     const { user, setUser, orbis } = useContext(GlobalContext);
@@ -17,9 +16,6 @@ const Profile = ({ navigation, route }) => {
 
     useEffect(() => {
         getProfile();
-        navigation.addListener('tabPress', (e) => {
-            Haptics.selectionAsync();
-        });
     }, [user]);
 
     async function getProfile() {

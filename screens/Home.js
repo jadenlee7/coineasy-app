@@ -1,22 +1,15 @@
-import React, { useContext, useEffect } from "react";
+import React, { useContext } from "react";
 import { View, TouchableOpacity, Image } from 'react-native';
 
 import Feed from "../components/Feed";
 import { GlobalContext } from "../contexts/GlobalContext";
 import { useTailwind } from 'tailwind-rn';
 import Header from "../components/Header";
-import * as Haptics from 'expo-haptics';
 
 
 const Home = ({ navigation, route }) => {
     const { posts, refreshing, refreshingBottom, onRefresh, showPostbox, loadMorePosts } = useContext(GlobalContext);
     const tailwind = useTailwind();
-
-    useEffect(() => {
-        navigation.addListener('tabPress', (e) => {
-            Haptics.selectionAsync();
-        });
-    }, [])
 
     return(
         <>
