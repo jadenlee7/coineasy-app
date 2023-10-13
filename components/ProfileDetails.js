@@ -20,10 +20,15 @@ import useStatusBarHeight from "../hooks/useStatusBarHeight";
 import { useNavigation } from "@react-navigation/core";
 import Modal from "./Modal";
 import { useScrollToTop } from "@react-navigation/native";
+import { useWalletConnectModal } from '@walletconnect/modal-react-native'
+
 
 export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, setUser } = useContext(GlobalContext);
     const tailwind = useTailwind();
+
+    const { provider } = useWalletConnectModal();
+
     const [nav, setNav] = useState("feed");
     const [isFollowing, setIsFollowing] = useState(false);
     const [countPosts, setCountPosts] = useState("-");
