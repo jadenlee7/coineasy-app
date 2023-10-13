@@ -177,6 +177,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                             activeOpacity={0.7}
                             onPress={() => {Haptics.selectionAsync();setShowModal(true)}} 
                             style={{width: 60,height: 50,alignItems: 'center',justifyContent: 'center',position: 'absolute',top: 0,right:0}}
+                            hitSlop={{top: 20, bottom: 20, left: 50, right: 50}}
                         >
                             <SettingsIcon />
                         </TouchableOpacity>
