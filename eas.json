@@ -14,5 +14,14 @@
     "production": {
       "channel": "production"
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "guillaume.lamboley@yahoo.com",
+        "ascAppId": "6463145391",
+        "appleTeamId": "A9G84S4PWJ"
+      }
+    }
   }
 }

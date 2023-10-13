@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, ActivityIndicator, Dimensions, Image, Keyboard } from 'react-native';
+import { Text, View, TouchableOpacity, ActivityIndicator, Dimensions, Image, Keyboard, Platform } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -148,26 +148,19 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
             <Animated.ScrollView scrollEventThrottle={16} style={{backgroundColor: 'white',}} ref={scrollRef}>
                 { type !== 'selected' && (
-                    <>
-                        <Image
-                            style={{ 
-                                width: Dimensions.get('window').width,
-                                height: 40 + statusBarHeight,
-                                paddingTop: statusBarHeight,
-                            }}
-                            source={require('../assets/HeaderBg.png')} 
-                        />
-                        <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'flex-end',alignItems: 'center',paddingRight: 5,paddingTop: 5,minHeight: 50}}>
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();setShowModal(true)}} style={{width: 50,height: 50,alignItems: 'center',justifyContent: 'center',}}>
-                                <SettingsIcon />
-                            </TouchableOpacity>
-                        </View>
-                    </>
+                    <Image
+                        style={{ 
+                            width: Dimensions.get('window').width,
+                            height: 40 + statusBarHeight,
+                            paddingTop: statusBarHeight,
+                        }}
+                        source={require('../assets/HeaderBg.png')} 
+                    />
                 )}
 
                 {/** Display profile details */}
-                <View style={[tailwind('flex flex-col items-center'), {marginTop: type == 'selected' ? pfpMarginTop : -30,}]}>
-                    <View style={[tailwind("rounded-full")]}>
+                <View style={[tailwind('flex flex-col items-center'), {marginTop: type == 'selected' ? pfpMarginTop : 0,}]}>
+                    <View style={[tailwind("rounded-full mt-4")]}>
                         <UserPfp details={profile} height={60} />
                     </View>
                     <View style={tailwind('mt-2 flex flex-row items-center')}>
@@ -177,6 +170,17 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     {profile?.profile?.description &&
                         <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>{profile.profile.description}</Text>
                     }
+                    
+                    { type !== 'selected' && (
+
+                        <TouchableOpacity 
+                            activeOpacity={0.7}
+                            onPress={() => {Haptics.selectionAsync();setShowModal(true)}} 
+                            style={{width: 60,height: 50,alignItems: 'center',justifyContent: 'center',position: 'absolute',top: 0,right:0}}
+                        >
+                            <SettingsIcon />
+                        </TouchableOpacity>
+                    )}
                 </View>
         
                 {/** KPI counts */}
