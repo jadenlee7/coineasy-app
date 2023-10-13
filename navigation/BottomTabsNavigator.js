@@ -62,26 +62,26 @@ const BottomTabsNavigator = ({ navigation, route }) => {
             <Tab.Screen name="Home" component={Home} options={showIcons('home')}
                 listeners={{
                     tabPress: (e) => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        Haptics.selectionAsync();
                     },
                 }}
             />
             <Tab.Screen name="Categories" component={Categories} options={showIcons('cat')}
                 listeners={{
                     tabPress: (e) => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        Haptics.selectionAsync();
                     },
                 }}                />
             <Tab.Screen name="News" component={News} options={showIcons('news')}
                 listeners={{
                     tabPress: (e) => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        Haptics.selectionAsync();
                     },
                 }}                />
             <Tab.Screen name="Profile" component={Profile} options={showIcons('profile')}
                 listeners={{
                     tabPress: (e) => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        Haptics.selectionAsync();
                     },
                 }}                />
         </Tab.Navigator>
