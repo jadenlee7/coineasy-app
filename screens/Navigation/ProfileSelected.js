@@ -43,6 +43,19 @@ const ProfileSelected = ({navigation, route}) => {
                         source={require('../../assets/HeaderBg.png')} 
                     />
                     
+                    <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 10,paddingRight: 20,paddingTop: 5,}}>
+                        <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
+                            <View style={{zIndex:100000, justifyContent: 'center',alignItems: 'center',margin: 15, backgroundColor: 'white',flexDirection:'row',}}>
+                                <BackIcon />
+                                <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
+                            <NotificationsIcon />
+                        </TouchableOpacity>
+                    </View>
+
                     <ActivityIndicator style={{marginTop: 25}} size="small" color="#020617" />
                 </View>
             )}

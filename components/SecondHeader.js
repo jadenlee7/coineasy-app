@@ -75,7 +75,7 @@ const SecondHeader = (props) => {
 
         {/** Notifications button */}
         {cta == "notifications" &&
-            <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2'),{marginTop: category ? -4 : 0,}]} activeOpacity={0.7} onPress={() => navigation.navigate('Notifications')}>
+            <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2'),{marginTop: category ? -4 : -1,}]} activeOpacity={0.7} onPress={() => navigation.navigate('Notifications')}>
                 <NotificationsIcon />
             </TouchableOpacity>
         }

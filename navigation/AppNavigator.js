@@ -14,10 +14,10 @@ const AppNavigator = (props) => {
     return (
         <NavigationContainer>
             <Stack.Navigator>
-                <Stack.Screen name="Navigator" component={BottomTabsNavigator} options={{ headerShown: false }} />
-                <Stack.Screen name="ProfileSelected" component={ProfileSelected} options={{ headerShown: false }} />
-                <Stack.Screen name="Notifications" component={Notifications} options={{ headerShown: false }} />
-                <Stack.Screen name="PostDetails" component={PostDetails} options={{ headerShown: false }} />
+                <Stack.Screen name="Navigator" component={BottomTabsNavigator} options={{ headerShown: false,animation: 'none' }} />
+                <Stack.Screen name="ProfileSelected" component={ProfileSelected} options={{ headerShown: false,animation: 'none' }} />
+                <Stack.Screen name="Notifications" component={Notifications} options={{ headerShown: false,animation: 'none' }} />
+                <Stack.Screen name="PostDetails" component={PostDetails} options={{ headerShown: false,animation: 'none' }} />
             </Stack.Navigator>
         </NavigationContainer>
     )

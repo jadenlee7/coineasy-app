@@ -67,8 +67,6 @@ const PostDisplay = (props) => {
     /** Will open pane with post details */
     function showProfileDetails(did) {
         Haptics.selectionAsync();
-
-        console.log('ici');
         navigation.navigate('ProfileSelected', { did })
         // translateY.value = 0;
         // setProfileSelected(did)
@@ -135,10 +133,10 @@ const PostDisplay = (props) => {
         const tailwind = useTailwind();
         const [loaded, setLoaded] = useState(false);
         const { width } = Dimensions.get('window');
-    
+
         if(media && media.length > 0) {
             return(
-                <View style={{marginLeft: index != 0 ? 8 : 0}} key={Math.random()}>
+                <View style={{marginLeft: index && index != 0 ? 8 : 0}} key={Math.random()}>
                     <TouchableOpacity 
                         activeOpacity={0.8} 
                         style={[tailwind('rounded-md border border-secondary'), { marginBottom: 6, marginTop: 2 }]} 

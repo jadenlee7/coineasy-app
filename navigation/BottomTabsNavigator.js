@@ -20,19 +20,19 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                 tabBarLabel: '',
                 tabBarIcon: ({ focused, color, size }) => (
                     title == 'home' ? 
-                        <View style={{marginTop: '20%',marginLeft: 24,}}>
+                        <View style={{marginTop: '20%',marginLeft: 40,width: 60,alignItems: 'center',}}>
                             <NavHomeIcon color={focused ? "#FF6E31" : "#959595" } /> 
                         </View>
                     : title == 'cat' ? 
-                        <View style={{marginTop: '20%',marginLeft: 10,}}>
+                        <View style={{marginTop: '20%',marginLeft: 15,width: 60,alignItems: 'center',}}>
                             <NavCategoriesIcon color={focused ? "#FF6E31" : "#959595" }/> 
                         </View>
                     : title == 'news' ? 
-                        <View style={{marginTop: '20%',marginRight: 10,}}>
+                        <View style={{marginTop: '20%',marginRight: 15,width: 60,alignItems: 'center',}}>
                             <NavChartIcon color={focused ? "#FF6E31" : "#959595" }/> 
                         </View>
                     : 
-                        <View style={{marginTop: '20%',marginRight: 24,}}>
+                        <View style={{marginTop: '20%',marginRight: 40,width: 60,alignItems: 'center',}}>
                             <NavProfileIcon color={focused ? "#FF6E31" : "#959595" }/>
                         </View>
                 ),
@@ -42,6 +42,7 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                     elevation: 0,
                     shadowOffset: { width: 0, height: 0 },
                     shadowOpacity: 0,
+                    // backgroundColor: 'gray',
                 },
                 tabBarActiveTintColor: "#FF6E31",
                 tabBarInactiveTintColor: "#959595",
