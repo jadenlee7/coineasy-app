@@ -1,9 +1,10 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Image, Modal, ActivityIndicator, Dimensions, ScrollView } from 'react-native';
+import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Image, Modal, ActivityIndicator, Dimensions, ScrollView, Animated } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as WebBrowser from 'expo-web-browser';
+import { useRoute, useScrollToTop } from '@react-navigation/native';
 import reactStringReplace from 'react-string-replace';
 import { useNavigation } from '@react-navigation/core';
 import ImageViewer from 'react-native-image-zoom-viewer';
@@ -27,8 +28,9 @@ const Post = React.memo((props) => {
 const PostDisplay = (props) => {
 
     const navigation = useNavigation();
+    const route = useRoute();
 
-    const { user, setPostDetailsVis, setCategory, translateY, setEditedPost, hidePostbox } = useContext(GlobalContext);
+    const { user, setPostDetailsVis, setCategory, setEditedPost, hidePostbox, setScrollAnim, setOffsetAnim } = useContext(GlobalContext);
     const {
         post,
         isReply = false,
@@ -43,9 +45,9 @@ const PostDisplay = (props) => {
     } = props
 
     let list_images = [];
-    if(post.content.media?.length > 1){
+    if(post?.content?.media?.length > 1){
         list_images = post.content.media.map((elt) => {return({'url': elt[0].url})})
-    }else if(post.content.media?.length == 1){
+    }else if(post?.content?.media?.length == 1){
         list_images = [{'url': post.content.media[0].url ? post.content.media[0].url : post.content.media[0][0].url}]
     }
 
@@ -75,9 +77,13 @@ const PostDisplay = (props) => {
     /** Will select the post's category and display its feed */
     function selectCategory(category) {
         Haptics.selectionAsync();
-        translateY.value = 0;
         setCategory(category);
-        navigation.replace('Navigator')
+        setScrollAnim(new Animated.Value(0));
+        setOffsetAnim(new Animated.Value(0));
+
+        if(route?.name !== 'Categories'){
+            navigation.replace('Navigator')
+        }
     }
 
     /** Will update the body of the post */
@@ -101,12 +107,12 @@ const PostDisplay = (props) => {
 
         // Match @-mentions
         replacedText = reactStringReplace(body, /@(\w+)/g, (match, i) => (
-            <InteractiveMention mentions={post.content.mentions} key={match + i} match={match} i={i} showProfileDetails={showProfileDetails} />
+            <InteractiveMention mentions={post.content.mentions} key={Math.random()} match={match} i={i} showProfileDetails={showProfileDetails} />
         ));
 
         // Match URLs
         replacedText = reactStringReplace(replacedText, /(https?:\/\/\S+)/g, (match, i) => (
-        <TouchableWithoutFeedback key={match + i} onPress={() => openNews(match)}>
+        <TouchableWithoutFeedback key={Math.random()} onPress={() => openNews(match)}>
             <View>
                 <Text style={{ color: '#ff6b17', fontFamily: "GmarketMedium", backgroundColor: "#FFF" }}>{match}</Text>
             </View>

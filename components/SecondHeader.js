@@ -32,7 +32,7 @@ const SecondHeader = (props) => {
     
         if(back) {
             return(
-                <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-3')]} activeOpacity={0.7} onPress={() => back()}>
+                <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-3')]} activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();back()}}>
                     <>
                         <BackIcon />
                         <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
@@ -75,7 +75,7 @@ const SecondHeader = (props) => {
 
         {/** Notifications button */}
         {cta == "notifications" &&
-            <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2'),{marginTop: category ? -4 : -1,}]} activeOpacity={0.7} onPress={() => navigation.navigate('Notifications')}>
+            <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2'),{marginTop: category ? -4 : -1,}]} activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
                 <NotificationsIcon />
             </TouchableOpacity>
         }

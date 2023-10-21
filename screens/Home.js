@@ -1,15 +1,64 @@
-import React, { useContext } from "react";
-import { View, TouchableOpacity, Image } from 'react-native';
+import React, { useContext, useEffect } from "react";
+import { View, TouchableOpacity, Image, BackHandler, Animated } from 'react-native';
+
+import * as Haptics from 'expo-haptics';
+import { useTailwind } from 'tailwind-rn';
+import { useFocusEffect } from '@react-navigation/native';
 
 import Feed from "../components/Feed";
-import { GlobalContext } from "../contexts/GlobalContext";
-import { useTailwind } from 'tailwind-rn';
 import Header from "../components/Header";
+import { GlobalContext } from "../contexts/GlobalContext";
 
 
 const Home = ({ navigation, route }) => {
-    const { posts, refreshing, refreshingBottom, onRefresh, showPostbox, loadMorePosts } = useContext(GlobalContext);
+    const { posts, currentRoute, selectedCategory, setSelectedCategory,selectedNews,setSelectedNews, refreshing, refreshingBottom, onRefresh, showPostbox, loadMorePosts, category, setCategory, setScrollAnim, setOffsetAnim, setCurrentRoute } = useContext(GlobalContext);
     const tailwind = useTailwind();
+
+    useFocusEffect(
+        React.useCallback(() => {
+            setCurrentRoute(route.name)
+        }, [])
+    );
+    const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
+        console.log('ICI');
+        console.log(currentRoute);
+        console.log(' ');
+
+        Haptics.selectionAsync()
+        if(currentRoute == 'Categories'){
+            if (selectedCategory) {
+                setSelectedCategory(null)
+                return true;
+            }else{
+                setScrollAnim(new Animated.Value(0))
+                setOffsetAnim(new Animated.Value(0))
+                navigation.goBack()
+                return true;
+            }
+        } else if(currentRoute == 'News'){
+            if (selectedNews) {
+                setSelectedNews(null)
+                return true;
+            }else{
+                setScrollAnim(new Animated.Value(0));
+                setOffsetAnim(new Animated.Value(0));
+                navigation.goBack()
+                return true;
+            }
+        } else if(currentRoute == 'Home'){
+            if (category) {
+                setCategory(null)
+            }
+            setScrollAnim(new Animated.Value(0));
+            setOffsetAnim(new Animated.Value(0));
+            navigation.replace('Navigator')
+            return true
+        }
+    });
+
+    useEffect(() => {
+        return () => backhandler.remove();
+    }, [navigation])
 
     return(
         <>

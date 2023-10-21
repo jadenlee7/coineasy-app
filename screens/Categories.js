@@ -1,25 +1,139 @@
-import React, { useContext } from "react";
-import { ScrollView, RefreshControl, Text, View, TouchableOpacity, Image, TouchableHighlight, Animated, Dimensions } from 'react-native';
+import React, { useCallback, useContext, useEffect, useState } from "react";
+import { ScrollView, RefreshControl, Text, View, TouchableOpacity, Image, TouchableHighlight, Animated, Dimensions, BackHandler } from 'react-native';
 
+import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
+import { useFocusEffect } from '@react-navigation/native';
 
-import { NotificationsIcon } from "../components/Icons";
+import { BackIcon, NotificationsIcon } from "../components/Icons";
 import { GlobalContext } from "../contexts/GlobalContext";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
+import Feed from "../components/Feed";
+import Header from "../components/Header";
+
+let page = 0;
 
 const Categories = ({ navigation, route }) => {
-    const { categories, loadContexts } = useContext(GlobalContext);
+    const { orbis, currentRoute, selectedNews,setSelectedNews, categories, category, setCategory, loadContexts, refreshing, setRefreshing, refreshingBottom, setRefreshingBottom, showPostbox, setScrollAnim, setOffsetAnim, categoryFeedRef, categoryPosts, setCategoryPosts, selectedCategory, setSelectedCategory, setCurrentRoute} = useContext(GlobalContext);
     const tailwind = useTailwind();
     const statusBarHeight = useStatusBarHeight();
 
+    useFocusEffect(
+        React.useCallback(() => {
+            setCurrentRoute(route.name)
+        }, [])
+    );
+
+    const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
+        // console.log('LA');
+        // console.log(currentRoute);
+        // console.log(' ');
+
+        Haptics.selectionAsync()
+        if(currentRoute == 'Categories'){
+            if (selectedCategory) {
+                setSelectedCategory(null)
+                return true;
+            }else{
+                setScrollAnim(new Animated.Value(0))
+                setOffsetAnim(new Animated.Value(0))
+                navigation.goBack()
+                return true;
+            }
+        } else if(currentRoute == 'News'){
+            if (selectedNews) {
+                setSelectedNews(null)
+                return true;
+            }else{
+                setScrollAnim(new Animated.Value(0));
+                setOffsetAnim(new Animated.Value(0));
+                navigation.goBack()
+                return true;
+            }
+        } else if(currentRoute == 'Home'){
+            if (category) {
+                setCategory(null)
+            }
+            setScrollAnim(new Animated.Value(0));
+            setOffsetAnim(new Animated.Value(0));
+            navigation.replace('Navigator')
+            return true
+        }
+    });
+
+    useEffect(() => {
+        return () => backhandler.remove();
+    }, [navigation])
+
+    /** Will retrieve all posts shared in the global context */
+    async function loadCategoryPosts(category) {
+        setCategoryPosts([]);
+        setRefreshing(true);
+        let { data } = await orbis.getPosts({
+            contexts: [category.stream_id],
+            include_child_contexts: true
+        });
+        if(data) {
+            console.log(data.length + " category posts retrieved.");
+            setCategoryPosts(data);
+        }
+        setRefreshing(false);
+    }
+
+    /** This will load more posts and add those to the current list */
+    async function loadMoreCategoryPosts() {
+        console.log("Enter loadMoreCategoryPosts() with page:", page);
+        if(refreshingBottom) {
+            console.log("Already refreshing.");
+            return;
+        }
+        if (categoryPosts.length % 50 === 0) {
+            setRefreshingBottom(true);
+            page++;
+            console.log("Enter loadMoreCategoryPosts with page:", page);
+            let { data } = await orbis.getPosts(
+                {
+                    contexts: [selectedCategory.stream_id],
+                    include_child_contexts: true
+                },
+                page
+            );
+
+            let _posts = [...categoryPosts, ...data];
+            setRefreshingBottom(false);
+            setCategoryPosts(_posts);
+        } else {
+            console.log("Reached the end category.");
+        }
+    }
+
+    const onRefresh = useCallback(async () => {
+        page = 0;
+        setRefreshing(true);
+        let { data, error } = await orbis.getPosts({
+          contexts: [selectedCategory.stream_id],
+          include_child_contexts: true
+        });
+        console.log("Data loaded.");
+        if(error) {
+          console.log("Error getPosts:", error);
+        }
+        if(data) {
+          console.log(data.length + " posts retrieved.");
+          setCategoryPosts(data);
+        }
+        setRefreshing(false);
+      }, [selectedCategory]);
+
     const Category = ({category}) => {
-        const { setCategory, setScreen, setPreviousScreen } = useContext(GlobalContext);
         const tailwind = useTailwind();
 
         function selectCat() {
-            console.log("Selecting category.");
-            setCategory(category);
-            navigation.replace('Navigator')
+            Haptics.selectionAsync()
+            setSelectedCategory(category);
+            loadCategoryPosts(category)
+            setScrollAnim(new Animated.Value(0));
+            setOffsetAnim(new Animated.Value(0));
         }
     
         return(
@@ -52,36 +166,58 @@ const Categories = ({ navigation, route }) => {
 
     return(
         <View style={tailwind('flex flex-1 bg-white')}>
-            <Image
-                style={{ 
-                    width: Dimensions.get('window').width,
-                    height: 40 + statusBarHeight,
-                    paddingTop: statusBarHeight,
-                }}
-                source={require('../assets/HeaderBg.png')} 
-            />
 
-            <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: 19,marginBottom: 10,}}>
-                <Text style={[tailwind('text-slate-900 px-2'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20,marginLeft: 10, }]}>Categories</Text>
+            { !selectedCategory ? (
+                <>
+                    <Image
+                        style={{ 
+                            width: Dimensions.get('window').width,
+                            height: 40 + statusBarHeight,
+                            paddingTop: statusBarHeight,
+                        }}
+                        source={require('../assets/HeaderBg.png')} 
+                    />
+                    <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: 19,marginBottom: 10,}}>
+                        <Text style={[tailwind('text-slate-900 px-2'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20,marginLeft: 10, }]}>Categories</Text>
 
-                <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('Notifications')} style={{marginRight: 20,}}>
-                    <NotificationsIcon />
-                </TouchableOpacity>
-            </View>
+                        <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('Notifications')} style={{marginRight: 20,}}>
+                            <NotificationsIcon />
+                        </TouchableOpacity>
+                    </View>
 
-            <ScrollView
-                contentContainerStyle={tailwind('flex flex-row flex-1 items-start px-5 py-2 w-full flex-wrap')}
-                refreshControl={
-                    <RefreshControl refreshing={false} onRefresh={loadContexts} />
-                }
-            >
-                {/** Loop and display categories */}
-                {categories.map((category, key) => {
-                    return (
-                        <Category key={key} category={category} />
-                    );
-                })}
-            </ScrollView>
+                    <ScrollView
+                        contentContainerStyle={tailwind('flex flex-row items-start px-5 py-2 w-full flex-wrap')}
+                        refreshControl={
+                            <RefreshControl refreshing={false} onRefresh={loadContexts} />
+                        }
+                    >
+                        {/** Loop and display categories */}
+                        {categories.map((category, key) => {
+                            return (
+                                <Category key={key} category={category} />
+                            );
+                        })}
+                        <View style={{height: 50}}/>
+                    </ScrollView>
+                </>
+            ) : (
+                <>
+                    <Header route={route.name} backCategory={() => setSelectedCategory(null)}/>
+                    <View style={tailwind('flex flex-col flex-1')}>
+                        <View style={tailwind('flex flex-1 bg-white')}>
+                        <Feed posts={categoryPosts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMoreCategoryPosts} feedRef={categoryFeedRef}/>
+        
+                        {/** Share button */}
+                        <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => showPostbox()}>
+                            <Image
+                                style={{ height: 70, width: 70 }}
+                                source={require('../assets/share_btn.png')} 
+                            />
+                        </TouchableOpacity>
+                        </View>
+                    </View>
+                </>
+            )}
         </View>
     )
 }

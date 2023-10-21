@@ -42,7 +42,6 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                     elevation: 0,
                     shadowOffset: { width: 0, height: 0 },
                     shadowOpacity: 0,
-                    // backgroundColor: 'gray',
                 },
                 tabBarActiveTintColor: "#FF6E31",
                 tabBarInactiveTintColor: "#959595",
@@ -50,12 +49,6 @@ const BottomTabsNavigator = ({ navigation, route }) => {
             }
         )
     }
-
-    // useEffect(() => {
-    //     navigation.addListener('tabPress', (e) => {
-    //         Haptics.selectionAsync();
-    //     });
-    // }, [])
     
 
     return (
@@ -72,19 +65,22 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                     tabPress: (e) => {
                         Haptics.selectionAsync();
                     },
-                }}                />
+                }}                
+            />
             <Tab.Screen name="News" component={News} options={showIcons('news')}
                 listeners={{
                     tabPress: (e) => {
                         Haptics.selectionAsync();
                     },
-                }}                />
+                }}                
+            />
             <Tab.Screen name="Profile" component={Profile} options={showIcons('profile')}
                 listeners={{
                     tabPress: (e) => {
                         Haptics.selectionAsync();
                     },
-                }}                />
+                }}                
+            />
         </Tab.Navigator>
     )
 };

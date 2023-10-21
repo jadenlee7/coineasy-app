@@ -10,8 +10,8 @@ import { RepostIcon } from "./Icons";
 import { GlobalContext } from "../contexts/GlobalContext";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
-export default function Feed({posts, refreshing, refreshingBottom, onRefresh, loadMore, header}) {
-  const { feedRef, scrollAnim } = useContext(GlobalContext);
+export default function Feed({posts, refreshing, refreshingBottom, onRefresh, loadMore, header, feedRef }) {
+  const { homeFeedRef, scrollAnim } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
   const statusBarHeight = useStatusBarHeight();
@@ -22,7 +22,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
     }
   }
 
-  useScrollToTop(feedRef);
+  useScrollToTop(feedRef ? feedRef : homeFeedRef);
 
   return(
     <>
@@ -32,7 +32,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
         <>
           {posts.length > 0 ?
             <Animated.FlatList
-              ref={feedRef}
+              ref={feedRef ? feedRef : homeFeedRef}
               style={tailwind('w-full')}
               data={posts}
               ListHeaderComponent={header}
@@ -92,7 +92,9 @@ const PostInFeed = React.memo(({post}) => {
       <View style={tailwind('flex flex-col')}>
         <View style={[tailwind('flex flex-row items-center px-5 mt-3'), { marginBottom: -5 }]}>
           <RepostIcon color="#959595" />
-          <Text style={tailwind('text-secondary items-center ml-1')}><Username details={post.creator_details} style={tailwind('text-secondary font-normal')} /> reposted</Text>
+          <Text style={tailwind('text-secondary items-center ml-1')}>
+            <Username details={post.creator_details} style={tailwind('text-secondary font-normal')} /> reposted
+          </Text>
         </View>
         <Post post={post.repost_details} showRepostDetails={false} />
       </View>

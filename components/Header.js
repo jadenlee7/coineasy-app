@@ -1,40 +1,18 @@
-import React, { useState, useEffect, useRef, useContext } from "react";
-import { Dimensions, SafeAreaView, StyleSheet, Text, View, Image, NativeEventEmitter, NativeModules, Platform, StatusBar, Animated } from 'react-native';
+import React, { useContext, useEffect } from "react";
+import { Dimensions, Image, Animated } from 'react-native';
 import { useTailwind } from 'tailwind-rn';
 import { GlobalContext } from "../contexts/GlobalContext";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
-import {
-  withTiming,
-  useAnimatedStyle,
-  useSharedValue,
-  Easing
-} from 'react-native-reanimated';
 import SecondHeader from "./SecondHeader";
 
-export default function Header() {
-  const { screen, scrolled, setScrolled, postDetailsVis, profileSelected, translateY, setCategory, setScreen, previousScreen, category, scrollAnim,offsetAnim, setClampedScroll, navbarTranslate } = useContext(GlobalContext);
+export default function Header(props) {
+  const { screen, setCategory, category, scrollAnim,offsetAnim, setClampedScroll, navbarTranslate } = useContext(GlobalContext);
   const tailwind = useTailwind();
   const { width } = Dimensions.get('window');
   const statusBarHeight = useStatusBarHeight();
-  const mTop = useSharedValue(0);
-  const [hidden, setHidden] = useState(false);
-
-  const actionBarStyle = useAnimatedStyle(() => {
-    return {
-      marginTop: withTiming(translateY.value, {
-        duration: translateY.value == 0 ? 250 : 200,
-        easing: Easing.inOut(Easing.ease),
-      })
-    };
-  });
 
   if(screen == "qr") {
     return;
-  }
-  
-  function resetCategory() {
-    setCategory(null);
-    setScreen(previousScreen);
   }
 
   return(
@@ -66,12 +44,18 @@ export default function Header() {
             );
         }}
     >
-      <Image
-        style={[{ width: width, height: 40 + statusBarHeight, paddingTop: statusBarHeight }]}
-        source={require('../assets/HeaderBg.png')} 
-      />
+        <Image
+            style={[{ width: width, height: 40 + statusBarHeight, paddingTop: statusBarHeight }]}
+            source={require('../assets/HeaderBg.png')} 
+        />
       
-      {screen == 'home' && <SecondHeader label={"GM! CoinEasy Frens!"} back={category ? () => resetCategory() : null} />}
+        {screen == 'home' && props.route != 'Categories' && props.route != 'News'? (
+            <SecondHeader label={"GM! CoinEasy Frens!"} back={category ? () => setCategory(null) : null} />
+         ) : props.route == 'Categories' ? (
+            <SecondHeader back={props.backCategory}/>
+        ) : props.route == 'News' ? (
+            <SecondHeader back={props.backNews}/>
+        ) : null}
     </Animated.View>
   )
 }

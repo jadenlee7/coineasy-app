@@ -84,8 +84,16 @@ export default function App() {
   const [scrolled, setScrolled] = useState(0);
   const url = Linking.useURL();
   const responseListener = useRef();
-  const feedRef = useRef();
+  const homeFeedRef = useRef();
+  const categoryFeedRef = useRef();
+  const newsFeedRef = useRef();
   const translateY = useSharedValue(0);
+
+  const [categoryPosts, setCategoryPosts] = useState(null)
+  const [selectedCategory, setSelectedCategory] = useState(null)
+  const [newsPosts, setNewsPosts] = useState(null)
+  const [selectedNews, setSelectedNews] = useState(null)
+  const [currentRoute, setCurrentRoute] = useState(null)
 
   const [scrollAnim, setScrollAnim] = useState(new Animated.Value(0));
   const [offsetAnim, setOffsetAnim] = useState(new Animated.Value(0));
@@ -408,9 +416,12 @@ export default function App() {
   }
 
   function scrollToTop() {
-    if(feedRef?.current) {
-      //setScrolled(0);
-      feedRef.current.scrollToOffset({ animated: true, offset: 0 });
+    if(homeFeedRef?.current) {
+      homeFeedRef.current.scrollToOffset({ animated: true, offset: 0 });
+    } else if(categoryFeedRef?.current){
+        categoryFeedRef.current.scrollToOffset({ animated: true, offset: 0 });
+    } else if(newsFeedRef?.current){
+        newsFeedRef.current.scrollToOffset({ animated: true, offset: 0 });
     }
   }
 
@@ -428,7 +439,79 @@ export default function App() {
     <>
       <StatusBar translucent={true} backgroundColor="#00000000" />
       <View onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
-        <GlobalContext.Provider value={{ user, setUser, updateProfileVis, setUpdateProfileVis, screen, setScreen, profileSelected, setProfileSelected, userConnecting, setUserConnecting, orbis, showConnectModal, setShowConnectModal, confetti, repost, setRepost, postDetailsVis, setPostDetailsVis, posts, setPosts, refreshing, refreshingBottom, onRefresh, loadPosts, loadMorePosts, categories, loadContexts, callbackConnect, pushNotifsVis, setPushNotifsVis, postboxVis, showPostbox, hidePostbox, callbackPostShared, replyTo, setReplyTo, setSettingsVis, setShareProfileVis, category, setCategory, setNotificationsVis, scrolled, setScrolled, feedRef, scrollToTop, translateY, setPostSettingsModalVis, editedPost, setEditedPost, previousScreen, setPreviousScreen, scrollAnim, offsetAnim, setClampedScroll, navbarTranslate, setOffsetAnim, setScrollAnim }}>
+        <GlobalContext.Provider value={{ 
+                user,
+                setUser,
+                updateProfileVis,
+                setUpdateProfileVis,
+                screen,
+                setScreen,
+                profileSelected,
+                setProfileSelected,
+                userConnecting,
+                setUserConnecting,
+                orbis,
+                showConnectModal,
+                setShowConnectModal,
+                confetti,
+                repost,
+                setRepost,
+                postDetailsVis,
+                setPostDetailsVis,
+                posts,
+                setPosts,
+                refreshing,
+                refreshingBottom,
+                onRefresh,
+                loadPosts,
+                loadMorePosts,
+                categories,
+                loadContexts,
+                callbackConnect,
+                pushNotifsVis,
+                setPushNotifsVis,
+                postboxVis,
+                showPostbox,
+                hidePostbox,
+                callbackPostShared,
+                replyTo,
+                setReplyTo,
+                setSettingsVis,
+                setShareProfileVis,
+                category,
+                setCategory,
+                setNotificationsVis,
+                scrolled,
+                setScrolled,
+                homeFeedRef,
+                categoryFeedRef,
+                newsFeedRef,
+                scrollToTop,
+                translateY,
+                setPostSettingsModalVis,
+                editedPost,
+                setEditedPost,
+                previousScreen,
+                setPreviousScreen,
+                scrollAnim,
+                offsetAnim,
+                setClampedScroll,
+                navbarTranslate,
+                setOffsetAnim,
+                setScrollAnim,
+                setRefreshing,
+                categoryPosts, 
+                setCategoryPosts,
+                selectedCategory, 
+                setSelectedCategory,
+                newsPosts, 
+                setNewsPosts,
+                selectedNews, 
+                setSelectedNews,
+                currentRoute,
+                setCurrentRoute
+            }}
+        >
           <TailwindProvider utilities={utilities}>
             {user ?
               <AppNavigator />

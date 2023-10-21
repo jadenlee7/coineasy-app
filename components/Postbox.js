@@ -19,7 +19,7 @@ import { BackIcon, ImagePickerIcon, CaretDownIcon, CloseIcon, LockIcon, UnlockIc
 let mentions = [];
 
 export default function Postbox({isReply = false}) {
-    const { user, orbis, setShowConnectModal, hidePostbox, replyTo, repost, callbackPostShared, category, categories, editedPost } = useContext(GlobalContext);
+    const { user, orbis, setShowConnectModal, hidePostbox, replyTo, repost, callbackPostShared, category, categories, editedPost, selectedCategory, selectedNews, currentRoute } = useContext(GlobalContext);
     const tailwind = useTailwind();
     const textInputRef = useRef();
     const [message, setMessage] = useState("");
@@ -44,20 +44,21 @@ export default function Postbox({isReply = false}) {
 
     /** Pre-select category if one already selected in the feed */
     useEffect(() => {
-        if(category) {
-            setCategorySelected(category);
+        if(category || selectedCategory || selectedNews) {
+            const temp_cat = currentRoute == 'Categories' ? selectedCategory : currentRoute == 'News' ? selectedNews : category
+            setCategorySelected(temp_cat);
             checkAccess();
 
             async function checkAccess() {
-                if(category.content.accessRules && category.content.accessRules.length > 0) {
-                    let _hasAccess = await checkContextAccess(user, category.content.accessRules);
+                if(temp_cat?.content.accessRules && temp_cat?.content.accessRules.length > 0) {
+                    let _hasAccess = await checkContextAccess(user, temp_cat.content.accessRules);
                     setHasAccess(_hasAccess);
                 } else {
                     setHasAccess(true);
                 }
             }
         }
-    }, [category])
+    }, [category, selectedCategory, selectedNews])
 
     async function edit() {
         try {
@@ -392,10 +393,9 @@ export default function Postbox({isReply = false}) {
         setListMedia([...listMedia])
     }
   
-
     return(
         <View style={tailwind('items-center w-full')} keyboardShouldPersistTaps="always">
-            <View style={tailwind('flex flex-col items-start w-full p-5')}>
+            <View style={tailwind('flex flex-col items-start w-full p-5')} keyboardShouldPersistTaps="always">
                 {categoriesVis ?
                     <>
                         <View style={tailwind('flex flex-row w-full mb-1')}>
@@ -416,7 +416,7 @@ export default function Postbox({isReply = false}) {
                         </View>
                     </>
                 :
-                    <>
+                    <View keyboardShouldPersistTaps="always">
                         {/** Top bar with user details and cancel button */}
                         <View style={tailwind('flex flex-row mb-10px w-full items-center')}>
                             <View style={tailwind('flex-1')}>
@@ -462,7 +462,7 @@ export default function Postbox({isReply = false}) {
                                 numberOfLines={1}
                                 value={message}
                                 //editable={!loading}
-                                style={[tailwind('w-full'), { fontSize: 14, fontFamily: "GmarketMedium", minHeight: 35, lineHeight: 17, paddingBottom: 10 }]}
+                                style={[tailwind('w-full'), { fontSize: 14, fontFamily: "GmarketMedium", minHeight: 55, lineHeight: 17, paddingBottom: 10, width:Dimensions.get('window').width }]}
                                 placeholder={replyTo ? "Post your reply" : "What's happening?" }
                                 placeholderTextColor="#64748b"
                                 multiline={true} 
@@ -509,7 +509,7 @@ export default function Postbox({isReply = false}) {
                                 onPress={editedPost ? () => edit() : () => send()} 
                             />
                         </View>
-                    </>
+                    </View>
                 }
             </View>
 
