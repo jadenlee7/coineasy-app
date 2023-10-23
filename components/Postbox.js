@@ -442,7 +442,7 @@ export default function Postbox({isReply = false}) {
                         </View>
 
                         {(categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) &&
-                            <View style={tailwind('bg-slate-50 px-2 py-3 items-center mb-1 rounded-md w-full flex-row justify-center')} >
+                            <View style={tailwind('bg-slate-50 px-2 py-3 items-center mb-1 rounded-md flex-row justify-center')} >
                                 {hasAccess ?
                                     <UnlockIcon color="#959595" style={{marginRight: 2}} />
                                 :

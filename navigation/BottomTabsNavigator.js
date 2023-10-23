@@ -45,7 +45,7 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                 },
                 tabBarActiveTintColor: "#FF6E31",
                 tabBarInactiveTintColor: "#959595",
-                lazy: 'false'
+                lazy: false
             }
         )
     }
