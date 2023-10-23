@@ -30,36 +30,36 @@ export default function Login() {
             />
 
             <View style={[tailwind('w-full h-full absolute px-8 items-center'), {paddingTop: 350}]}>
-                <View style={[tailwind('absolute w-full'), {bottom: 115}]}>
+                <View style={[tailwind('absolute w-full'), {bottom: 175}]}>
 
                     <TouchableOpacity activeOpacity={0.8} style={[tailwind('rounded-full py-2.5 text-center bg-slate-900 border-2 border-slate-900 mt-4')]} onPress={() => setConnectModalVis(true)}>
-                        <Text style={[tailwind(`text-white px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Register</Text>
+                        <Text style={[tailwind(`text-white px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign up</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={[tailwind('rounded-full py-2.5 text-center bg-white mt-2 border-2 border-slate-900')]} onPress={() => setConnectModalVis(true)} activeOpacity={0.8}>
-                        <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Login</Text>
+                        <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign in</Text>
                     </TouchableOpacity>
 
                     <View style={[tailwind(`w-full items-center`), {marginTop: 25}]}>
                         <Image
                             resizeMode="cover"
                             style={{width: 159 * 0.9, height: 22.7 * 0.9}}
-                            source={require('../assets/powered_by_orbis.png')} 
+                            source={require('../assets/powered_by_orbis_white.png')} 
                         />
                     </View>
 
                 </View>
             </View>
 
-            <View style={{position: 'absolute',bottom: 50,width: '100%',alignItems: 'center',}}>
-                <Text>By signing up an account, I agree to the</Text>
+            <View style={{position: 'absolute',bottom: 120,width: '100%',alignItems: 'center',}}>
+                <Text style={{color:'white'}}>By signing up an account, I agree to the</Text>
                 <View style={{flexDirection: 'row'}}>
                     <TouchableOpacity onPress={() => openTerms()}>
-                        <Text style={{textDecorationLine: 'underline', fontWeight: 'bold',}}>Terms & Conditions</Text>
+                        <Text style={{textDecorationLine: 'underline', fontWeight: 'bold',color:'white'}}>Terms & Conditions</Text>
                     </TouchableOpacity>
-                    <Text> and </Text>
+                    <Text style={{color:'white'}}> and </Text>
                     <TouchableOpacity onPress={() => openPrivacy()}>
-                        <Text style={{textDecorationLine: 'underline', fontWeight: 'bold',}}>Privacy policy</Text>
+                        <Text style={{textDecorationLine: 'underline', fontWeight: 'bold',color:'white'}}>Privacy policy</Text>
                     </TouchableOpacity>
                 </View>
             </View>
