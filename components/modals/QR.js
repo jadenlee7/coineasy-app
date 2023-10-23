@@ -1,20 +1,31 @@
 import React, { useState, useContext, useEffect, useCallback } from "react";
-import { GlobalContext } from "../../contexts/GlobalContext";
-import { useTailwind } from 'tailwind-rn';
-import { Keyboard, StyleSheet, Text, View, TouchableOpacity, Image, SafeAreaView, KeyboardAvoidingView, TouchableHighlight, ActivityIndicator, Dimensions, Share } from 'react-native';
-import Button from "../Button";
-import SvgQRCode from 'react-native-qrcode-svg';
+import { Text, View, Image, TouchableHighlight, Dimensions, Share, BackHandler } from 'react-native';
+
 import * as Linking from 'expo-linking';
+import * as Haptics from 'expo-haptics';
+import { useTailwind } from 'tailwind-rn';
 import * as Clipboard from 'expo-clipboard';
+import SvgQRCode from 'react-native-qrcode-svg';
+
 import { CloseIcon, ShareIcon, CopyIcon } from "../Icons";
+import { GlobalContext } from "../../contexts/GlobalContext";
 import useStatusBarHeight from "../../hooks/useStatusBarHeight";
 
 export default function QR({hide}) {
-  const { user, setUser, orbis, callbackConnect } = useContext(GlobalContext);
-  const tailwind = useTailwind();
-  const [connectModalVis, setConnectModalVis] = useState(false);
-  const { width } = Dimensions.get('window');
-  const statusBarHeight = useStatusBarHeight();
+    const { user, setShareProfileVis } = useContext(GlobalContext);
+    const tailwind = useTailwind();
+    const { width } = Dimensions.get('window');
+    const statusBarHeight = useStatusBarHeight();
+
+    const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
+        Haptics.selectionAsync()
+        setShareProfileVis(false)
+        return true
+    });
+
+    useEffect(() => {
+        return () => backhandler.remove();
+    }, [])
 
   /** Will build follow link */
   let link = Linking.createURL('user', {
@@ -58,7 +69,7 @@ export default function QR({hide}) {
         source={require('../../assets/qr_code_bg.png')} />
       <View style={[tailwind('absolute w-full flex flex-col'), { paddingTop: statusBarHeight }]}>
         <View style={[tailwind('flex items-start')]}>
-          <TouchableHighlight onPress={hide} style={{left: 20, top: 10}} underlayColor="transparent">
+          <TouchableHighlight onPress={() => {Haptics.selectionAsync();hide()}} style={{left: 20, top: 10}} underlayColor="transparent">
             <CloseIcon />
           </TouchableHighlight>
         </View>

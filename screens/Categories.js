@@ -25,10 +25,6 @@ const Categories = ({ navigation, route }) => {
     );
 
     const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
-        // console.log('LA');
-        // console.log(currentRoute);
-        // console.log(' ');
-
         Haptics.selectionAsync()
         if(currentRoute == 'Categories'){
             if (selectedCategory) {
