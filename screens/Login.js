@@ -1,5 +1,5 @@
-import React, { useState, useContext } from "react";
-import { Text, View, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useContext, useEffect, useRef } from "react";
+import { Text, View, TouchableOpacity, Image, Animated, Easing, Dimensions } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -21,6 +21,23 @@ export default function Login() {
         let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1Dhijs_O61shJEKNy6Sga16Iu3vgqwc8I/view?usp=sharing");
     }
 
+
+
+
+
+    // const moveAnimation = useRef(new Animated.Value(0)).current;
+    // const animate = () => {
+    //   Animated.timing(moveAnimation, {
+    //     toValue: (Dimensions.get('window').width/2)-100,
+    //     duration: 1000,
+    //     useNativeDriver: true
+    //   }).start();
+    // }
+
+    // useEffect(() => {
+    //     animate();
+    // }, []);
+
     return(
         <View style={tailwind('w-full h-full')}>
             <Image
@@ -29,14 +46,30 @@ export default function Login() {
                 source={require('../assets/LoginBG.png')} 
             />
 
-            <View style={[tailwind('w-full h-full absolute px-8 items-center'), {paddingTop: 350}]}>
-                <View style={[tailwind('absolute w-full'), {bottom: 175}]}>
+            {/* <Animated.View style={{ transform: [{ translateX }], paddingTop: 300 }}>
+                <Text ref={ref}>Some Text</Text>
+            </Animated.View> */}
 
-                    <TouchableOpacity activeOpacity={0.8} style={[tailwind('rounded-full py-2.5 text-center bg-slate-900 border-2 border-slate-900 mt-4')]} onPress={() => setConnectModalVis(true)}>
+            <View style={[tailwind('w-full h-full absolute px-7 items-center')]}>
+                <View style={[tailwind('absolute w-full'), {top: '55%'}]}>
+
+                    {/* <Animated.Text style={[{  transform: [{translateX: moveAnimation}], fontSize: 30,fontWeight: 'bold',color: 'white'}]}>
+                        WELCOME TO
+                    </Animated.Text> */}
+
+                    <TouchableOpacity 
+                        activeOpacity={0.8} 
+                        style={[tailwind('rounded-full py-2.5 text-center bg-slate-900 border-2 border-slate-900 mt-4')]}
+                        onPress={() => setConnectModalVis(true)}
+                    >
                         <Text style={[tailwind(`text-white px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign up</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={[tailwind('rounded-full py-2.5 text-center bg-white mt-2 border-2 border-slate-900')]} onPress={() => setConnectModalVis(true)} activeOpacity={0.8}>
+                    <TouchableOpacity 
+                        style={[tailwind('rounded-full py-2.5 text-center bg-white mt-2 border-2 border-slate-900')]} 
+                        onPress={() => setConnectModalVis(true)} 
+                        activeOpacity={0.8}
+                    >
                         <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign in</Text>
                     </TouchableOpacity>
 
@@ -51,7 +84,7 @@ export default function Login() {
                 </View>
             </View>
 
-            <View style={{position: 'absolute',bottom: 120,width: '100%',alignItems: 'center',}}>
+            <View style={{position: 'absolute',bottom: 80,width: '100%',alignItems: 'center',}}>
                 <Text style={{color:'white'}}>By signing up an account, I agree to the</Text>
                 <View style={{flexDirection: 'row'}}>
                     <TouchableOpacity onPress={() => openTerms()}>

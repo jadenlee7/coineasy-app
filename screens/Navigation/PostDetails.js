@@ -9,6 +9,7 @@ import { GlobalContext } from "../../contexts/GlobalContext";
 import { useTailwind } from 'tailwind-rn';
 import useStatusBarHeight from "../../hooks/useStatusBarHeight";
 import { BackIcon, NotificationsIcon } from "../../components/Icons";
+import HeaderImage from "../../components/HeaderImage";
 
 const PostDetails = ({navigation, route}) => {
     const { user, orbis, postDetailsVis, showPostbox, hidePostbox, setReplyTo } = useContext(GlobalContext);
@@ -69,14 +70,8 @@ const PostDetails = ({navigation, route}) => {
     return(
         <View style={{flex: 1}}>
             
-            <Image
-                style={{ 
-                    width: Dimensions.get('window').width,
-                    height: 40 + statusBarHeight,
-                    paddingTop: statusBarHeight,
-                }}
-                source={require('../../assets/HeaderBg.png')} 
-            />
+            <HeaderImage />
+
 
             <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 5,maxHeight:60}}>
                 <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>

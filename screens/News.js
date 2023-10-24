@@ -13,6 +13,7 @@ import { context, onboard_context, edu_context } from '../utils/config.js';
 import { InterpunctIcon, NotificationsIcon } from "../components/Icons";
 import Header from "../components/Header";
 import Feed from "../components/Feed";
+import HeaderImage from "../components/HeaderImage";
 
 let page = 0
 
@@ -275,21 +276,11 @@ const News = ({ navigation, route }) => {
     }
   
 
-
-
-
     return(
         <View style={tailwind('flex flex-1 bg-white')}>
             { !selectedNews ? (
                 <>
-                    <Image
-                        style={{ 
-                            width: Dimensions.get('window').width,
-                            height: 40 + statusBarHeight,
-                            paddingTop: statusBarHeight,
-                        }}
-                        source={require('../assets/HeaderBg.png')} 
-                    />
+                    <HeaderImage />
 
                     <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: 19,}}>
                         <Text style={[tailwind('text-slate-900 px-2'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20,marginLeft: 10, }]}>Explore EASY World!</Text>

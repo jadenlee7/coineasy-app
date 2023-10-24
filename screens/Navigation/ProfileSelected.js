@@ -8,6 +8,7 @@ import { GlobalContext } from "../../contexts/GlobalContext";
 import ProfileDetails from "../../components/ProfileDetails";
 import useStatusBarHeight from "../../hooks/useStatusBarHeight";
 import { BackIcon, NotificationsIcon } from "../../components/Icons";
+import HeaderImage from "../../components/HeaderImage";
 
 const ProfileSelected = ({navigation, route}) => {
 
@@ -34,14 +35,8 @@ const ProfileSelected = ({navigation, route}) => {
                 <ProfileDetails profile={profile?.details} pfpMarginTop={0} type='selected'/>
             ) : (
                 <View style={tailwind('w-full flex-1 bg-white')}>
-                    <Image
-                        style={{ 
-                            width: Dimensions.get('window').width,
-                            height: 40 + statusBarHeight,
-                            paddingTop: statusBarHeight,
-                        }}
-                        source={require('../../assets/HeaderBg.png')} 
-                    />
+                    <HeaderImage />
+
                     
                     <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 10,paddingRight: 20,paddingTop: 5,}}>
                         <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>

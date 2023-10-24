@@ -10,6 +10,7 @@ import { UserPfp, Username } from "../../components/User";
 import { GlobalContext } from "../../contexts/GlobalContext";
 import useStatusBarHeight from "../../hooks/useStatusBarHeight";
 import { BackIcon, InterpunctIcon, NotificationsIcon } from "../../components/Icons";
+import HeaderImage from "../../components/HeaderImage";
 
 const Notifications = ({navigation, route}) => {
     const { orbis } = useContext(GlobalContext);
@@ -102,14 +103,8 @@ const Notifications = ({navigation, route}) => {
 
     return(
         <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
-            <Image
-                style={{ 
-                    width: Dimensions.get('window').width,
-                    height: 40 + statusBarHeight,
-                    paddingTop: statusBarHeight,
-                }}
-                source={require('../../assets/HeaderBg.png')} 
-            />
+            <HeaderImage />
+
 
             <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 5}}>
                 <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>

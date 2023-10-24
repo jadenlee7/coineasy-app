@@ -20,10 +20,6 @@ const Home = ({ navigation, route }) => {
         }, [])
     );
     const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
-        console.log('ICI');
-        console.log(currentRoute);
-        console.log(' ');
-
         Haptics.selectionAsync()
         if(currentRoute == 'Categories'){
             if (selectedCategory) {
@@ -65,15 +61,15 @@ const Home = ({ navigation, route }) => {
             <Header />
             <View style={tailwind('flex flex-col flex-1')}>
                 <View style={tailwind('flex flex-1 bg-white')}>
-                <Feed posts={posts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMorePosts}/>
+                    <Feed posts={posts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMorePosts}/>
 
-                {/** Share button */}
-                <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => showPostbox()}>
-                    <Image
-                        style={{ height: 70, width: 70 }}
-                        source={require('../assets/share_btn.png')} 
-                    />
-                </TouchableOpacity>
+                    {/** Share button */}
+                    <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => showPostbox()}>
+                        <Image
+                            style={{ height: 70, width: 70 }}
+                            source={require('../assets/share_btn.png')} 
+                        />
+                    </TouchableOpacity>
                 </View>
             </View>
         </>

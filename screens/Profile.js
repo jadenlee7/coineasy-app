@@ -6,6 +6,7 @@ import { useTailwind } from 'tailwind-rn';
 import { GlobalContext } from "../contexts/GlobalContext";
 import ProfileDetails from "../components/ProfileDetails";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
+import HeaderImage from "../components/HeaderImage";
 
 const Profile = ({ navigation, route }) => {
     const { user, setUser, orbis } = useContext(GlobalContext);
@@ -31,14 +32,7 @@ const Profile = ({ navigation, route }) => {
                 <ProfileDetails profile={user} />
             :
                 <View style={tailwind('flex-1 bg-white')}>
-                    <Image
-                        style={{ 
-                            width: Dimensions.get('window').width,
-                            height: 40 + statusBarHeight,
-                            paddingTop: statusBarHeight,
-                        }}
-                        source={require('../assets/HeaderBg.png')} 
-                    />
+                    <HeaderImage />
                     
                     <ActivityIndicator style={{marginTop: 25}} size="small" color="#020617" />
                 </View>

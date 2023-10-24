@@ -1,9 +1,10 @@
 import React, { useContext, useEffect } from "react";
-import { Dimensions, Image, Animated } from 'react-native';
+import { Dimensions, Image, Animated, Platform } from 'react-native';
 import { useTailwind } from 'tailwind-rn';
 import { GlobalContext } from "../contexts/GlobalContext";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 import SecondHeader from "./SecondHeader";
+import HeaderImage from "./HeaderImage";
 
 export default function Header(props) {
   const { screen, setCategory, category, scrollAnim,offsetAnim, setClampedScroll, navbarTranslate } = useContext(GlobalContext);
@@ -20,12 +21,12 @@ export default function Header(props) {
         style={[
             tailwind('w-full'), 
             { 
-                height: screen == 'home' ? 100 + statusBarHeight : 40 + statusBarHeight,
+                height: statusBarHeight > 25 ? 120 + statusBarHeight : 135 + statusBarHeight,
                 transform: [{ translateY: navbarTranslate }],
                 position: 'absolute',
                 left: 0,
                 right: 0,
-                top: 0,
+                top: statusBarHeight > 25 ? 0 : -20,
                 zIndex: 1000,
                 overflow: 'hidden'
             },
@@ -44,11 +45,8 @@ export default function Header(props) {
             );
         }}
     >
-        <Image
-            style={[{ width: width, height: 40 + statusBarHeight, paddingTop: statusBarHeight }]}
-            source={require('../assets/HeaderBg.png')} 
-        />
-      
+        <HeaderImage />
+
         {screen == 'home' && props.route != 'Categories' && props.route != 'News'? (
             <SecondHeader label={"GM! CoinEasy Frens!"} back={category ? () => setCategory(null) : null} />
          ) : props.route == 'Categories' ? (

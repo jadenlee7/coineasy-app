@@ -66,26 +66,37 @@ const SecondHeader = (props) => {
 
   return(
     <View style={{marginTop: screen == 'home' ? 0 : 40 + useStatusBarHeight(),}}>
-        <View style={[tailwind('flex flex-row items-center px-3 pt-3'), {minHeight: 50, backgroundColor: 'white', paddingBottom: screen == 'home' && !profileSelected ? 30 : 0 }]}>
+        <View 
+            style={
+                [
+                    tailwind('flex flex-row items-center px-3 pt-3'), 
+                    {
+                        minHeight: 50,
+                        backgroundColor: 'white',
+                        paddingBottom: screen == 'home' && !profileSelected ? 30 : 0,
+                    }
+                ]
+            }
+        >
 
-        {/** Back button */}
-        <View style={[tailwind('flex flex-1 items-start pt-1'),]}>
-            <HeaderLabel label={label} showBack={label == 'GM! CoinEasy Frens!' ? false : showBack} back={back} />
-        </View>
+            {/** Back button */}
+            <View style={[tailwind('flex flex-1 items-start pt-1'),]}>
+                <HeaderLabel label={label} showBack={label == 'GM! CoinEasy Frens!' ? false : showBack} back={back} />
+            </View>
 
-        {/** Notifications button */}
-        {cta == "notifications" &&
-            <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2'),{marginTop: category ? -4 : -1,}]} activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
-                <NotificationsIcon />
-            </TouchableOpacity>
-        }
+            {/** Notifications button */}
+            {cta == "notifications" &&
+                <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2'),{marginTop: category ? -4 : -1,}]} activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
+                    <NotificationsIcon />
+                </TouchableOpacity>
+            }
 
-        {/** Settings button */}
-        {cta == "settings" &&
-            <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2')]} activeOpacity={0.7} onPress={() => setSettingsVis(true)}>
-                <SettingsIcon />
-            </TouchableOpacity>
-        }
+            {/** Settings button */}
+            {cta == "settings" &&
+                <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2')]} activeOpacity={0.7} onPress={() => setSettingsVis(true)}>
+                    <SettingsIcon />
+                </TouchableOpacity>
+            }
         </View>
     </View>
   )

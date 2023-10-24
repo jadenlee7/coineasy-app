@@ -21,6 +21,7 @@ import { useNavigation } from "@react-navigation/core";
 import Modal from "./Modal";
 import { useScrollToTop } from "@react-navigation/native";
 import { useWalletConnectModal } from '@walletconnect/modal-react-native'
+import HeaderImage from "./HeaderImage";
 
 
 export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
@@ -127,14 +128,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
             { type == 'selected' && (
                 <>
-                    <Image
-                        style={{ 
-                            width: Dimensions.get('window').width,
-                            height: 40 + statusBarHeight,
-                            paddingTop: statusBarHeight,
-                        }}
-                        source={require('../assets/HeaderBg.png')} 
-                    />
+                    <HeaderImage />
 
                     <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 10,paddingRight: 20,paddingTop: 5,}}>
                         <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
@@ -153,14 +147,8 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
             <Animated.ScrollView scrollEventThrottle={16} style={{backgroundColor: 'white',}} ref={scrollRef}>
                 { type !== 'selected' && (
-                    <Image
-                        style={{ 
-                            width: Dimensions.get('window').width,
-                            height: 40 + statusBarHeight,
-                            paddingTop: statusBarHeight,
-                        }}
-                        source={require('../assets/HeaderBg.png')} 
-                    />
+                    <HeaderImage />
+
                 )}
 
                 {/** Display profile details */}
