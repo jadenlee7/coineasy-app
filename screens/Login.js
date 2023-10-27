@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, Image, Animated, Easing, Dimensions } from 'react-native';
+import { Text, View, TouchableOpacity, Image, Animated, Easing, Dimensions, Platform } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -59,14 +59,26 @@ export default function Login() {
 
                     <TouchableOpacity 
                         activeOpacity={0.8} 
-                        style={[tailwind('rounded-full py-2.5 text-center bg-slate-900 border-2 border-slate-900 mt-4')]}
+                        style={[
+                            tailwind('rounded-full text-center bg-slate-900 border-2 border-slate-900 mt-4'), 
+                            {
+                                paddingTop: Platform.OS == 'ios' ? 12 : 10,
+                                paddingBottom: Platform.OS == 'ios' ? 12 : 10
+                            }
+                        ]}
                         onPress={() => setConnectModalVis(true)}
                     >
                         <Text style={[tailwind(`text-white px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign up</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity 
-                        style={[tailwind('rounded-full py-2.5 text-center bg-white mt-2 border-2 border-slate-900')]} 
+                        style={[
+                            tailwind('rounded-full text-center bg-white mt-2 border-2 border-slate-900'),
+                            {
+                                paddingTop: Platform.OS == 'ios' ? 12 : 10,
+                                paddingBottom: Platform.OS == 'ios' ? 12 : 10
+                            }
+                        ]} 
                         onPress={() => setConnectModalVis(true)} 
                         activeOpacity={0.8}
                     >

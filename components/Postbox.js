@@ -314,7 +314,7 @@ export default function Postbox({isReply = false}) {
         if(usersLoading) {
             return(
                 <View style={tailwind("mt-2")}>
-                <ActivityIndicator size="small" color="#FF6B17" />
+                    <ActivityIndicator size="small" color="#FF6B17" />
                 </View>
             )
         }
@@ -416,7 +416,7 @@ export default function Postbox({isReply = false}) {
                         </View>
                     </>
                 :
-                    <View keyboardShouldPersistTaps="always">
+                    <>
                         {/** Top bar with user details and cancel button */}
                         <View style={tailwind('flex flex-row mb-10px w-full items-center')}>
                             <View style={tailwind('flex-1')}>
@@ -509,13 +509,14 @@ export default function Postbox({isReply = false}) {
                                 onPress={editedPost ? () => edit() : () => send()} 
                             />
                         </View>
-                    </View>
+                    </>
                 }
+
             </View>
 
             {/** Show mentions box if needed */}
             {mentionsBoxVis == true &&
-                <View style={[tailwind('flex flex-col w-full pt-1 border-t border-secondary' ), { height: 120 }]}>
+                <View style={[tailwind('flex flex-col pt-1 border-t border-secondary' ), { height: 120,width: Dimensions.get('window').width,}]}>
                     <UserLoop term={currentMention} mentionUser={mentionUser} />
                 </View>
             }

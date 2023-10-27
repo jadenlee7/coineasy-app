@@ -34,13 +34,14 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const [isFollowing, setIsFollowing] = useState(false);
     const [countPosts, setCountPosts] = useState("-");
     const [followLoading, setFollowLoading] = useState(false);
+    const [logOutLoading, setLogOutLoading] = useState(false)
+
     const { address } = useDidToAddress(profile?.did);
 
     const scrollRef = useRef()
 
     const navigation = useNavigation()
 
-    const statusBarHeight = useStatusBarHeight();
     const [showModal, setShowModal] = useState(false)
 
     useScrollToTop(scrollRef);
@@ -97,13 +98,15 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     async function logout() {
         Haptics.selectionAsync();
         setSettingsVis(false);
-        AsyncStorage.removeItem("user-connected");
+        await AsyncStorage.removeItem("user-connected");
         let res = await orbis.logout();
         console.log("res:", res);
 
         let providerType = await AsyncStorage.getItem("provider-type");
         if(providerType == "wallet-connect") {
-            provider?.disconnect();
+            setLogOutLoading(true)
+            await provider?.disconnect();
+            setLogOutLoading(false)
         }
 
         setUser(null);
@@ -224,7 +227,15 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         <Button color="rounded-gray" title="Help" style={{marginBottom: 10}} onPress={() => openHelp()} />
                         <Button color="rounded-gray" title="Privacy Policy" style={{marginBottom: 10}} onPress={() => openPrivacyPolicy()} />
                         <Button color="rounded-gray" title="Terms and Conditions" style={{marginBottom: 10}} onPress={() => openTerms()} />
-                        <Button color="rounded-red" title="Logout" onPress={() => logout()} style={{marginBottom: 30}}  />
+
+                        {logOutLoading ? (
+                            <View style={[tailwind('bg-slate-100 rounded-full py-4 px-8 flex-row items-center justify-center'), {alignSelf: 'center',width: '100%'}]}>
+                                <ActivityIndicator size="small" color="#020617" />
+                            </View>
+
+                        ) : (
+                            <Button color="rounded-red" title="Logout" onPress={() => logout()} style={{marginBottom: 30}}  />
+                        )}
                     </View>
                 </Modal>
             )}
