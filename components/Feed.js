@@ -60,7 +60,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                   colors={["#020617"]}
                   refreshing={refreshing}
                   onRefresh={onRefresh}
-                  progressViewOffset={120 + statusBarHeight}
+                  progressViewOffset={140 + statusBarHeight}
                   style={{marginTop: 120 + statusBarHeight}}
                 />
               }

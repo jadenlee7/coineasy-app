@@ -148,6 +148,8 @@ export default function App() {
       console.log("User connected is:", _userDid);
       if(_userDid) {
         setUser({did: _userDid})
+      }else{
+        setUser(null)
       }
       setIsReady(true);
 
@@ -155,6 +157,8 @@ export default function App() {
       let res = await orbis.isConnected();
       if(res.status == 200) {
         setUser(res.details);
+      }else{
+        setUser(null)
       }
     }
 

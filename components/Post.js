@@ -251,7 +251,13 @@ const PostDisplay = (props) => {
                                         </ScrollView>
                                 ) : null}
                                 {modalVis && list_images.length > 0 &&
-                                    <Modal visible={true} transparent={true} style={{backgroundColor: "#000"}} statusBarTranslucent>
+                                    <Modal 
+                                        visible={true}
+                                        transparent={true}
+                                        style={{backgroundColor: "#000"}}
+                                        statusBarTranslucent
+                                        onRequestClose={() => setModalVis(false)}
+                                    >
                                         <View style={[tailwind("h-full w-full"), {backgroundColor: "#000", paddingTop: statusBarHeight + 10}]}>
                                             <View style={[tailwind('flex justify-end w-full'), {height: 40}]}>
                                                 <TouchableOpacity onPress={() => setModalVis(!modalVis)} style={{left: 20}} activeOpacity={0.6}>
