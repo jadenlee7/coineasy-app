@@ -130,10 +130,10 @@ export default function ConnectModal({hide}) {
 
   /** Will open WebBrowser to connect with Google using our Oauth API */
   async function connectWithGoogle() {
+    Haptics.selectionAsync();
     let link = Linking.createURL('google-auth');
     console.log("link:", link);
     setLoading(true);
-    Haptics.selectionAsync();
     let result = await WebBrowser.openBrowserAsync('https://lit.orbis.club/oauth-google/' + encodeURIComponent(link));
   }
 
@@ -194,7 +194,7 @@ export default function ConnectModal({hide}) {
             <Button color="rounded-gray" title="Continue with Google" icon={<GoogleIcon style={{marginRight: 8}} />} style={{marginTop: 10}} onPress={connectWithGoogle} />
 
             {/** Connect with Wallet Connect */}
-            <Button color="rounded-gray" title="With Wallet Connect" icon={<WalletConnectIcon style={{marginRight: 8}} />} style={{marginTop: 10}} onPress={open} />
+            <Button color="rounded-gray" title="With Wallet Connect" icon={<WalletConnectIcon style={{marginRight: 8}} />} style={{marginTop: 10}} onPress={() => {Haptics.selectionAsync();open()}} />
 
             <WalletConnectModal projectId={projectId} providerMetadata={providerMetadata} sessionParams={sessionParams} />
             {/**<Button color="rounded-gray" title="Continue with Web3Auth" onPress={connectWithTorus} />*/}

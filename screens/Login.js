@@ -66,7 +66,7 @@ export default function Login() {
                                 paddingBottom: Platform.OS == 'ios' ? 12 : 10
                             }
                         ]}
-                        onPress={() => setConnectModalVis(true)}
+                        onPress={() => {Haptics.selectionAsync();setConnectModalVis(true)}}
                     >
                         <Text style={[tailwind(`text-white px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign up</Text>
                     </TouchableOpacity>
@@ -79,7 +79,7 @@ export default function Login() {
                                 paddingBottom: Platform.OS == 'ios' ? 12 : 10
                             }
                         ]} 
-                        onPress={() => setConnectModalVis(true)} 
+                        onPress={() => {Haptics.selectionAsync();setConnectModalVis(true)}} 
                         activeOpacity={0.8}
                     >
                         <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign in</Text>
@@ -99,11 +99,11 @@ export default function Login() {
             <View style={{position: 'absolute',bottom: 80,width: '100%',alignItems: 'center',}}>
                 <Text style={{color:'white'}}>By signing up an account, I agree to the</Text>
                 <View style={{flexDirection: 'row'}}>
-                    <TouchableOpacity onPress={() => openTerms()}>
+                    <TouchableOpacity onPress={() => {Haptics.selectionAsync();openTerms()}}>
                         <Text style={{textDecorationLine: 'underline', fontWeight: 'bold',color:'white'}}>Terms & Conditions</Text>
                     </TouchableOpacity>
                     <Text style={{color:'white'}}> and </Text>
-                    <TouchableOpacity onPress={() => openPrivacy()}>
+                    <TouchableOpacity onPress={() => {Haptics.selectionAsync();openPrivacy()}}>
                         <Text style={{textDecorationLine: 'underline', fontWeight: 'bold',color:'white'}}>Privacy policy</Text>
                     </TouchableOpacity>
                 </View>

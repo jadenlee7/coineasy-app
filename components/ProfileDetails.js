@@ -96,6 +96,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     }
 
     async function logout() {
+        setLogOutLoading(true)
         Haptics.selectionAsync();
         setSettingsVis(false);
         await AsyncStorage.removeItem("user-connected");
@@ -108,11 +109,14 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
             await AsyncStorage.removeItem("provider-type");            
             provider?.disconnect().then( res => {
                 setUser(null);
+                setLogOutLoading(false)
             }).catch(e => {
                 console.log(e);
+                setLogOutLoading(false)
             })
         }else{
             setUser(null);
+            setLogOutLoading(false)
         }
       }
 
