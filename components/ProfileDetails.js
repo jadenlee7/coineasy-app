@@ -103,10 +103,11 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         let res = await orbis.logout();
         console.log("res:", res);
     
-        let providerType = await AsyncStorage.getItem("provider-type");
-        console.log("providerType:", providerType);
-        if(providerType == "wallet-connect") {
-            await AsyncStorage.removeItem("provider-type");            
+        // let providerType = await AsyncStorage.getItem("provider-type");
+        // console.log("providerType:", providerType);
+        // if(providerType == "wallet-connect") {
+        await AsyncStorage.removeItem("provider-type");       
+        if(provider){
             provider?.disconnect().then( res => {
                 setUser(null);
                 setLogOutLoading(false)
@@ -116,8 +117,11 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
             })
         }else{
             setUser(null);
-            setLogOutLoading(false)
         }
+        // }else{
+        //     setUser(null);
+        //     setLogOutLoading(false)
+        // }
       }
 
     async function openHelp() {

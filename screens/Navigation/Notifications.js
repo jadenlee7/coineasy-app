@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from "react";
-import { View, ActivityIndicator, ScrollView, Text, TouchableHighlight, Dimensions, Image, TouchableOpacity } from 'react-native';
+import { View, ActivityIndicator, ScrollView, Text, TouchableHighlight, Dimensions, Image, TouchableOpacity, RefreshControl } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -18,6 +18,7 @@ const Notifications = ({navigation, route}) => {
 
     const [ notifications, setNotifications ] = useState([]);
     const [ notificationsLoading, setNotificationsLoading ] = useState(false);
+    const [refreshing, setRefreshing] = useState(false)
 
     const statusBarHeight = useStatusBarHeight();
 
@@ -27,17 +28,17 @@ const Notifications = ({navigation, route}) => {
 
         /** Will load main post details */
         async function getNotifications() {
-        setNotificationsLoading(true);
-        let { data, error } = await orbis.getNotifications({
-            type: 'social',
-            context: context,
-            include_child_contexts: true
-        });
+            setNotificationsLoading(true);
+            let { data, error } = await orbis.getNotifications({
+                type: 'social',
+                context: context,
+                include_child_contexts: true
+            });
 
-        if(data) {
-            setNotifications(data);
-            setNotificationsLoading(false);
-        }
+            if(data) {
+                setNotifications(data);
+                setNotificationsLoading(false);
+            }
         }
     }, []);
 
@@ -100,6 +101,21 @@ const Notifications = ({navigation, route}) => {
         }
     }
 
+    async function updateNotifications() {
+        setRefreshing(true)
+        let { data, error } = await orbis.getNotifications({
+            type: 'social',
+            context: context,
+            include_child_contexts: true
+        });
+
+        if(data) {
+            setNotifications(data);
+        }
+
+        setRefreshing(false)
+    }
+
 
     return(
         <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
@@ -122,7 +138,9 @@ const Notifications = ({navigation, route}) => {
             {notificationsLoading ?
                 <ActivityIndicator style={{marginTop: 50}} size="small" color="#020617" />
             : notifications && notifications.length > 0 ?
-                <ScrollView>
+                <ScrollView
+                    refreshControl={ <RefreshControl refreshing={refreshing} onRefresh={updateNotifications} /> }
+                >
                     {notifications.map((notification, key) => {
                         return (
                             <Notification notification={notification} key={key} />

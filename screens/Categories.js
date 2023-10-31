@@ -171,7 +171,11 @@ const Categories = ({ navigation, route }) => {
                     <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: 19,marginBottom: 10,}}>
                         <Text style={[tailwind('text-slate-900 px-2'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20,marginLeft: 10, }]}>Categories</Text>
 
-                        <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('Notifications')} style={{marginRight: 20,}}>
+                        <TouchableOpacity 
+                            activeOpacity={0.7} 
+                            onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}
+                            style={{marginRight: 20,marginTop: -2,}}
+                        >
                             <NotificationsIcon />
                         </TouchableOpacity>
                     </View>
