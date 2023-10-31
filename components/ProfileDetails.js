@@ -101,16 +101,20 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         await AsyncStorage.removeItem("user-connected");
         let res = await orbis.logout();
         console.log("res:", res);
-
+    
         let providerType = await AsyncStorage.getItem("provider-type");
+        console.log("providerType:", providerType);
         if(providerType == "wallet-connect") {
-            setLogOutLoading(true)
-            await provider?.disconnect();
-            setLogOutLoading(false)
+            await AsyncStorage.removeItem("provider-type");            
+            provider?.disconnect().then( res => {
+                setUser(null);
+            }).catch(e => {
+                console.log(e);
+            })
+        }else{
+            setUser(null);
         }
-
-        setUser(null);
-    }
+      }
 
     async function openHelp() {
         Haptics.selectionAsync();
