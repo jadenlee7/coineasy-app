@@ -62,7 +62,6 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
             animatedModalStyle ,
             {
                 paddingBottom: paddingBottom,
-                backgroundColor: '#333',
             }, 
         ]} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
