@@ -108,8 +108,8 @@ export default function App() {
     ), 0, 1
   ));
   const navbarTranslate = clampedScroll.interpolate({
-    inputRange: [50, 130],
-    outputRange: [0, -130],
+    inputRange: [50, Platform.OS == 'ios' ? 170 : 150],
+    outputRange: [0, Platform.OS == 'ios' ? -170 : -150],
     extrapolate: 'clamp'
   });
   

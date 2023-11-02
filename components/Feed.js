@@ -27,7 +27,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
   return(
     <>
       {(refreshing && posts.length == 0) ?
-        <ActivityIndicator style={{marginTop: 160}} size="small" color="#020617" />
+        <ActivityIndicator style={{marginTop: 190}} size="small" color="#020617" />
       :
         <>
           {posts.length > 0 ?
@@ -60,7 +60,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                   colors={["#020617"]}
                   refreshing={refreshing}
                   onRefresh={onRefresh}
-                  progressViewOffset={140 + statusBarHeight}
+                  progressViewOffset={120 + statusBarHeight}
                   style={{marginTop: 120 + statusBarHeight}}
                 />
               }

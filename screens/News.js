@@ -31,10 +31,6 @@ const News = ({ navigation, route }) => {
     const statusBarHeight = useStatusBarHeight();
 
     const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
-        // console.log('OUI');
-        // console.log(currentRoute);
-        // console.log(' ');
-
         Haptics.selectionAsync()
         if(currentRoute == 'Categories'){
             if (selectedCategory) {
