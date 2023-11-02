@@ -47,15 +47,22 @@ export default function Postbox({isReply = false}) {
         if(category || selectedCategory || selectedNews) {
             const temp_cat = currentRoute == 'Categories' ? selectedCategory : currentRoute == 'News' ? selectedNews : category
             setCategorySelected(temp_cat);
-            checkAccess();
+            checkAccess(temp_cat);
+        }else{
+            checkAccess(null)
+        }
 
-            async function checkAccess() {
-                if(temp_cat?.content.accessRules && temp_cat?.content.accessRules.length > 0) {
-                    let _hasAccess = await checkContextAccess(user, temp_cat.content.accessRules);
+        async function checkAccess(temp_cat) {
+            if(temp_cat?.content.accessRules && temp_cat?.content.accessRules.length > 0) {
+                checkContextAccess(user, temp_cat.content.accessRules)
+                .then(_hasAccess => {
                     setHasAccess(_hasAccess);
-                } else {
-                    setHasAccess(true);
-                }
+                }).catch(e => {
+                    console.log('ERROR');
+                    console.log(e);
+                })
+            } else {
+                setHasAccess(true);
             }
         }
     }, [category, selectedCategory, selectedNews])
