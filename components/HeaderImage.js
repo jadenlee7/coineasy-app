@@ -19,7 +19,6 @@ const HeaderImage = (props) => {
             // resizeMode="stretch"
             defaultSource={require('../assets/HeaderBg.png')}
             height={statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight}
-            loadingIndicatorSource={<ActivityIndicator style={{height: statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight, paddingTop: statusBarHeight, width: Dimensions.get('window').width,}}/>}
         />
     )
 }

@@ -168,7 +168,7 @@ const Categories = ({ navigation, route }) => {
                 <>
                     <HeaderImage />
 
-                    <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: 19,marginBottom: 10,}}>
+                    <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: 21,marginBottom: 10,}}>
                         <Text style={[tailwind('text-slate-900 px-2'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20,marginLeft: 10, }]}>Categories</Text>
 
                         <TouchableOpacity 

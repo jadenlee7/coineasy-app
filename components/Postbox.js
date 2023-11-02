@@ -321,7 +321,7 @@ export default function Postbox({isReply = false}) {
     
         /** Loop through all users */
         return (
-            <ScrollView keyboardShouldPersistTaps="always">
+            <ScrollView>
                 {/** Show everyone tag if user is admin */}
                 {(isOwner(user.did) && "everyone".includes(term)) &&
                     <TouchableOpacity style={tailwind("p-2 px-4")} activeOpacity={0.6} onPress={() => mentionUser({did: "did:@:everyone", profile: {username: "everyone"}})}>
@@ -394,8 +394,8 @@ export default function Postbox({isReply = false}) {
     }
   
     return(
-        <View style={tailwind('items-center w-full')} keyboardShouldPersistTaps="always">
-            <View style={tailwind('flex flex-col items-start w-full p-5')} keyboardShouldPersistTaps="always">
+        <View style={tailwind('w-full')} >
+            <View style={tailwind('flex flex-col items-start w-full p-5')}>
                 {categoriesVis ?
                     <>
                         <View style={tailwind('flex flex-row w-full mb-1')}>
@@ -441,7 +441,7 @@ export default function Postbox({isReply = false}) {
                             }
                         </View>
 
-                        {(categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) &&
+                        {(categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) ? (
                             <View style={tailwind('bg-slate-50 px-2 py-3 items-center mb-1 rounded-md flex-row justify-center w-full')} >
                                 {hasAccess ?
                                     <UnlockIcon color="#959595" style={{marginRight: 2}} />
@@ -451,14 +451,11 @@ export default function Postbox({isReply = false}) {
 
                                 <Text style={tailwind('text-secondary items-center ml-1')}>This category is gated.</Text>
                             </View>
-                        }
-
-                        {/** Show input container */}
-                        {hasAccess &&
+                        ) : hasAccess ? (
                             <TextInput
                                 ref={textInputRef}
-                                onChangeText={loading ? () => console.log("Disbaled.") : handleTextChange}
-                                autoFocus
+                                onChangeText={loading ? () => console.log("Disabled.") : handleTextChange}
+                                autoFocus={(categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) ? false : true}
                                 numberOfLines={1}
                                 value={message}
                                 //editable={!loading}
@@ -467,7 +464,7 @@ export default function Postbox({isReply = false}) {
                                 placeholderTextColor="#64748b"
                                 multiline={true} 
                             />
-                        }
+                        ) : null }
 
 
                         {/** Display media attached if any */}

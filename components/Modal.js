@@ -43,10 +43,30 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
   return(
     <KeyboardAvoidingView style={[tailwind('absolute h-full w-full'), { elevation: 50 }]} behavior={Platform.OS === 'ios' ? 'height' : 'padding'}>
       {/** Background */}
-      <TouchableOpacity activeOpacity={0.63} onPress={() => hide()} style={[tailwind('h-full w-full bg-slate-950'), {opacity: 0.63, height: Dimensions.get('window').height}]}></TouchableOpacity>
+      <TouchableOpacity 
+        activeOpacity={0.63} 
+        onPress={() => hide()} 
+        style={[
+            tailwind('h-full w-full bg-slate-950'), 
+            {
+                opacity: 0.63,
+                height: Dimensions.get('window').height
+            }
+        ]} 
+      />
 
       {/** Modal content */}
-      <Animated.View style={[tailwind('absolute w-full bg-white rounded-t-xl'), { paddingBottom: paddingBottom}, animatedModalStyle ]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <Animated.View 
+        style={[
+            tailwind('absolute w-full bg-white rounded-t-xl'),
+            animatedModalStyle ,
+            {
+                paddingBottom: paddingBottom,
+                backgroundColor: '#333',
+            }, 
+        ]} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         {children}
       </Animated.View>
     </KeyboardAvoidingView>
