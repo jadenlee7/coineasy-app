@@ -27,7 +27,7 @@ export default function Postbox({isReply = false}) {
     const [imageLoading, setImageLoading] = useState(false);
     const [categoriesVis, setCategoriesVis] = useState(false);
     const [categorySelected, setCategorySelected] = useState(false);
-    const [hasAccess, setHasAccess] = useState(true);
+    const [hasAccess, setHasAccess] = useState(false);
     const [mentionsBoxVis, setMentionsBoxVis] = useState(false);
     const [currentMention, setCurrentMention] = useState(null);
     const [listMedia, setListMedia] = useState([]);
@@ -455,7 +455,7 @@ export default function Postbox({isReply = false}) {
                             <TextInput
                                 ref={textInputRef}
                                 onChangeText={loading ? () => console.log("Disabled.") : handleTextChange}
-                                autoFocus={(categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) ? false : true}
+                                autoFocus
                                 numberOfLines={1}
                                 value={message}
                                 //editable={!loading}
