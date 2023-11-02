@@ -113,6 +113,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 setLogOutLoading(false)
             }).catch(e => {
                 console.log(e);
+                setUser(null);
                 setLogOutLoading(false)
             })
         }else{
