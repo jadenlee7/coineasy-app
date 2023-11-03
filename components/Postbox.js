@@ -43,6 +43,26 @@ export default function Postbox({isReply = false}) {
     }, [])
 
     /** Pre-select category if one already selected in the feed */
+    // useEffect(() => {
+    //     if(category || selectedCategory || selectedNews) {
+    //         const temp_cat = currentRoute == 'Categories' ? selectedCategory : currentRoute == 'News' ? selectedNews : category
+    //         setCategorySelected(temp_cat);
+    //         checkAccess(temp_cat);
+    //     }
+    // }, [category, selectedCategory, selectedNews])
+
+    async function checkAccess(temp_cat) {
+        if(temp_cat?.content.accessRules && temp_cat?.content.accessRules.length > 0) {
+            checkContextAccess(user, temp_cat.content.accessRules)
+            .then(_hasAccess => {
+                setHasAccess(_hasAccess);
+            }).catch(e => console.log(e))
+        } else {
+            setHasAccess(true);
+        }
+    }
+
+    /** Pre-select category if one already selected in the feed */
     useEffect(() => {
         if(category || selectedCategory || selectedNews) {
             const temp_cat = currentRoute == 'Categories' ? selectedCategory : currentRoute == 'News' ? selectedNews : category
@@ -50,20 +70,6 @@ export default function Postbox({isReply = false}) {
             checkAccess(temp_cat);
         }else{
             checkAccess(null)
-        }
-
-        async function checkAccess(temp_cat) {
-            if(temp_cat?.content.accessRules && temp_cat?.content.accessRules.length > 0) {
-                checkContextAccess(user, temp_cat.content.accessRules)
-                .then(_hasAccess => {
-                    setHasAccess(_hasAccess);
-                }).catch(e => {
-                    console.log('ERROR');
-                    console.log(e);
-                })
-            } else {
-                setHasAccess(true);
-            }
         }
     }, [category, selectedCategory, selectedNews])
 
@@ -362,15 +368,20 @@ export default function Postbox({isReply = false}) {
     }
     
     const Category = ({category, setCategoriesVis, setCategorySelected}) => {
-        const { setCategory } = useContext(GlobalContext);
     
         function select() {
             setCategorySelected(category);
             setCategoriesVis(false);
+            checkAccess(category);
         }
     
         return(
-            <Button title={category.content.displayName} style={{width: "48%", marginRight: "2%", marginBottom: 10}} color="rounded-gray" onPress={() => select()} />
+            <Button 
+                title={category.content.displayName} 
+                style={{width: "48%", marginRight: "2%", marginBottom: 10}} 
+                color="rounded-gray" 
+                onPress={() => select()} 
+            />
         )
     }
     

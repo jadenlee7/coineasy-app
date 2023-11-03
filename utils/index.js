@@ -85,11 +85,27 @@ export async function checkContextAccess(user, accessRules) {
           if(_user.did == user.did) {
             hasAccess = true;
           }
+        //   else if(user.did == 'did:pkh:eip155:1:0xF5AA85F74BCFfcA96f3468391a1f91c450E4a023'){
+        //     console.log('OUCIIII');
+        //       hasAccess = true;
+        //   }
         });
         break;
       case "token":
         console.log("Token gating not supported yet.");
         break;
+      /** Check POAP ownership */
+    //   case "poap":
+    //     /** Check if user owns requested balance for the token */
+    //     const { address } = useDidToAddress(user.did);
+    //     getPoapOwnership(rule.requiredPoap.event_id, address, () => callback(true))
+    //     .then(resultPoap => {
+    //         console.log('LAAAAAAAAA');
+    //         console.log(resultPoap);
+    //         console.log(' ');
+    //         return resultPoap
+    //     }).catch(e => console.log(e))
+    //     break;
       default:
     }
   });
@@ -194,3 +210,29 @@ export function isAdmin(did) {
   let _admin = admins.includes(did);
   return _admin;
 }
+
+
+/** Will call our API to verify if user owns the required POAP */
+export async function getPoapOwnership(event_id, account, successCallback) {
+    try {
+      let res = await fetch('https://api.orbis.club/get-poap-ownership', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          event_id: event_id,
+          account: account
+        })
+      });
+      let owns = await res.json();
+      return owns.result
+    //   if(owns.result == true) {
+    //     successCallback();
+    //     return true
+    //   }
+    } catch(e) {
+      console.log("Error retrieving user's balance for this token:", e);
+      return 0;
+    }
+  }
