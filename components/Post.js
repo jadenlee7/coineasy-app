@@ -4,7 +4,7 @@ import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedb
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as WebBrowser from 'expo-web-browser';
-import { useRoute, useScrollToTop } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import reactStringReplace from 'react-string-replace';
 import { useNavigation } from '@react-navigation/core';
 import ImageViewer from 'react-native-image-zoom-viewer';
@@ -27,9 +27,6 @@ const Post = React.memo((props) => {
 // function PostDisplay({post, isReply = false, showParent = true, verticalDivider = false, style, showRepostDetails = true, showReactions= true, fontSize = 13.5, stylePostContent}) {
 const PostDisplay = (props) => {
 
-    const navigation = useNavigation();
-    const route = useRoute();
-
     const { user, setPostDetailsVis, setCategory, setEditedPost, hidePostbox, setScrollAnim, setOffsetAnim } = useContext(GlobalContext);
     const {
         post,
@@ -43,6 +40,16 @@ const PostDisplay = (props) => {
         stylePostContent,
         isRepost = false
     } = props
+
+    let navigation;
+    let route;
+
+    try {
+        navigation = useNavigation();
+        route = useRoute();
+    } catch (error) {
+        console.log(error);        
+    }
 
     let list_images = [];
     if(post?.content?.media?.length > 1){

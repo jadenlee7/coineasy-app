@@ -130,14 +130,14 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1x8ZvprutJSuv96KVz3vLyXHWXwi8AaVS/view?usp=sharing");
     }
 
-    function openPrivacyPolicy() {
+    async function openPrivacyPolicy() {
         Haptics.selectionAsync();
-        alert("Coming soon");
+        let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1Dhijs_O61shJEKNy6Sga16Iu3vgqwc8I/view?usp=sharing");
     }
 
-    function openTerms() {
+    async function openTerms() {
         Haptics.selectionAsync();
-        alert("Coming soon");
+        let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/17_d1L3-qBYKk3vAK9_P-zd2PKW3fNDiX/view?usp=sharing");
     }
 
     return(

@@ -448,7 +448,7 @@ export default function Postbox({isReply = false}) {
                             }
                         </View>
 
-                        {(categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) ? (
+                        {(categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) &&
                             <View style={tailwind('bg-slate-50 px-2 py-3 items-center mb-1 rounded-md flex-row justify-center w-full')} >
                                 {hasAccess ?
                                     <UnlockIcon color="#959595" style={{marginRight: 2}} />
@@ -458,7 +458,9 @@ export default function Postbox({isReply = false}) {
 
                                 <Text style={tailwind('text-secondary items-center ml-1')}>This category is gated.</Text>
                             </View>
-                        ) : hasAccess ? (
+                        }
+
+                        {hasAccess && 
                             <TextInput
                                 ref={textInputRef}
                                 onChangeText={loading ? () => console.log("Disabled.") : handleTextChange}
@@ -471,7 +473,7 @@ export default function Postbox({isReply = false}) {
                                 placeholderTextColor="#64748b"
                                 multiline={true} 
                             />
-                        ) : null }
+                        }
 
 
                         {/** Display media attached if any */}
