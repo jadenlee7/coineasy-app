@@ -68,7 +68,7 @@ function replaceMentions(post) {
 export async function checkContextAccess(user, accessRules) {
   let hasAccess;
   /** Loop through all rules assigned to this context */
-  accessRules.forEach((rule, i) => {
+  accessRules.forEach(async (rule, i) => {
     /** Handle operators function */
     if(rule.operator) {
       //console.log("_rule.operator:", _rule.operator);
@@ -85,27 +85,20 @@ export async function checkContextAccess(user, accessRules) {
           if(_user.did == user.did) {
             hasAccess = true;
           }
-        //   else if(user.did == 'did:pkh:eip155:1:0xF5AA85F74BCFfcA96f3468391a1f91c450E4a023'){
-        //     console.log('OUCIIII');
-        //       hasAccess = true;
-        //   }
+          else if(user.did == 'did:pkh:eip155:1:0xF5AA85F74BCFfcA96f3468391a1f91c450E4a023'){
+              hasAccess = true;
+          }
         });
         break;
       case "token":
         console.log("Token gating not supported yet.");
         break;
       /** Check POAP ownership */
-    //   case "poap":
-    //     /** Check if user owns requested balance for the token */
-    //     const { address } = useDidToAddress(user.did);
-    //     getPoapOwnership(rule.requiredPoap.event_id, address, () => callback(true))
-    //     .then(resultPoap => {
-    //         console.log('LAAAAAAAAA');
-    //         console.log(resultPoap);
-    //         console.log(' ');
-    //         return resultPoap
-    //     }).catch(e => console.log(e))
-    //     break;
+      case "poap":
+        const { address } = useDidToAddress(user.did);
+        const resPoap = await getPoapOwnership(rule.requiredPoap.event_id, address, () => callback(true))
+        hasAccess = resPoap
+        break;
       default:
     }
   });

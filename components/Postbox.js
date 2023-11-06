@@ -411,8 +411,8 @@ export default function Postbox({isReply = false}) {
         setListMedia([...listMedia])
     }
   
-    return(
-        <View style={tailwind('w-full')} >
+    return (
+        <ScrollView style={[tailwind('w-full'), {maxHeight: 400,}]} keyboardShouldPersistTaps='handled'>
             <View style={tailwind('flex flex-col items-start w-full p-5')}>
                 {categoriesVis ?
                     <>
@@ -479,7 +479,7 @@ export default function Postbox({isReply = false}) {
                                 numberOfLines={1}
                                 value={message}
                                 //editable={!loading}
-                                style={[tailwind('w-full'), { fontSize: 14, fontFamily: "GmarketMedium", minHeight: 55, lineHeight: 17, paddingBottom: 10, width:Dimensions.get('window').width }]}
+                                style={[tailwind('w-full'), { fontSize: 16, fontFamily: "GmarketMedium", minHeight: 55, lineHeight: 17, paddingBottom: 10, width:Dimensions.get('window').width }]}
                                 placeholder={replyTo ? "Post your reply" : "What's happening?" }
                                 placeholderTextColor="#64748b"
                                 multiline={true} 
@@ -502,7 +502,7 @@ export default function Postbox({isReply = false}) {
 
                         {/** Show repost details if user is replying to a post */}
                         {(repost != false && repost != null) &&
-                            <Post post={repost} style={tailwind('rounded-md border border-secondary p-4')} />
+                            <Post post={repost} isRepost={true} style={tailwind('rounded-md border border-secondary p-4')} />
                         }
 
                         <View style={tailwind('flex flex-row w-full pt-1' )}>
@@ -537,6 +537,6 @@ export default function Postbox({isReply = false}) {
                     <UserLoop term={currentMention} mentionUser={mentionUser} />
                 </View>
             }
-        </View>
+        </ScrollView>
     )
 }
