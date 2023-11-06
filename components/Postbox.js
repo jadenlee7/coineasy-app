@@ -133,8 +133,8 @@ export default function Postbox({isReply = false}) {
                 repostDetail: repost
             };
 
-            console.log('OUIIIIIIII');
-            console.log(content);
+            // console.log('OUIIIIIIII');
+            // console.log(content);
 
             let res = await orbis.createPost(content);
 
@@ -160,8 +160,8 @@ export default function Postbox({isReply = false}) {
                     repostDetail: repost
                 }
 
-                console.log('LALALALALALA');
-                console.log(_callbackContent);
+                // console.log('LALALALALALA');
+                // console.log(_callbackContent);
 
                 /** If any trigger callback after the post is shared */
                 if(callbackPostShared) {
