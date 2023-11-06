@@ -130,11 +130,8 @@ export default function Postbox({isReply = false}) {
                 reply_to: replyTo ? replyTo.stream_id : null,
                 master: master ? master : null,
                 mentions: mentions,
-                repostDetail: repost
+                repost_details: repost
             };
-
-            // console.log('OUIIIIIIII');
-            // console.log(content);
 
             let res = await orbis.createPost(content);
 
@@ -157,11 +154,8 @@ export default function Postbox({isReply = false}) {
                     count_likes: 0,
                     count_repost: 0,
                     timestamp: getTimestamp(),
-                    repostDetail: repost
+                    repost_details: repost
                 }
-
-                // console.log('LALALALALALA');
-                // console.log(_callbackContent);
 
                 /** If any trigger callback after the post is shared */
                 if(callbackPostShared) {
