@@ -129,8 +129,13 @@ export default function Postbox({isReply = false}) {
                 repost: repost ? repost.stream_id : null,
                 reply_to: replyTo ? replyTo.stream_id : null,
                 master: master ? master : null,
-                mentions: mentions
+                mentions: mentions,
+                repostDetail: repost
             };
+
+            console.log('OUIIIIIIII');
+            console.log(content);
+
             let res = await orbis.createPost(content);
 
             /** Wait for new post to be indexed */
@@ -151,8 +156,12 @@ export default function Postbox({isReply = false}) {
                     count_replies: 0,
                     count_likes: 0,
                     count_repost: 0,
-                    timestamp: getTimestamp()
+                    timestamp: getTimestamp(),
+                    repostDetail: repost
                 }
+
+                console.log('LALALALALALA');
+                console.log(_callbackContent);
 
                 /** If any trigger callback after the post is shared */
                 if(callbackPostShared) {
@@ -502,7 +511,7 @@ export default function Postbox({isReply = false}) {
 
                         {/** Show repost details if user is replying to a post */}
                         {(repost != false && repost != null) &&
-                            <Post post={repost} isRepost={true} style={tailwind('rounded-md border border-secondary p-4')} />
+                            <Post post={repost} quotedPost={true} isRepost={true} style={tailwind('rounded-md border border-secondary p-4')} />
                         }
 
                         <View style={tailwind('flex flex-row w-full pt-1' )}>

@@ -319,6 +319,12 @@ export default function App() {
       contexts: category ? [category.stream_id] : _contexts,
       include_child_contexts: true
     });
+    // console.log(data?.map(e => {
+    //     if(e.repost_details?.content != null){
+    //         console.log('LAAAAAAAAA');
+    //         console.log(e);
+    //     }
+    // }));
     if(data) {
       console.log(data.length + " posts retrieved.");
       setPosts(data);

@@ -38,7 +38,8 @@ const PostDisplay = (props) => {
         showReactions= true,
         fontSize = 13.5,
         stylePostContent,
-        isRepost = false
+        isRepost = false,
+        quotedPost = false
     } = props
 
     let navigation;
@@ -160,8 +161,8 @@ const PostDisplay = (props) => {
                                 tailwind('rounded-md'), 
                                 { 
                                     height: width - 87,
-                                    width: isRepost ? width - 135  : width - 87 ,
-                                    marginLeft: isRepost ? -20 : 0,
+                                    width: isRepost && !quotedPost ? width - 135  : quotedPost ? width - 160 : width - 87 ,
+                                    marginLeft: isRepost && !quotedPost ? -20 : 0,
                                 }
                             ]}
                             onLoad={() => setLoaded(true)}
@@ -232,13 +233,13 @@ const PostDisplay = (props) => {
                         <TouchableOpacity activeOpacity={0.7} style={[tailwind('ml-1 px-1 flex flex-1 rounded-md mr-8')]} onPress={() => showPostDetails()}>
                             <>
                                 {(body && body != "") ?
-                                <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: 5, paddingBottom: 5, fontSize: fontSize, lineHeight: fontSize * 1.47 }, stylePostContent]}>
-                                    {cleanBody()}
-                                </Text>
+                                    <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: 5, paddingBottom: 5, fontSize: fontSize, lineHeight: fontSize * 1.47 }, stylePostContent]}>
+                                        {cleanBody()}
+                                    </Text>
                                 :
-                                <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-1 mb-1 rounded-md')} >
-                                    <Text style={tailwind('text-secondary items-center ml-1 text-center')}>This post isn't available or has been deleted.</Text>
-                                </View>
+                                    <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-1 mb-1 rounded-md')} >
+                                        <Text style={tailwind('text-secondary items-center ml-1 text-center')}>This post isn't available or has been deleted.</Text>
+                                    </View>
                                 }
 
 
@@ -248,7 +249,7 @@ const PostDisplay = (props) => {
                                         <Media media={post.content.media} isRepost={isRepost}/>
                                     </View>
                                 ) : post.content.media?.length > 1 ? (
-                                        <ScrollView horizontal={true} style={{width: Dimensions.get('window').width}}>
+                                        <ScrollView horizontal={true} style={{width: quotedPost && isRepost ? Dimensions.get('window').width - 105 : quotedPost ? Dimensions.get('window').width - 135 : Dimensions.get('window').width}}>
                                             { post.content.media?.map((item, index) => {
                                                 return(
                                                     <Media media={item} index={index} key={Math.random()} isRepost={isRepost}/>
@@ -306,7 +307,7 @@ const PostDisplay = (props) => {
                         {/** Quoted post details if any */}
                         {(showRepostDetails && post.content.repost != null) &&
                         <View >
-                            <Post post={post.repost_details} isRepost={true} style={[tailwind('rounded-md border border-secondary p-3'), {width: "100%",marginLeft: -10,}]} />
+                            <Post post={post.repost_details} quotedPost={true} style={[tailwind('rounded-md border border-secondary p-3'), {width: "100%",}]} />
                         </View>
                         }
 
