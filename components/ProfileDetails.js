@@ -140,13 +140,24 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/17_d1L3-qBYKk3vAK9_P-zd2PKW3fNDiX/view?usp=sharing");
     }
 
+    const ProfileItem = ({title, count}) => {
+        const tailwind = useTailwind();
+      
+        return(
+          <TouchableOpacity style={tailwind('flex flex-col flex-1 items-center')} onPress={() => navigation.navigate('FollowDetails', {origin: title, profile})}>
+            <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
+            <Text style={[tailwind(`text-slate-400 mt-2 text-center`), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{title}</Text>
+          </TouchableOpacity>
+        )
+    }
+
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
             { type == 'selected' && (
                 <>
                     <HeaderImage />
 
-                    <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 10,paddingRight: 20,paddingTop: 5,}}>
+                    <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 5,}}>
                         <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
                             <View style={{zIndex:100000, justifyContent: 'center',alignItems: 'center',margin: 15, backgroundColor: 'white',flexDirection:'row',}}>
                                 <BackIcon />
@@ -357,16 +368,5 @@ const NavItem = ({title, selected, nav, setNav, slug}) => {
           <View style={[tailwind(`rounded-full h-1 mt-2`), { backgroundColor: nav == slug ? "#FF6B17" : "transparent" }]}></View>
         </View>
     </TouchableOpacity>
-  )
-}
-
-const ProfileItem = ({title, count}) => {
-  const tailwind = useTailwind();
-
-  return(
-    <View style={tailwind('flex flex-col flex-1 items-center')}>
-      <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
-      <Text style={[tailwind(`text-slate-400 mt-2 text-center`), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{title}</Text>
-    </View>
   )
 }
