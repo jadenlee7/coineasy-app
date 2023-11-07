@@ -53,10 +53,7 @@ export default function Postbox({isReply = false}) {
 
     async function checkAccess(temp_cat) {
         if(temp_cat?.content.accessRules && temp_cat?.content.accessRules.length > 0) {
-            checkContextAccess(user, temp_cat.content.accessRules)
-            .then(_hasAccess => {
-                setHasAccess(_hasAccess);
-            }).catch(e => console.log(e))
+            checkContextAccess(user, temp_cat.content.accessRules, () => setHasAccess(true)).catch(e => console.log(e))
         } else {
             setHasAccess(true);
         }
@@ -315,7 +312,7 @@ export default function Postbox({isReply = false}) {
         const tailwind = useTailwind();
         const [users, setUsers] = useState([]);
         const [usersLoading, setUsersLoading] = useState(false);
-    
+
         useEffect(() => {
             searchUsers();
             async function searchUsers() {
@@ -325,7 +322,7 @@ export default function Postbox({isReply = false}) {
                 setUsersLoading(false);
             }
         }, [term]);
-    
+
         /** Show loasing state */
         if(usersLoading) {
             return(
@@ -334,7 +331,7 @@ export default function Postbox({isReply = false}) {
                 </View>
             )
         }
-    
+
         /** Loop through all users */
         return (
             <ScrollView>
@@ -344,13 +341,13 @@ export default function Postbox({isReply = false}) {
                         <View style={tailwind('flex flex-row items-center')}>
                             <Image
                                 style={[tailwind('rounded-full'), { height: 40, width: 40 }]}
-                                source={require('../assets/pfp-everyone.png')} 
+                                source={require('../assets/pfp-everyone.png')}
                             />
                             <Text style={[tailwind('ml-2 text-main'), { fontFamily: "GmarketBold", fontSize: 13, lineHeight: 19, color: "#FF6B17" }]} >everyone</Text>
                         </View>
                     </TouchableOpacity>
                 }
-        
+
                 {/** Loop through users */}
                 {users.map((_user, key) => {
                     return (
@@ -360,7 +357,7 @@ export default function Postbox({isReply = false}) {
             </ScrollView>
         )
     }
-    
+
     const UserRow = ({details, mentionUser}) => {
         const tailwind = useTailwind();
         return(
@@ -369,25 +366,25 @@ export default function Postbox({isReply = false}) {
             </TouchableOpacity>
         )
     }
-    
+
     const Category = ({category, setCategoriesVis, setCategorySelected}) => {
-    
+
         function select() {
             setCategorySelected(category);
             setCategoriesVis(false);
             checkAccess(category);
         }
-    
+
         return(
-            <Button 
-                title={category.content.displayName} 
-                style={{width: "48%", marginRight: "2%", marginBottom: 10}} 
-                color="rounded-gray" 
-                onPress={() => select()} 
+            <Button
+                title={category.content.displayName}
+                style={{width: "48%", marginRight: "2%", marginBottom: 10}}
+                color="rounded-gray"
+                onPress={() => select()}
             />
         )
     }
-    
+
     const Media = ({media, deleteMedia, index}) => {
         const tailwind = useTailwind();
         if(media && media.length > 0) {
@@ -397,7 +394,7 @@ export default function Postbox({isReply = false}) {
                         style={[tailwind('rounded-md shadow-md border border-secondary'), { height: 150, width: 150 }]}
                         source={{
                             uri: media[0].url,
-                        }} 
+                        }}
                     />
                     <TouchableHighlight onPress={deleteMedia} style={{ position: "absolute", right: -5, top: -5}} underlayColor="transparent">
                         <CloseIcon />
@@ -413,7 +410,7 @@ export default function Postbox({isReply = false}) {
         listMedia.splice(index, 1)
         setListMedia([...listMedia])
     }
-  
+
     return (
         <ScrollView style={[tailwind('w-full'), {maxHeight: 400,}]} keyboardShouldPersistTaps='handled'>
             <View style={tailwind('flex flex-col items-start w-full p-5')}>
@@ -452,12 +449,12 @@ export default function Postbox({isReply = false}) {
                                 }
                             </View>
                             {!replyTo &&
-                                <Button 
+                                <Button
                                     title={categorySelected ? categorySelected.content.displayName : "Category"}
                                     iconRight={<CaretDownIcon />}
                                     color="white"
                                     size="sm"
-                                    onPress={() => openCategory()} 
+                                    onPress={() => openCategory()}
                                 />
                             }
                         </View>
@@ -474,7 +471,7 @@ export default function Postbox({isReply = false}) {
                             </View>
                         }
 
-                        {hasAccess && 
+                        {hasAccess &&
                             <TextInput
                                 ref={textInputRef}
                                 onChangeText={loading ? () => console.log("Disabled.") : handleTextChange}
@@ -485,13 +482,13 @@ export default function Postbox({isReply = false}) {
                                 style={[tailwind('w-full'), { fontSize: 16, fontFamily: "GmarketMedium", minHeight: 55, lineHeight: 17, paddingBottom: 10, width:Dimensions.get('window').width }]}
                                 placeholder={replyTo ? "Post your reply" : "What's happening?" }
                                 placeholderTextColor="#64748b"
-                                multiline={true} 
+                                multiline={true}
                             />
                         }
 
 
                         {/** Display media attached if any */}
-                        <ScrollView 
+                        <ScrollView
                             horizontal={true}
                             // style={{width: Dimensions.get('window').width}}
                         >
@@ -521,12 +518,12 @@ export default function Postbox({isReply = false}) {
                             </View>
 
                             {/** Post button */}
-                            <Button 
+                            <Button
                                 loading={loading}
                                 title={editedPost != null ? "Edit" : "Post"}
                                 color="orange"
                                 size="sm"
-                                onPress={editedPost ? () => edit() : () => send()} 
+                                onPress={editedPost ? () => edit() : () => send()}
                             />
                         </View>
                     </>

@@ -65,7 +65,8 @@ function replaceMentions(post) {
 }
 
 /** Will loop through rules and user credentials to check if the user has access to this context */
-export async function checkContextAccess(user, accessRules) {
+export async function checkContextAccess(user, accessRules, successCallback) {
+  console.log("Enter checkContextAccess.")
   let hasAccess;
   /** Loop through all rules assigned to this context */
   accessRules.forEach(async (rule, i) => {
@@ -84,9 +85,11 @@ export async function checkContextAccess(user, accessRules) {
         rule.authorizedUsers.forEach((_user, i) => {
           if(_user.did == user.did) {
             hasAccess = true;
+            successCallback();
           }
           else if(user.did == 'did:pkh:eip155:1:0xF5AA85F74BCFfcA96f3468391a1f91c450E4a023'){
-              hasAccess = true;
+            hasAccess = true;
+            successCallback();
           }
         });
         break;
@@ -95,14 +98,16 @@ export async function checkContextAccess(user, accessRules) {
         break;
       /** Check POAP ownership */
       case "poap":
-        const { address } = useDidToAddress(user.did);
-        const resPoap = await getPoapOwnership(rule.requiredPoap.event_id, address, () => callback(true))
-        hasAccess = resPoap
+        const resPoap = await getPoapOwnership(rule.requiredPoap.event_id, user.did, () => callback(true))
+        console.log("resPoap:",resPoap);
+        if(resPoap == true) {
+          successCallback();
+        }
         break;
       default:
     }
   });
-
+  console.log("hasAccess:", hasAccess);
   return hasAccess;
 }
 
@@ -206,7 +211,10 @@ export function isAdmin(did) {
 
 
 /** Will call our API to verify if user owns the required POAP */
-export async function getPoapOwnership(event_id, account, successCallback) {
+export async function getPoapOwnership(event_id, did, successCallback) {
+  console.log("Enter getPoapOwnership with account:");
+  console.log("did:", did);
+  console.log("event_id:", event_id);
     try {
       let res = await fetch('https://api.orbis.club/get-poap-ownership', {
         method: 'POST',
@@ -215,10 +223,11 @@ export async function getPoapOwnership(event_id, account, successCallback) {
         },
         body: JSON.stringify({
           event_id: event_id,
-          account: account
+          did: did
         })
       });
       let owns = await res.json();
+      console.log("owns:", owns);
       return owns.result
     //   if(owns.result == true) {
     //     successCallback();
