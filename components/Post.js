@@ -232,7 +232,11 @@ const PostDisplay = (props) => {
                         {/** Post content */}
                         <TouchableOpacity activeOpacity={0.7} style={[tailwind('ml-1 px-1 flex flex-1 rounded-md mr-8')]} onPress={() => showPostDetails()}>
                             <>
-                                {(body && body != "") ?
+                                {body && body == 'Message sans body' ?(
+                                    <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: 5, paddingBottom: 5, fontSize: fontSize, lineHeight: fontSize * 1.47 }, stylePostContent]}>
+                                        
+                                    </Text>
+                                ) : (body && body != "") ?
                                     <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: 5, paddingBottom: 5, fontSize: fontSize, lineHeight: fontSize * 1.47 }, stylePostContent]}>
                                         {cleanBody()}
                                     </Text>

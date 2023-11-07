@@ -164,7 +164,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
             <Animated.ScrollView scrollEventThrottle={16} style={{backgroundColor: 'white',}} ref={scrollRef}>
                 { type !== 'selected' && (
                     <HeaderImage />
-
                 )}
 
                 {/** Display profile details */}

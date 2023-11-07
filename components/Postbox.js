@@ -123,7 +123,7 @@ export default function Postbox({isReply = false}) {
 
             setLoading(true);
             let content = {
-                body: message,
+                body: message != '' ? message : 'Message sans body',
                 context: _context,
                 media: listMedia ? listMedia : null,
                 repost: repost ? repost.stream_id : null,
