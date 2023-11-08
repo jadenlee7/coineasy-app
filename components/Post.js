@@ -121,9 +121,7 @@ const PostDisplay = (props) => {
         // Match URLs
         replacedText = reactStringReplace(replacedText, /(https?:\/\/\S+)/g, (match, i) => (
         <TouchableWithoutFeedback key={match + i} onPress={() => openNews(match)}>
-            <View>
-                <Text style={{ color: '#ff6b17', fontFamily: "GmarketMedium", backgroundColor: "#FFF" }}>{match}</Text>
-            </View>
+            <Text style={{ color: '#ff6b17', fontFamily: "GmarketMedium", backgroundColor: "#FFF" }}>{match}</Text>
         </TouchableWithoutFeedback>
         ));
 
@@ -186,7 +184,19 @@ const PostDisplay = (props) => {
             <View style={[tailwind(`flex w-full flex-col mb-2 ${!verticalDivider ? "border-b border-slate-200" : "" } ${isReply ? "" : "px-5 py-4"}`), style]}>
                 {/** Will show the parent post if any */}
                 {(showParent && post.content.reply_to && post.reply_to_details) &&
-                    <Post stylePostContent={{paddingBottom: 20}} showReactions={false} post={{stream_id: post.reply_to, content: post.reply_to_details, creator_details: post.reply_to_creator_details, context_details: post.context_details, context: post.context}} isReply={true} verticalDivider={true} />
+                    <Post 
+                        stylePostContent={{paddingBottom: 10}}
+                        showReactions={false} 
+                        post={{
+                            stream_id: post.reply_to,
+                            content: post.reply_to_details,
+                            creator_details: post.reply_to_creator_details,
+                            context_details: post.context_details,
+                            context: post.context
+                        }}
+                        isReply={true}
+                        verticalDivider={true} 
+                    />
                 }
 
                 <View style={[tailwind('flex flex-row items-start')]}>
@@ -237,7 +247,18 @@ const PostDisplay = (props) => {
                                         
                                     </Text>
                                 ) : (body && body != "") ?
-                                    <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: 5, paddingBottom: 5, fontSize: fontSize, lineHeight: fontSize * 1.47 }, stylePostContent]}>
+                                    <Text 
+                                        style={[
+                                            tailwind('text-slate-900 font-normal'), 
+                                            {
+                                                marginTop: 5,
+                                                paddingBottom: 5,
+                                                fontSize: fontSize,
+                                                lineHeight: fontSize * 1.47
+                                            }, 
+                                            stylePostContent
+                                        ]
+                                    }>
                                         {cleanBody()}
                                     </Text>
                                 :

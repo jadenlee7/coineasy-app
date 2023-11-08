@@ -40,7 +40,7 @@ const FollowDetails = ({navigation, route}) => {
 
     const Follow = ({follow}) => {      
         return(
-            <TouchableOpacity style={tailwind("items-center flex flex-row border-b border-secondary py-3 px-6 ")} underlayColor="#f1f5f9" onPress={() => navigation.navigate('ProfileSelected', { did: follow.details.did })}>
+            <TouchableOpacity style={tailwind("items-center flex flex-row border-b border-secondary py-3 px-6 ")} underlayColor="#f1f5f9" onPress={() => {Haptics.selectionAsync();navigation.navigate('ProfileSelected', { did: follow.details.did })}}>
                 <>
                     <UserPfp details={follow.details} />
                     <View style={{marginLeft: 13}}>
