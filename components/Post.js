@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Image, Modal, ActivityIndicator, Dimensions, ScrollView, Animated } from 'react-native';
+import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Image, Modal, ActivityIndicator, Dimensions, ScrollView, Animated, Platform } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -331,8 +331,8 @@ const PostDisplay = (props) => {
 
                         {/** Quoted post details if any */}
                         {(showRepostDetails && post.content.repost != null) &&
-                        <View >
-                            <Post post={post.repost_details} quotedPost={true} style={[tailwind('rounded-md border border-secondary p-3'), {width: "100%",}]} />
+                        <View style={{width: Platform.OS == 'ios' ? '97.5%' : '97%',marginLeft: 8}}>
+                            <Post post={post.repost_details} quotedPost={true} style={[tailwind('rounded-md border border-secondary p-3')]} />
                         </View>
                         }
 
