@@ -29,7 +29,7 @@ const Profile = ({ navigation, route }) => {
         <>
 
             {profile ?
-                <ProfileDetails profile={user} />
+                <ProfileDetails profile={profile.details} />
             :
                 <View style={tailwind('flex-1 bg-white')}>
                     <HeaderImage />

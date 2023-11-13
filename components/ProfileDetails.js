@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, ActivityIndicator, Dimensions, Image, Keyboard, Platform } from 'react-native';
+import { Text, View, TouchableOpacity, ActivityIndicator, Dimensions, Image, Keyboard, Platform, RefreshControl } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -35,6 +35,9 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const [countPosts, setCountPosts] = useState("-");
     const [followLoading, setFollowLoading] = useState(false);
     const [logOutLoading, setLogOutLoading] = useState(false)
+    const [refreshing, setRefreshing] = React.useState(false);
+
+    const [userInfo, setUserInfo] = useState(profile)
 
     const { address } = useDidToAddress(profile?.did);
 
@@ -47,6 +50,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     useScrollToTop(scrollRef);
 
     useEffect(() => {
+
         loadiIsFollowing();
         getCountPosts();
         setFollowLoading(true);
@@ -59,14 +63,15 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
             setFollowLoading(false);
         }
 
-        /** Will retrieve the count of posts shared by this profile in the context */
-        async function getCountPosts() {
-            const { count } = await orbis.api.from('orbis_posts').select('*', { count: 'exact', head: true }).eq('context', context).eq('creator', profile.did);
-            if(count) {
-                setCountPosts(count);
-            }
-        }
     }, [profile]);
+    
+    /** Will retrieve the count of posts shared by this profile in the context */
+    async function getCountPosts() {
+        const { count } = await orbis.api.from('orbis_posts').select('*', { count: 'exact', head: true }).eq('context', context).eq('creator', profile.did);
+        if(count) {
+            setCountPosts(count);
+        }
+    }
 
     /** Will copy link in Clipboard */
     async function copy(val) {
@@ -151,9 +156,20 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         )
     }
 
+    async function updateProfile() {
+        setRefreshing(true)
+        
+        const { data, error } = await orbis.getProfile(profile.did);
+        setUserInfo(data.details)
+
+        getCountPosts()
+
+        setRefreshing(false)
+    }
+
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
-            { type == 'selected' && (
+            { type == 'selected' ? (
                 <>
                     <HeaderImage />
 
@@ -170,12 +186,18 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         </TouchableOpacity>
                     </View>
                 </>
+            ) : (
+                <HeaderImage/>
             )}
 
-            <Animated.ScrollView scrollEventThrottle={16} style={{backgroundColor: 'white',}} ref={scrollRef}>
-                { type !== 'selected' && (
-                    <HeaderImage />
-                )}
+            <Animated.ScrollView 
+                scrollEventThrottle={16}
+                style={{backgroundColor: 'white',}}
+                ref={scrollRef}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={updateProfile} />
+                }
+            >
 
                 {/** Display profile details */}
                 <View style={[tailwind('flex flex-col items-center'), {marginTop: type == 'selected' ? pfpMarginTop : 0,}]}>
@@ -183,11 +205,11 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         <UserPfp details={profile} height={60} />
                     </View>
                     <View style={tailwind('mt-2 flex flex-row items-center')}>
-                        <Username details={profile} fontSize={15} />
-                        <Button color="badge-gray" icon={<CopyIconBadge style={{marginLeft: 4}} />} title={profile?.metadata?.ensName ? profile.metadata.ensName : shortAddress(address, 4)} style={{marginLeft: 8}} onPress={() => copy(address)} />
+                        <Username details={userInfo} fontSize={15} />
+                        <Button color="badge-gray" icon={<CopyIconBadge style={{marginLeft: 4}} />} title={userInfo?.metadata?.ensName ? userInfo.metadata.ensName : shortAddress(address, 4)} style={{marginLeft: 8}} onPress={() => copy(address)} />
                     </View>
-                    {profile?.profile?.description &&
-                        <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>{profile.profile.description}</Text>
+                    {userInfo?.profile?.description &&
+                        <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>{userInfo.profile.description}</Text>
                     }
                     
                     { type !== 'selected' && (
@@ -206,8 +228,8 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 {/** KPI counts */}
                 <View style={[tailwind('flex flex-row px-4'), {paddingTop: 10}]}>
                     <ProfileItem count={countPosts} title="Posts" />
-                    <ProfileItem count={profile ? profile.count_followers : "-"} title="Followers" />
-                    <ProfileItem count={profile ? profile.count_following : "-"} title="Following" />
+                    <ProfileItem count={userInfo ? userInfo.count_followers : "-"} title="Followers" />
+                    <ProfileItem count={userInfo ? userInfo.count_following : "-"} title="Following" />
                     {/*<ProfileItem count="156" title="Oranges" />*/}
                 </View>
         
@@ -239,7 +261,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 </View>
         
                 <View style={tailwind('flex flex-col')}>
-                    <Posts type={nav} profile={profile} />
+                    <Posts type={nav} profile={userInfo} />
                 </View>
             </Animated.ScrollView>
 
