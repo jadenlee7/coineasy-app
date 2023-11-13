@@ -180,39 +180,48 @@ export default function Postbox({isReply = false}) {
     /** Will open the media library and allow user to select a photo */
     async function openCamera() {
         try {
-            let result = await ImagePicker.launchCameraAsync();
 
-            if(!result.canceled){
-                /** Handle Image picked */
-                let imagePath = result.assets[0].uri;
-                setCameraLoading(true);
+            const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+
+            console.log(permissionResult);
+
+            if (permissionResult.granted === false) {
+                alert("You have refused to allow this app to access your camera.");
+            } else {
+                let result = await ImagePicker.launchCameraAsync();
     
-                const imageType = mime.getType(imagePath)
-    
-                /** Create file object */
-                let file = {
-                    name: "test",
-                    type: imageType,
-                    uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
-                }
-    
-                /** Upload Image to IPFS */
-                const resUpload = await orbis.uploadMedia(file);
-    
-                /** Handle result returned by Orbis SDK */
-                if(resUpload.status == 200) {
-                    let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
-                    let media = [{
-                        gateway: resUpload.result.gateway,
-                        url: finalUrl
-                    }]
-                    listMedia.push(media)
-    
-                    setListMedia([...listMedia]);
-                    setCameraLoading(false);
-                } else {
-                    alert("Error uploading image.");
-                    setCameraLoading(false);
+                if(!result.canceled){
+                    /** Handle Image picked */
+                    let imagePath = result.assets[0].uri;
+                    setCameraLoading(true);
+        
+                    const imageType = mime.getType(imagePath)
+        
+                    /** Create file object */
+                    let file = {
+                        name: "test",
+                        type: imageType,
+                        uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
+                    }
+        
+                    /** Upload Image to IPFS */
+                    const resUpload = await orbis.uploadMedia(file);
+        
+                    /** Handle result returned by Orbis SDK */
+                    if(resUpload.status == 200) {
+                        let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
+                        let media = [{
+                            gateway: resUpload.result.gateway,
+                            url: finalUrl
+                        }]
+                        listMedia.push(media)
+        
+                        setListMedia([...listMedia]);
+                        setCameraLoading(false);
+                    } else {
+                        alert("Error uploading image.");
+                        setCameraLoading(false);
+                    }
                 }
             }
         } catch (error) {
