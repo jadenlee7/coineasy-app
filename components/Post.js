@@ -317,7 +317,7 @@ const PostDisplay = (props) => {
 
                         {/** Display URL Metadata */}
                         {(post.indexing_metadata?.urlMetadata && post.indexing_metadata?.urlMetadata.title) &&
-                        <View style={tailwind("w-full")}>
+                        <View style={{width: Platform.OS == 'ios' ? '97.5%' : '97%',marginLeft: 8}}>
                             <NewsItem 
                                 item={{
                                     title: getShorterString(post.indexing_metadata.urlMetadata.title, 60),
@@ -331,9 +331,9 @@ const PostDisplay = (props) => {
 
                         {/** Quoted post details if any */}
                         {(showRepostDetails && post.content.repost != null) &&
-                        <View style={{width: Platform.OS == 'ios' ? '97.5%' : '97%',marginLeft: 8}}>
-                            <Post post={post.repost_details} quotedPost={true} style={[tailwind('rounded-md border border-secondary p-3')]} />
-                        </View>
+                            <View style={{width: Platform.OS == 'ios' ? '97.5%' : '97%',marginLeft: 8}}>
+                                <Post post={post.repost_details} quotedPost={true} style={[tailwind('rounded-md border border-secondary p-3')]} />
+                            </View>
                         }
 
                         {/** Post CTAs */}
