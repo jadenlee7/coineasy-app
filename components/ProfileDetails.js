@@ -148,12 +148,17 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const ProfileItem = ({title, count}) => {
         const tailwind = useTailwind();
       
-        return(
-          <TouchableOpacity style={tailwind('flex flex-col flex-1 items-center')} onPress={() => {Haptics.selectionAsync();navigation.navigate('FollowDetails', {origin: title, profile})}}>
-            <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
-            <Text style={[tailwind(`text-slate-400 mt-2 text-center`), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{title}</Text>
-          </TouchableOpacity>
-        )
+        { return title != 'Posts' ? (
+            <TouchableOpacity style={tailwind('flex flex-col flex-1 items-center')} onPress={() => {Haptics.selectionAsync();navigation.navigate('FollowDetails', {origin: title, profile})}}>
+                <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
+                <Text style={[tailwind(`text-slate-400 mt-2 text-center`), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{title}</Text>
+            </TouchableOpacity>
+        ) : (
+            <View style={tailwind('flex flex-col flex-1 items-center')}>
+                <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
+                <Text style={[tailwind(`text-slate-400 mt-2 text-center`), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{title}</Text>
+            </View>
+        )}
     }
 
     async function updateProfile() {
