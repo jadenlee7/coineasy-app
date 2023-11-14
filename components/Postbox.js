@@ -35,6 +35,9 @@ export default function Postbox({isReply = false}) {
 
     const [keepFocus, setKeepFocus] = useState(false)
 
+    const [listFollow, setListFollow] = useState([])
+    const [fullListFollow, setFullListFollow] = useState([])
+
     useEffect(() => {
         /** Make sure mentions is reset */
         mentions = [];
@@ -43,7 +46,19 @@ export default function Postbox({isReply = false}) {
         if(editedPost) {
             setMessage(editedPost.value.content.body);
         }
+
+        getListFollow()
     }, [])
+
+    async function getListFollow() {
+        const result_followers = await orbis.getProfileFollowers(user.did);
+        const result_following = await orbis.getProfileFollowing(user.did);
+
+        const list_follow = [...result_followers.data.map(e => e.details.did), ...result_following.data.map(e => e.details.did)];
+        const full_list_follow = [...result_followers.data, ...result_following.data];
+        setListFollow([...list_follow])
+        setFullListFollow([...full_list_follow])
+    }
 
     /** Pre-select category if one already selected in the feed */
     // useEffect(() => {
@@ -380,9 +395,20 @@ export default function Postbox({isReply = false}) {
             searchUsers();
             async function searchUsers() {
                 setUsersLoading(true);
-                const { data, error } = await orbis.getProfilesByUsername(term);
-                setUsers(data);
-                setUsersLoading(false);
+
+                let result
+                if(term != ''){
+                    const {data, error} = await orbis.getProfilesByUsername(term);
+                    result = data.filter(e => listFollow.includes(e.did))
+
+                    setUsers(result);
+                    setUsersLoading(false);
+                }else{
+                    result = fullListFollow
+
+                    setUsers(result);
+                    setUsersLoading(false);
+                }
             }
         }, [term]);
 
@@ -412,11 +438,15 @@ export default function Postbox({isReply = false}) {
                 }
 
                 {/** Loop through users */}
-                {users.map((_user, key) => {
+                {users.length != 0 ? users.map((_user, key) => {
                     return (
-                        <UserRow key={_user.did} details={_user.details} mentionUser={mentionUser} />
+                        <UserRow key={_user.did ? _user.did : _user.details.did} details={_user.details} mentionUser={mentionUser} />
                     );
-                })}
+                }) : !usersLoading && !isOwner(user.did) && (
+                    <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md')} >
+                        <Text style={tailwind('text-secondary ml-1 text-center')}>Oops, it seems @{term} is not a followed friend</Text>
+                    </View>
+                )}
             </ScrollView>
         )
     }
@@ -710,7 +740,7 @@ export default function Postbox({isReply = false}) {
                     }
 
                     {cameraLoading ?
-                        <ActivityIndicator size="small" color="#FF6B17" style={{marginLeft: 15,}}/>
+                        <ActivityIndicator size="small" color="#FF6B17" style={{marginLeft: 17,}}/>
                     :
                         <TouchableOpacity onPress={() => {setKeepFocus(true);openCamera()}} style={{marginLeft: 15,}}>
                             <CameraIcon />
