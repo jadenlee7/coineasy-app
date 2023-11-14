@@ -180,6 +180,7 @@ export default function Postbox({isReply = false}) {
     /** Will open the media library and allow user to select a photo */
     async function openCamera() {
         try {
+            textInputRef?.current?.focus();
 
             const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
@@ -222,7 +223,6 @@ export default function Postbox({isReply = false}) {
                         alert("Error uploading image.");
                         setCameraLoading(false);
                     }
-                    textInputRef?.current?.focus();
                 }else{
                     textInputRef?.current?.focus();
                 }
@@ -543,6 +543,7 @@ export default function Postbox({isReply = false}) {
                                         placeholder={replyTo ? "Post your reply" : "What's happening?" }
                                         placeholderTextColor="#64748b"
                                         multiline={true}
+                                        onBlur={e => e.target.focus()}
                                     />
                                 }
 
@@ -653,6 +654,7 @@ export default function Postbox({isReply = false}) {
                                         placeholder={replyTo ? "Post your reply" : "What's happening?" }
                                         placeholderTextColor="#64748b"
                                         multiline={true}
+                                        onBlur={e => e.target.focus()}
                                     />
                                 }
 
