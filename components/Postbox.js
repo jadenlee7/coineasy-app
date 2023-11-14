@@ -222,6 +222,9 @@ export default function Postbox({isReply = false}) {
                         alert("Error uploading image.");
                         setCameraLoading(false);
                     }
+                    textInputRef?.current?.focus();
+                }else{
+                    textInputRef?.current?.focus();
                 }
             }
         } catch (error) {
