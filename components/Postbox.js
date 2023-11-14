@@ -33,6 +33,8 @@ export default function Postbox({isReply = false}) {
     const [currentMention, setCurrentMention] = useState(null);
     const [listMedia, setListMedia] = useState([]);
 
+    const [keepFocus, setKeepFocus] = useState(false)
+
     useEffect(() => {
         /** Make sure mentions is reset */
         mentions = [];
@@ -179,9 +181,9 @@ export default function Postbox({isReply = false}) {
 
     /** Will open the media library and allow user to select a photo */
     async function openCamera() {
-        try {
-            textInputRef?.current?.focus();
+        setKeepFocus(true)
 
+        try {
             const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
             console.log(permissionResult);
@@ -223,13 +225,14 @@ export default function Postbox({isReply = false}) {
                         alert("Error uploading image.");
                         setCameraLoading(false);
                     }
-                }else{
-                    textInputRef?.current?.focus();
                 }
             }
+
+            setKeepFocus(false)
         } catch (error) {
             console.log('ICI');
             console.log(error);
+            setKeepFocus(false)
         }
 
     }
@@ -543,7 +546,7 @@ export default function Postbox({isReply = false}) {
                                         placeholder={replyTo ? "Post your reply" : "What's happening?" }
                                         placeholderTextColor="#64748b"
                                         multiline={true}
-                                        onBlur={e => e.target.focus()}
+                                        onBlur={e => {if(keepFocus){e.target.focus()}}}
                                     />
                                 }
 
@@ -654,7 +657,7 @@ export default function Postbox({isReply = false}) {
                                         placeholder={replyTo ? "Post your reply" : "What's happening?" }
                                         placeholderTextColor="#64748b"
                                         multiline={true}
-                                        onBlur={e => e.target.focus()}
+                                        onBlur={e => {if(keepFocus){e.target.focus()}}}
                                     />
                                 }
 
@@ -709,7 +712,7 @@ export default function Postbox({isReply = false}) {
                     {cameraLoading ?
                         <ActivityIndicator size="small" color="#FF6B17" style={{marginLeft: 15,}}/>
                     :
-                        <TouchableOpacity onPress={() => openCamera()} style={{marginLeft: 15,}}>
+                        <TouchableOpacity onPress={() => {setKeepFocus(true);openCamera()}} style={{marginLeft: 15,}}>
                             <CameraIcon />
                         </TouchableOpacity>
                     }
