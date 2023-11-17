@@ -5,14 +5,17 @@ import useDidToAddress from "../hooks/useDidToAddress";
 import useGetUsername from "../hooks/useGetUsername";
 import { isAdmin } from "../utils";
 
-export default function User({height = 40, details}) {
+export default function User({height = 40, details, isFollow}) {
   const tailwind = useTailwind();
   return(
     <View style={tailwind('flex flex-row items-center')}>
       <UserPfp height={height} details={details} />
-      <Text style={tailwind('text-slate-900 font-medium ml-2 text-sm')}>
-        <Username details={details} />
-      </Text>
+      <View>
+        <Text style={tailwind('text-slate-900 font-medium ml-2 text-sm')}>
+            <Username details={details} />
+        </Text>
+        {isFollow && <Text style={tailwind("text-secondary ml-2")}>{details.type == 'Followers' ? 'Followed Friend' : 'Following Friend'}</Text>}
+      </View>
     </View>
   )
 }

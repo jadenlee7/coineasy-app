@@ -1,0 +1,179 @@
+import React, { useContext, useState, useEffect } from "react";
+import { View, ActivityIndicator, ScrollView, Text, TouchableOpacity, RefreshControl } from 'react-native';
+
+import * as Haptics from 'expo-haptics';
+import { useTailwind } from 'tailwind-rn';
+
+import { UserPfp, Username } from "../../components/User";
+import { GlobalContext } from "../../contexts/GlobalContext";
+import Button from "../../components/Button";
+import { useNavigation } from "@react-navigation/core";
+
+const FollowerScreen = (props) => {
+    const { orbis, user } = useContext(GlobalContext);
+    const tailwind = useTailwind();
+
+    const navigation = useNavigation()
+
+    const { profile, type, followers, following, own_followers, own_following } = props
+
+    const [pageLoader, setPageLoader ] = useState(false);
+    const [refreshing, setRefreshing] = useState(false)
+    
+    const [list_followers, setList_followers ] = useState(followers);
+    const [list_following, setList_following ] = useState(following);
+    const [list_own_followers, setList_own_followers] = useState(own_followers);
+    const [list_own_following, setList_own_following] = useState(own_following);
+
+    const [listFollowLoader, setListFollowLoader] = useState([])
+
+    /** Check if user liked this post */
+    // useEffect(() => {
+    //     getListFollower();
+
+    //     /** Will load main post details */
+    //     async function getListFollower() {
+    //         setPageLoader(true);
+
+    //         const result_followers = await orbis.getProfileFollowers(profile.did)
+            
+    //         // If user visits another profile, We'll fetch his own followers/following to compare the two lists
+    //         if(type == 'selected'){
+    //             const result_own_followers = await orbis.getProfileFollowers(user.did)
+    //             setList_own_followers(result_own_followers.data)
+    //         }
+
+    //         result_followers.data.forEach(e => listFollowLoader.push(false))
+            
+    //         setList_followers(result_followers.data);
+    //         setListFollowLoader([...listFollowLoader])
+    //         setPageLoader(false);
+    //     }
+    // }, []);
+
+
+    const Follow = ({follow, index}) => {    
+
+        /** Will follow the user */
+        async function doFollow (follow, index_follow, active) {
+            listFollowLoader[index_follow] = true
+            setListFollowLoader([...listFollowLoader])
+
+            if(active){
+                if(type == 'selected'){
+                    list_own_following.push(follow)
+                    setList_own_following([...list_own_following])
+                }else{
+                    list_following.push(follow)
+                    setList_following([...list_following])
+                }
+            }else{
+                if(type == 'selected'){
+                    const temp_list = list_own_following.filter(e => e.details.did != follow.details.did)
+                    setList_own_following([...temp_list])
+                }else{
+                    const temp_list = list_following.filter(e => e.details.did != follow.details.did)
+                    setList_following([...temp_list])
+                }
+            }
+
+            const res = await orbis.setFollow(follow.details.did, active);
+
+            listFollowLoader[index_follow] = false
+            setListFollowLoader([...listFollowLoader])
+        }
+
+        const is_follower = type == 'selected' ? list_own_followers?.findIndex(e => e.details.did == follow.details?.did) : list_followers?.findIndex(e => e.details.did == follow.details?.did)
+        const is_following = type == 'selected' ? list_own_following?.findIndex(e => e.details.did == follow.details?.did) : list_following?.findIndex(e => e.details.did == follow.details?.did)
+
+        return (
+            <View style={[tailwind("items-center flex flex-row border-b border-secondary"), {justifyContent: 'space-between',paddingRight: 10,}]}>
+                <TouchableOpacity 
+                    style={tailwind("items-center flex flex-row py-3 px-6 ")} 
+                    underlayColor="#f1f5f9"
+                    onPress={() => {Haptics.selectionAsync();navigation.navigate('ProfileSelected', { did: follow.details.did })}}
+                >
+                    <UserPfp details={follow.details} />
+                    <View style={{marginLeft: 13}}>
+                        <View style={tailwind("flex mt-1")}>
+                            <Text style={[tailwind("text-secondary"), {maxWidth: 150}]} numberOfLines={1}>
+                                <Username details={follow.details}/>
+                            </Text>
+                            {is_follower != -1 && (
+                                <Text style={tailwind("text-secondary")}>Follows you</Text>
+                            )}
+                        </View>
+                    </View>
+                </TouchableOpacity>
+
+                {is_following == -1 && follow.details.did != user.did ? (
+                    <TouchableOpacity 
+                        activeOpacity={0.7}
+                        style={[
+                            tailwind(`px-5 rounded-full border ${listFollowLoader[index] ? "bg-main-400" : "bg-main"}`), 
+                            {
+                                borderColor: "transparent",
+                                paddingVertical: listFollowLoader[index] ? 3.2 : 5
+                            }
+                        ]}
+                        onPress={() => doFollow(follow, index, true)}
+                    >
+                        {listFollowLoader[index] ?
+                            <ActivityIndicator size="small" color="#fff" style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }} />
+                        :
+                            <Text style={[tailwind('text-white font-semibold'), {fontSize: 12, lineHeight: 16}]}>{is_follower == -1 ? 'Follow' : 'Follow back'}</Text>
+                        }
+                    </TouchableOpacity>
+                ) : follow.details.did != user.did ? (
+                    <Button loading={listFollowLoader[index]} title="Following" color="white" size="sm" onPress={() => doFollow(follow, index, false)}/>
+                ) : null}
+
+            </View>
+        )
+    }
+    
+
+    async function updateFollow() {
+        setRefreshing(true)
+
+        const result_followers = await orbis.getProfileFollowers(profile.did)
+        const result_following = await orbis.getProfileFollowing(profile.did)
+        
+        // If user visits another profile, We'll fetch his own followers/following to compare the two lists
+        if(type == 'selected'){
+            const result_own_followers = await orbis.getProfileFollowers(user.did)
+            const result_own_following = await orbis.getProfileFollowing(user.did)
+
+            setList_own_followers(result_own_followers.data)
+            setList_own_following(result_own_following.data)
+        }
+
+        setList_followers(result_followers.data);
+        setList_following(result_following.data);
+
+        setRefreshing(false)
+    }
+
+
+    return(
+        <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
+            <ScrollView
+                refreshControl={ 
+                    <RefreshControl refreshing={refreshing} onRefresh={updateFollow} /> 
+                }
+            >
+                { list_followers.length != 0 ? list_followers.map((follow, index) => {
+                    return (
+                        <Follow follow={follow} index={index} key={Math.random()}/>
+                    );
+                }) : (
+                    <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md')} >
+                        <Text style={tailwind('text-secondary items-center ml-1')}>{type == 'Selected' ? profile.profile.username+' doesn\'t' : 'You don\'t'} have any followers.</Text>
+                    </View>
+                )}
+            </ScrollView>
+        </View>
+    )
+}
+
+export default FollowerScreen

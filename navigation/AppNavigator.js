@@ -7,7 +7,7 @@ import BottomTabsNavigator from './BottomTabsNavigator';
 import ProfileSelected from '../screens/Navigation/ProfileSelected';
 import Notifications from '../screens/Navigation/Notifications';
 import PostDetails from '../screens/Navigation/PostDetails';
-import FollowDetails from '../screens/Navigation/FollowDetails';
+import FollowNavigation from '../screens/Navigation/FollowNavigation';
 
 const Stack = createNativeStackNavigator();
 
@@ -19,7 +19,7 @@ const AppNavigator = (props) => {
                 <Stack.Screen name="ProfileSelected" component={ProfileSelected} options={{ headerShown: false,animation: 'none' }} />
                 <Stack.Screen name="Notifications" component={Notifications} options={{ headerShown: false,animation: 'none' }} />
                 <Stack.Screen name="PostDetails" component={PostDetails} options={{ headerShown: false,animation: 'none' }} />
-                <Stack.Screen name="FollowDetails" component={FollowDetails} options={{ headerShown: false,animation: 'none' }} />
+                <Stack.Screen name="FollowNavigation" component={FollowNavigation} options={{ headerShown: false,animation: 'none' }} />
             </Stack.Navigator>
         </NavigationContainer>
     )

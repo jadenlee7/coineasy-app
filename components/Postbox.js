@@ -35,7 +35,7 @@ export default function Postbox({isReply = false}) {
 
     const [keepFocus, setKeepFocus] = useState(false)
 
-    const [listFollow, setListFollow] = useState([])
+    // const [listFollow, setListFollow] = useState([])
     const [fullListFollow, setFullListFollow] = useState([])
 
     useEffect(() => {
@@ -54,9 +54,12 @@ export default function Postbox({isReply = false}) {
         const result_followers = await orbis.getProfileFollowers(user.did);
         const result_following = await orbis.getProfileFollowing(user.did);
 
-        const list_follow = [...result_followers.data.map(e => e.details.did), ...result_following.data.map(e => e.details.did)];
+        result_followers.data.forEach(e => e.details.type = 'Followers');
+        result_following.data.forEach(e => e.details.type = 'Following');
+
+        // const list_follow = [...result_followers.data.map(e => e.details.did), ...result_following.data.map(e => e.details.did)];
         const full_list_follow = [...result_followers.data, ...result_following.data];
-        setListFollow([...list_follow])
+        // setListFollow([...list_follow])
         setFullListFollow([...full_list_follow])
     }
 
@@ -94,7 +97,7 @@ export default function Postbox({isReply = false}) {
             setLoading(true);
             let content = {...editedPost.value.content};
             content.body = message;
-
+            
             /** Share edited post */
             let res = await orbis.editPost(editedPost.value.stream_id, content);
             console.log("res:", res);
@@ -389,26 +392,38 @@ export default function Postbox({isReply = false}) {
         const { user, orbis } = useContext(GlobalContext);
         const tailwind = useTailwind();
         const [users, setUsers] = useState([]);
+        const [followUsers, setFollowUsers] = useState([]);
         const [usersLoading, setUsersLoading] = useState(false);
 
         useEffect(() => {
             searchUsers();
+
             async function searchUsers() {
                 setUsersLoading(true);
 
+                const {data, error} = await orbis.getProfilesByUsername(term);
+
                 let result
                 if(term != ''){
-                    const {data, error} = await orbis.getProfilesByUsername(term);
-                    result = data.filter(e => listFollow.includes(e.did))
-
-                    setUsers(result);
-                    setUsersLoading(false);
+                    result = fullListFollow.filter(e => e.details?.profile?.username?.startsWith(term))
                 }else{
                     result = fullListFollow
-
-                    setUsers(result);
-                    setUsersLoading(false);
                 }
+
+                let objetsVus = {};
+                let listWithoutDuplicates = result.filter(objet => {
+                    if (!objetsVus.hasOwnProperty(objet.details.did)) {
+                        objetsVus[objet.details.did] = true;
+                        return true;
+                    }
+                    return false;
+                });
+
+                let listWithoutCommon = data.filter(elt1 => !result.some(elt2 => elt2.details.did === elt1.did));
+
+                setUsers(listWithoutCommon);
+                setFollowUsers(listWithoutDuplicates)
+                setUsersLoading(false);
             }
         }, [term]);
 
@@ -437,25 +452,28 @@ export default function Postbox({isReply = false}) {
                     </TouchableOpacity>
                 }
 
-                {/** Loop through users */}
-                {users.length != 0 ? users.map((_user, key) => {
+                {/** Loop through follow users */}
+                {followUsers.map((_user, key) => {
                     return (
-                        <UserRow key={_user.did ? _user.did : _user.details.did} details={_user.details} mentionUser={mentionUser} />
+                        <UserRow key={_user.did ? _user.did : _user.details.did} details={_user.details} mentionUser={mentionUser} isFollow={true}/>
                     );
-                }) : !usersLoading && !isOwner(user.did) && (
-                    <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md')} >
-                        <Text style={tailwind('text-secondary ml-1 text-center')}>Oops, it seems @{term} is not a followed friend</Text>
-                    </View>
-                )}
+                })}
+
+                {/** Loop through users */}
+                {users.map((_user, key) => {
+                    return (
+                        <UserRow key={_user.did ? _user.did : _user.details.did} details={_user.details} mentionUser={mentionUser} isFollow={false}/>
+                    );
+                })}
             </ScrollView>
         )
     }
 
-    const UserRow = ({details, mentionUser}) => {
+    const UserRow = ({details, mentionUser, isFollow}) => {
         const tailwind = useTailwind();
         return(
             <TouchableOpacity style={tailwind("p-2 px-4")} activeOpacity={0.6} onPress={() => mentionUser(details)}>
-                <User details={details} />
+                <User details={details} isFollow={isFollow}/>
             </TouchableOpacity>
         )
     }
@@ -506,7 +524,7 @@ export default function Postbox({isReply = false}) {
         <>
             {(repost != false && repost != null) ? (
                 <ScrollView style={[tailwind('w-full'), {maxHeight: Dimensions.get('screen').height/2.2}]} keyboardShouldPersistTaps='handled'>
-                    <View style={tailwind('flex flex-col items-start w-full p-5')} key={Math.random()}>
+                    <View style={tailwind('flex flex-col items-start w-full p-5')}>
                         {categoriesVis ?
                             <>
                                 <View style={tailwind('flex flex-row w-full mb-1')}>
