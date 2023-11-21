@@ -375,12 +375,31 @@ export default function Postbox({isReply = false}) {
             username: "@" + _mentionName,
             did: mention.did
         });
-        let _message;
-        if(currentMention && currentMention != "") {
-            _message = message.replace(currentMention, _mentionName);
-        } else {
-            _message = "@" + _mentionName;
-        }
+
+        let seenObjects = [];
+        let listWithoutDuplicates = mentions.filter(objet => {
+            if (!seenObjects.hasOwnProperty(objet.did)) {
+                seenObjects[objet.did] = true;
+                return true;
+            }
+            return false;
+        });
+        
+        let _message = "";
+        listWithoutDuplicates.forEach((e, index) => {
+            if(index != listWithoutDuplicates.length-1){
+                _message += e.username+" "
+            }else{
+                _message += e.username
+            }
+        });
+
+        // let _message;
+        // if(currentMention && currentMention != "") {
+        //     _message = message.replace(currentMention, _mentionName);
+        // } else {
+        //     _message = "@" + _mentionName;
+        // }
 
         setMessage(_message + " ");
         setMentionsBoxVis(false);
@@ -413,17 +432,12 @@ export default function Postbox({isReply = false}) {
 
                 const {data, error} = await orbis.getProfilesByUsername(term);
 
-                let result
-                if(term != ''){
-                    result = fullListFollow.filter(e => e.details?.profile?.username?.startsWith(term))
-                }else{
-                    result = fullListFollow
-                }
+                let result = term != '' ? fullListFollow.filter(e => e.details?.profile?.username?.startsWith(term)) : fullListFollow
 
-                let objetsVus = {};
+                let seenObjects = {};
                 let listWithoutDuplicates = result.filter(objet => {
-                    if (!objetsVus.hasOwnProperty(objet.details.did)) {
-                        objetsVus[objet.details.did] = true;
+                    if (!seenObjects.hasOwnProperty(objet.details.did)) {
+                        seenObjects[objet.details.did] = true;
                         return true;
                     }
                     return false;
@@ -448,7 +462,7 @@ export default function Postbox({isReply = false}) {
 
         /** Loop through all users */
         return (
-            <ScrollView>
+            <ScrollView keyboardShouldPersistTaps='handled'>
                 {/** Show everyone tag if user is admin */}
                 {(isOwner(user.did) && "everyone".includes(term)) &&
                     <TouchableOpacity style={tailwind("p-2 px-4")} activeOpacity={0.6} onPress={() => mentionUser({did: "did:@:everyone", profile: {username: "everyone"}})}>
@@ -532,229 +546,118 @@ export default function Postbox({isReply = false}) {
 
     return (
         <>
-            {(repost != false && repost != null) ? (
-                <ScrollView style={[tailwind('w-full'), {maxHeight: Dimensions.get('screen').height/2.2}]} keyboardShouldPersistTaps='handled'>
-                    <View style={tailwind('flex flex-col items-start w-full p-5')}>
-                        {categoriesVis ?
-                            <>
-                                <View style={tailwind('flex flex-row w-full mb-1')}>
-                                    <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md')]} activeOpacity={0.6} onPress={() => setCategoriesVis(false)}>
-                                        <>
-                                            <BackIcon />
-                                            <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
-                                        </>
-                                    </TouchableOpacity>
-                                </View>
-                                <View style={tailwind('flex flex-row w-full mb-6 flex-wrap mt-2')}>
-                                    {/** Loop and display categories */}
-                                    {categories.map((category, key) => {
-                                        return (
-                                            <Category key={key} category={category} setCategoriesVis={setCategoriesVis} setCategorySelected={setCategorySelected} />
-                                        );
-                                    })}
-                                </View>
-                            </>
-                        :
-                            <>
-                                {/** Top bar with user details and cancel button */}
-                                <View style={tailwind('flex flex-row mb-10px w-full items-center')}>
-                                    <View style={tailwind('flex-1')}>
-                                        {replyTo ?
-                                            <View style={tailwind('flex flex-row items-center')}>
-                                                <UserPfp details={user} height={20} />
-                                                <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, lineHeight: 18, color: "#959595", marginLeft: 8, marginRight: 4}]}>Replying to</Text>
-                                                <Username details={replyTo.creator_details} style={{fontSize: 13}} />
-                                            </View>
-                                        :
-                                            <User details={user} height={40} />
-                                        }
-                                    </View>
-                                    {!replyTo &&
-                                        <Button
-                                            title={categorySelected?.content?.displayName ? categorySelected.content.displayName : categorySelected?.context?.displayName ? categorySelected.context.displayName : "Category"}
-                                            iconRight={<CaretDownIcon />}
-                                            color="white"
-                                            size="sm"
-                                            onPress={() => openCategory()}
-                                        />
+            {/* {(repost != false && repost != null) ? ( */}
+            <ScrollView style={[tailwind('w-full'), {maxHeight: Dimensions.get('screen').height/2.2}]} keyboardShouldPersistTaps='handled'>
+                <View style={tailwind('flex flex-col items-start w-full p-5')}>
+                    {categoriesVis ?
+                        <>
+                            <View style={tailwind('flex flex-row w-full mb-1')}>
+                                <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md')]} activeOpacity={0.6} onPress={() => setCategoriesVis(false)}>
+                                    <>
+                                        <BackIcon />
+                                        <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
+                                    </>
+                                </TouchableOpacity>
+                            </View>
+                            <View style={tailwind('flex flex-row w-full mb-6 flex-wrap mt-2')}>
+                                {/** Loop and display categories */}
+                                {categories.map((category, key) => {
+                                    return (
+                                        <Category key={key} category={category} setCategoriesVis={setCategoriesVis} setCategorySelected={setCategorySelected} />
+                                    );
+                                })}
+                            </View>
+                        </>
+                    :
+                        <>
+                            {/** Top bar with user details and cancel button */}
+                            <View style={tailwind('flex flex-row mb-10px w-full items-center')}>
+                                <View style={tailwind('flex-1')}>
+                                    {replyTo ?
+                                        <View style={tailwind('flex flex-row items-center')}>
+                                            <UserPfp details={user} height={20} />
+                                            <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, lineHeight: 18, color: "#959595", marginLeft: 8, marginRight: 4}]}>Replying to</Text>
+                                            <Username details={replyTo.creator_details} style={{fontSize: 13}} />
+                                        </View>
+                                    :
+                                        <User details={user} height={40} />
                                     }
                                 </View>
-
-                                {(categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) &&
-                                    <View style={tailwind('bg-slate-50 px-2 py-3 items-center mb-1 rounded-md flex-row justify-center w-full')} >
-                                        {hasAccess ?
-                                            <UnlockIcon color="#959595" style={{marginRight: 2}} />
-                                        :
-                                            <LockIcon color="#959595" style={{marginRight: 2}} />
-                                        }
-
-                                        <Text style={tailwind('text-secondary items-center ml-1')}>This category is gated.</Text>
-                                    </View>
-                                }
-
-                                {hasAccess &&
-                                    <TextInput
-                                        ref={textInputRef}
-                                        onChangeText={loading ? () => console.log("Disabled.") : handleTextChange}
-                                        autoFocus={hasAccess}
-                                        numberOfLines={1}
-                                        value={message}
-                                        //editable={!loading}
-                                        style={[tailwind('w-full'), { fontSize: 14, fontFamily: "GmarketMedium", minHeight: 55, lineHeight: 17, paddingBottom: 10, width:Dimensions.get('window').width }]}
-                                        placeholder={replyTo ? "Post your reply" : "What's happening?" }
-                                        placeholderTextColor="#64748b"
-                                        multiline={true}
-                                        onBlur={e => {if(keepFocus){e.target.focus()}}}
+                                {!replyTo &&
+                                    <Button
+                                        title={categorySelected?.content?.displayName ? categorySelected.content.displayName : categorySelected?.context?.displayName ? categorySelected.context.displayName : "Category"}
+                                        iconRight={<CaretDownIcon />}
+                                        color="white"
+                                        size="sm"
+                                        onPress={() => openCategory()}
                                     />
                                 }
+                            </View>
 
-                                {listMedia.length == 1 ? (
-                                    <View style={tailwind("items-start")}>
-                                        <Media media={listMedia[0]} deleteMedia={() => deleteMedia(0)}/>
-                                    </View>
-                                ) : (
-                                    <ScrollView
-                                        horizontal={true}
-                                        // style={{width: Dimensions.get('window').width}}
-                                    >
-                                        { listMedia.map((item, index) => {
-                                            return(
-                                                <Media media={item} deleteMedia={() => deleteMedia(index)} index={index}/>
-                                            )
-                                        })}
-                                        <View style={{width: 20}}/>
-                                    </ScrollView>
-                                )}
-
-                                {/** Show repost details if user is replying to a post */}
-                                {(repost != false && repost != null) &&
-                                    <Post post={repost} quotedPost={true} isRepost={true} style={tailwind('rounded-md border border-secondary p-4')} />
-                                }
-                            </>
-                        }
-
-                    </View>
-
-                    {/** Show mentions box if needed */}
-                    {mentionsBoxVis == true &&
-                        <View style={[tailwind('flex flex-col pt-1 border-t border-secondary' ), { height: 120,width: Dimensions.get('window').width,}]}>
-                            <UserLoop term={currentMention} mentionUser={mentionUser} />
-                        </View>
-                    }
-
-                </ScrollView>
-            ) : (
-                <>
-                    <View style={tailwind('flex flex-col items-start w-full p-5')}>
-                        {categoriesVis ?
-                            <>
-                                <View style={tailwind('flex flex-row w-full mb-1')}>
-                                    <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md')]} activeOpacity={0.6} onPress={() => setCategoriesVis(false)}>
-                                        <>
-                                            <BackIcon />
-                                            <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
-                                        </>
-                                    </TouchableOpacity>
-                                </View>
-                                <View style={tailwind('flex flex-row w-full mb-6 flex-wrap mt-2')}>
-                                    {/** Loop and display categories */}
-                                    {categories.map((category, key) => {
-                                        return (
-                                            <Category key={key} category={category} setCategoriesVis={setCategoriesVis} setCategorySelected={setCategorySelected} />
-                                        );
-                                    })}
-                                </View>
-                            </>
-                        :
-                            <>
-                                {/** Top bar with user details and cancel button */}
-                                <View style={tailwind('flex flex-row mb-10px w-full items-center')}>
-                                    <View style={tailwind('flex-1')}>
-                                        {replyTo ?
-                                            <View style={tailwind('flex flex-row items-center')}>
-                                                <UserPfp details={user} height={20} />
-                                                <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, lineHeight: 18, color: "#959595", marginLeft: 8, marginRight: 4}]}>Replying to</Text>
-                                                <Username details={replyTo.creator_details} style={{fontSize: 13}} />
-                                            </View>
-                                        :
-                                            <User details={user} height={40} />
-                                        }
-                                    </View>
-                                    {!replyTo &&
-                                        <Button
-                                            title={categorySelected?.content?.displayName ? categorySelected.content.displayName : categorySelected?.context?.displayName ? categorySelected.context.displayName : "Category"}
-                                            iconRight={<CaretDownIcon />}
-                                            color="white"
-                                            size="sm"
-                                            onPress={() => openCategory()}
-                                        />
+                            {(categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) &&
+                                <View style={tailwind('bg-slate-50 px-2 py-3 items-center mb-1 rounded-md flex-row justify-center w-full')} >
+                                    {hasAccess ?
+                                        <UnlockIcon color="#959595" style={{marginRight: 2}} />
+                                    :
+                                        <LockIcon color="#959595" style={{marginRight: 2}} />
                                     }
+
+                                    <Text style={tailwind('text-secondary items-center ml-1')}>This category is gated.</Text>
                                 </View>
+                            }
 
-                                {(categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) &&
-                                    <View style={tailwind('bg-slate-50 px-2 py-3 items-center mb-1 rounded-md flex-row justify-center w-full')} >
-                                        {hasAccess ?
-                                            <UnlockIcon color="#959595" style={{marginRight: 2}} />
-                                        :
-                                            <LockIcon color="#959595" style={{marginRight: 2}} />
-                                        }
+                            {hasAccess &&
+                                <TextInput
+                                    ref={textInputRef}
+                                    onChangeText={loading ? () => console.log("Disabled.") : handleTextChange}
+                                    autoFocus={hasAccess}
+                                    numberOfLines={1}
+                                    value={message}
+                                    //editable={!loading}
+                                    style={[tailwind('w-full'), { fontSize: 14, fontFamily: "GmarketMedium", minHeight: 55, lineHeight: 17, paddingBottom: 10, width:Dimensions.get('window').width }]}
+                                    placeholder={replyTo ? "Post your reply" : "What's happening?" }
+                                    placeholderTextColor="#64748b"
+                                    multiline={true}
+                                    onBlur={e => {if(keepFocus){e.target.focus()}}}
+                                />
+                            }
 
-                                        <Text style={tailwind('text-secondary items-center ml-1')}>This category is gated.</Text>
-                                    </View>
-                                }
+                            {listMedia.length == 1 ? (
+                                <View style={tailwind("items-start")}>
+                                    <Media media={listMedia[0]} deleteMedia={() => deleteMedia(0)}/>
+                                </View>
+                            ) : (
+                                <ScrollView
+                                    horizontal={true}
+                                    // style={{width: Dimensions.get('window').width}}
+                                >
+                                    { listMedia.map((item, index) => {
+                                        return(
+                                            <Media media={item} deleteMedia={() => deleteMedia(index)} index={index}/>
+                                        )
+                                    })}
+                                    <View style={{width: 20}}/>
+                                </ScrollView>
+                            )}
 
-                                {hasAccess &&
-                                    <TextInput
-                                        ref={textInputRef}
-                                        onChangeText={loading ? () => console.log("Disabled.") : handleTextChange}
-                                        autoFocus={hasAccess}
-                                        numberOfLines={1}
-                                        value={message}
-                                        //editable={!loading}
-                                        style={[tailwind('w-full'), { fontSize: 14, fontFamily: "GmarketMedium", minHeight: 55, lineHeight: 17, paddingBottom: 10, width:Dimensions.get('window').width }]}
-                                        placeholder={replyTo ? "Post your reply" : "What's happening?" }
-                                        placeholderTextColor="#64748b"
-                                        multiline={true}
-                                        onBlur={e => {if(keepFocus){e.target.focus()}}}
-                                    />
-                                }
-
-                                {listMedia.length == 1 ? (
-                                    <View style={tailwind("items-start")}>
-                                        <Media media={listMedia[0]} deleteMedia={() => deleteMedia(0)}/>
-                                    </View>
-                                ) : (
-                                    <ScrollView
-                                        horizontal={true}
-                                        // style={{width: Dimensions.get('window').width}}
-                                    >
-                                        { listMedia.map((item, index) => {
-                                            return(
-                                                <Media media={item} deleteMedia={() => deleteMedia(index)} index={index}/>
-                                            )
-                                        })}
-                                        <View style={{width: 20}}/>
-                                    </ScrollView>
-                                )}
-
-                                {/** Show repost details if user is replying to a post */}
-                                {(repost != false && repost != null) &&
-                                    <Post post={repost} quotedPost={true} isRepost={true} style={tailwind('rounded-md border border-secondary p-4')} />
-                                }
-                            </>
-                        }
-
-                    </View>
-
-                    {/** Show mentions box if needed */}
-                    {mentionsBoxVis == true &&
-                        <View style={[tailwind('flex flex-col pt-1 border-t border-secondary' ), { height: 120,width: Dimensions.get('window').width,}]}>
-                            <UserLoop term={currentMention} mentionUser={mentionUser} />
-                        </View>
+                            {/** Show repost details if user is replying to a post */}
+                            {(repost != false && repost != null) &&
+                                <Post post={repost} quotedPost={true} isRepost={true} style={tailwind('rounded-md border border-secondary p-4')} />
+                            }
+                        </>
                     }
 
-                </>
-            )}
+                </View>
+
+                {/** Show mentions box if needed */}
+                {mentionsBoxVis == true &&
+                    <View style={[tailwind('flex flex-col pt-1 border-t border-secondary' ), { height: 120,width: Dimensions.get('window').width,}]}>
+                        <UserLoop term={currentMention} mentionUser={mentionUser} />
+                    </View>
+                }
+
+            </ScrollView>
+            
 
             <KeyboardAvoidingView style={[tailwind('flex flex-row w-full p-3 px-5'), {marginBottom: -25,}]} behavior='height'>
                 {/** Image picker icon */}
