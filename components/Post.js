@@ -53,13 +53,6 @@ const PostDisplay = (props) => {
         console.log(error);        
     }
 
-    let list_images = [];
-    if(listMedia?.length > 1){
-        list_images = listMedia.map((elt) => {return({'url': elt[0].url})})
-    }else if(listMedia?.length == 1){
-        list_images = [{'url': listMedia[0].url ? listMedia[0].url : listMedia[0][0].url}]
-    }
-
     const [body, setBody] = useState(post?.content?.body);
     const [postContext, setPostContext] = useState(post?.content?.context ? post.content.context : post?.context);
     const [postContextDetails, setPostContextDetails] = useState(post?.content?.context_details ? post.content.context_details : post?.context_details);
@@ -71,6 +64,13 @@ const PostDisplay = (props) => {
     const tailwind = useTailwind();
 
     const statusBarHeight = useStatusBarHeight();
+
+    let list_images = [];
+    if(listMedia?.length > 1){
+        list_images = listMedia.map((elt) => {return({'url': elt[0].url})})
+    }else if(listMedia?.length == 1){
+        list_images = [{'url': listMedia[0].url ? listMedia[0].url : listMedia[0][0].url}]
+    }
 
     /** Will open pane with post details */
     function showPostDetails() {
@@ -307,7 +307,8 @@ const PostDisplay = (props) => {
                                             <View style={{width: 70}} key={Math.random()}/>
                                         </ScrollView>
                                 ) : null}
-                                {modalVis && list_images.length > 0 &&
+
+                                {modalVis && listMedia.length > 0 &&
                                     <Modal 
                                         visible={true}
                                         transparent={true}
