@@ -35,7 +35,6 @@ export default function Postbox({isReply = false}) {
 
     const [keepFocus, setKeepFocus] = useState(false)
 
-    // const [listFollow, setListFollow] = useState([])
     const [fullListFollow, setFullListFollow] = useState([])
 
     useEffect(() => {
@@ -45,6 +44,12 @@ export default function Postbox({isReply = false}) {
         /** If user is editing a post we pre-fill the content */
         if(editedPost) {
             setMessage(editedPost.value.content.body);
+
+            const temp_category = {}
+            temp_category.content = editedPost.value.content?.context_details ? editedPost.value.content.context_details : editedPost.value.context_details?.context_details
+            temp_category.context = editedPost.value.content.context ? editedPost.value.content.context : editedPost.value.context
+
+            setCategorySelected(temp_category)
         }
 
         getListFollow()
@@ -57,20 +62,9 @@ export default function Postbox({isReply = false}) {
         result_followers.data.forEach(e => e.details.type = 'Followers');
         result_following.data.forEach(e => e.details.type = 'Following');
 
-        // const list_follow = [...result_followers.data.map(e => e.details.did), ...result_following.data.map(e => e.details.did)];
         const full_list_follow = [...result_followers.data, ...result_following.data];
-        // setListFollow([...list_follow])
         setFullListFollow([...full_list_follow])
     }
-
-    /** Pre-select category if one already selected in the feed */
-    // useEffect(() => {
-    //     if(category || selectedCategory || selectedNews) {
-    //         const temp_cat = currentRoute == 'Categories' ? selectedCategory : currentRoute == 'News' ? selectedNews : category
-    //         setCategorySelected(temp_cat);
-    //         checkAccess(temp_cat);
-    //     }
-    // }, [category, selectedCategory, selectedNews])
 
     async function checkAccess(temp_cat) {
         if(temp_cat?.content.accessRules && temp_cat?.content.accessRules.length > 0) {
@@ -97,13 +91,21 @@ export default function Postbox({isReply = false}) {
             setLoading(true);
             let content = {...editedPost.value.content};
             content.body = message;
+
+            if(categorySelected){
+                content.context = categorySelected.stream_id
+                content.context_details = categorySelected.content
+            }
             
             /** Share edited post */
             let res = await orbis.editPost(editedPost.value.stream_id, content);
             console.log("res:", res);
 
             if(res.status == 200) {
-                editedPost.callback(message);
+                editedPost.callback(
+                    message,
+                    categorySelected
+                );
                 setMessage("");
                 mentions = [];
             } else {
@@ -160,6 +162,9 @@ export default function Postbox({isReply = false}) {
                 setMessage("");
                 mentions = [];
 
+                const temp_details = {}
+                temp_details.context_details = categorySelected?.content
+                temp_details.context_id = categorySelected?.stream_id
                 let _callbackContent = {
                     creator: user.did,
                     creator_details: {
@@ -172,7 +177,9 @@ export default function Postbox({isReply = false}) {
                     count_likes: 0,
                     count_repost: 0,
                     timestamp: getTimestamp(),
-                    repost_details: repost
+                    repost_details: repost,
+                    context: categorySelected?.stream_id,
+                    context_details: categorySelected ? temp_details : null,
                 }
 
                 /** If any trigger callback after the post is shared */
@@ -561,7 +568,7 @@ export default function Postbox({isReply = false}) {
                                     </View>
                                     {!replyTo &&
                                         <Button
-                                            title={categorySelected ? categorySelected.content.displayName : "Category"}
+                                            title={categorySelected?.content?.displayName ? categorySelected.content.displayName : categorySelected?.context?.displayName ? categorySelected.context.displayName : "Category"}
                                             iconRight={<CaretDownIcon />}
                                             color="white"
                                             size="sm"
@@ -672,7 +679,7 @@ export default function Postbox({isReply = false}) {
                                     </View>
                                     {!replyTo &&
                                         <Button
-                                            title={categorySelected ? categorySelected.content.displayName : "Category"}
+                                            title={categorySelected?.content?.displayName ? categorySelected.content.displayName : categorySelected?.context?.displayName ? categorySelected.context.displayName : "Category"}
                                             iconRight={<CaretDownIcon />}
                                             color="white"
                                             size="sm"

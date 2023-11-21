@@ -60,6 +60,9 @@ const PostDisplay = (props) => {
     }
 
     const [body, setBody] = useState(post?.content?.body);
+    const [postContext, setPostContext] = useState(post?.content?.context ? post.content.context : post?.context);
+    const [postContextDetails, setPostContextDetails] = useState(post?.content?.context_details ? post.content.context_details : post?.context_details);
+
     const [isDeleted, setIsDeleted] = useState(false);
     const [modalVis, setModalVis] = useState(false);
     const [imageIndex, setImageIndex] = useState(0)
@@ -95,8 +98,18 @@ const PostDisplay = (props) => {
     }
 
     /** Will update the body of the post */
-    function callbackEditPost(_body) {
+    function callbackEditPost(_body, _selectedCategory) {
         setBody(_body);
+        setPostContext(_selectedCategory.stream_id)
+
+        const temp_details = {}
+        temp_details.context_details = _selectedCategory.content
+        temp_details.context_id = _selectedCategory.stream_id
+        setPostContextDetails({...temp_details})
+        
+        post.context = _selectedCategory.stream_id
+        post.context_details = temp_details
+
         hidePostbox();
     }
 
@@ -191,8 +204,8 @@ const PostDisplay = (props) => {
                             stream_id: post.reply_to,
                             content: post.reply_to_details,
                             creator_details: post.reply_to_creator_details,
-                            context_details: post.context_details,
-                            context: post.context
+                            context_details: postContextDetails,
+                            context: postContext
                         }}
                         isReply={true}
                         verticalDivider={true} 
@@ -226,8 +239,13 @@ const PostDisplay = (props) => {
                                 </Text>
 
                                 {/** Display category name */}
-                                {(post.context != context && post.context != undefined) &&
-                                    <Button title={post.context_details?.context_details?.displayName} color="orange" size="xs" onPress={() => selectCategory({stream_id: post.context, content: post.context_details?.context_details})} />
+                                {(postContext != undefined && (postContextDetails?.context_details?.displayName || postContextDetails?.displayName)) &&
+                                    <Button 
+                                        title={postContextDetails?.displayName ? postContextDetails.displayName : postContextDetails?.context_details?.displayName}
+                                        color="orange"
+                                        size="xs"
+                                        onPress={() => selectCategory({stream_id: postContext, content: postContextDetails?.context_details ? postContextDetails.context_details : postContextDetails})} 
+                                    />
                                 }
                             </View>
 
