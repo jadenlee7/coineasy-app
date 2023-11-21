@@ -91,7 +91,7 @@ const PostDetails = ({navigation, route}) => {
                 {post ?
                     <View style={{marginTop: -10}}>
                     {/** Show master post */}
-                    <Post post={post} verticalDivider={true} fontSize={15} />
+                    <Post post={post} verticalDivider={true} fontSize={15} notTouchable={true}/>
 
                     {/** Show replies */}
                     <View style={[tailwind('flex flex-col')]}>
@@ -103,7 +103,7 @@ const PostDetails = ({navigation, route}) => {
                         <>
                             {replies.map((reply) => {
                             return (
-                                <Post post={reply} key={reply.stream_id} showParent={false} verticalDivider={true} style={{marginTop: -20}} />
+                                <Post post={reply} key={reply.stream_id} showParent={false} verticalDivider={true} style={{marginTop: -20}} notTouchable={true}/>
                             );
                             })}
                         </>

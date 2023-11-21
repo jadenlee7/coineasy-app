@@ -39,7 +39,8 @@ const PostDisplay = (props) => {
         fontSize = 13.5,
         stylePostContent,
         isRepost = false,
-        quotedPost = false
+        quotedPost = false,
+        notTouchable
     } = props
 
     let navigation;
@@ -262,7 +263,7 @@ const PostDisplay = (props) => {
                         </View>
 
                         {/** Post content */}
-                        <TouchableOpacity activeOpacity={0.7} style={[tailwind('ml-1 px-1 flex flex-1 rounded-md mr-8')]} onPress={() => showPostDetails()}>
+                        <TouchableOpacity activeOpacity={0.7} style={[tailwind('ml-1 px-1 flex flex-1 rounded-md mr-8')]} onPress={() => showPostDetails()} disabled={notTouchable ? true : false}>
                             <>
                                 {body && body == 'Message sans body' ?(
                                     <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: 5, paddingBottom: 5, fontSize: fontSize, lineHeight: fontSize * 1.47 }, stylePostContent]}>
@@ -270,6 +271,7 @@ const PostDisplay = (props) => {
                                     </Text>
                                 ) : (body && body != "") ?
                                     <Text 
+                                        selectable
                                         style={[
                                             tailwind('text-slate-900 font-normal'), 
                                             {
