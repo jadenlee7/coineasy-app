@@ -46,6 +46,8 @@ export default function Postbox({isReply = false}) {
             setMessage(editedPost.value.content.body);
             setListMedia([...editedPost.value.content.media]);
 
+            mentions = editedPost.value.content.mentions
+
             const temp_category = {}
             temp_category.content = editedPost.value.context_details?.context_details ? editedPost.value.context_details?.context_details : editedPost.value.content?.context_details
             temp_category.stream_id = editedPost.value.context ? editedPost.value.context : editedPost.value.content?.context
@@ -93,6 +95,7 @@ export default function Postbox({isReply = false}) {
             let content = {...editedPost.value.content};
             content.body = message;
             content.media = listMedia ? listMedia : null
+            content.mention = mentions
 
             if(categorySelected){
                 content.context = categorySelected.stream_id
