@@ -53,15 +53,16 @@ const PostDisplay = (props) => {
     }
 
     let list_images = [];
-    if(post?.content?.media?.length > 1){
-        list_images = post.content.media.map((elt) => {return({'url': elt[0].url})})
-    }else if(post?.content?.media?.length == 1){
-        list_images = [{'url': post.content.media[0].url ? post.content.media[0].url : post.content.media[0][0].url}]
+    if(listMedia?.length > 1){
+        list_images = listMedia.map((elt) => {return({'url': elt[0].url})})
+    }else if(listMedia?.length == 1){
+        list_images = [{'url': listMedia[0].url ? listMedia[0].url : listMedia[0][0].url}]
     }
 
     const [body, setBody] = useState(post?.content?.body);
     const [postContext, setPostContext] = useState(post?.content?.context ? post.content.context : post?.context);
     const [postContextDetails, setPostContextDetails] = useState(post?.content?.context_details ? post.content.context_details : post?.context_details);
+    const [listMedia, setListMedia] = useState(post?.content?.media)
 
     const [isDeleted, setIsDeleted] = useState(false);
     const [modalVis, setModalVis] = useState(false);
@@ -98,8 +99,9 @@ const PostDisplay = (props) => {
     }
 
     /** Will update the body of the post */
-    function callbackEditPost(_body, _selectedCategory) {
+    function callbackEditPost(_body, _listMedia, _selectedCategory) {
         setBody(_body);
+        setListMedia(_listMedia);
         setPostContext(_selectedCategory.stream_id)
 
         const temp_details = {}
@@ -107,6 +109,8 @@ const PostDisplay = (props) => {
         temp_details.context_id = _selectedCategory.stream_id
         setPostContextDetails({...temp_details})
         
+        post.content.body = _body
+        post.content.media = _listMedia
         post.context = _selectedCategory.stream_id
         post.context_details = temp_details
 
@@ -287,13 +291,13 @@ const PostDisplay = (props) => {
 
 
                                 {/** Display media attached if any */}
-                                {post.content.media?.length == 1 ? (
+                                {listMedia?.length == 1 ? (
                                     <View style={tailwind("items-start")}>
-                                        <Media media={post.content.media} isRepost={isRepost}/>
+                                        <Media media={listMedia} isRepost={isRepost}/>
                                     </View>
-                                ) : post.content.media?.length > 1 ? (
+                                ) : listMedia?.length > 1 ? (
                                         <ScrollView horizontal={true} style={{width: quotedPost && isRepost ? Dimensions.get('window').width - 105 : quotedPost ? Dimensions.get('window').width - 135 : Dimensions.get('window').width}}>
-                                            { post.content.media?.map((item, index) => {
+                                            { listMedia?.map((item, index) => {
                                                 return(
                                                     <Media media={item} index={index} key={Math.random()} isRepost={isRepost}/>
                                                 )

@@ -44,10 +44,11 @@ export default function Postbox({isReply = false}) {
         /** If user is editing a post we pre-fill the content */
         if(editedPost) {
             setMessage(editedPost.value.content.body);
+            setListMedia([...editedPost.value.content.media]);
 
             const temp_category = {}
-            temp_category.content = editedPost.value.content?.context_details ? editedPost.value.content.context_details : editedPost.value.context_details?.context_details
-            temp_category.context = editedPost.value.content.context ? editedPost.value.content.context : editedPost.value.context
+            temp_category.content = editedPost.value.context_details?.context_details ? editedPost.value.context_details?.context_details : editedPost.value.content?.context_details
+            temp_category.stream_id = editedPost.value.context ? editedPost.value.context : editedPost.value.content?.context
 
             setCategorySelected(temp_category)
         }
@@ -91,6 +92,7 @@ export default function Postbox({isReply = false}) {
             setLoading(true);
             let content = {...editedPost.value.content};
             content.body = message;
+            content.media = listMedia ? listMedia : null
 
             if(categorySelected){
                 content.context = categorySelected.stream_id
@@ -104,6 +106,7 @@ export default function Postbox({isReply = false}) {
             if(res.status == 200) {
                 editedPost.callback(
                     message,
+                    listMedia,
                     categorySelected
                 );
                 setMessage("");
