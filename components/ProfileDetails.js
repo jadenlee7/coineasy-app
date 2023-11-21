@@ -392,7 +392,7 @@ const NavItem = ({title, selected, nav, setNav, slug}) => {
     <TouchableOpacity style={tailwind('flex flex-1 items-center rounded-md')} onPress={() => setNav(slug)} activeOpacity={0.65}>
         <View style={tailwind('flex flex-col')}>
           <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15 }]}>{title}</Text>
-          <View style={[tailwind(`rounded-full h-1 mt-2`), { backgroundColor: nav == slug ? "#FF6B17" : "transparent" }]}></View>
+          <View style={[tailwind(`rounded-full h-1 mt-1`), { backgroundColor: nav == slug ? "#FF6B17" : "transparent" }]}></View>
         </View>
     </TouchableOpacity>
   )

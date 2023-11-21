@@ -125,7 +125,7 @@ const FollowerScreen = (props) => {
                         }
                     </TouchableOpacity>
                 ) : follow.details.did != user.did ? (
-                    <Button loading={listFollowLoader[index]} title="Following" color="white" size="sm" onPress={() => doFollow(follow, index, false)}/>
+                    <Button loading={listFollowLoader[index]} title="Following" color="white" size="sm" onPress={() => doFollow(follow, index, false)} style={{borderColor: 'black',}}/>
                 ) : null}
 
             </View>

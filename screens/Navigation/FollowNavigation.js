@@ -13,7 +13,7 @@ import FollowingScreen from "./FollowingScreen";
 
 import { TabBar, TabView } from 'react-native-tab-view';
 
-const TabBarHeight = 48;
+const TabBarHeight = 44;
 const IndicatorWidth = 80
 
 const FollowNavigation = ({navigation, route}) => {
@@ -132,6 +132,6 @@ const styles = StyleSheet.create({
         height: 4, 
         borderRadius: 10,
         width: '20%',
-        backgroundColor: '#f76522'
+        backgroundColor: '#FF6B17'
     },
 })
