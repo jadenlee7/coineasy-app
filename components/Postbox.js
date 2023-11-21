@@ -371,28 +371,29 @@ export default function Postbox({isReply = false}) {
     function mentionUser(mention) {
         /** Save username to did */
         let _mentionName = mention.profile?.username?.replaceAll(" ", "");
-        mentions.push({
+        const new_mention = {
             username: "@" + _mentionName,
             did: mention.did
-        });
+        }
+        mentions.push(new_mention);
 
-        let seenObjects = [];
-        let listWithoutDuplicates = mentions.filter(objet => {
-            if (!seenObjects.hasOwnProperty(objet.did)) {
-                seenObjects[objet.did] = true;
-                return true;
-            }
-            return false;
-        });
+        // let seenObjects = [];
+        // let listWithoutDuplicates = mentions.filter(objet => {
+        //     if (!seenObjects.hasOwnProperty(objet.did)) {
+        //         seenObjects[objet.did] = true;
+        //         return true;
+        //     }
+        //     return false;
+        // });
         
-        let _message = "";
-        listWithoutDuplicates.forEach((e, index) => {
-            if(index != listWithoutDuplicates.length-1){
-                _message += e.username+" "
-            }else{
-                _message += e.username
-            }
-        });
+        // let _message = "";
+        // listWithoutDuplicates.forEach((e, index) => {
+        //     if(index != listWithoutDuplicates.length-1){
+        //         _message += e.username+" "
+        //     }else{
+        //         _message += e.username
+        //     }
+        // });
 
         // let _message;
         // if(currentMention && currentMention != "") {
@@ -401,7 +402,8 @@ export default function Postbox({isReply = false}) {
         //     _message = "@" + _mentionName;
         // }
 
-        setMessage(_message + " ");
+        const at_index = message.lastIndexOf('@')
+        setMessage(message.slice(0, at_index) + new_mention.username + " ");
         setMentionsBoxVis(false);
         textInputRef?.current?.focus();
     }
