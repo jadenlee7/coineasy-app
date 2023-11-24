@@ -8,7 +8,8 @@ import News from "../screens/News";
 import Profile from '../screens/Profile';
 import * as Haptics from 'expo-haptics';
 
-import { NavHomeIcon, NavCategoriesIcon, NavChartIcon, NavProfileIcon } from "../components/Icons";
+import { NavHomeIcon, NavCategoriesIcon, NavChartIcon, NavProfileIcon, NavSearchIcon } from "../components/Icons";
+import Search from '../screens/Search';
 
 const Tab = createBottomTabNavigator();
 
@@ -20,19 +21,23 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                 tabBarLabel: '',
                 tabBarIcon: ({ focused, color, size }) => (
                     title == 'home' ? 
-                        <View style={{marginTop: '20%',marginLeft: 40,width: 60,alignItems: 'center',}}>
+                        <View style={{marginTop: '20%',marginLeft: 35,width: 60,alignItems: 'center',}}>
                             <NavHomeIcon color={focused ? "#FF6E31" : "#959595" } /> 
                         </View>
                     : title == 'cat' ? 
-                        <View style={{marginTop: '20%',marginLeft: 15,width: 60,alignItems: 'center',}}>
+                        <View style={{marginTop: '20%',marginLeft: 20,width: 60,alignItems: 'center',}}>
                             <NavCategoriesIcon color={focused ? "#FF6E31" : "#959595" }/> 
                         </View>
                     : title == 'news' ? 
-                        <View style={{marginTop: '20%',marginRight: 15,width: 60,alignItems: 'center',}}>
+                        <View style={{marginTop: '20%',width: 60,alignItems: 'center',}}>
                             <NavChartIcon color={focused ? "#FF6E31" : "#959595" }/> 
                         </View>
+                    : title == 'search' ? 
+                        <View style={{marginTop: '20%',marginRight: 20,width: 60,alignItems: 'center',}}>
+                            <NavSearchIcon color={focused ? "#FF6E31" : "#959595" }/> 
+                        </View>
                     : 
-                        <View style={{marginTop: '20%',marginRight: 40,width: 60,alignItems: 'center',}}>
+                        <View style={{marginTop: '20%',marginRight: 35,width: 60,alignItems: 'center',}}>
                             <NavProfileIcon color={focused ? "#FF6E31" : "#959595" }/>
                         </View>
                 ),
@@ -52,7 +57,7 @@ const BottomTabsNavigator = ({ navigation, route }) => {
     
 
     return (
-        <Tab.Navigator screenOptions={{ headerShown: false }} style={{minHeight: 150}}>
+        <Tab.Navigator screenOptions={{ headerShown: false, tabBarHideOnKeyboard: true }} style={{minHeight: 150}}>
             <Tab.Screen name="Home" component={Home} options={showIcons('home')}
                 listeners={{
                     tabPress: (e) => {
@@ -68,6 +73,13 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                 }}                
             />
             <Tab.Screen name="News" component={News} options={showIcons('news')}
+                listeners={{
+                    tabPress: (e) => {
+                        Haptics.selectionAsync();
+                    },
+                }}                
+            />
+            <Tab.Screen name="Search" component={Search} options={showIcons('search')}
                 listeners={{
                     tabPress: (e) => {
                         Haptics.selectionAsync();

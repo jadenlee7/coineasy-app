@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from "react";
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, BackHandler, Text, TouchableOpacity, View } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from "tailwind-rn";
@@ -11,7 +11,7 @@ import { BackIcon, NotificationsIcon } from "../../components/Icons";
 
 const ProfileSelected = ({navigation, route}) => {
 
-    const { did } = route.params
+    const { did, back } = route.params
     const { orbis } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
@@ -21,6 +21,22 @@ const ProfileSelected = ({navigation, route}) => {
     useEffect(() => {
         getProfile();
     }, [did]);
+
+    useEffect(() => {
+        return () => backhandler.remove();
+    }, [navigation])
+
+    const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
+        if(back == 'search'){
+            Haptics.selectionAsync()
+
+            navigation.navigate('Navigator', {
+                screen: 'Search',
+                params: {screen: 'Search'},
+            })
+            return true;
+        }
+    })
 
     async function getProfile() {
         setLoadProfile(true)
