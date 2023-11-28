@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Animated, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Animated, Dimensions, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -50,7 +50,7 @@ const Search = ({ navigation, route }) => {
         if(clicked){
             Animated.parallel([
                 Animated.timing(marginTop, {
-                    toValue: -260,
+                    toValue: Platform.OS =='ios' ? -230 : -220,
                     duration: 500,
                     useNativeDriver: false,
                 }),
@@ -97,8 +97,10 @@ const Search = ({ navigation, route }) => {
         let temp_list = await AsyncStorage.getItem("list_recent_search");
 
         const new_list = JSON.parse(temp_list)
-        new_list.sort((a, b) => (a.date < b.date) ? 1 : -1)
-        setListRecentSearches(new_list)
+        if(new_list){
+            new_list.sort((a, b) => (a.date < b.date) ? 1 : -1)
+            setListRecentSearches(new_list)
+        }
     }
 
     async function searchUsers (term) {
@@ -156,21 +158,25 @@ const Search = ({ navigation, route }) => {
         await AsyncStorage.setItem("list_recent_search", JSON.stringify(listRecentSearches));
     }
 
-    // async function showCategory(category) {
-    //     setSelectedCategory(category);
-    //     navigation.navigate('Categories', {'loadPosts': true, 'category': category})
-    // }
+    async function showCategory(category) {
+        navigation.navigate('Categories', {'loadPosts': true, 'category': category})
+    }
 
     return (
         <View style={{backgroundColor: 'white',}}>
-            <Image
-                style={{ 
-                    width: windowSize.width,
-                    marginTop: Platform.OS == 'ios' ? 30 : 10,
-                }}
-                source={require('../assets/search_top_image.png')}
-                defaultSource={require('../assets/search_top_image.png')}
-            />
+            <Pressable onPress={() => {setClicked(false);setSearchPhrase("");textInputRef?.current?.blur()}}>
+                <Image
+                    style={{ 
+                        width: windowSize.width,
+                        // width: 200,
+                        height: 330,
+                        marginTop: Platform.OS == 'ios' ? 10 : -20,
+                    }}
+                    resizeMode='contain'
+                    source={require('../assets/search_top_image.png')}
+                    defaultSource={require('../assets/search_top_image.png')}
+                />
+            </Pressable>
 
             <Animated.View style={{
                     backgroundColor: 'white',
@@ -196,7 +202,7 @@ const Search = ({ navigation, route }) => {
                     )}
 
                     <Animated.View style={[clicked ? styles.searchBar__clicked: styles.searchBar__unclicked, {width: searchWidth}]}>
-                        <SmallSearchIcon color={"#959595"}/>
+                        <SmallSearchIcon color={"#959595"} style={{marginLeft: 8,}}/>
 
                         <TextInput
                             ref={textInputRef}
@@ -254,11 +260,11 @@ const Search = ({ navigation, route }) => {
                 </ScrollView>
             ) : (
                 <View style={{backgroundColor: 'white',height: windowSize.height}}>
-                    {/* <View>
-                        <Text style={{fontWeight: 'bold',fontSize: 20,marginLeft: 20,}}>Top Categories</Text>
+                    <View>
+                        <Text style={{fontWeight: 'bold',fontSize: 20,marginLeft: 20,fontFamily: "GmarketBold",height: Platform.OS == 'ios' ? 23 : 'auto'}}>Top Categories</Text>
                     </View>
 
-                    <View style={{flexDirection: 'row',justifyContent: 'center',alignItems: 'center',paddingLeft: 20,paddingTop: 10}}>
+                    <View style={{flexDirection: 'row',justifyContent: 'center',alignItems: 'center',paddingLeft: 20,paddingTop: 17}}>
                         <TouchableOpacity activeOpacity={0.7} style={{backgroundColor: 'black',width: 40,height: 40,borderRadius: 25,justifyContent: 'center',alignItems: 'center',}}>
                             <Image
                                 style={{width: 23,height: 23}}
@@ -272,7 +278,7 @@ const Search = ({ navigation, route }) => {
                                 return(
                                     <TouchableOpacity 
                                         key={Math.random()}
-                                        style={{height:40,borderWidth: 2,borderRadius:20, justifyContent: 'center',paddingLeft:15,paddingRight:15,marginLeft: 10,marginRight: index == listTopCategories.length -1 ? 10 : 0,}}
+                                        style={{height:40,borderWidth: 2,borderRadius:20, justifyContent: 'center',paddingLeft:15,paddingRight:15,marginLeft: 10,marginRight: index == categories.filter(e => list_top_categories.includes(e.content.displayName)).length -1 ? 10 : 0,}}
                                         onPress={() => showCategory(e)}
                                     >
                                         <Text style={{fontWeight: 'bold',}}>{e.content.displayName}</Text>
@@ -280,11 +286,11 @@ const Search = ({ navigation, route }) => {
                                 )
                             })}
                         </ScrollView>
-                    </View> */}
+                    </View>
 
 
                     <View>
-                        <Text style={{fontWeight: 'bold',fontSize: 20,marginLeft: 20,}}>Recent Searches</Text>
+                        <Text style={{fontWeight: 'bold',fontSize: 20,marginLeft: 20,marginTop: 20,marginBottom: 10,fontFamily: "GmarketBold",}}>Recent Searches</Text>
                     </View>
 
                     { listRecentSearches && listRecentSearches?.length != 0 ? (
@@ -292,7 +298,7 @@ const Search = ({ navigation, route }) => {
                             {listRecentSearches.map((e, index) => {
                                 return(
                                     <View key={Math.random()} style={{justifyContent: 'center',}}>
-                                        <TouchableOpacity style={tailwind("p-2 px-4")} activeOpacity={0.6} onPress={() => showUser(e)}>
+                                        <TouchableOpacity style={tailwind("p-2 px-5")} activeOpacity={0.6} onPress={() => showUser(e)}>
                                             <User details={e.details} isFollow={e.details.type ? true : false}/>
                                         </TouchableOpacity>
 

@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useState } from "react";
-import { ScrollView, RefreshControl, Text, View, TouchableOpacity, Image, TouchableHighlight, Animated, Dimensions, BackHandler } from 'react-native';
+import { ScrollView, RefreshControl, Text, View, TouchableOpacity, Image, TouchableHighlight, Animated, Dimensions, BackHandler, ActivityIndicator } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -18,6 +18,19 @@ const Categories = ({ navigation, route }) => {
     const { orbis, currentRoute, selectedNews,setSelectedNews, categories, category, setCategory, loadContexts, refreshing, setRefreshing, refreshingBottom, setRefreshingBottom, showPostbox, setScrollAnim, setOffsetAnim, categoryFeedRef, categoryPosts, setCategoryPosts, selectedCategory, setSelectedCategory, setCurrentRoute} = useContext(GlobalContext);
     const tailwind = useTailwind();
     const statusBarHeight = useStatusBarHeight();
+
+    const [loadingPosts, setLoadingPosts] = useState(true)
+
+    useEffect(() => {
+        if(route.params?.loadPosts){
+            console.log('ici');
+            setLoadingPosts(true)
+            loadCategoryPosts(route.params.category)
+            setSelectedCategory(route.params.category);
+            console.log('la');
+        }
+    }, [route.params])
+    
 
     useFocusEffect(
         React.useCallback(() => {
@@ -75,6 +88,7 @@ const Categories = ({ navigation, route }) => {
             setCategoryPosts(data);
         }
         setRefreshing(false);
+        setLoadingPosts(false)
     }
 
     /** This will load more posts and add those to the current list */
@@ -199,17 +213,23 @@ const Categories = ({ navigation, route }) => {
                 <>
                     <Header route={route.name} backCategory={() => setSelectedCategory(null)}/>
                     <View style={tailwind('flex flex-col flex-1')}>
-                        <View style={tailwind('flex flex-1 bg-white')}>
-                        <Feed posts={categoryPosts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMoreCategoryPosts} feedRef={categoryFeedRef}/>
-        
-                        {/** Share button */}
-                        <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => showPostbox()}>
-                            <Image
-                                style={{ height: 70, width: 70 }}
-                                source={require('../assets/share_btn.png')} 
-                            />
-                        </TouchableOpacity>
-                        </View>
+                        {loadingPosts ? (
+                            <View style={{backgroundColor: 'white', marginTop: 200,}}>
+                                <ActivityIndicator size="small" color="black" />
+                            </View>
+                        ) : (
+                            <View style={tailwind('flex flex-1 bg-white')}>
+                                <Feed posts={categoryPosts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMoreCategoryPosts} feedRef={categoryFeedRef}/>
+                
+                                {/** Share button */}
+                                <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => showPostbox()}>
+                                    <Image
+                                        style={{ height: 70, width: 70 }}
+                                        source={require('../assets/share_btn.png')} 
+                                    />
+                                </TouchableOpacity>
+                            </View>
+                        )}
                     </View>
                 </>
             )}
