@@ -261,7 +261,7 @@ const Search = ({ navigation, route }) => {
             ) : (
                 <View style={{backgroundColor: 'white',height: windowSize.height}}>
                     <View>
-                        <Text style={{fontWeight: 'bold',fontSize: 14,marginLeft: 20,fontFamily: "GmarketBold",height: Platform.OS == 'ios' ? 20 : 'auto'}}>Top Categories</Text>
+                        <Text style={{fontWeight: 'bold',fontSize: 16,marginLeft: 20,fontFamily: "GmarketBold",height: Platform.OS == 'ios' ? 17 : 'auto'}}>Top Categories</Text>
                     </View>
 
                     <View style={{flexDirection: 'row',justifyContent: 'center',alignItems: 'center',paddingLeft: 20,paddingTop: 17}}>
@@ -290,7 +290,7 @@ const Search = ({ navigation, route }) => {
 
 
                     <View>
-                        <Text style={{fontWeight: 'bold',fontSize: 14,marginLeft: 20,marginTop: 20,marginBottom: 10,fontFamily: "GmarketBold",}}>Recent Searches</Text>
+                        <Text style={{fontWeight: 'bold',fontSize: 16,marginLeft: 20,marginTop: 20,marginBottom: 10,fontFamily: "GmarketBold",}}>Recent Searches</Text>
                     </View>
 
                     { listRecentSearches && listRecentSearches?.length != 0 ? (

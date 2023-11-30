@@ -23,11 +23,9 @@ const Categories = ({ navigation, route }) => {
 
     useEffect(() => {
         if(route.params?.loadPosts){
-            console.log('ici');
             setLoadingPosts(true)
             loadCategoryPosts(route.params.category)
             setSelectedCategory(route.params.category);
-            console.log('la');
         }
     }, [route.params])
     

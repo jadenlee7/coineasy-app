@@ -443,7 +443,7 @@ export default function App() {
 
   return (
     <>
-      <StatusBar translucent={true} backgroundColor="#00000000" />
+      <StatusBar translucent={true} backgroundColor="#00000000" style="light"/>
       <View onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
         <GlobalContext.Provider value={{ 
                 user,

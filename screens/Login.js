@@ -43,7 +43,7 @@ export default function Login() {
             <Image
                 resizeMode="cover"
                 style={[tailwind('w-full h-full')]}
-                source={require('../assets/LoginBG.png')} 
+                source={require('../assets/LoginBG_christmas.png')} 
             />
 
             {/* <Animated.View style={{ transform: [{ translateX }], paddingTop: 300 }}>
@@ -89,22 +89,22 @@ export default function Login() {
                         <Image
                             resizeMode="cover"
                             style={{width: 159 * 0.9, height: 22.7 * 0.9}}
-                            source={require('../assets/powered_by_orbis.png')} 
+                            source={require('../assets/powered_by_orbis_white.png')} 
                         />
                     </View>
 
                 </View>
             </View>
 
-            <View style={{position: 'absolute',bottom: 80,width: '100%',alignItems: 'center',}}>
-                <Text style={{color:'black'}}>By signing up an account, I agree to the</Text>
+            <View style={{position: 'absolute',bottom: 100,width: '100%',alignItems: 'center',}}>
+                <Text style={{color:'white'}}>By signing up an account, I agree to the</Text>
                 <View style={{flexDirection: 'row'}}>
                     <TouchableOpacity onPress={() => {Haptics.selectionAsync();openTerms()}}>
-                        <Text style={{textDecorationLine: 'underline', fontWeight: 'bold',color:'black'}}>Terms & Conditions</Text>
+                        <Text style={{textDecorationLine: 'underline', fontWeight: 'bold',color:'white'}}>Terms & Conditions</Text>
                     </TouchableOpacity>
-                    <Text style={{color:'black'}}> and </Text>
+                    <Text style={{color:'white'}}> and </Text>
                     <TouchableOpacity onPress={() => {Haptics.selectionAsync();openPrivacy()}}>
-                        <Text style={{textDecorationLine: 'underline', fontWeight: 'bold',color:'black'}}>Privacy policy</Text>
+                        <Text style={{textDecorationLine: 'underline', fontWeight: 'bold',color:'white'}}>Privacy policy</Text>
                     </TouchableOpacity>
                 </View>
             </View>

@@ -6,10 +6,10 @@
     "owner": "useorbis",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon_christmas.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash_christmas.png",
       "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },
@@ -18,13 +18,13 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "34",
+      "buildNumber": "35",
       "bundleIdentifier": "com.coineasy.coineasysocial"
     },
     "android": {
-      "versionCode": 12,
+      "versionCode": 13,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/adaptive-icon_christmas.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
@@ -37,7 +37,7 @@
       "package": "com.coineasy.coineasy"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon_christmas.png"
     },
     "plugins": [
       [
