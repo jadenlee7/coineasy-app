@@ -62,8 +62,8 @@ export default function PushNotificationsModal() {
                 <Text style={[tailwind(`text-secondary text-center text-slate-900`), {lineHeight: 20}]}>Stay in the loop with the latest news, content, videos, and rewards.</Text>
 
                 <View style={[tailwind('flex items-center mt-5 flex-col w-full')]}>
-                    <Button size="md" color="black" title="Notify me" onPress={enablePushNotifications} style={{width: '90%',alignItems: 'center',}}/>
-                    <Button size="md" color="white" title="Not now" onPress={skipNotifications} style={{width: '90%',alignItems: 'center',marginTop: 10,}}/>
+                    <Button size="md" color="black" title="Notify me" onPress={enablePushNotifications} style={{width: '90%',alignItems: 'center',height:50,justifyContent: 'center',}}/>
+                    <Button size="md" color="white" title="Not now" onPress={skipNotifications} style={{width: '90%',alignItems: 'center',marginTop: 10,height: 50,justifyContent: 'center',}}/>
                 </View>
             </View>
         </Modal>

@@ -204,7 +204,7 @@ const PostDisplay = (props) => {
                 {(showParent && post.content.reply_to && post.reply_to_details) &&
                     <Post 
                         stylePostContent={{paddingBottom: 10}}
-                        showReactions={false} 
+                        showReactions={true} 
                         post={{
                             stream_id: post.reply_to,
                             content: post.reply_to_details,
@@ -449,7 +449,9 @@ export const LikeCTA = ({post}) => {
     if(user) {
       setHasLiked(true);
       Haptics.selectionAsync();
-      setCountLikes(post.count_likes + 1);
+      if(Number.isInteger(post.count_likes)){
+          setCountLikes(post.count_likes + 1);
+      }
       let res = await orbis.react(
         post.stream_id,
         "like"
