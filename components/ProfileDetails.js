@@ -25,7 +25,7 @@ import HeaderImage from "./HeaderImage";
 
 
 export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
-    const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, setUser } = useContext(GlobalContext);
+    const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, setUser, setPushNotifsVis } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const { provider } = useWalletConnectModal();
@@ -178,9 +178,9 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 <>
                     <HeaderImage />
 
-                    <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 5,}}>
-                        <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
-                            <View style={{zIndex:100000, justifyContent: 'center',alignItems: 'center',margin: 15, backgroundColor: 'white',flexDirection:'row',}}>
+                    <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 5}}>
+                        <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}} hitSlop={{top: 50, bottom: 150, left: 50, right: 50}}>
+                            <View style={{justifyContent: 'center',alignItems: 'center',margin: 15, backgroundColor: 'white',flexDirection:'row',}}>
                                 <BackIcon />
                                 <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
                             </View>
@@ -197,7 +197,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
             <Animated.ScrollView 
                 scrollEventThrottle={16}
-                style={{backgroundColor: 'white',}}
+                style={{backgroundColor: 'white',marginTop: type == 'selected' ? -10 : 0,}}
                 ref={scrollRef}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={updateProfile} />
@@ -206,7 +206,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
                 {/** Display profile details */}
                 <View style={[tailwind('flex flex-col items-center'), {marginTop: type == 'selected' ? pfpMarginTop : 0,}]}>
-                    <View style={[tailwind("rounded-full mt-4")]}>
+                    <View style={[tailwind("rounded-full"), {marginTop: type == 'selected' ? 0 : 16,}]}>
                         <UserPfp details={profile} height={60} />
                     </View>
                     <View style={tailwind('mt-2 flex flex-row items-center')}>
@@ -274,6 +274,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 <Modal visible hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100}>
                     <View style={[tailwind('flex flex-col w-full p-5')]}>
                         <Text style={[tailwind('text-primary mb-5')]}>Settings & Privacy</Text>
+                        <Button color="rounded-gray" title="Notifications" style={{marginBottom: 10}} onPress={() => {hideSettings();setPushNotifsVis(true)}} />
                         <Button color="rounded-gray" title="Help" style={{marginBottom: 10}} onPress={() => openHelp()} />
                         <Button color="rounded-gray" title="Privacy Policy" style={{marginBottom: 10}} onPress={() => openPrivacyPolicy()} />
                         <Button color="rounded-gray" title="Terms and Conditions" style={{marginBottom: 10}} onPress={() => openTerms()} />

@@ -122,6 +122,12 @@ export default function Button({icon, iconRight, size, title, onPress, color, st
               {iconRight}
             </TouchableOpacity>
           );
+        case "md":
+          return(
+            <TouchableOpacity activeOpacity={0.9}  style={[tailwind('bg-white px-5 py-3 rounded-full border'), style]} onPress={onPress}>
+                <Text style={tailwind('font-semibold')}>{title}</Text>
+            </TouchableOpacity>
+          );
         default:
           return;
       }

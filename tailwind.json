@@ -269,6 +269,14 @@
 			"borderBottomLeftRadius": 8
 		}
 	},
+	"rounded-xl": {
+		"style": {
+			"borderTopLeftRadius": 12,
+			"borderTopRightRadius": 12,
+			"borderBottomRightRadius": 12,
+			"borderBottomLeftRadius": 12
+		}
+	},
 	"rounded-md": {
 		"style": {
 			"borderTopLeftRadius": 6,

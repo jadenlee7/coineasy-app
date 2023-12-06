@@ -55,7 +55,7 @@ const ProfileSelected = ({navigation, route}) => {
                     <HeaderImage />
 
                     
-                    <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 10,paddingRight: 20,paddingTop: 5,}}>
+                    <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 5,}}>
                         <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
                             <View style={{zIndex:100000, justifyContent: 'center',alignItems: 'center',margin: 15, backgroundColor: 'white',flexDirection:'row',}}>
                                 <BackIcon />

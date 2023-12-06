@@ -21,7 +21,15 @@ export default function PushNotificationsModal() {
 
   /** Will enable push notifications and save the token with Orbis */
   async function enablePushNotifications() {
-    let res = await registerForPushNotificationsAsync();
+    Haptics.selectionAsync();
+
+    let res;
+    try {
+        res = await registerForPushNotificationsAsync();
+    } catch (error) {
+        console.log(error);
+    }
+
     if(res) {
       console.log("Retrieved push token:", res);
       setPushNotifsVis(false);
@@ -39,19 +47,25 @@ export default function PushNotificationsModal() {
 
   /** Won't ask for the push notifications token and will close modal */
   async function skipNotifications() {
+    Haptics.selectionAsync();
+
     setPushNotifsVis(false);
   }
 
-  return(
-    <Modal hide={() => setPushNotifsVis(false)}>
-      <View style={[tailwind('flex flex-col items-center justify-center p-5 px-3')]}>
-        <Text style={[tailwind(`text-primary px-8 mb-1 text-center`)]}>Push Notifications</Text>
-        <Text style={[tailwind(`text-secondary text-center text-slate-900`)]}>To stay in the loop with the latest news, content, videos, and more, allow CoinEasy to send you notifications.</Text>
-        <View style={[tailwind('flex items-center mt-4 flex-col')]}>
-          <Button size="md" color="orange" title="Notify me" onPress={enablePushNotifications} />
-          <Button color="sm-transparent" title="Do not notify me" onPress={skipNotifications} style={{marginTop: 5, marginBottom: 30}} />
-        </View>
-      </View>
-    </Modal>
-  )
+    return(
+        <Modal hide={() => {Haptics.selectionAsync();setPushNotifsVis(false)}} type='notifications'>
+            <View style={[tailwind('flex flex-col items-center justify-center px-3'), {paddingTop: 30,}]}>
+                <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,}]}>Push Notifications</Text>
+
+                <Image source={require('../../assets/notification_icon.png')} style={{height: 115,marginTop: 15,marginBottom: 25,alignSelf: 'center',}} resizeMode="contain"/>
+
+                <Text style={[tailwind(`text-secondary text-center text-slate-900`), {lineHeight: 20}]}>Stay in the loop with the latest news, content, videos, and rewards.</Text>
+
+                <View style={[tailwind('flex items-center mt-5 flex-col w-full')]}>
+                    <Button size="md" color="black" title="Notify me" onPress={enablePushNotifications} style={{width: '90%',alignItems: 'center',}}/>
+                    <Button size="md" color="white" title="Not now" onPress={skipNotifications} style={{width: '90%',alignItems: 'center',marginTop: 10,}}/>
+                </View>
+            </View>
+        </Modal>
+    )
 }

@@ -19,7 +19,7 @@ const Search = ({ navigation, route }) => {
     const [clicked, setClicked] = useState(false);
     const [searchPhrase, setSearchPhrase] = useState("");
 
-    const [marginTop] = useState(new Animated.Value(Platform.OS == 'ios' ? -60 : -75))
+    const [marginTop] = useState(new Animated.Value(-40))
     const [searchWidth] = useState(new Animated.Value(windowSize.width * 0.92))
 
     const [listFollow, setListFollow] = useState([])
@@ -63,7 +63,7 @@ const Search = ({ navigation, route }) => {
         }else{
             Animated.parallel([
                 Animated.timing(marginTop, {
-                    toValue: Platform.OS == 'ios' ? -60 : -75,
+                    toValue: -40,
                     duration: 500,
                     useNativeDriver: false,
                 }),
@@ -169,10 +169,10 @@ const Search = ({ navigation, route }) => {
                     style={{ 
                         width: windowSize.width,
                         // width: 200,
-                        height: 330,
-                        marginTop: Platform.OS == 'ios' ? -21 : -40,
+                        height: 290,
+                        // marginTop: Platform.OS == 'ios' ? -21 : -40,
                     }}
-                    resizeMode='contain'
+                    // resizeMode='contain'
                     source={require('../assets/search_top_image_christmas.png')}
                     defaultSource={require('../assets/search_top_image_christmas.png')}
                 />

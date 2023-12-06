@@ -1,14 +1,14 @@
 import React, { useContext, useState, useEffect } from "react";
 import { useTailwind } from 'tailwind-rn';
 import { GlobalContext } from "../contexts/GlobalContext";
-import { Platform, Keyboard, SafeAreaView, StyleSheet, Text, View, TouchableOpacity, TextInput, KeyboardAvoidingView, Dimensions } from 'react-native';
+import { Platform, Keyboard, SafeAreaView, StyleSheet, Text, View, TouchableOpacity, TextInput, KeyboardAvoidingView, Dimensions, ImageBackground } from 'react-native';
 import Animated, {
   withTiming,
   useAnimatedStyle,
   useSharedValue
 } from 'react-native-reanimated';
 
-export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24}) {
+export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24, type = null}) {
   const tailwind = useTailwind();
   const opacity = useSharedValue(0.25);
   const bottom = useSharedValue(bottomStart);
@@ -34,7 +34,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
 
   const animatedModalStyle = useAnimatedStyle(() => {
     return {
-      bottom: animateModal ? bottom.value : 0,
+      bottom: type == 'notifications' ? '25%' : animateModal ? bottom.value : 0,
     };
   });
 
@@ -50,7 +50,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
             tailwind('h-full w-full bg-slate-950'), 
             {
                 opacity: 0.63,
-                height: Dimensions.get('window').height
+                height: type == 'notifications' ? '100%' : Dimensions.get('window').height
             }
         ]} 
       />
@@ -58,15 +58,27 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
       {/** Modal content */}
       <Animated.View 
         style={[
-            tailwind('absolute w-full bg-white rounded-t-xl'),
+            tailwind('absolute bg-white '+ (type == 'notifications' ? 'rounded-xl' : 'rounded-t-xl')),
             animatedModalStyle ,
             {
                 paddingBottom: paddingBottom,
+                width: type == 'notifications' ? '90%' : '100%',
+                height: type == 'notifications' ? 400 : 'auto',
+                alignSelf: 'center',
             }, 
         ]} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {children}
+        {type && type == 'notifications' ? (
+            <ImageBackground source={require('../assets/notification_background.png')} resizeMode="stretch" style={{height: '103%',}} >
+                {children}
+            </ImageBackground>
+        ) : (
+            <>
+                {children}
+            </>
+        )}
+
       </Animated.View>
     </KeyboardAvoidingView>
   )
