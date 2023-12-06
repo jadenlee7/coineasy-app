@@ -206,7 +206,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
                 {/** Display profile details */}
                 <View style={[tailwind('flex flex-col items-center'), {marginTop: type == 'selected' ? pfpMarginTop : 0,}]}>
-                    <View style={[tailwind("rounded-full"), {marginTop: type == 'selected' ? 0 : 16,}]}>
+                    <View style={[tailwind("rounded-full"), {marginTop: type == 'selected' ? 0 : 42,}]}>
                         <UserPfp details={profile} height={60} />
                     </View>
                     <View style={tailwind('mt-2 flex flex-row items-center')}>
