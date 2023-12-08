@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useCallback } from "react";
 import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Image, Modal, ActivityIndicator, Dimensions, ScrollView, Animated, Platform } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
@@ -61,6 +61,12 @@ const PostDisplay = (props) => {
     const [isDeleted, setIsDeleted] = useState(false);
     const [modalVis, setModalVis] = useState(false);
     const [imageIndex, setImageIndex] = useState(0)
+
+    const [lengthMore,setLengthMore] = useState(false);
+    const onTextLayout = useCallback(e =>{
+        setLengthMore(e.nativeEvent.lines.length >=4);
+    },[]);
+
     const tailwind = useTailwind();
 
     const statusBarHeight = useStatusBarHeight();
@@ -270,21 +276,33 @@ const PostDisplay = (props) => {
                                         
                                     </Text>
                                 ) : (body && body != "") ?
-                                    <Text 
-                                        selectable
-                                        style={[
-                                            tailwind('text-slate-900 font-normal'), 
-                                            {
-                                                marginTop: 5,
-                                                paddingBottom: 5,
-                                                fontSize: fontSize,
-                                                lineHeight: fontSize * 1.47
-                                            }, 
-                                            stylePostContent
-                                        ]
-                                    }>
-                                        {cleanBody()}
-                                    </Text>
+                                    <>
+                                        <Text 
+                                            selectable
+                                            onTextLayout={onTextLayout}
+                                            numberOfLines={notTouchable ? undefined : 6}
+                                            style={[
+                                                tailwind('text-slate-900 font-normal'), 
+                                                {
+                                                    marginTop: 5,
+                                                    paddingBottom: 5,
+                                                    fontSize: fontSize,
+                                                    lineHeight: fontSize * 1.47
+                                                }, 
+                                                stylePostContent
+                                            ]
+                                        }>
+                                            {cleanBody()}
+                                        </Text>
+                                        {lengthMore && typeof notTouchable === 'undefined' &&
+                                            <Text 
+                                                onPress={() => showPostDetails()} 
+                                                style={{ lineHeight: 21,marginBottom: 10,color: '#FF6E31', fontWeight: 'bold', }}
+                                            >
+                                                ... Show more
+                                            </Text>
+                                        }
+                                    </>
                                 :
                                     <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-1 mb-1 rounded-md')} >
                                         <Text style={tailwind('text-secondary items-center ml-1 text-center')}>This post isn't available or has been deleted.</Text>
