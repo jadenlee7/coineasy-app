@@ -34,7 +34,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
 
   const animatedModalStyle = useAnimatedStyle(() => {
     return {
-      bottom: type == 'notifications' ? '25%' : animateModal ? bottom.value : 0,
+      bottom: (type == 'notifications' || type == 'deleteAccount') ? '25%' : animateModal ? bottom.value : 0,
     };
   });
 
@@ -58,12 +58,12 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
       {/** Modal content */}
       <Animated.View 
         style={[
-            tailwind('absolute bg-white '+ (type == 'notifications' ? 'rounded-xl' : 'rounded-t-xl')),
+            tailwind('absolute bg-white '+ ((type == 'notifications' || type == 'deleteAccount') ? 'rounded-xl' : 'rounded-t-xl')),
             animatedModalStyle ,
             {
                 paddingBottom: paddingBottom,
-                width: type == 'notifications' ? '90%' : '100%',
-                height: type == 'notifications' ? 400 : 'auto',
+                width: (type == 'notifications' || type == 'deleteAccount')  ? '90%' : '100%',
+                height: type == 'notifications' ? 400 :  type == 'deleteAccount' ? 500 : 'auto',
                 alignSelf: 'center',
             }, 
         ]} 
@@ -71,6 +71,10 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
       >
         {type && type == 'notifications' ? (
             <ImageBackground source={require('../assets/notification_background.png')} resizeMode="stretch" style={{height: '103%',}} >
+                {children}
+            </ImageBackground>
+        ) : type && type == 'deleteAccount' ? (
+            <ImageBackground source={require('../assets/deleteAccount_background.png')} resizeMode="stretch" style={{height: '103%',}} >
                 {children}
             </ImageBackground>
         ) : (

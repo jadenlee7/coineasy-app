@@ -1,12 +1,10 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, ActivityIndicator, Dimensions, Image, Keyboard, Platform, RefreshControl } from 'react-native';
+import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as Clipboard from 'expo-clipboard';
 import Animated from 'react-native-reanimated';
-import * as WebBrowser from 'expo-web-browser';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Post from "./Post";
 import Button from "./Button";
@@ -16,11 +14,8 @@ import { context } from '../utils/config.js';
 import { BackIcon, CheckIcon, CopyIconBadge, NotificationsIcon, SettingsIcon } from "./Icons";
 import useDidToAddress from "../hooks/useDidToAddress";
 import { GlobalContext } from "../contexts/GlobalContext";
-import useStatusBarHeight from "../hooks/useStatusBarHeight";
 import { useNavigation } from "@react-navigation/core";
-import Modal from "./Modal";
 import { useScrollToTop } from "@react-navigation/native";
-import { useWalletConnectModal } from '@walletconnect/modal-react-native'
 import HeaderImage from "./HeaderImage";
 
 
@@ -28,13 +23,10 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, setUser, setPushNotifsVis } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
-    const { provider } = useWalletConnectModal();
-
     const [nav, setNav] = useState("feed");
     const [isFollowing, setIsFollowing] = useState(false);
     const [countPosts, setCountPosts] = useState("-");
     const [followLoading, setFollowLoading] = useState(false);
-    const [logOutLoading, setLogOutLoading] = useState(false)
     const [refreshing, setRefreshing] = React.useState(false);
 
     const [userInfo, setUserInfo] = useState(profile)
@@ -44,8 +36,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const scrollRef = useRef()
 
     const navigation = useNavigation()
-
-    const [showModal, setShowModal] = useState(false)
 
     useScrollToTop(scrollRef);
 
@@ -91,58 +81,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         console.log("res:", res);
         setFollowLoading(false);
         setIsFollowing(active);
-    }
-
-
-    function hideSettings() {
-        setShowModal(false);
-        Keyboard.dismiss()
-        Haptics.selectionAsync();
-    }
-
-    async function logout() {
-        setLogOutLoading(true)
-        Haptics.selectionAsync();
-        setSettingsVis(false);
-        await AsyncStorage.removeItem("user-connected");
-        let res = await orbis.logout();
-        console.log("res:", res);
-    
-        // let providerType = await AsyncStorage.getItem("provider-type");
-        // console.log("providerType:", providerType);
-        // if(providerType == "wallet-connect") {
-        await AsyncStorage.removeItem("provider-type");       
-        if(provider){
-            provider?.disconnect().then( res => {
-                setUser(null);
-                setLogOutLoading(false)
-            }).catch(e => {
-                console.log(e);
-                setUser(null);
-                setLogOutLoading(false)
-            })
-        }else{
-            setUser(null);
-        }
-        // }else{
-        //     setUser(null);
-        //     setLogOutLoading(false)
-        // }
-      }
-
-    async function openHelp() {
-        Haptics.selectionAsync();
-        let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1x8ZvprutJSuv96KVz3vLyXHWXwi8AaVS/view?usp=sharing");
-    }
-
-    async function openPrivacyPolicy() {
-        Haptics.selectionAsync();
-        let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1Dhijs_O61shJEKNy6Sga16Iu3vgqwc8I/view?usp=sharing");
-    }
-
-    async function openTerms() {
-        Haptics.selectionAsync();
-        let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/17_d1L3-qBYKk3vAK9_P-zd2PKW3fNDiX/view?usp=sharing");
     }
 
     const ProfileItem = ({title, count}) => {
@@ -221,7 +159,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
                         <TouchableOpacity 
                             activeOpacity={0.7}
-                            onPress={() => {Haptics.selectionAsync();setShowModal(true)}} 
+                            onPress={() => {Haptics.selectionAsync();setSettingsVis(true)}} 
                             style={{width: 60,height: 50,alignItems: 'center',justifyContent: 'center',position: 'absolute',top: 0,right:0}}
                             hitSlop={{top: 20, bottom: 20, left: 50, right: 50}}
                         >
@@ -269,27 +207,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     <Posts type={nav} profile={userInfo} />
                 </View>
             </Animated.ScrollView>
-
-            {showModal && (
-                <Modal visible hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100}>
-                    <View style={[tailwind('flex flex-col w-full p-5')]}>
-                        <Text style={[tailwind('text-primary mb-5')]}>Settings & Privacy</Text>
-                        <Button color="rounded-gray" title="Notifications" style={{marginBottom: 10}} onPress={() => {hideSettings();setPushNotifsVis(true)}} />
-                        <Button color="rounded-gray" title="Help" style={{marginBottom: 10}} onPress={() => openHelp()} />
-                        <Button color="rounded-gray" title="Privacy Policy" style={{marginBottom: 10}} onPress={() => openPrivacyPolicy()} />
-                        <Button color="rounded-gray" title="Terms and Conditions" style={{marginBottom: 10}} onPress={() => openTerms()} />
-
-                        {logOutLoading ? (
-                            <View style={[tailwind('bg-slate-100 rounded-full py-4 px-8 flex-row items-center justify-center'), {alignSelf: 'center',width: '100%'}]}>
-                                <ActivityIndicator size="small" color="#020617" />
-                            </View>
-
-                        ) : (
-                            <Button color="rounded-red" title="Logout" onPress={() => logout()} style={{marginBottom: 30}}  />
-                        )}
-                    </View>
-                </Modal>
-            )}
         </View>
     )
 }

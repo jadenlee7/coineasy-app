@@ -1,69 +1,202 @@
-import React, { useState, useContext, useEffect, useCallback } from "react";
+import React, { useState, useContext, useRef } from "react";
 import { GlobalContext } from "../../contexts/GlobalContext";
 import Modal from "../Modal";
 import Button from "../Button";
 import { useTailwind } from 'tailwind-rn';
-import { Keyboard, StyleSheet, Text, View, TouchableHighlight, ActivityIndicator, Image } from 'react-native';
+import { Keyboard, Text, View, ActivityIndicator, Image, Animated, TouchableOpacity, Dimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { context } from '../../utils/config.js';
-import { sleep } from '../../utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useWalletConnectModal, WalletConnectModal } from '@walletconnect/modal-react-native'
+import { useWalletConnectModal } from '@walletconnect/modal-react-native'
 import * as WebBrowser from 'expo-web-browser';
 
 export default function SettingsModal() {
-  const { user, setUser, orbis, setSettingsVis } = useContext(GlobalContext);
-  const tailwind = useTailwind();
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const { isOpen, open, close, provider, isConnected, address } = useWalletConnectModal();
+    const { user, setUser, orbis, setSettingsVis, setPushNotifsVis } = useContext(GlobalContext);
+    const tailwind = useTailwind();
 
-  function hideSettings() {
-    setSettingsVis(false);
-    Keyboard.dismiss()
-    Haptics.selectionAsync();
-  }
+    const { provider } = useWalletConnectModal();
+    
+    const [showBack, setShowBack] = useState(false)
+    const [logOutLoading, setLogOutLoading] = useState(false)
+    const [showConfirm, setShowConfirm] = useState(false)
 
-  async function logout() {
-    Haptics.selectionAsync();
-    setSettingsVis(false);
-    AsyncStorage.removeItem("user-connected");
-    let res = await orbis.logout();
-    console.log("res:", res);
+    const moveAnimation1 = useRef(new Animated.Value(0)).current;
+    const moveAnimation2 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
 
-    let providerType = await AsyncStorage.getItem("provider-type");
-    console.log("providerType:", providerType);
-    if(providerType == "wallet-connect") {
-      provider?.disconnect();
+    function hideSettings() {
+        setSettingsVis(false);
+        Keyboard.dismiss()
+        Haptics.selectionAsync();
     }
 
-    setUser(null);
-  }
+    async function openHelp() {
+        Haptics.selectionAsync();
+        let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1x8ZvprutJSuv96KVz3vLyXHWXwi8AaVS/view?usp=sharing");
+    }
 
-  async function openHelp() {
-    Haptics.selectionAsync();
-    let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1x8ZvprutJSuv96KVz3vLyXHWXwi8AaVS/view?usp=sharing");
-  }
+    async function openPrivacyPolicy() {
+        Haptics.selectionAsync();
+        let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1Dhijs_O61shJEKNy6Sga16Iu3vgqwc8I/view?usp=sharing");
+    }
 
-  function openPrivacyPolicy() {
-    Haptics.selectionAsync();
-    alert("Coming soon");
-  }
+    async function openTerms() {
+        Haptics.selectionAsync();
+        let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/17_d1L3-qBYKk3vAK9_P-zd2PKW3fNDiX/view?usp=sharing");
+    }
 
-  function openTerms() {
-    Haptics.selectionAsync();
-    alert("Coming soon");
-  }
+    async function logout() {
+        setLogOutLoading(true)
+        Haptics.selectionAsync();
+        setSettingsVis(false);
 
-  return(
-    <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100}>
-      <View style={[tailwind('flex flex-col w-full p-5')]}>
-        <Text style={[tailwind('text-primary mb-5')]}>Settings & Privacy</Text>
-        <Button color="rounded-gray" title="Help" style={{marginBottom: 10}} onPress={() => openHelp()} />
-        <Button color="rounded-gray" title="Privacy Policy" style={{marginBottom: 10}} onPress={() => openPrivacyPolicy()} />
-        <Button color="rounded-gray" title="Terms and Conditions" style={{marginBottom: 10}} onPress={() => openTerms()} />
-        <Button color="rounded-red" title="Logout" onPress={() => logout()} style={{marginBottom: 30}}  />
-      </View>
-    </Modal>
-  )
+        await AsyncStorage.removeItem("user-connected");
+        let res = await orbis.logout();
+        console.log("res:", res);
+
+        await AsyncStorage.removeItem("provider-type");       
+        if(provider){
+            provider?.disconnect().then( res => {
+                setUser(null);
+                setLogOutLoading(false)
+            }).catch(e => {
+                console.log(e);
+                setUser(null);
+                setLogOutLoading(false)
+            })
+        }else{
+            setUser(null);
+        }
+    }
+
+    const showAppManagement = () => {
+        Haptics.selectionAsync();
+
+        Animated.parallel([
+            Animated.timing(moveAnimation1, {
+                toValue: -Dimensions.get('window').width,
+                duration: 300,
+                useNativeDriver: true
+            }),
+            Animated.timing(moveAnimation2, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true
+            })
+        ]).start();
+
+        setShowBack(true)
+    }
+
+    function showBoxConfirm() {
+        Haptics.selectionAsync();
+        setShowConfirm(true)
+    }
+
+    function hideBoxConfirm() {
+        Haptics.selectionAsync();
+        setShowConfirm(false)
+    }
+
+    async function deleteAccount() {
+        Haptics.selectionAsync();
+
+        const res = await orbis.updateProfile({
+            pfp: null,
+            cover: null,
+            username: null,
+            description: null,
+        });
+
+        logout()
+    }
+
+    function onBackPress() {
+        Haptics.selectionAsync();
+
+        Animated.parallel([
+            Animated.timing(moveAnimation1, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true
+            }),
+            Animated.timing(moveAnimation2, {
+                toValue: Dimensions.get('window').width,
+                duration: 300,
+                useNativeDriver: true
+            })
+        ]).start(() => {
+            setShowBack(false)
+        });
+    }
+
+
+    return(
+        <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100}>
+            {showBack ? (
+                <TouchableOpacity onPress={() => onBackPress()} style={{padding: 20,marginBottom: 0,}}>
+                    <Image
+                        style={{width: 30,height: 30}}
+                        resizeMode='contain'
+                        source={require('../../assets/back_button.png')}
+                        defaultSource={require('../../assets/back_button.png')}
+                    />
+                </TouchableOpacity>
+            ) : (
+                <View style={{padding: 11}}>
+                    <Text style={[tailwind('text-primary mb-5')]}>Settings & Privacy</Text>
+                </View>
+            )}
+
+            <Animated.View style={[tailwind('flex flex-col w-full p-5'), {transform: [{ translateX: moveAnimation1 }]}]}>
+                <Button color="rounded-gray" title="Notifications" style={{marginBottom: 10}} onPress={() => {hideSettings();setPushNotifsVis(true)}} />
+                <Button color="rounded-gray" title="Help" style={{marginBottom: 10}} onPress={() => openHelp()} />
+                <Button color="rounded-gray" title="Privacy Policy" style={{marginBottom: 10}} onPress={() => openPrivacyPolicy()} />
+                <Button color="rounded-gray" title="Terms and Conditions" style={{marginBottom: 10}} onPress={() => openTerms()} />
+                <Button color="rounded-gray" title="App Management" style={{marginBottom: 10}} onPress={() => showAppManagement()} />
+
+                {logOutLoading ? (
+                    <View style={[tailwind('bg-slate-100 rounded-full py-4 px-8 flex-row items-center justify-center'), {alignSelf: 'center',width: '100%'}]}>
+                        <ActivityIndicator size="small" color="#020617" />
+                    </View>
+                ) : (
+                    <Button color="rounded-red" title="Logout" onPress={() => logout()} />
+                )}
+            </Animated.View>
+
+            {showBack && (
+                <Animated.View style={{transform: [{ translateX: moveAnimation2 }],position: 'absolute',width: '90%',marginTop: 70,alignSelf: 'center',}}>
+                    <Button color="rounded-gray" title="Delete Account" onPress={() => showBoxConfirm()} />
+                </Animated.View>
+            )}
+
+
+            {showConfirm && (
+                <Modal hide={() => hideBoxConfirm()} type='deleteAccount'>
+                    <View style={[tailwind('flex flex-col items-center justify-center px-3'), {paddingTop: 25,}]}>
+
+                        <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,}]}>Deleting Your{'\n'}EASY App Account</Text>
+
+                        <Image source={require('../../assets/deleteAccount_icon.png')} style={{height: 115,marginTop: 20,marginBottom: 20,alignSelf: 'center',}} resizeMode="contain"/>
+
+                        <Text style={[tailwind(`text-secondary text-center text-slate-900`), {lineHeight: 20}]}>
+                            By deleting your account, you will no longer have access to EASY App and will lose all your data, including points, activity history, and profile information.
+                        </Text>
+
+                        <View style={[tailwind('flex items-center mt-5 flex-col w-full')]}>
+                            <Button 
+                                size="md" 
+                                color="black" 
+                                title="Delete Account" 
+                                onPress={deleteAccount} 
+                                style={{width: '90%',alignItems: 'center',height:50,justifyContent: 'center',marginTop: 14,}}
+                            />
+                            <Button size="md" color="white" title="Not now" onPress={hideBoxConfirm} style={{width: '90%',alignItems: 'center',marginTop: 10,height: 50,justifyContent: 'center',}}/>
+                        </View>
+
+
+                    </View>
+                </Modal>
+            )}
+        </Modal>
+
+    )
 }
