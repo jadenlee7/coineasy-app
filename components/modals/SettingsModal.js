@@ -3,7 +3,7 @@ import { GlobalContext } from "../../contexts/GlobalContext";
 import Modal from "../Modal";
 import Button from "../Button";
 import { useTailwind } from 'tailwind-rn';
-import { Keyboard, Text, View, ActivityIndicator, Image, Animated, TouchableOpacity, Dimensions } from 'react-native';
+import { Keyboard, Text, View, ActivityIndicator, Image, Animated, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useWalletConnectModal } from '@walletconnect/modal-react-native'
@@ -131,22 +131,24 @@ export default function SettingsModal() {
 
     return(
         <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100}>
-            {showBack ? (
-                <TouchableOpacity onPress={() => onBackPress()} style={{padding: 20,marginBottom: 0,}}>
-                    <Image
-                        style={{width: 30,height: 30}}
-                        resizeMode='contain'
-                        source={require('../../assets/back_button.png')}
-                        defaultSource={require('../../assets/back_button.png')}
-                    />
-                </TouchableOpacity>
-            ) : (
-                <View style={{padding: 11}}>
-                    <Text style={[tailwind('text-primary mb-5')]}>Settings & Privacy</Text>
-                </View>
-            )}
+            <View style={{height: 65}}>
+                {showBack ? (
+                    <TouchableOpacity onPress={() => onBackPress()} style={{padding: 20,marginBottom: 0,}}>
+                        <Image
+                            style={{width: 30,height: 30}}
+                            resizeMode='contain'
+                            source={require('../../assets/back_button.png')}
+                            defaultSource={require('../../assets/back_button.png')}
+                        />
+                    </TouchableOpacity>
+                ) : (
+                    <View style={{padding: 20,marginBottom: 0,}}>
+                        <Text style={[tailwind('text-primary'), {fontSize: Platform.OS == 'ios' ? 18 : 15,}]}>Settings & Privacy</Text>
+                    </View>
+                )}
+            </View>
 
-            <Animated.View style={[tailwind('flex flex-col w-full p-5'), {transform: [{ translateX: moveAnimation1 }]}]}>
+            <Animated.View style={[tailwind('flex flex-col w-full p-5'), {transform: [{ translateX: moveAnimation1 }], marginTop: -20,marginBottom: 20,}]}>
                 <Button color="rounded-gray" title="Notifications" style={{marginBottom: 10}} onPress={() => {hideSettings();setPushNotifsVis(true)}} />
                 <Button color="rounded-gray" title="Help" style={{marginBottom: 10}} onPress={() => openHelp()} />
                 <Button color="rounded-gray" title="Privacy Policy" style={{marginBottom: 10}} onPress={() => openPrivacyPolicy()} />
@@ -158,7 +160,7 @@ export default function SettingsModal() {
                         <ActivityIndicator size="small" color="#020617" />
                     </View>
                 ) : (
-                    <Button color="rounded-red" title="Logout" onPress={() => logout()} />
+                    <Button color="rounded-red" title="Sign out" onPress={() => logout()} />
                 )}
             </Animated.View>
 
@@ -173,7 +175,7 @@ export default function SettingsModal() {
                 <Modal hide={() => hideBoxConfirm()} type='deleteAccount'>
                     <View style={[tailwind('flex flex-col items-center justify-center px-3'), {paddingTop: 25,}]}>
 
-                        <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,}]}>Deleting Your{'\n'}EASY App Account</Text>
+                        <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,}]}>Deleting Your{'\n'}EASY App Account?</Text>
 
                         <Image source={require('../../assets/deleteAccount_icon.png')} style={{height: 115,marginTop: 20,marginBottom: 20,alignSelf: 'center',}} resizeMode="contain"/>
 
