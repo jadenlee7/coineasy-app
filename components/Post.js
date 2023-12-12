@@ -64,7 +64,12 @@ const PostDisplay = (props) => {
 
     const [lengthMore,setLengthMore] = useState(false);
     const onTextLayout = useCallback(e =>{
-        setLengthMore(e.nativeEvent.lines.length >=4);
+
+        if(body.includes('Gm~~')){
+            console.log(e.nativeEvent.lines.length > 4);
+        }
+
+        setLengthMore(e.nativeEvent.lines.length > 4);
     },[]);
 
     const tailwind = useTailwind();
