@@ -3,24 +3,32 @@ import { GlobalContext } from "../../contexts/GlobalContext";
 import Modal from "../Modal";
 import Button from "../Button";
 import { useTailwind } from 'tailwind-rn';
-import { Keyboard, Text, View, ActivityIndicator, Image, Animated, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { Keyboard, Text, View, ActivityIndicator, Image, Animated, TouchableOpacity, Dimensions, Platform, ScrollView } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useWalletConnectModal } from '@walletconnect/modal-react-native'
 import * as WebBrowser from 'expo-web-browser';
+import { UserPfp, Username } from "../User";
+import { showMessage } from "react-native-flash-message";
+import { SuccessIcon } from "../Icons";
 
 export default function SettingsModal() {
-    const { user, setUser, orbis, setSettingsVis, setPushNotifsVis } = useContext(GlobalContext);
+    const { user, setUser, orbis, setSettingsVis, setPushNotifsVis, listBlockedUser, setListBlockedUser } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const { provider } = useWalletConnectModal();
     
     const [showBack, setShowBack] = useState(false)
+    const [showBackBlockedUsers, setShowBackBlockedUsers] = useState(false)
     const [logOutLoading, setLogOutLoading] = useState(false)
     const [showConfirm, setShowConfirm] = useState(false)
 
+    const [listBlockLoader, setListBlockLoader] = useState([])
+    const [blockedUsers, setBlockedUsers] = useState([])
+
     const moveAnimation1 = useRef(new Animated.Value(0)).current;
     const moveAnimation2 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
+    const moveAnimation3 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
 
     function hideSettings() {
         setSettingsVis(false);
@@ -86,6 +94,31 @@ export default function SettingsModal() {
         setShowBack(true)
     }
 
+    const showBlockedUsers = () => {
+        Haptics.selectionAsync();
+
+        listBlockedUser.map(async e => {
+            const { data, error } = await orbis.getProfile(e);
+            blockedUsers.push(data)
+            setBlockedUsers([...blockedUsers])
+        })
+
+        Animated.parallel([
+            Animated.timing(moveAnimation1, {
+                toValue: -Dimensions.get('window').width,
+                duration: 300,
+                useNativeDriver: true
+            }),
+            Animated.timing(moveAnimation3, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true
+            })
+        ]).start();
+
+        setShowBackBlockedUsers(true)
+    }
+
     function showBoxConfirm() {
         Haptics.selectionAsync();
         setShowConfirm(true)
@@ -128,12 +161,109 @@ export default function SettingsModal() {
         });
     }
 
+    function onBackBlockedUsersPress() {
+        Haptics.selectionAsync();
+
+        Animated.parallel([
+            Animated.timing(moveAnimation1, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true
+            }),
+            Animated.timing(moveAnimation3, {
+                toValue: Dimensions.get('window').width,
+                duration: 300,
+                useNativeDriver: true
+            })
+        ]).start(() => {
+            setBlockedUsers([])
+            setShowBackBlockedUsers(false)
+        });
+    }
+
+    const BlockedUser = ({blockedUser, index}) => {   
+        
+        /** Will unblock the user */
+        async function doUnblock (blockedUser, index_follow) {
+            listBlockLoader[index_follow] = true
+            setListBlockLoader([...listBlockLoader])
+
+            console.log(listBlockedUser);
+            // const temp_list = listBlockedUser
+            listBlockedUser.splice(index, 1);
+
+            await AsyncStorage.setItem("list_blocked_user", JSON.stringify(listBlockedUser));             
+            setListBlockedUser([...listBlockedUser])
+
+            blockedUsers.splice(index, 1)
+            setBlockedUsers([...blockedUsers])
+            
+            listBlockLoader[index_follow] = false
+            setListBlockLoader([...listBlockLoader])
+
+            showMessage({
+                message: blockedUser.details.profile.username+" has been unblocked !",
+                type: "success",
+                floating: true,
+                backgroundColor: "#3D3D3D",
+                icon: () => <SuccessIcon style={{marginRight: 10,}}/>
+            });
+        }
+
+        return (
+            <View style={[tailwind("items-center flex flex-row border-b border-secondary"), {justifyContent: 'space-between',paddingRight: 10,}]}>
+                <TouchableOpacity 
+                    style={tailwind("items-center flex flex-row py-3 px-6 ")} 
+                    underlayColor="#f1f5f9"
+                    onPress={() => {Haptics.selectionAsync();navigation.navigate('ProfileSelected', { did: blockedUser.details.did })}}
+                >
+                    <UserPfp details={blockedUser.details} />
+                    <View style={{marginLeft: 13}}>
+                        <View style={tailwind("flex mt-1")}>
+                            <Text style={[tailwind("text-secondary"), {maxWidth: 150}]} numberOfLines={1}>
+                                <Username details={blockedUser.details}/>
+                            </Text>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                    activeOpacity={0.7}
+                    style={[
+                        tailwind(`px-5 rounded-full border ${listBlockLoader[index] ? "bg-main-400" : "bg-main"}`), 
+                        {
+                            borderColor: "transparent",
+                            paddingVertical: listBlockLoader[index] ? 3.2 : 5
+                        }
+                    ]}
+                    onPress={() => doUnblock(blockedUser, index)}
+                >
+                    {listBlockLoader[index] ?
+                        <ActivityIndicator size="small" color="#fff" style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }} />
+                    :
+                        <Text style={[tailwind('text-white font-semibold'), {fontSize: 12, lineHeight: 16}]}>Unblock</Text>
+                    }
+                </TouchableOpacity>
+
+            </View>
+        )
+    }
+
 
     return(
         <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100}>
             <View style={{height: 65}}>
                 {showBack ? (
                     <TouchableOpacity onPress={() => onBackPress()} style={{padding: 20,marginBottom: 0,}}>
+                        <Image
+                            style={{width: 30,height: 30}}
+                            resizeMode='contain'
+                            source={require('../../assets/back_button.png')}
+                            defaultSource={require('../../assets/back_button.png')}
+                        />
+                    </TouchableOpacity>
+                ) : showBackBlockedUsers ? (
+                    <TouchableOpacity onPress={() => onBackBlockedUsersPress()} style={{position: 'absolute',top: 20, left: 20,zIndex: 2}}>
                         <Image
                             style={{width: 30,height: 30}}
                             resizeMode='contain'
@@ -154,6 +284,7 @@ export default function SettingsModal() {
                 <Button color="rounded-gray" title="Privacy Policy" style={{marginBottom: 10}} onPress={() => openPrivacyPolicy()} />
                 <Button color="rounded-gray" title="Terms and Conditions" style={{marginBottom: 10}} onPress={() => openTerms()} />
                 <Button color="rounded-gray" title="App Management" style={{marginBottom: 10}} onPress={() => showAppManagement()} />
+                <Button color="rounded-gray" title="Blocked Users" style={{marginBottom: 10}} onPress={() => showBlockedUsers()} />
 
                 {logOutLoading ? (
                     <View style={[tailwind('bg-slate-100 rounded-full py-4 px-8 flex-row items-center justify-center'), {alignSelf: 'center',width: '100%'}]}>
@@ -167,6 +298,25 @@ export default function SettingsModal() {
             {showBack && (
                 <Animated.View style={{transform: [{ translateX: moveAnimation2 }],position: 'absolute',width: '90%',marginTop: 70,alignSelf: 'center',}}>
                     <Button color="rounded-gray" title="Delete Account" onPress={() => showBoxConfirm()} />
+                </Animated.View>
+            )}
+
+            {showBackBlockedUsers && (
+                <Animated.View style={{transform: [{ translateX: moveAnimation3 }],position: 'absolute',width: '100%',marginTop: 30,alignSelf: 'center',}}>
+                    <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,}}>Blocked Users</Text>
+
+                    <ScrollView style={{marginTop: 10,}}>
+                        { blockedUsers.length != 0 ? blockedUsers.map((e, index) => {
+                            return (
+                                <BlockedUser blockedUser={e} index={index} key={Math.random()}/>
+                            );
+                        }) : (
+                            <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md')} >
+                                <Text style={tailwind('text-secondary items-center ml-1')}>You don't have blocked users.</Text>
+                            </View>
+                        )}
+                    </ScrollView>
+
                 </Animated.View>
             )}
 

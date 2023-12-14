@@ -74,6 +74,8 @@ export default function App() {
   const [shareProfileVis, setShareProfileVis] = useState(false);
   const [notificationsVis, setNotificationsVis] = useState(false);
 
+  const [listBlockedUser, setListBlockedUser] = useState(null)
+
   const confetti = useRef();
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -139,7 +141,7 @@ export default function App() {
   useEffect(() => {
     connect();
     loadContexts();
-    //logout();
+    fecthBlockedUser()
 
     /** Will re-connect automatically the user to the account found in local storage */
     async function connect() {
@@ -158,10 +160,19 @@ export default function App() {
       }
     }
 
-    /** Logout user and remove from state */
-    async function logout() {
-      let res = await orbis.logout();
-      setUser(null);
+    // Will fetch all blocked user
+    async function fecthBlockedUser() {
+      /** Check if user exists in local storage */
+
+    //   await AsyncStorage.removeItem("list_blocked_user");
+
+
+      let temp_list = await AsyncStorage.getItem("list_blocked_user");
+      const list_blocked_user = JSON.parse(temp_list)
+
+      if(list_blocked_user) {
+        setListBlockedUser([...list_blocked_user])
+      }
     }
   }, []);
 
@@ -169,6 +180,12 @@ export default function App() {
     page = 0;
     loadPosts();
   }, [category]);
+
+
+  /** Will be triggered when a user is blocked */
+  useEffect(() => {
+    loadPosts();
+  }, [listBlockedUser]);
 
   /** Will be triggered when a new deeplink is received */
   useEffect(() => {
@@ -515,7 +532,9 @@ export default function App() {
                 selectedNews, 
                 setSelectedNews,
                 currentRoute,
-                setCurrentRoute
+                setCurrentRoute,
+                listBlockedUser,
+                setListBlockedUser
             }}
         >
           <TailwindProvider utilities={utilities}>

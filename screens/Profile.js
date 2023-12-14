@@ -27,7 +27,6 @@ const Profile = ({ navigation, route }) => {
 
     return(
         <>
-
             {profile ?
                 <ProfileDetails profile={profile.details} />
             :

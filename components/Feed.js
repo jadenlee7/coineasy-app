@@ -11,7 +11,7 @@ import { GlobalContext } from "../contexts/GlobalContext";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
 export default function Feed({posts, refreshing, refreshingBottom, onRefresh, loadMore, header, feedRef }) {
-  const { homeFeedRef, scrollAnim } = useContext(GlobalContext);
+  const { homeFeedRef, scrollAnim, listBlockedUser } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
   const statusBarHeight = useStatusBarHeight();
@@ -21,6 +21,8 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
       loadMore()
     }
   }
+  
+  const filteredPosts = posts.filter(e => !listBlockedUser?.includes(e.creator) && !listBlockedUser?.includes(e.reply_to_creator_details?.did)) 
 
   useScrollToTop(feedRef ? feedRef : homeFeedRef);
 
@@ -34,7 +36,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
             <Animated.FlatList
               ref={feedRef ? feedRef : homeFeedRef}
               style={tailwind('w-full')}
-              data={posts}
+              data={filteredPosts}
               ListHeaderComponent={header}
               ListHeaderComponentStyle={tailwind('flex flex-1')}
               renderItem={({item, index}) => {
@@ -90,7 +92,7 @@ const PostInFeed = React.memo(({post}) => {
   if(post?.content?.repost != null && post.content.body == " ") {
     return (
       <View style={tailwind('flex flex-col')}>
-        <View style={[tailwind('flex flex-row items-center px-5 mt-3'), { marginBottom: -5 }]}>
+        <View style={[tailwind('flex flex-row items-center px-5 mt-3'), { marginBottom: -2 }]}>
           <RepostIcon color="#959595" />
           <Text style={tailwind('text-secondary items-center ml-1')}>
             <Username details={post.creator_details} style={tailwind('text-secondary font-normal')} /> reposted

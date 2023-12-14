@@ -64,11 +64,6 @@ const PostDisplay = (props) => {
 
     const [lengthMore,setLengthMore] = useState(false);
     const onTextLayout = useCallback(e =>{
-
-        if(body.includes('Gm~~')){
-            console.log(e.nativeEvent.lines.length > 4);
-        }
-
         setLengthMore(e.nativeEvent.lines.length > 4);
     },[]);
 
@@ -210,7 +205,7 @@ const PostDisplay = (props) => {
 
     return(
         <>
-            <View style={[tailwind(`flex w-full flex-col mb-2 ${!verticalDivider ? "border-b border-slate-200" : "" } ${isReply ? "" : "px-5 py-4"}`), style]}>
+            <View style={[tailwind(`flex w-full flex-col mb-2 ${!verticalDivider ? "border-b border-slate-200" : "" } ${isReply ? "" : "px-5 py-4"}`), style, {backgroundColor: 'white',}]}>
                 {/** Will show the parent post if any */}
                 {(showParent && post.content.reply_to && post.reply_to_details) &&
                     <Post 
@@ -266,8 +261,12 @@ const PostDisplay = (props) => {
                             </View>
 
                             {/** Show post menu if user is creator */}
-                            {user?.did == post.creator &&
+                            {user?.did == post.creator ?
                                 <TouchableOpacity onPress={() => setEditedPost({value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost})} style={[tailwind('flex flex-row items-center rounded-md py-2 px-1 -mr-1')]}>
+                                    <PostMenuIcon />
+                                </TouchableOpacity>
+                                :
+                                <TouchableOpacity onPress={() => setEditedPost({type:'notCreator',value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost})} style={[tailwind('flex flex-row items-center rounded-md py-2 px-1 -mr-1')]}>
                                     <PostMenuIcon />
                                 </TouchableOpacity>
                             }
@@ -277,9 +276,7 @@ const PostDisplay = (props) => {
                         <TouchableOpacity activeOpacity={0.7} style={[tailwind('ml-1 px-1 flex flex-1 rounded-md mr-8')]} onPress={() => showPostDetails()} disabled={notTouchable ? true : false}>
                             <>
                                 {body && body == 'Message sans body' ?(
-                                    <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: 5, paddingBottom: 5, fontSize: fontSize, lineHeight: fontSize * 1.47 }, stylePostContent]}>
-                                        
-                                    </Text>
+                                    <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: -10, paddingBottom: 0, }, stylePostContent]} />
                                 ) : (body && body != "") ?
                                     <>
                                         <Text 

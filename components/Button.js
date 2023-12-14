@@ -9,7 +9,7 @@ export default function Button({icon, iconRight, size, title, onPress, color, st
     /** Transparent Button */
     case "gray-100":
       return(
-        <TouchableOpacity activeOpacity={0.9}  style={[tailwind('bg-gray-100 px-5 py-3 rounded-full')], style} onPress={onPress}>
+        <TouchableOpacity activeOpacity={0.9}  style={[tailwind('bg-gray-100 px-5 py-3 rounded-full'), style]} onPress={onPress}>
           <Text style={tailwind('text-slate-900 font-semibold')}>{title}</Text>
         </TouchableOpacity>
       );
@@ -61,6 +61,12 @@ export default function Button({icon, iconRight, size, title, onPress, color, st
               <Text style={tailwind('text-white font-semibold')}>{title}</Text>
             </TouchableOpacity>
           );
+        case "centered":
+            return(
+                <TouchableOpacity activeOpacity={0.9}  style={[tailwind('px-7 py-4 rounded-full items-center'), {backgroundColor: "#FF6B17", ...style}]} onPress={onPress}>
+                    <Text style={tailwind('text-white font-semibold')}>{title}</Text>
+                </TouchableOpacity>
+            )
         default:
           return(
             <TouchableOpacity activeOpacity={0.9}  style={[tailwind('px-7 py-3 rounded-full'), {backgroundColor: "#FF6B17", ...style}]} onPress={onPress}>
@@ -151,6 +157,17 @@ export default function Button({icon, iconRight, size, title, onPress, color, st
         </TouchableHighlight>
       );
 
+    /** Bold & rounded gray button with red text */
+    case "rounded-red-gray":
+      return(
+        <TouchableHighlight style={[tailwind('bg-slate-100 rounded-full py-4 px-8 flex-row items-center justify-center'), { ...style }]} onPress={onPress} underlayColor="#f8fafc">
+          <>
+            {icon}
+            <Text style={[tailwind('text-center'), { fontSize: 14, fontFamily: "GmarketBold", lineHeight: 18, color:'red' }]}>{title}</Text>
+          </>
+        </TouchableHighlight>
+      );
+
     /** Bold & rounded red button */
     case "rounded-red":
       return(
@@ -168,6 +185,16 @@ export default function Button({icon, iconRight, size, title, onPress, color, st
           <Text style={[tailwind("text-secondary"), {color: "#FFF", fontSize: 11}]}>{title}</Text>
           {icon}
         </TouchableOpacity>
+      )
+
+    case "disabled":
+      return(
+        <TouchableHighlight disabled style={[tailwind('bg-slate-100 rounded-full py-4 px-8 flex-row items-center justify-center'), { ...style }]} onPress={onPress} underlayColor="#f8fafc">
+          <>
+            {icon}
+            <Text style={[tailwind('text-center'), { fontSize: 14, fontFamily: "GmarketBold", lineHeight: 18 }]}>{title}</Text>
+          </>
+        </TouchableHighlight>
       )
 
     /** Default purple button */
