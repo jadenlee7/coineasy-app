@@ -70,28 +70,38 @@ export default function PostSettingsModal() {
     }
 
     const blockUser = async () => {
-        setBlockLoader(true)
 
-        const userInfo = editedPost.value.creator_details.did
-        if(listBlockedUser && !listBlockedUser.includes(userInfo)){
-            setListBlockedUser([...listBlockedUser, userInfo])
-            await AsyncStorage.setItem("list_blocked_user", JSON.stringify([...listBlockedUser, userInfo]));             
-        }else if(!listBlockedUser.includes(userInfo)){
-            setListBlockedUser([userInfo])
-            await AsyncStorage.setItem("list_blocked_user", JSON.stringify([userInfo]));             
+        try {
+            setBlockLoader(true)
+    
+            const userInfo = editedPost.value.creator_details.did
+            let temp_list = listBlockedUser
+            if(listBlockedUser && !listBlockedUser?.includes(userInfo)){
+                temp_list.push(userInfo)
+            }else{
+                temp_list = [userInfo]
+            }
+
+            if(temp_list){
+                setListBlockedUser([...temp_list])
+                await AsyncStorage.setItem("list_blocked_user", JSON.stringify(temp_list));
+            }
+
+            setBlockModalVisible(false)
+            setBlockLoader(false)
+            hide()
+    
+            showMessage({
+                message: editedPost.value.creator_details.profile.username+" is now blocked !",
+                type: "success",
+                floating: true,
+                backgroundColor: "#3D3D3D",
+                icon: () => <SuccessIcon style={{marginRight: 10,}}/>
+            });
+        } catch (error) {
+            Alert(error)            
         }
 
-        setBlockModalVisible(false)
-        setBlockLoader(false)
-        hide()
-
-        showMessage({
-            message: editedPost.value.creator_details.profile.username+" is now blocked !",
-            type: "success",
-            floating: true,
-            backgroundColor: "#3D3D3D",
-            icon: () => <SuccessIcon style={{marginRight: 10,}}/>
-        });
     }
 
     const showBlock = () => {

@@ -95,28 +95,33 @@ export default function SettingsModal() {
     }
 
     const showBlockedUsers = () => {
-        Haptics.selectionAsync();
-
-        listBlockedUser.map(async e => {
-            const { data, error } = await orbis.getProfile(e);
-            blockedUsers.push(data)
-            setBlockedUsers([...blockedUsers])
-        })
-
-        Animated.parallel([
-            Animated.timing(moveAnimation1, {
-                toValue: -Dimensions.get('window').width,
-                duration: 300,
-                useNativeDriver: true
-            }),
-            Animated.timing(moveAnimation3, {
-                toValue: 0,
-                duration: 300,
-                useNativeDriver: true
+        try {
+            Haptics.selectionAsync();
+    
+            listBlockedUser?.map(async e => {
+                const { data, error } = await orbis.getProfile(e);
+                blockedUsers.push(data)
+                setBlockedUsers([...blockedUsers])
             })
-        ]).start();
-
-        setShowBackBlockedUsers(true)
+    
+            Animated.parallel([
+                Animated.timing(moveAnimation1, {
+                    toValue: -Dimensions.get('window').width,
+                    duration: 300,
+                    useNativeDriver: true
+                }),
+                Animated.timing(moveAnimation3, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: true
+                })
+            ]).start();
+    
+            setShowBackBlockedUsers(true)
+        } catch (error) {
+            console.log(error);
+            alert('ICI : '+error)
+        }
     }
 
     function showBoxConfirm() {
