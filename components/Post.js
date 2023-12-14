@@ -205,7 +205,7 @@ const PostDisplay = (props) => {
 
     return(
         <>
-            <View style={[tailwind(`flex w-full flex-col mb-2 ${!verticalDivider ? "border-b border-slate-200" : "" } ${isReply ? "" : "px-5 py-4"}`), style, {backgroundColor: 'white',}]}>
+            <View style={[tailwind(`flex w-full flex-col ${!verticalDivider ? "border-b border-slate-200" : "" } ${isReply ? "" : "px-5 py-4"}`), style, {backgroundColor: 'white',}]}>
                 {/** Will show the parent post if any */}
                 {(showParent && post.content.reply_to && post.reply_to_details) &&
                     <Post 
