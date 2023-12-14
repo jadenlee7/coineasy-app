@@ -257,7 +257,7 @@ export default function SettingsModal() {
 
     return(
         <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100}>
-            <View style={{height: 65}}>
+            <View style={{height: 65, zIndex: 2}}>
                 {showBack ? (
                     <TouchableOpacity onPress={() => onBackPress()} style={{padding: 20,marginBottom: 0,}}>
                         <Image
@@ -268,7 +268,7 @@ export default function SettingsModal() {
                         />
                     </TouchableOpacity>
                 ) : showBackBlockedUsers ? (
-                    <TouchableOpacity onPress={() => onBackBlockedUsersPress()} style={{position: 'absolute',top: 20, left: 20,zIndex: 2}}>
+                    <TouchableOpacity onPress={() => onBackBlockedUsersPress()} style={{position: 'absolute',top: 20, left: 20,}}>
                         <Image
                             style={{width: 30,height: 30}}
                             resizeMode='contain'
