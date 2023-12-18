@@ -24,7 +24,6 @@ const Post = React.memo((props) => {
   return <PostDisplay {...props}/>;
 });
 
-// function PostDisplay({post, isReply = false, showParent = true, verticalDivider = false, style, showRepostDetails = true, showReactions= true, fontSize = 13.5, stylePostContent}) {
 const PostDisplay = (props) => {
 
     const { user, setPostDetailsVis, setCategory, setEditedPost, hidePostbox, setScrollAnim, setOffsetAnim } = useContext(GlobalContext);

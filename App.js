@@ -118,6 +118,7 @@ export default function App() {
   /** Load fonts */
   const [fontsLoaded] = useFonts({
     'GmarketMedium': require('./assets/fonts/GmarketSansMedium.ttf'),
+    'GmarketMediumV2': require('./assets/fonts/GmarketSansMedium_V2.ttf'),
     'GmarketBold': require('./assets/fonts/GmarketSansBold.otf'),
   });
 

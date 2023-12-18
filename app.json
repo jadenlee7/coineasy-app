@@ -22,6 +22,7 @@
       "bundleIdentifier": "com.coineasy.coineasysocial",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow CoinEasy to access your photos. Photos will be used for profile picture and post with Media. This is not mandatory, user can leave the default profile picture. It can then be updated in the user Profil page. Example: You want to create a Post with a photo, we'll need to access your media library",
+        "NSPhotoLibraryAddUsageDescription": "Enable CoinEasy to save media to your gallery. Example: You want to download a media from a post into your phone",
         "NSCameraUsageDescription": "Allow CoinEasy to access your camera. Camera will be used to create a media in your Post. Example: You want to share where you're at by taking a photo."
       }
     },

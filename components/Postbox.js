@@ -619,7 +619,7 @@ export default function Postbox({isReply = false}) {
                                     numberOfLines={1}
                                     value={message}
                                     //editable={!loading}
-                                    style={[tailwind('w-full'), { fontSize: 14, fontFamily: "GmarketMedium", minHeight: 55, lineHeight: 17, paddingBottom: 10, width:Dimensions.get('window').width }]}
+                                    style={[tailwind('w-full'), { fontSize: 14, fontFamily: message == "" && Platform.OS == 'ios' ? "GmarketMediumV2" : "GmarketMedium", minHeight: 55, lineHeight: 20, paddingBottom: 10, width:Dimensions.get('window').width }]}
                                     placeholder={replyTo ? "Post your reply" : "What's happening?" }
                                     placeholderTextColor="#64748b"
                                     multiline={true}

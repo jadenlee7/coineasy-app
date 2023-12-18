@@ -249,8 +249,8 @@ export default function PostSettingsModal() {
                             <Animated.View style={{transform: [{ translateX: moveAnimation2 }],position: 'absolute',width: '90%',marginTop: 50,alignSelf: 'center',}}>
                                 <UserPfp details={editedPost.value.creator_details} style={{alignSelf: 'center',marginTop: -30,}}/>
 
-                                <Text style={{textAlign:'center',fontWeight: 'bold',fontSize: 19,}}>Why are you reposting this post ?</Text>
-                                <Text style={{color: '#959595',textAlign:'center',margin: 10,fontSize: 12,}}>Your report is anonymous, except if you're reporting an intellectual property infringement</Text>
+                                <Text style={{textAlign:'center',fontWeight: 'bold',fontSize: 19,marginTop: 10,}}>Why are you reposting this post ?</Text>
+                                <Text style={{color: '#959595',textAlign:'center',margin: 15,fontSize: 12,}}>Your report is anonymous, except if you're reporting an intellectual property infringement</Text>
                                 {list_report.map(e => {
                                     return(
                                         <TouchableOpacity 
