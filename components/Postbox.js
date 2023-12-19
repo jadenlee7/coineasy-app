@@ -608,7 +608,7 @@ export default function Postbox({isReply = false}) {
             <ScrollView style={[tailwind('w-full'), {maxHeight: Dimensions.get('screen').height,}]} keyboardShouldPersistTaps='handled'>
                 {/* <View style={tailwind('flex flex-col items-start w-full p-5')}> */}
 
-                    <Animated.View style={[tailwind('flex flex-col items-start w-full p-5'), {transform: [{ translateX: moveAnimation1 }]}]}>
+                    <Animated.View style={[tailwind('flex flex-col items-start p-5'), {transform: [{ translateX: moveAnimation1 }]}]}>
                         {/** Top bar with user details and cancel button */}
                         <View style={tailwind('flex flex-row mb-10px w-full items-center')}>
                             <View style={tailwind('flex-1')}>
@@ -665,7 +665,7 @@ export default function Postbox({isReply = false}) {
                                         minHeight: 55,
                                         lineHeight: 20,
                                         paddingBottom: 10,
-                                        width:Dimensions.get('window').width,
+                                        width: Dimensions.get('window').width - 40,
                                         marginTop: replyTo ? -5 : 0,
                                         marginLeft: replyTo ? 25: 0,
                                     }
@@ -760,6 +760,7 @@ export default function Postbox({isReply = false}) {
                         title={editedPost != null ? "Edit" : "Post"}
                         color="orange"
                         size="sm"
+                        style={{height: 30}}
                         onPress={editedPost ? () => edit() : () => send()}
                     />
                 </KeyboardAvoidingView>
