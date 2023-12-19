@@ -63,7 +63,12 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
             {
                 paddingBottom: paddingBottom,
                 width: (type == 'notifications' || type == 'deleteAccount')  ? '90%' : '100%',
-                height: type == 'notifications' ? 400 : type == 'deleteAccount' && Platform.OS == 'ios' ? 470 : type == 'deleteAccount' ? 500 : 'auto',
+                height: 
+                    type == 'notifications' ? 400 
+                    : type == 'deleteAccount' && Platform.OS == 'ios' ? 470 
+                    : type == 'deleteAccount' ? 500 
+                    : type == "post" ? '79.5%'
+                    : 'auto',
                 alignSelf: 'center',
             }, 
         ]} 

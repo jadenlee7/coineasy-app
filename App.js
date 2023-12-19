@@ -75,6 +75,7 @@ export default function App() {
   const [notificationsVis, setNotificationsVis] = useState(false);
 
   const [listBlockedUser, setListBlockedUser] = useState(null)
+//   const [listFollowers, setListFollowers] = useState([])
 
   const confetti = useRef();
   const [posts, setPosts] = useState([]);
@@ -535,7 +536,9 @@ export default function App() {
                 currentRoute,
                 setCurrentRoute,
                 listBlockedUser,
-                setListBlockedUser
+                setListBlockedUser,
+                // listFollowers,
+                // setListFollowers
             }}
         >
           <TailwindProvider utilities={utilities}>

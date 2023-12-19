@@ -4,6 +4,9 @@ import { useTailwind } from 'tailwind-rn';
 import useDidToAddress from "../hooks/useDidToAddress";
 import useGetUsername from "../hooks/useGetUsername";
 import { isAdmin } from "../utils";
+import { useContext } from 'react';
+import { GlobalContext } from '../contexts/GlobalContext';
+import { FollowIcon, UnfollowIcon } from './Icons';
 
 export default function User({height = 40, details, isFollow}) {
   const tailwind = useTailwind();
@@ -21,8 +24,9 @@ export default function User({height = 40, details, isFollow}) {
 }
 
 /** Will render the user's pfp or empty state */
-export function UserPfp({height = 40, details, style}) {
+export function UserPfp({height = 40, details, style, origin}) {
   const tailwind = useTailwind();
+//   const { user, listFollowers } = useContext(GlobalContext);
 
   function getProfilePicture() {
     if(details.profile.pfp.includes("ipfs://")) {
@@ -48,13 +52,23 @@ export function UserPfp({height = 40, details, style}) {
             style={{width: height / 2, height: height / 2, position: "absolute", right: -4, top: 0}}
             source={require('../assets/AdminBadge.png')} />
         }
+
+        {/* {origin == 'feed' && details.did != user.did && listFollowers.findIndex(e => e.details.did == details.did) != -1 ? (
+            <FollowIcon style={{position: 'absolute',bottom: -10, right: -6}}/>
+        ) : origin == 'feed' && details.did != user.did && (
+            <UnfollowIcon style={{position: 'absolute',bottom: -10, right: -6}}/>
+        )} */}
       </View>
     )
   } else {
     return(
-      <Image
-        style={[tailwind('rounded-full'), { height: height, width: height }, style]}
-        source={require('../assets/empty-state-user.png')} />
+        <>
+            <Image
+                style={[tailwind('rounded-full'), { height: height, width: height }, style]}
+                source={require('../assets/empty-state-user.png')} 
+            />
+            {/* {origin == 'feed' && details.did != user.did && <UnfollowIcon style={{position: 'absolute',bottom: -10, right: -6, width: height / 2, height: height / 2,}}/>} */}
+        </>
     )
   }
 }

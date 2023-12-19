@@ -7,7 +7,7 @@ export default function PostboxModal() {
   const { hidePostbox } = useContext(GlobalContext);
 
   return(
-    <Modal hide={() => hidePostbox()} animateModal={false} statusBarTranslucent={true}>
+    <Modal hide={() => hidePostbox()} animateModal={false} statusBarTranslucent={true} type='post'>
       <Postbox />
     </Modal>
   )

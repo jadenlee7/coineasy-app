@@ -11,7 +11,7 @@ import { GlobalContext } from "../contexts/GlobalContext";
 
 
 const Home = ({ navigation, route }) => {
-    const { posts, currentRoute, selectedCategory, setSelectedCategory,selectedNews,setSelectedNews, refreshing, refreshingBottom, onRefresh, showPostbox, loadMorePosts, category, setCategory, setScrollAnim, setOffsetAnim, setCurrentRoute } = useContext(GlobalContext);
+    const { user, orbis, posts, currentRoute, selectedCategory, setSelectedCategory,selectedNews,setSelectedNews, refreshing, refreshingBottom, onRefresh, showPostbox, loadMorePosts, category, setCategory, setScrollAnim, setOffsetAnim, setCurrentRoute, setListFollowers } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     useFocusEffect(
@@ -55,6 +55,15 @@ const Home = ({ navigation, route }) => {
     useEffect(() => {
         return () => backhandler.remove();
     }, [navigation])
+
+    // useEffect(() => {
+    //     fecthFollowers()
+    // }, [])
+    
+    // const fecthFollowers = async () => {
+    //     const { data, error } = await orbis.getProfileFollowers(user.did);
+    //     setListFollowers([...data])
+    // }
 
     return(
         <>

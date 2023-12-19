@@ -52,7 +52,6 @@ export default function Button({icon, iconRight, size, title, onPress, color, st
               :
                 <Text style={[tailwind('text-white font-semibold'), {fontSize: 12, lineHeight: 16}]}>{title}</Text>
               }
-
             </TouchableOpacity>
           );
         case "md":
@@ -65,6 +64,13 @@ export default function Button({icon, iconRight, size, title, onPress, color, st
             return(
                 <TouchableOpacity activeOpacity={0.9}  style={[tailwind('px-7 py-4 rounded-full items-center'), {backgroundColor: "#FF6B17", ...style}]} onPress={onPress}>
                     <Text style={tailwind('text-white font-semibold')}>{title}</Text>
+                </TouchableOpacity>
+            )
+        case "icon":
+            return(
+                <TouchableOpacity activeOpacity={0.6} style={[tailwind(`px-5 rounded-full border flex-row items-center ${loading ? "bg-slate-100" : "bg-white"}`), {backgroundColor: "#FF6B17", borderColor: "#FF6B17", paddingVertical: 10, ...style}]} onPress={onPress}>
+                    <Text style={[tailwind('text-main text-white font-semibold items-center'), {fontSize: 12, lineHeight: 16,}]}>{title}</Text>
+                    {iconRight}
                 </TouchableOpacity>
             )
         default:

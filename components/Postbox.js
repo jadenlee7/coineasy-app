@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, TouchableHighlight, TextInput, ActivityIndicator, Platform, Image, ScrollView, BackHandler, Dimensions, KeyboardAvoidingView } from 'react-native';
+import { Text, View, TouchableOpacity, TouchableHighlight, TextInput, ActivityIndicator, Platform, Image, ScrollView, BackHandler, Dimensions, KeyboardAvoidingView, Animated, Keyboard } from 'react-native';
 
 import mime from 'mime'
 import * as Haptics from 'expo-haptics';
@@ -21,7 +21,11 @@ let mentions = [];
 export default function Postbox({isReply = false}) {
     const { user, orbis, setShowConnectModal, hidePostbox, replyTo, repost, callbackPostShared, category, categories, editedPost, selectedCategory, selectedNews, currentRoute } = useContext(GlobalContext);
     const tailwind = useTailwind();
+
     const textInputRef = useRef();
+    const moveAnimation1 = useRef(new Animated.Value(0)).current;
+    const moveAnimation2 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
+
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
     const [imageLoading, setImageLoading] = useState(false);
@@ -32,9 +36,7 @@ export default function Postbox({isReply = false}) {
     const [mentionsBoxVis, setMentionsBoxVis] = useState(false);
     const [currentMention, setCurrentMention] = useState(null);
     const [listMedia, setListMedia] = useState([]);
-
     const [keepFocus, setKeepFocus] = useState(false)
-
     const [fullListFollow, setFullListFollow] = useState([])
 
     useEffect(() => {
@@ -321,7 +323,42 @@ export default function Postbox({isReply = false}) {
     }
 
     function openCategory() {
+        Haptics.selectionAsync();
+        Keyboard.dismiss()
+
+        Animated.parallel([
+            Animated.timing(moveAnimation1, {
+                toValue: -Dimensions.get('window').width,
+                duration: 300,
+                useNativeDriver: true
+            }),
+            Animated.timing(moveAnimation2, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true
+            })
+        ]).start();
+
         setCategoriesVis(true)
+    }
+    
+    function closeCategory() {
+        Haptics.selectionAsync();
+
+        Animated.parallel([
+            Animated.timing(moveAnimation1, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true
+            }),
+            Animated.timing(moveAnimation2, {
+                toValue: Dimensions.get('window').width,
+                duration: 300,
+                useNativeDriver: true
+            })
+        ]).start(() => {
+            setCategoriesVis(false)
+        });
     }
 
     function getWordAtCharCount(str, charCount) {
@@ -510,9 +547,25 @@ export default function Postbox({isReply = false}) {
     const Category = ({category, setCategoriesVis, setCategorySelected}) => {
 
         function select() {
-            setCategorySelected(category);
-            setCategoriesVis(false);
-            checkAccess(category);
+            Haptics.selectionAsync();
+
+            Animated.parallel([
+                Animated.timing(moveAnimation1, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: true
+                }),
+                Animated.timing(moveAnimation2, {
+                    toValue: Dimensions.get('window').width,
+                    duration: 300,
+                    useNativeDriver: true
+                })
+            ]).start(() => {
+                setCategorySelected(category);
+                setCategoriesVis(false);
+                checkAccess(category);
+                textInputRef.current?.focus()
+            });
         }
 
         return(
@@ -552,19 +605,113 @@ export default function Postbox({isReply = false}) {
     return (
         <>
             {/* {(repost != false && repost != null) ? ( */}
-            <ScrollView style={[tailwind('w-full'), {maxHeight: Dimensions.get('screen').height/2.2}]} keyboardShouldPersistTaps='handled'>
-                <View style={tailwind('flex flex-col items-start w-full p-5')}>
-                    {categoriesVis ?
-                        <>
-                            <View style={tailwind('flex flex-row w-full mb-1')}>
-                                <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md')]} activeOpacity={0.6} onPress={() => setCategoriesVis(false)}>
-                                    <>
-                                        <BackIcon />
-                                        <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
-                                    </>
-                                </TouchableOpacity>
+            <ScrollView style={[tailwind('w-full'), {maxHeight: Dimensions.get('screen').height,}]} keyboardShouldPersistTaps='handled'>
+                {/* <View style={tailwind('flex flex-col items-start w-full p-5')}> */}
+
+                    <Animated.View style={[tailwind('flex flex-col items-start w-full p-5'), {transform: [{ translateX: moveAnimation1 }]}]}>
+                        {/** Top bar with user details and cancel button */}
+                        <View style={tailwind('flex flex-row mb-10px w-full items-center')}>
+                            <View style={tailwind('flex-1')}>
+                                {replyTo ?
+                                    <View style={tailwind('flex flex-row items-center')}>
+                                        <UserPfp details={user} height={20} />
+                                        <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, lineHeight: 18, color: "#959595", marginLeft: 8, marginRight: 4}]}>Replying to</Text>
+                                        <Text style={{fontWeight: 'bold',marginTop: -5,}}>@</Text>
+                                        <Username details={replyTo.creator_details} style={{fontSize: 13}} />
+                                    </View>
+                                :
+                                    <User details={user} height={40} />
+                                }
                             </View>
-                            <View style={tailwind('flex flex-row w-full mb-6 flex-wrap mt-2')}>
+                            {!replyTo &&
+                                <Button
+                                    title={categorySelected?.content?.displayName ? categorySelected.content.displayName : categorySelected?.context?.displayName ? categorySelected.context.displayName : "Category"}
+                                    iconRight={<CaretDownIcon style={{color: 'white',marginLeft: 8,}} />}
+                                    color="orange"
+                                    size="icon"
+                                    onPress={() => openCategory()}
+                                />
+                            }
+
+                        </View>
+
+                        {(categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) &&
+                            <View style={tailwind('bg-slate-50 px-2 py-3 items-center mb-1 rounded-md flex-row justify-center w-full')} >
+                                {hasAccess ?
+                                    <UnlockIcon color="#959595" style={{marginRight: 2}} />
+                                :
+                                    <LockIcon color="#959595" style={{marginRight: 2}} />
+                                }
+
+                                <Text style={tailwind('text-secondary items-center ml-1')}>This category is gated.</Text>
+                            </View>
+                        }
+
+                        {replyTo && <View style={[tailwind('bg-slate-200 flex-1'), {width: 1, height:50,position: 'absolute',top: 45,left: 30}]} />}
+
+                        {hasAccess &&
+                            <TextInput
+                                ref={textInputRef}
+                                onChangeText={loading ? () => console.log("Disabled.") : handleTextChange}
+                                autoFocus={hasAccess}
+                                numberOfLines={1}
+                                value={message}
+                                //editable={!loading}
+                                style={[
+                                    tailwind('w-full'), 
+                                    { 
+                                        fontSize: 14,
+                                        fontFamily: message == "" && Platform.OS == 'ios' ? "GmarketMedium" : "GmarketMedium",
+                                        minHeight: 55,
+                                        lineHeight: 20,
+                                        paddingBottom: 10,
+                                        width:Dimensions.get('window').width,
+                                        marginTop: replyTo ? -5 : 0,
+                                        marginLeft: replyTo ? 25: 0,
+                                    }
+                                ]}
+                                placeholder={replyTo ? "Post your reply" : "Tell us about your story!" }
+                                placeholderTextColor="#64748b"
+                                multiline={true}
+                                onBlur={e => {if(keepFocus){e.target.focus()}}}
+                            />
+                        }
+
+                        {listMedia.length == 1 ? (
+                            <View style={tailwind("items-start")}>
+                                <Media media={listMedia[0]} deleteMedia={() => deleteMedia(0)}/>
+                            </View>
+                        ) : (
+                            <ScrollView
+                                horizontal={true}
+                                // style={{width: Dimensions.get('window').width}}
+                            >
+                                { listMedia.map((item, index) => {
+                                    return(
+                                        <Media media={item} deleteMedia={() => deleteMedia(index)} index={index}/>
+                                    )
+                                })}
+                                <View style={{width: 20}}/>
+                            </ScrollView>
+                        )}
+
+                        {/** Show repost details if user is replying to a post */}
+                        {(repost != false && repost != null) &&
+                            <Post post={repost} quotedPost={true} isRepost={true} style={tailwind('rounded-md border border-secondary p-4')} />
+                        }
+                    </Animated.View>
+
+                    {categoriesVis && 
+                        <Animated.View style={[tailwind('flex'), {transform: [{ translateX: moveAnimation2 }], padding: 12,marginTop: (categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) ? -195 : -145,}]}>
+                            <TouchableOpacity onPress={() => closeCategory()} style={{padding: 5,marginBottom: 0,}}>
+                                <Image
+                                    style={{width: 27,height: 27}}
+                                    resizeMode='contain'
+                                    source={require('../assets/back_button.png')}
+                                    defaultSource={require('../assets/back_button.png')}
+                                />
+                            </TouchableOpacity>
+                            <View style={[tailwind('flex flex-row w-full flex-wrap mt-2')]}>
                                 {/** Loop and display categories */}
                                 {categories.map((category, key) => {
                                     return (
@@ -572,90 +719,13 @@ export default function Postbox({isReply = false}) {
                                     );
                                 })}
                             </View>
-                        </>
-                    :
-                        <>
-                            {/** Top bar with user details and cancel button */}
-                            <View style={tailwind('flex flex-row mb-10px w-full items-center')}>
-                                <View style={tailwind('flex-1')}>
-                                    {replyTo ?
-                                        <View style={tailwind('flex flex-row items-center')}>
-                                            <UserPfp details={user} height={20} />
-                                            <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, lineHeight: 18, color: "#959595", marginLeft: 8, marginRight: 4}]}>Replying to</Text>
-                                            <Username details={replyTo.creator_details} style={{fontSize: 13}} />
-                                        </View>
-                                    :
-                                        <User details={user} height={40} />
-                                    }
-                                </View>
-                                {!replyTo &&
-                                    <Button
-                                        title={categorySelected?.content?.displayName ? categorySelected.content.displayName : categorySelected?.context?.displayName ? categorySelected.context.displayName : "Category"}
-                                        iconRight={<CaretDownIcon />}
-                                        color="white"
-                                        size="sm"
-                                        onPress={() => openCategory()}
-                                    />
-                                }
-                            </View>
-
-                            {(categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) &&
-                                <View style={tailwind('bg-slate-50 px-2 py-3 items-center mb-1 rounded-md flex-row justify-center w-full')} >
-                                    {hasAccess ?
-                                        <UnlockIcon color="#959595" style={{marginRight: 2}} />
-                                    :
-                                        <LockIcon color="#959595" style={{marginRight: 2}} />
-                                    }
-
-                                    <Text style={tailwind('text-secondary items-center ml-1')}>This category is gated.</Text>
-                                </View>
-                            }
-
-                            {hasAccess &&
-                                <TextInput
-                                    ref={textInputRef}
-                                    onChangeText={loading ? () => console.log("Disabled.") : handleTextChange}
-                                    autoFocus={hasAccess}
-                                    numberOfLines={1}
-                                    value={message}
-                                    //editable={!loading}
-                                    style={[tailwind('w-full'), { fontSize: 14, fontFamily: message == "" && Platform.OS == 'ios' ? "GmarketMediumV2" : "GmarketMedium", minHeight: 55, lineHeight: 20, paddingBottom: 10, width:Dimensions.get('window').width }]}
-                                    placeholder={replyTo ? "Post your reply" : "What's happening?" }
-                                    placeholderTextColor="#64748b"
-                                    multiline={true}
-                                    onBlur={e => {if(keepFocus){e.target.focus()}}}
-                                />
-                            }
-
-                            {listMedia.length == 1 ? (
-                                <View style={tailwind("items-start")}>
-                                    <Media media={listMedia[0]} deleteMedia={() => deleteMedia(0)}/>
-                                </View>
-                            ) : (
-                                <ScrollView
-                                    horizontal={true}
-                                    // style={{width: Dimensions.get('window').width}}
-                                >
-                                    { listMedia.map((item, index) => {
-                                        return(
-                                            <Media media={item} deleteMedia={() => deleteMedia(index)} index={index}/>
-                                        )
-                                    })}
-                                    <View style={{width: 20}}/>
-                                </ScrollView>
-                            )}
-
-                            {/** Show repost details if user is replying to a post */}
-                            {(repost != false && repost != null) &&
-                                <Post post={repost} quotedPost={true} isRepost={true} style={tailwind('rounded-md border border-secondary p-4')} />
-                            }
-                        </>
+                        </Animated.View>
                     }
 
-                </View>
+                {/* </View> */}
 
                 {/** Show mentions box if needed */}
-                {mentionsBoxVis == true &&
+                {mentionsBoxVis == true && !categoriesVis &&
                     <View style={[tailwind('flex flex-col pt-1 border-t border-secondary' ), { height: 120,width: Dimensions.get('window').width,}]}>
                         <UserLoop term={currentMention} mentionUser={mentionUser} />
                     </View>
@@ -663,36 +733,37 @@ export default function Postbox({isReply = false}) {
 
             </ScrollView>
             
+            {!categoriesVis && (
+                <KeyboardAvoidingView style={[tailwind('flex flex-row w-full p-3 px-5'), {position: 'absolute',bottom: 10}]} behavior='height'>
+                    {/** Image picker icon */}
+                    <View style={tailwind('flex flex-1 flex-row items-start')}>
+                        {imageLoading ?
+                            <ActivityIndicator size="small" color="#FF6B17" />
+                        :
+                            <TouchableOpacity onPress={() => selectPhoto()} style={{marginTop: 5}}>
+                                <ImagePickerIcon />
+                            </TouchableOpacity>
+                        }
 
-            <KeyboardAvoidingView style={[tailwind('flex flex-row w-full p-3 px-5'), {marginBottom: -25,}]} behavior='height'>
-                {/** Image picker icon */}
-                <View style={tailwind('flex flex-1 flex-row items-start')}>
-                    {imageLoading ?
-                        <ActivityIndicator size="small" color="#FF6B17" />
-                    :
-                        <TouchableOpacity onPress={() => selectPhoto()} style={{marginTop: 5}}>
-                            <ImagePickerIcon />
-                        </TouchableOpacity>
-                    }
+                        {cameraLoading ?
+                            <ActivityIndicator size="small" color="#FF6B17" style={{marginLeft: 17,}}/>
+                        :
+                            <TouchableOpacity onPress={() => {setKeepFocus(true);openCamera()}} style={{marginLeft: 15,}}>
+                                <CameraIcon />
+                            </TouchableOpacity>
+                        }
+                    </View>
 
-                    {cameraLoading ?
-                        <ActivityIndicator size="small" color="#FF6B17" style={{marginLeft: 17,}}/>
-                    :
-                        <TouchableOpacity onPress={() => {setKeepFocus(true);openCamera()}} style={{marginLeft: 15,}}>
-                            <CameraIcon />
-                        </TouchableOpacity>
-                    }
-                </View>
-
-                {/** Post button */}
-                <Button
-                    loading={loading}
-                    title={editedPost != null ? "Edit" : "Post"}
-                    color="orange"
-                    size="sm"
-                    onPress={editedPost ? () => edit() : () => send()}
-                />
-            </KeyboardAvoidingView>
+                    {/** Post button */}
+                    <Button
+                        loading={loading}
+                        title={editedPost != null ? "Edit" : "Post"}
+                        color="orange"
+                        size="sm"
+                        onPress={editedPost ? () => edit() : () => send()}
+                    />
+                </KeyboardAvoidingView>
+            )}
         </>
     )
 }

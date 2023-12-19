@@ -225,7 +225,7 @@ const PostDisplay = (props) => {
                 <View style={[tailwind('flex flex-row items-start')]}>
                     <View style={[tailwind('justify-center flex flex-col items-center')]}>
                         <TouchableHighlight onPress={() => showProfileDetails(post.creator_details.did)} underlayColor="transparent">
-                            <UserPfp height={37} details={post.creator_details} />
+                            <UserPfp height={37} details={post.creator_details} origin={'feed'}/>
                         </TouchableHighlight>
 
                         {verticalDivider && <View style={[tailwind('bg-slate-200 flex-1 mt-2 mb-1'), {width: 1}]} />}
