@@ -173,8 +173,8 @@ const Search = ({ navigation, route }) => {
                         // marginTop: Platform.OS == 'ios' ? -21 : -40,
                     }}
                     // resizeMode='contain'
-                    source={require('../assets/search_top_image_christmas.png')}
-                    defaultSource={require('../assets/search_top_image_christmas.png')}
+                    source={require('../assets/search_top_image.png')}
+                    defaultSource={require('../assets/search_top_image.png')}
                 />
             </Pressable>
 

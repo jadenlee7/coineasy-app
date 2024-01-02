@@ -6,10 +6,10 @@
     "owner": "useorbis",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon_christmas.png",
+    "icon": "./assets/icon_2024.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash_christmas.png",
+      "image": "./assets/splash_2024.png",
       "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },
@@ -18,7 +18,7 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "39",
+      "buildNumber": "40",
       "bundleIdentifier": "com.coineasy.coineasysocial",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow CoinEasy to access your photos. Photos will be used for profile picture and post with Media. This is not mandatory, user can leave the default profile picture. It can then be updated in the user Profil page. Example: You want to create a Post with a photo, we'll need to access your media library",
@@ -27,9 +27,9 @@
       }
     },
     "android": {
-      "versionCode": 16,
+      "versionCode": 17,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon_christmas.png",
+        "foregroundImage": "./assets/icon_2024.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
@@ -42,7 +42,7 @@
       "package": "com.coineasy.coineasy"
     },
     "web": {
-      "favicon": "./assets/favicon_christmas.png"
+      "favicon": "./assets/icon_2024.png"
     },
     "plugins": [
       [

@@ -15,9 +15,9 @@ const HeaderImage = (props) => {
                 height: statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight,
                 paddingTop: statusBarHeight,
             }}
-            source={require('../assets/HeaderBg_christmas.png')}
+            source={require('../assets/HeaderBg_2024.png')}
             // resizeMode="stretch"
-            defaultSource={require('../assets/HeaderBg_christmas.png')}
+            defaultSource={require('../assets/HeaderBg_2024.png')}
             height={statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight}
         />
     )

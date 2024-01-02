@@ -702,7 +702,7 @@ export default function Postbox({isReply = false}) {
                     </Animated.View>
 
                     {categoriesVis && 
-                        <Animated.View style={[tailwind('flex'), {transform: [{ translateX: moveAnimation2 }], padding: 12,marginTop: (categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) ? -195 : -145,}]}>
+                        <Animated.View style={[tailwind('flex'), {transform: [{ translateX: moveAnimation2 }], padding: 12,marginTop: (categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) ? -195 : listMedia.length != 0 ? -310 : -145,}]}>
                             <TouchableOpacity onPress={() => closeCategory()} style={{padding: 5,marginBottom: 0,}}>
                                 <Image
                                     style={{width: 27,height: 27}}
