@@ -660,7 +660,7 @@ export default function Postbox({isReply = false}) {
                                     tailwind('w-full'), 
                                     { 
                                         fontSize: 14,
-                                        fontFamily: message == "" && Platform.OS == 'ios' ? "GmarketMedium" : "GmarketMedium",
+                                        fontFamily: message == "" && Platform.OS == 'ios' ? "GmarketMedium_ios" : "GmarketMedium",
                                         minHeight: 55,
                                         lineHeight: 20,
                                         paddingBottom: 10,
