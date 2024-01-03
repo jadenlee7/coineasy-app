@@ -606,7 +606,6 @@ export default function Postbox({isReply = false}) {
         <>
             {/* {(repost != false && repost != null) ? ( */}
             <ScrollView style={[tailwind('w-full'), {maxHeight: Dimensions.get('screen').height,}]} keyboardShouldPersistTaps='handled'>
-                {/* <View style={tailwind('flex flex-col items-start w-full p-5')}> */}
 
                     <Animated.View style={[tailwind('flex flex-col items-start p-5'), {transform: [{ translateX: moveAnimation1 }]}]}>
                         {/** Top bar with user details and cancel button */}
@@ -649,7 +648,7 @@ export default function Postbox({isReply = false}) {
 
                         {replyTo && <View style={[tailwind('bg-slate-200 flex-1'), {width: 1, height:50,position: 'absolute',top: 45,left: 30}]} />}
 
-                        {hasAccess &&
+                        {hasAccess && !categoriesVis &&
                             <TextInput
                                 ref={textInputRef}
                                 onChangeText={loading ? () => console.log("Disabled.") : handleTextChange}
@@ -702,7 +701,16 @@ export default function Postbox({isReply = false}) {
                     </Animated.View>
 
                     {categoriesVis && 
-                        <Animated.View style={[tailwind('flex'), {transform: [{ translateX: moveAnimation2 }], padding: 12,marginTop: (categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) ? -195 : listMedia.length != 0 ? -310 : -145,}]}>
+                        <Animated.View style={[{
+                            transform: [{ translateX: moveAnimation2 }], 
+                            padding: 12,
+                            marginTop: 
+                                (categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) && listMedia.length != 0 ? -310 
+                                : (categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) && listMedia.length == 0 ? -140 
+                                : listMedia.length != 0 ? -260 
+                                : -90
+                            }]}
+                        >
                             <TouchableOpacity onPress={() => closeCategory()} style={{padding: 5,marginBottom: 0,}}>
                                 <Image
                                     style={{width: 27,height: 27}}
@@ -722,7 +730,6 @@ export default function Postbox({isReply = false}) {
                         </Animated.View>
                     }
 
-                {/* </View> */}
 
                 {/** Show mentions box if needed */}
                 {mentionsBoxVis == true && !categoriesVis &&
