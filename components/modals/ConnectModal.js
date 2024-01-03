@@ -148,7 +148,7 @@ export default function ConnectModal({hide}) {
   }
 
   return(
-    <Modal hide={hideModal}>
+    <Modal hide={hideModal} type='login'>
       <View style={[tailwind('flex flex-col w-full p-5 pb-12 ')]}>
         {loading ?
           <>

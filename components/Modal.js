@@ -6,6 +6,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue
 } from 'react-native-reanimated';
+import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
 export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24, type = null}) {
     const tailwind = useTailwind();
@@ -37,6 +38,9 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
         };
     });
 
+    const statusBarHeight = useStatusBarHeight();
+
+
     return(
         <KeyboardAvoidingView style={[tailwind('absolute h-full w-full'), { elevation: 50 }]} behavior={'height'}>
             {/** Background */}
@@ -59,12 +63,13 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     animatedModalStyle ,
                     {
                         paddingBottom: paddingBottom,
+                        top: statusBarHeight > 25 && type != 'notifications' && type != 'login' ? 65 + statusBarHeight : type != 'notifications' && type != 'login' ? 80 + statusBarHeight : 'auto',
                         width: (type == 'notifications' || type == 'deleteAccount')  ? '90%' : '100%',
                         height: 
                             type == 'notifications' ? 400 
                             : type == 'deleteAccount' && Platform.OS == 'ios' ? 470 
                             : type == 'deleteAccount' ? 500 
-                            : type == "post" ? '79.5%'
+                            // : type == "post" ? '79.5%'
                             : 'auto',
                         alignSelf: 'center',
                     }, 
