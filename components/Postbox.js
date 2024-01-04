@@ -703,7 +703,7 @@ export default function Postbox({isReply = false}) {
                     {categoriesVis && 
                         <Animated.View style={[{
                             transform: [{ translateX: moveAnimation2 }], 
-                            padding: 12,
+                            padding: 5,
                             marginTop: 
                                 (categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) && listMedia.length != 0 ? -310 
                                 : (categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) && listMedia.length == 0 ? -140 
@@ -711,7 +711,7 @@ export default function Postbox({isReply = false}) {
                                 : -90
                             }]}
                         >
-                            <TouchableOpacity onPress={() => closeCategory()} style={{padding: 5,marginBottom: 0,}}>
+                            <TouchableOpacity onPress={() => closeCategory()} style={{padding: 12,marginBottom: 0,}}>
                                 <Image
                                     style={{width: 27,height: 27}}
                                     resizeMode='contain'

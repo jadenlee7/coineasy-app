@@ -40,7 +40,6 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
 
     const statusBarHeight = useStatusBarHeight();
 
-
     return(
         <KeyboardAvoidingView style={[tailwind('absolute h-full w-full'), { elevation: 50 }]} behavior={'height'}>
             {/** Background */}
@@ -63,7 +62,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     animatedModalStyle ,
                     {
                         paddingBottom: paddingBottom,
-                        top: statusBarHeight > 25 && type != 'notifications' && type != 'login' ? 65 + statusBarHeight : type != 'notifications' && type != 'login' ? 80 + statusBarHeight : 'auto',
+                        top: statusBarHeight > 25 && type != 'notifications' && type != 'login' && type != 'postEdit' ? 65 + statusBarHeight : type != 'notifications' && type != 'login' && type != 'postEdit' ? 80 + statusBarHeight : 'auto',
                         width: (type == 'notifications' || type == 'deleteAccount')  ? '90%' : '100%',
                         height: 
                             type == 'notifications' ? 400 
