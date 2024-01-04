@@ -27,7 +27,10 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const [isFollowing, setIsFollowing] = useState(false);
     const [countPosts, setCountPosts] = useState("-");
     const [followLoading, setFollowLoading] = useState(false);
-    const [refreshing, setRefreshing] = React.useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const [listCommonFollowers, setListCommonFollowers ] = useState([]);
+    const [commonFollowLoading, setCommonFollowLoading] = useState(true)
+
 
     const [userInfo, setUserInfo] = useState(profile)
 
@@ -38,6 +41,32 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const navigation = useNavigation()
 
     useScrollToTop(scrollRef);
+
+    /** fetch common followers */
+    useEffect(() => {
+        type == 'selected' && getListCommonFollow();
+
+        /** Will fetch common followers between you and the profile you are visiting */
+        async function getListCommonFollow() {
+            setCommonFollowLoading(true)
+            const result_selected_followers = await orbis.getProfileFollowers(profile.did)
+            const result_own_followers = await orbis.getProfileFollowers(user.did)
+
+            let common_followers = []
+            result_selected_followers?.data.forEach(e => {
+                result_own_followers?.data.map(elt => {
+                    if(elt.details.did == e.details.did){
+                        if(e.details.profile){
+                            common_followers.push(e)
+                        }
+                    }
+                })
+            })
+
+            setListCommonFollowers(common_followers);
+            setCommonFollowLoading(false)
+        }
+    }, []);
 
     useEffect(() => {
 
@@ -176,6 +205,84 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     {/*<ProfileItem count="156" title="Oranges" />*/}
                 </View>
         
+                {!commonFollowLoading && type == "selected" && listCommonFollowers.length > 0 ? (
+                    <TouchableOpacity 
+                        style={{width: '100%', justifyContent: 'center', marginTop: 15,}}
+                        onPress={() => {Haptics.selectionAsync();navigation.navigate('FollowNavigation', {origin: "Followers", profile, type})}}
+                    >
+                        {listCommonFollowers.length < 3 ? (
+                            <View style={{flexDirection: 'row',alignItems: 'center',justifyContent: 'center',}}>
+                                {listCommonFollowers?.map(e => {
+                                    return (
+                                        <UserPfp details={e.details} height={27} key={Math.random()} style={{marginLeft: -13,}}/>
+                                    )
+                                })}
+
+                                <Text style={[tailwind('text-secondary'), {marginLeft: 10,fontSize: 11,}]}>Followed by </Text>
+
+                                {listCommonFollowers?.map((e, index) => {
+                                    if(index != listCommonFollowers.length-1){
+                                        return (
+                                            <View style={{flexDirection: 'row',alignItems: 'flex-start',height: 20}} key={Math.random()}>
+                                                <Text style={{fontWeight: 'bold',fontSize: 12,marginTop: 0,}}>{e.details.profile.username}</Text>
+                                                <Text style={[tailwind('text-secondary'),{fontSize: 11,}]}> and </Text>
+                                            </View>
+                                        )
+                                    }else{
+                                        return(
+                                            <Text style={{fontWeight: 'bold',fontSize: 13,height: 20,marginTop: -2,}} key={Math.random()}>{e.details.profile.username}</Text>
+                                        )
+                                    }
+                                })}
+                            </View>
+                        ) : (
+                            <View style={{flexDirection: 'row',alignItems: 'center',justifyContent: 'center',}}>
+                                {listCommonFollowers.map((e, index) => {
+                                    if(index < 2){
+                                        return (
+                                            <UserPfp details={e.details} height={27} key={Math.random()} style={{marginLeft: -13,}}/>
+                                        )
+                                    }else{
+                                        return(
+                                            <View style={{backgroundColor: '#d9d9d9', width: 27, height: 27, borderRadius: 15,alignItems: 'center',justifyContent: 'center',marginLeft: -13,}} key={Math.random()}>
+                                                <Text style={[tailwind('text-secondary'),{fontSize: 10,}]}>+{listCommonFollowers.length - 2}</Text>
+                                            </View>
+                                        )
+                                    }
+                                })}
+
+                                <View style={{flexDirection: 'row'}}>
+                                    <Text style={[tailwind('text-secondary'), {marginLeft: 5,fontSize: 10,}]}>
+                                        Followed by
+                                        {listCommonFollowers.map((e, index) => {
+                                            if(index == 0){
+                                                return(
+                                                    <Text key={Math.random()}>
+                                                        <Text style={{fontWeight: 'bold',fontSize: 11,marginBottom: -8,marginLeft: 3,color: 'black'}}> {e.details.profile?.username}</Text>
+                                                        <Text> and </Text>
+                                                    </Text>
+                                                )
+                                            }else if(index == 1){
+                                                return (
+                                                    <Text style={{fontWeight: 'bold',fontSize: 11,marginBottom: -5,marginLeft: 3,color: 'black'}} key={Math.random()}>{e.details.profile?.username}</Text>
+                                                )
+                                            }else{
+                                                return(
+                                                    <Text style={[tailwind('text-secondary'),{fontSize: 10,marginLeft: 3,}]} key={Math.random()}>{"\n"}and {listCommonFollowers.length - 2} other{listCommonFollowers.length - 2 > 1 ? 's' : ''}</Text>
+                                                )
+                                            }
+                                        })}
+                                    </Text>
+
+                                </View>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                ) : !commonFollowLoading && type == "selected" && !isFollowing && (
+                    <View style={[tailwind('flex px-4'), {paddingTop: 15,}]}>
+                        <Text style={[tailwind('text-secondary'), {fontSize: 11,textAlign:'center'}]}>You don't have any common followers.</Text>
+                    </View>
+                )}
         
                 {/** Edit CTA (only if user is connected) */}
                 {user.did == profile.did ?

@@ -31,7 +31,7 @@ const FollowNavigation = ({navigation, route}) => {
     const [list_own_followers, setList_own_followers ] = useState([]);
     const [list_own_following, setList_own_following ] = useState([]);
 
-    /** Check if user liked this post */
+    /** Fetch follows */
     useEffect(() => {
         getListFollow();
 
