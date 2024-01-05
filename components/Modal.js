@@ -7,6 +7,8 @@ import Animated, {
   useSharedValue
 } from 'react-native-reanimated';
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
+import * as Haptics from 'expo-haptics';
+
 
 export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24, type = null}) {
     const tailwind = useTailwind();
@@ -45,7 +47,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
             {/** Background */}
             <TouchableOpacity 
                 activeOpacity={0.63} 
-                onPress={() => hide()} 
+                onPress={() => {Haptics.selectionAsync();hide()}} 
                 style={[
                     tailwind('h-full w-full bg-slate-950'), 
                     {

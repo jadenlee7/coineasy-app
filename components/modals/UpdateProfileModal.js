@@ -1,160 +1,533 @@
-import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
-import { StyleSheet, Text, View, TextInput, TouchableHighlight, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useContext } from "react";
+import { Text, View, TextInput, TouchableHighlight, Platform, ActivityIndicator, TouchableOpacity, Image, Animated, Dimensions, Keyboard, ImageBackground } from 'react-native';
+
 import Modal from "../Modal";
 import Button from "../Button";
-import { UserPfp, Username } from "../User";
-import { useTailwind } from 'tailwind-rn';
+import { UserPfp } from "../User";
+import { CancelIcon, LinkIcon, LinktreeIcon, PlusIcon, SuccessIcon, TelegramIcon, TwitterIcon } from "../Icons";
 import { GlobalContext } from "../../contexts/GlobalContext";
-import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
-import { PlusIcon } from "../Icons";
+
 import mime from 'mime'
+import * as Haptics from 'expo-haptics';
+import { useTailwind } from 'tailwind-rn';
+import * as ImagePicker from 'expo-image-picker';
+import { showMessage } from "react-native-flash-message";
 
 export default function UpdateProfileModal({callback}) {
-  const { user, setUser, orbis, setUpdateProfileVis } = useContext(GlobalContext);
-  const tailwind = useTailwind();
-  const [saving, setSaving] = useState(false);
-  const [pfpLoading, setPfpLoading] = useState(false);
-  const [pfp, setPfp] = useState(user.profile?.pfp ? user.profile.pfp : "");
-  const [name, setName] = useState(user.profile?.username ? user.profile.username : "");
-  const [description, setDescription] = useState(user.profile?.description ? user.profile.description : "");
+    const { user, setUser, orbis, setUpdateProfileVis } = useContext(GlobalContext);
+    const tailwind = useTailwind();
 
-  async function saveProfile() {
-    if(pfpLoading) {
-      alert("Your profile picture is currently being uploaded.");
-      return;
+    const [saving, setSaving] = useState(false);
+    const [savingLink, setSavingLink] = useState(false);
+    const [pfpLoading, setPfpLoading] = useState(false);
+    const [pfp, setPfp] = useState(user.profile?.pfp ? user.profile.pfp : "");
+    const [name, setName] = useState(user.profile?.username ? user.profile.username : "");
+    const [description, setDescription] = useState(user.profile?.description ? user.profile.description : "");
+
+    const [showLinks, setShowLinks] = useState(false)
+    const [showDetailLink, setShowDetailLink] = useState(false)
+    const [linkType, setLinkType] = useState("")
+    const [linkText, setLinkText] = useState("")
+    const [titleText, setTitleText] = useState("")
+
+    const moveAnimation1 = useRef(new Animated.Value(0)).current;
+    const moveAnimation2 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
+    const moveAnimation3 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
+
+    let numberLink = 0
+    if(user.profile && user.profile.data){
+        typeof user.profile.data.external !== 'undefined' && user.profile.data.external != '' ? numberLink += 1 : null
+        typeof user.profile.data.twitter !== 'undefined' && user.profile.data.twitter != '' ? numberLink += 1 : null
+        typeof user.profile.data.telegram !== 'undefined' && user.profile.data.telegram != '' ? numberLink += 1 : null
     }
-    Haptics.selectionAsync();
-    setSaving(true);
-    let content = {
-      username: name,
-      description: description,
-      pfp: pfp
-    };
-    const res = await orbis.updateProfile(content);
-    console.log("res:", res);
-    let _user = {...user};
-    _user.profile = content;
-    setUser(_user);
-    setSaving(false);
-    setUpdateProfileVis(false);
 
-    if(callback) {
-      callback(_user);
+    const onBackSocialLinks = () => {
+        Haptics.selectionAsync();
+
+        Animated.parallel([
+            Animated.timing(moveAnimation1, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true
+            }),
+            Animated.timing(moveAnimation2, {
+                toValue: Dimensions.get('window').width,
+                duration: 300,
+                useNativeDriver: true
+            })
+        ]).start(() => {
+            setShowLinks(false)
+        });
     }
-  }
 
-  async function selectPhoto() {
-    try {
-      // No permissions request is necessary for launching the image library
-      let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: "Images",
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.25,
-      });
+    const showDetailSocialLink = (type) => {
+        Haptics.selectionAsync();
+        Keyboard.dismiss()
 
-      console.log(result);
+        Animated.parallel([
+            Animated.timing(moveAnimation2, {
+                toValue: -Dimensions.get('window').width,
+                duration: 300,
+                useNativeDriver: true
+            }),
+            Animated.timing(moveAnimation3, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true
+            })
+        ]).start(() => {
+            setLinkType(type)
+            setLinkText(type == 'External Link' ? user.profile?.data?.external : type == 'Twitter' ? user.profile?.data?.twitter : type == 'Telegram' ? user.profile?.data?.telegram : '')
+            setTitleText(type == 'External Link' ? user.profile?.data?.external_title : type == 'Twitter' ? user.profile?.data?.twitter_title : type == 'Telegram' ? user.profile?.data?.telegram_title : '')
+        });
 
-      if (!result.canceled) {
-        /** Handle Image picked */
-        let imagePath = result.assets[0].uri;
-        setPfpLoading(true);
-        setPfp(imagePath);
+        setShowDetailLink(true)
+    }
 
-        const imageType = mime.getType(imagePath)
+    const onBackDetailSocialLink = () => {
+        Haptics.selectionAsync();
 
-        /** Create file object */
-        let file = {
-          name: "test",
-          type: imageType,
-          uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
+        Animated.parallel([
+            Animated.timing(moveAnimation2, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true
+            }),
+            Animated.timing(moveAnimation3, {
+                toValue: Dimensions.get('window').width,
+                duration: 300,
+                useNativeDriver: true
+            })
+        ]).start(() => {
+            setLinkType('')
+            setTitleText('')
+            setShowDetailLink(false)
+        });
+    }
+
+    async function saveProfile() {
+        if(pfpLoading) {
+            alert("Your profile picture is currently being uploaded.");
+            return;
         }
+        Haptics.selectionAsync();
+        setSaving(true);
+        let content = {
+            username: name,
+            description: description,
+            pfp: pfp,
+            data: user.profile?.data ? user.profile.data : {}
+        };
+        const res = await orbis.updateProfile(content);
+        
+        let _user = {...user};
+        _user.profile = content;
+        setUser(_user);
+        setSaving(false);
+        setUpdateProfileVis(false);
 
-        /** Upload PFP to IPFS */
-        const resUpload = await orbis.uploadMedia(file);
-        console.log("res image upload:", resUpload);
-
-        /** Handle result returned by Orbis SDK */
-        if(resUpload.status == 200) {
-          let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
-          console.log("finalUrl:", finalUrl);
-          setPfp(finalUrl);
-          setPfpLoading(false);
-        } else {
-          alert("Error uploading profile picture.");
-          setPfpLoading(false);
+        if(callback) {
+            callback(_user);
         }
-
-      }
-    } catch(e) {
-      console.log("Error selecting photo:", e);
-      setPfpLoading(false);
     }
-  }
 
-  return(
-    <Modal hide={() => setUpdateProfileVis(false)} animateModal={false}>
-      <View style={tailwind('flex flex-row px-4 items-center w-full justify-center p-5')}>
-          <Button title="Cancel" color="white" size="sm" onPress={() => setUpdateProfileVis(false)} />
-          <View style={tailwind('flex flex-1')} />
-          <Button title="Save" color="orange" size="sm" loading={saving} onPress={saveProfile} />
-        </View>
+    async function saveLinks() {
+        Haptics.selectionAsync();
+        setSavingLink(true);
 
-      {/** Display profile details */}
-      <View style={tailwind('w-full flex flex-col items-center')}>
-        <TouchableHighlight style={tailwind('rounded-full')} onPress={() => selectPhoto()}>
-          <>
-            {pfpLoading ?
-              <>
-                <UserPfp details={{ profile: { pfp: pfp }}} height={50} />
-                <ActivityIndicator size="small" color="#000" style={[tailwind('absolute'), {bottom: 0, right: -5}]} />
-              </>
-            :
-              <>
-                <UserPfp details={{ profile: { pfp: pfp }}} height={50} />
-                <PlusIcon />
-              </>
+        if(titleText != '' && linkText == ''){
+            showMessage({
+                message: 'URL can not be empty with a title.',
+                type: "danger",
+                floating: true,
+                backgroundColor: "#3D3D3D",
+                icon: () => <CancelIcon style={{marginRight: 10,}}/>
+            });
+        }else{
+            let content = {
+                username: name,
+                description: description,
+                pfp: pfp,
+                data: user.profile?.data ? user.profile.data : {}
             }
 
-          </>
-        </TouchableHighlight>
-        <View style={tailwind('mt-1')}>
-          <Text style={[tailwind("text-slate-900 mt-2 w-2/3 text-center"), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketBold", lineHeight: 15 }]}>Tap to edit your profile picture</Text>
-        </View>
-      </View>
+            if(linkText){
+                linkType == 'External Link' ? content.data.external = linkText : null
+                linkType == 'Twitter' ? content.data.twitter = linkText : null
+                linkType == 'Telegram' ? content.data.telegram = linkText : null
+                
+                linkType == 'External Link' ? content.data.external_title = titleText : null
+                linkType == 'Twitter' ? content.data.twitter_title = titleText : null
+                linkType == 'Telegram' ? content.data.telegram_title = titleText : null
+            }
+    
+            const res = await orbis.updateProfile(content);
+            
+            let _user = {...user};
+            if(user.profile){
+                _user.profile.data = content.data;
+            }else{
+                _user.profile = {
+                    data: content.data
+                }
+            }
+            setUser(_user);
+            setSavingLink(false);
+    
+            if(callback) {
+                callback(_user);
+            }
 
-      {/** Form content */}
-      <View style={tailwind('w-full flex flex-col border-t border-secondary mt-4')}>
-        <InputGroup label="Name" placeholder="Your name" value={name} setValue={setName} autoFocus={true} />
-        <InputGroup label="Bio" placeholder="Enter a short description" value={description} setValue={setDescription} height={60} />
-      </View>
-    </Modal>
-  )
+            showMessage({
+                message: linkText && linkText != '' ? 'Social link added with success' : 'Social link removed with success',
+                type: "success",
+                floating: true,
+                backgroundColor: "#3D3D3D",
+                icon: () => <SuccessIcon style={{marginRight: 10,}}/>
+            });
+            onBackDetailSocialLink()
+        }
+    }
+
+    async function selectPhoto() {
+        try {
+            // No permissions request is necessary for launching the image library
+            let result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: "Images",
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.25,
+            });
+
+            if (!result.canceled) {
+                /** Handle Image picked */
+                let imagePath = result.assets[0].uri;
+                setPfpLoading(true);
+                setPfp(imagePath);
+
+                const imageType = mime.getType(imagePath)
+
+                /** Create file object */
+                let file = {
+                    name: "test",
+                    type: imageType,
+                    uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
+                }
+
+                /** Upload PFP to IPFS */
+                const resUpload = await orbis.uploadMedia(file);
+
+                /** Handle result returned by Orbis SDK */
+                if(resUpload.status == 200) {
+                    let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
+                    console.log("finalUrl:", finalUrl);
+                    setPfp(finalUrl);
+                    setPfpLoading(false);
+                } else {
+                    alert("Error uploading profile picture.");
+                    setPfpLoading(false);
+                }
+
+            }
+        } catch(e) {
+            console.log("Error selecting photo:", e);
+            setPfpLoading(false);
+        }
+    }
+
+
+
+    return(
+        <Modal hide={() => setUpdateProfileVis(false)} animateModal={false}>
+            <Animated.View style={{transform: [{ translateX: moveAnimation1 }],}}>
+                <View style={tailwind('flex flex-row px-4 items-center w-full justify-center p-5')}>
+                    <Button title="Cancel" color="white" size="sm" onPress={() => setUpdateProfileVis(false)} />
+                    <View style={tailwind('flex flex-1')} />
+                    <Button title="Save" color="orange" size="sm" loading={saving} onPress={saveProfile} />
+                </View>
+
+                {/** Display profile details */}
+                <View style={tailwind('w-full flex flex-col items-center')}>
+                    <TouchableHighlight style={tailwind('rounded-full')} onPress={() => selectPhoto()}>
+                        <>
+                            {pfpLoading ?
+                            <>
+                                <UserPfp details={{ profile: { pfp: pfp }}} height={50} />
+                                <ActivityIndicator size="small" color="#000" style={[tailwind('absolute'), {bottom: 0, right: -5}]} />
+                            </>
+                            :
+                            <>
+                                <UserPfp details={{ profile: { pfp: pfp }}} height={50} />
+                                <PlusIcon />
+                            </>
+                            }
+
+                        </>
+                    </TouchableHighlight>
+                    <View style={tailwind('mt-1')}>
+                        <Text style={[tailwind("text-slate-900 mt-2 w-2/3 text-center"), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketBold", lineHeight: 15 }]}>Tap to edit your profile picture</Text>
+                    </View>
+                </View>
+
+                {/** Form content */}
+                <View style={tailwind('w-full flex flex-col border-t border-secondary mt-4')}>
+                    <InputGroup label="Name" placeholder="Your name" value={name} setValue={setName} autoFocus={true} />
+                    <InputGroup label="Bio" placeholder="Enter a short description" value={description} setValue={setDescription} height={60} />
+                    <InputGroup label="Social links" placeholder="Add links" height={60} animation1={moveAnimation1} animation2={moveAnimation2} setShowLinks={setShowLinks}/>
+                </View>
+            </Animated.View>
+
+            {showLinks && (
+                <Animated.View style={{transform: [{ translateX: moveAnimation2 }],position: 'absolute',width: '100%',alignSelf: 'center',}}>
+                    <TouchableOpacity onPress={() => onBackSocialLinks()} style={{position: 'absolute',top: 20, left: 20,}}>
+                        <Image
+                            style={{width: 30,height: 30}}
+                            resizeMode='contain'
+                            source={require('../../assets/back_button.png')}
+                            defaultSource={require('../../assets/back_button.png')}
+                        />
+                    </TouchableOpacity>
+                    
+                    <View style={[tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3'), {marginTop: 40,}]}/>
+
+                    <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')} onPress={() => showDetailSocialLink('External Link')}>
+                        <Image
+                            style={{width: 30,height: 30}}
+                            resizeMode='contain'
+                            source={require('../../assets/add_icon.png')}
+                            defaultSource={require('../../assets/add_icon.png')}
+                        />
+                        <View style={[tailwind(''), {paddingTop: 6, marginLeft: 20,}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",}]}>Add external link</Text>
+                        </View>
+
+                        {user.profile?.data?.external && (
+                            <View style={{position: 'absolute', right:8, top: 12, width:30,height: 30,borderRadius: 15, backgroundColor: '#FF6B17',alignItems: 'center',justifyContent: 'center',}}>
+                                <Text>1</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')} onPress={() => showDetailSocialLink('Twitter')}>
+                        <TwitterIcon style={{marginLeft: 5,}}/>
+                        <View style={[tailwind(''), {paddingTop: 6, marginLeft: 20,}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",}]}>Twitter</Text>
+                        </View>
+                        {user.profile?.data?.twitter && (
+                            <View style={{position: 'absolute', right:8, top: 10, width:30,height: 30,borderRadius: 15, backgroundColor: '#FF6B17',alignItems: 'center',justifyContent: 'center',}}>
+                                <Text>1</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')} onPress={() => showDetailSocialLink('Telegram')}>
+                        <TelegramIcon style={{marginLeft: 6,}}/>
+                        <View style={[tailwind(''), {paddingTop: 6, marginLeft: 24,}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",}]}>Telegram</Text>
+                        </View>
+                        {user.profile?.data?.telegram && (
+                            <View style={{position: 'absolute', right:8, top: 10, width:30,height: 30,borderRadius: 15, backgroundColor: '#FF6B17',alignItems: 'center',justifyContent: 'center',}}>
+                                <Text>1</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+
+                    <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,marginTop: 30,width: 220,alignSelf: 'center',}}>My Social links</Text>
+
+                    {numberLink != 0 ? (
+                        <>
+                            <View style={[tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')]}/>
+
+                            <View>
+                                {user.profile?.data?.external && (
+                                    <View style={[tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')]}>
+                                        <LinkIcon />
+                                        {user.profile.data.external_title && <Text style={{marginLeft: 10,fontWeight: 'bold',}}>{user.profile.data.external_title} · </Text>}
+                                        <Text style={{marginLeft: user.profile.data.external_title ? 0 : 10,fontWeight: 'bold',}}>{user.profile.data.external}</Text>
+                                    </View>
+                                )}
+                                {user.profile?.data?.twitter && (
+                                    <View style={[tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')]}>
+                                        <TwitterIcon style={{marginLeft: 5,}}/>
+                                        {user.profile.data.twitter_title && <Text style={{marginLeft: 10,fontWeight: 'bold',}}>{user.profile.data.twitter_title} · </Text>}
+                                        <Text style={{marginLeft: user.profile.data.twitter_title ? 0 : 10,fontWeight: 'bold',}}>{user.profile.data.twitter}</Text>
+                                    </View>
+                                )}
+                                {user.profile?.data?.telegram && (
+                                    <View style={[tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')]}>
+                                        <TelegramIcon style={{marginLeft: 6,}}/>
+                                        {user.profile.data.telegram_title && <Text style={{marginLeft: 10,fontWeight: 'bold',}}>{user.profile.data.telegram_title} · </Text>}
+                                        <Text style={{marginLeft: user.profile.data.telegram_title ? 0 : 14,fontWeight: 'bold',}}>{user.profile.data.telegram}</Text>
+                                    </View>
+                                )}
+                            </View>
+                        </>
+                    ) : (
+                        <Text style={[tailwind('text-secondary'), {textAlign:'center',marginTop: 10,}]}>You don't have social links yet.</Text>
+                    )}
+
+                </Animated.View>
+            )}
+
+            {showDetailLink && (
+                <Animated.View style={{transform: [{ translateX: moveAnimation3 }],position: 'absolute',width: '100%',alignSelf: 'center',}}>
+                    <View style={tailwind('flex flex-row px-4 items-center w-full justify-center p-5')}>
+                        <Button title="Cancel" color="white" size="sm" onPress={() => onBackDetailSocialLink()} />
+                        <View style={tailwind('flex flex-1')} />
+
+                        <TouchableOpacity 
+                            activeOpacity={0.7}
+                            style={[
+                                tailwind(`px-5 rounded-full border ${savingLink ? "bg-main-400" : "bg-main"}`), 
+                                {
+                                    borderColor: "transparent",
+                                    paddingVertical: savingLink ? 3.2 : 5
+                                }
+                            ]}
+                            onPress={() => saveLinks()}
+                        >
+                            {savingLink ?
+                                <ActivityIndicator size="small" color="#fff" style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }} />
+                            :
+                                <Text style={[tailwind('text-white font-semibold'), {fontSize: 12, lineHeight: 16}]}>Save</Text>
+                            }
+                        </TouchableOpacity>
+
+                        {/* <Button title="Save" color="orange" size="md" loading={savingLink} onPress={saveLinks} /> */}
+                    </View>
+
+                    <View style={{flexDirection: 'row',justifyContent: 'center',alignItems: 'center',}}>
+                        {linkType == 'External Link' ? <LinkIcon /> : linkType == 'Twitter' ? <TwitterIcon /> : linkType == 'Telegram' ? <TelegramIcon /> : null} 
+                        <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,marginLeft: 5,}}>{linkType}</Text>
+                    </View>
+
+                    <View style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')}/>
+
+                    <View style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')}>
+                        <View style={[tailwind(''), {paddingTop: 6, width: 80, height: 30, justifyContent: 'center',}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",}]}>URL</Text>
+                        </View>
+
+                        <View style={{height: 30,flexDirection: 'row', alignItems: 'center',justifyContent: 'space-between',}}>
+                            <TextInput
+                                value={linkText}
+                                onChangeText={setLinkText}
+                                style={[tailwind('text-slate-900'), { fontSize: 12, fontFamily: "GmarketMedium",width:'90%'}]}
+                                placeholder={'Your URL'} 
+                            />
+
+                            {linkText != "" && (
+                                <TouchableOpacity onPress={() => setLinkText('')}>
+                                    <CancelIcon />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
+
+                    <View style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')}>
+                        <View style={[tailwind(''), {paddingTop: 6, width: 80, height: 30, justifyContent: 'center',}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",}]}>Title</Text>
+                        </View>
+
+                        <View style={[tailwind('flex flex-row flex-1'), {height: 30,alignItems: 'center',justifyContent: 'space-between',}]}>
+                            <TextInput
+                                value={titleText}
+                                onChangeText={setTitleText}
+                                style={[tailwind('text-slate-900'), { fontSize: 12, fontFamily: "GmarketMedium",width:'90%'}]}
+                                placeholder={'Your title (optionnal)'} 
+                            />
+
+                            {titleText != "" && (
+                                <TouchableOpacity onPress={() => setTitleText('')}>
+                                    <CancelIcon />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
+                </Animated.View>
+            )}
+
+        </Modal>
+    )
 }
 
-const InputGroup = ({label, height = 20, placeholder, value, setValue, autoFocus = false}) => {
-  const tailwind = useTailwind();
 
-  return(
-    <View style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')}>
+const InputGroup = ({label, height = 20, placeholder, value, setValue, autoFocus = false, animation1, animation2, setShowLinks}) => {
+    const { user } = useContext(GlobalContext);
+    const tailwind = useTailwind();
 
-      {/** Label */}
-      <View style={[tailwind(''), {width: 80, paddingTop: 5}]}>
-        <Text style={[tailwind("text-slate-900"), { fontSize: 12,fontFamily: "GmarketBold" }]}>{label}</Text>
-      </View>
 
-      {/** Input */}
-      <View style={tailwind('flex flex-row pb-1 flex-1')}>
-        <TextInput
-          autoFocus={autoFocus}
-          editable
-          value={value}
-          onChangeText={setValue}
-          multiline={height > 20 ? true : false}
-          style={[tailwind('text-slate-900 w-full'), { fontSize: 12, fontFamily: "GmarketMedium", paddingTop: height > 20 ? 2 : 4 }]}
-          placeholder={placeholder} />
-      </View>
-    </View>
-  )
+    const showSocialLinks = () => {
+        Haptics.selectionAsync();
+        Keyboard.dismiss()
+
+        Animated.parallel([
+            Animated.timing(animation1, {
+                toValue: -Dimensions.get('window').width,
+                duration: 300,
+                useNativeDriver: true
+            }),
+            Animated.timing(animation2, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true
+            })
+        ]).start();
+
+        setShowLinks(true)
+    }
+
+    let numberLink = 0
+    if(user.profile && user.profile.data){
+        typeof user.profile.data.external !== 'undefined' && user.profile.data.external != '' ? numberLink += 1 : null
+        typeof user.profile.data.twitter !== 'undefined' && user.profile.data.twitter != '' ? numberLink += 1 : null
+        typeof user.profile.data.telegram !== 'undefined' && user.profile.data.telegram != '' ? numberLink += 1 : null
+    }
+
+    return(
+        <View style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')}>
+
+            {/** Label */}
+            <View style={[tailwind(''), {width: 80,height:30,justifyContent: 'center',}]}>
+                <Text style={[tailwind("text-slate-900"), { fontSize: 12,fontFamily: "GmarketBold" }]}>{label}</Text>
+            </View>
+
+            {label == 'Social links' ? (
+                <TouchableOpacity 
+                    onPress={() => showSocialLinks()} 
+                    style={[tailwind('flex flex-row flex-1'), {alignItems: 'center',justifyContent: 'space-between',height: 30}]}
+                >
+
+                    {numberLink != 0 ? (
+                        <Text style={{fontSize: 12,fontFamily: "GmarketMedium",color: '#959595'}}>
+                            {numberLink}
+                        </Text>
+                    ) : (
+                        <Text style={{fontSize: 12,fontFamily: "GmarketMedium",color: '#959595',}}>Add links</Text>
+                    )}
+
+                    <TouchableOpacity onPress={() => showSocialLinks()}>
+                        <Image
+                            style={{width: 25,height: 25,}}
+                            resizeMode='contain'
+                            source={require('../../assets/continue_button.png')}
+                            defaultSource={require('../../assets/continue_button.png')}
+                        />
+                    </TouchableOpacity>
+                </TouchableOpacity>
+            ) : (
+                <View style={tailwind('flex flex-row pb-1 flex-1')}>
+                    <TextInput
+                        autoFocus={autoFocus}
+                        value={value}
+                        onChangeText={new_text => setValue(new_text)}
+                        multiline={height > 20 ? true : false}
+                        style={[tailwind('text-slate-900 w-full'), { fontSize: 12, fontFamily: "GmarketMedium", paddingTop: height > 20 ? 2 : 4 }]}
+                        placeholder={placeholder} 
+                    />
+                </View>
+            )}
+
+        </View>
+    )
 }

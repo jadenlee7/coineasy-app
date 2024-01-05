@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Linking, Alert, Image } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -11,7 +11,7 @@ import Button from "./Button";
 import { shortAddress } from "../utils";
 import { UserPfp, Username } from "./User";
 import { context } from '../utils/config.js';
-import { BackIcon, CheckIcon, CopyIconBadge, NotificationsIcon, SettingsIcon } from "./Icons";
+import { BackIcon, CheckIcon, CopyIconBadge, LinkIcon, NotificationsIcon, SettingsIcon, TelegramIcon, TwitterIcon } from "./Icons";
 import useDidToAddress from "../hooks/useDidToAddress";
 import { GlobalContext } from "../contexts/GlobalContext";
 import { useNavigation } from "@react-navigation/core";
@@ -53,8 +53,8 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
             const result_own_followers = await orbis.getProfileFollowers(user.did)
 
             let common_followers = []
-            result_selected_followers?.data.forEach(e => {
-                result_own_followers?.data.map(elt => {
+            result_selected_followers?.data?.forEach(e => {
+                result_own_followers?.data?.map(elt => {
                     if(elt.details.did == e.details.did){
                         if(e.details.profile){
                             common_followers.push(e)
@@ -139,6 +139,20 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         setRefreshing(false)
     }
 
+    const openLink = async (url) => {
+        Haptics.selectionAsync()
+
+        if(!url.toLowerCase().includes('http')){
+            url = 'http://'+url
+        }
+
+        try {
+            Linking.openURL(url)
+        } catch (error) {
+            Alert.alert('Could not open URL '+url)
+        }
+    }
+
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
             { type == 'selected' ? (
@@ -183,6 +197,42 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     {userInfo?.profile?.description &&
                         <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>{userInfo.profile.description}</Text>
                     }
+
+                    {userInfo?.profile?.data &&
+                        <View style={{alignItems: 'flex-start',marginBottom: 10,marginTop: 5,}}>
+                            {userInfo.profile.data.external && (
+                                <TouchableOpacity style={{flexDirection: 'row',alignItems: 'center',justifyContent: 'center',}} onPress={() => openLink(userInfo.profile.data.external)}>
+                                    <Image
+                                        style={{width: 25,height: 25,}}
+                                        resizeMode='contain'
+                                        source={require('../assets/link_icon.png')}
+                                        defaultSource={require('../assets/link_icon.png')}
+                                    />
+                                    <Text style={[{fontSize: 11.5, fontFamily: "GmarketMedium", marginLeft: 3,color: 'rgb(29, 155, 240)', }]}>
+                                        {userInfo.profile.data.external_title ? userInfo.profile.data.external_title : userInfo.profile.data.external}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                            {userInfo.profile.data.twitter && (
+                                <TouchableOpacity style={{flexDirection: 'row',alignItems: 'center',justifyContent: 'center',marginTop: 5,}} onPress={() => openLink(userInfo.profile.data.twitter)}>
+                                    <TwitterIcon />
+                                    <Text style={[{fontSize: 11.5, fontFamily: "GmarketMedium", marginLeft: 6,color: 'rgb(29, 155, 240)', }]}>
+                                        {userInfo.profile.data.twitter_title ? userInfo.profile.data.twitter_title : userInfo.profile.data.twitter}
+                                        </Text>
+                                </TouchableOpacity>
+                            )}
+                            {userInfo.profile.data.telegram && (
+                                <TouchableOpacity style={{flexDirection: 'row',alignItems: 'center',justifyContent: 'center',marginTop: 8,}} onPress={() => openLink(userInfo.profile.data.telegram)}>
+                                    <TelegramIcon />
+                                    <Text style={[{fontSize: 11.5, fontFamily: "GmarketMedium", marginLeft: 10,color: 'rgb(29, 155, 240)', }]}>
+                                        {userInfo.profile.data.telegram_title ? userInfo.profile.data.telegram_title : userInfo.profile.data.telegram}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+
+
+                        </View>
+                    }
                     
                     { type !== 'selected' && (
 
@@ -224,13 +274,13 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                                     if(index != listCommonFollowers.length-1){
                                         return (
                                             <View style={{flexDirection: 'row',alignItems: 'flex-start',height: 20}} key={Math.random()}>
-                                                <Text style={{fontWeight: 'bold',fontSize: 12,marginTop: 0,}}>{e.details.profile.username}</Text>
+                                                <Text style={{fontWeight: 'bold',fontSize: 12,marginTop: Platform.OS == 'ios' ? 2 : 0,}}>{e.details.profile.username}</Text>
                                                 <Text style={[tailwind('text-secondary'),{fontSize: 11,}]}> and </Text>
                                             </View>
                                         )
                                     }else{
                                         return(
-                                            <Text style={{fontWeight: 'bold',fontSize: 13,height: 20,marginTop: -2,}} key={Math.random()}>{e.details.profile.username}</Text>
+                                            <Text style={{fontWeight: 'bold',fontSize: 13,height: 20,marginTop: Platform.OS == 'ios' ? 2 : -2,}} key={Math.random()}>{e.details.profile.username}</Text>
                                         )
                                     }
                                 })}
@@ -251,7 +301,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                                     }
                                 })}
 
-                                <View style={{flexDirection: 'row'}}>
+                                <View style={{flexDirection: 'row',}}>
                                     <Text style={[tailwind('text-secondary'), {marginLeft: 5,fontSize: 10,}]}>
                                         Followed by
                                         {listCommonFollowers.map((e, index) => {
