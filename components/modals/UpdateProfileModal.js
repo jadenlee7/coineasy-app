@@ -297,8 +297,8 @@ export default function UpdateProfileModal({callback}) {
                             source={require('../../assets/add_icon.png')}
                             defaultSource={require('../../assets/add_icon.png')}
                         />
-                        <View style={[tailwind(''), {paddingTop: 6, marginLeft: 20,}]}>
-                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",}]}>Add external link</Text>
+                        <View style={[tailwind(''), {paddingTop: 6, marginLeft: 20,height: 30,}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",height: 30}]}>Add external link</Text>
                         </View>
 
                         {user.profile?.data?.external && (
@@ -310,8 +310,8 @@ export default function UpdateProfileModal({callback}) {
 
                     <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')} onPress={() => showDetailSocialLink('Twitter')}>
                         <TwitterIcon style={{marginLeft: 5,}}/>
-                        <View style={[tailwind(''), {paddingTop: 6, marginLeft: 20,}]}>
-                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",}]}>Twitter</Text>
+                        <View style={[tailwind(''), {paddingTop: 6, marginLeft: 20,height: 30}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",height: 30}]}>Twitter</Text>
                         </View>
                         {user.profile?.data?.twitter && (
                             <View style={{position: 'absolute', right:8, top: 10, width:30,height: 30,borderRadius: 15, backgroundColor: '#FF6B17',alignItems: 'center',justifyContent: 'center',}}>
@@ -322,8 +322,8 @@ export default function UpdateProfileModal({callback}) {
 
                     <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')} onPress={() => showDetailSocialLink('Telegram')}>
                         <TelegramIcon style={{marginLeft: 6,}}/>
-                        <View style={[tailwind(''), {paddingTop: 6, marginLeft: 24,}]}>
-                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",}]}>Telegram</Text>
+                        <View style={[tailwind(''), {paddingTop: 6, marginLeft: 24,height: 30}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",height: 30}]}>Telegram</Text>
                         </View>
                         {user.profile?.data?.telegram && (
                             <View style={{position: 'absolute', right:8, top: 10, width:30,height: 30,borderRadius: 15, backgroundColor: '#FF6B17',alignItems: 'center',justifyContent: 'center',}}>

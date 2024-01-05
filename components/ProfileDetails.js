@@ -292,7 +292,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                                         return (
                                             <UserPfp details={e.details} height={27} key={Math.random()} style={{marginLeft: -13,}}/>
                                         )
-                                    }else{
+                                    }else if(index == 2){
                                         return(
                                             <View style={{backgroundColor: '#d9d9d9', width: 27, height: 27, borderRadius: 15,alignItems: 'center',justifyContent: 'center',marginLeft: -13,}} key={Math.random()}>
                                                 <Text style={[tailwind('text-secondary'),{fontSize: 10,}]}>+{listCommonFollowers.length - 2}</Text>
@@ -316,7 +316,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                                                 return (
                                                     <Text style={{fontWeight: 'bold',fontSize: 11,marginBottom: -5,marginLeft: 3,color: 'black'}} key={Math.random()}>{e.details.profile?.username}</Text>
                                                 )
-                                            }else{
+                                            }else if(index == 2){
                                                 return(
                                                     <Text style={[tailwind('text-secondary'),{fontSize: 10,marginLeft: 3,}]} key={Math.random()}>{"\n"}and {listCommonFollowers.length - 2} other{listCommonFollowers.length - 2 > 1 ? 's' : ''}</Text>
                                                 )
