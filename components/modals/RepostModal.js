@@ -46,7 +46,7 @@ export default function RepostModal() {
     return null;
   } else {
     return(
-      <Modal hide={() => hideRepost()} animateModal={true} bottomDuration={200} bottomStart={-100}>
+      <Modal hide={() => hideRepost()} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
         <View style={[tailwind('flex flex-col w-full p-5')]}>
           {loading ?
             <>

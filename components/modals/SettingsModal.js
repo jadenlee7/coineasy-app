@@ -256,9 +256,9 @@ export default function SettingsModal() {
 
 
     return(
-        <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100}>
+        <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
             <View style={{height: 65, zIndex: 2}}>
-                {showBack ? (
+                {showBack && !showConfirm ? (
                     <TouchableOpacity onPress={() => onBackPress()} style={{padding: 20,marginBottom: 0,}}>
                         <Image
                             style={{width: 30,height: 30}}
@@ -267,7 +267,7 @@ export default function SettingsModal() {
                             defaultSource={require('../../assets/back_button.png')}
                         />
                     </TouchableOpacity>
-                ) : showBackBlockedUsers ? (
+                ) : showBackBlockedUsers && !showConfirm ? (
                     <TouchableOpacity onPress={() => onBackBlockedUsersPress()} style={{position: 'absolute',top: 20, left: 20,}}>
                         <Image
                             style={{width: 30,height: 30}}
@@ -276,7 +276,7 @@ export default function SettingsModal() {
                             defaultSource={require('../../assets/back_button.png')}
                         />
                     </TouchableOpacity>
-                ) : (
+                ) : !showConfirm && (
                     <View style={{padding: 20,marginBottom: 0,}}>
                         <Text style={[tailwind('text-primary'), {fontSize: Platform.OS == 'ios' ? 18 : 15,}]}>Settings & Privacy</Text>
                     </View>

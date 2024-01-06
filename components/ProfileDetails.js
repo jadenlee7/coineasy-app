@@ -56,7 +56,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
             result_selected_followers?.data?.forEach(e => {
                 result_own_followers?.data?.map(elt => {
                     if(elt.details.did == e.details.did){
-                        if(e.details.profile){
+                        if(e.details.profile && e.details.profile.username){
                             common_followers.push(e)
                         }
                     }

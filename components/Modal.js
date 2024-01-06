@@ -52,7 +52,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     tailwind('h-full w-full bg-slate-950'), 
                     {
                         opacity: 0.63,
-                        height: type == 'notifications' ? '100%' : Dimensions.get('window').height
+                        height: type == 'notifications' ? '100%' : Dimensions.get('window').height,
                     }
                 ]} 
             />
@@ -64,13 +64,15 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     animatedModalStyle ,
                     {
                         paddingBottom: paddingBottom,
-                        top: statusBarHeight > 25 && type != 'notifications' && type != 'login' && type != 'postEdit' ? 65 + statusBarHeight : type != 'notifications' && type != 'login' && type != 'postEdit' ? 80 + statusBarHeight : 'auto',
+                        top: 
+                            statusBarHeight > 25 && type != 'notifications' && type != 'small' && type != 'deleteAccount' ? 65 + statusBarHeight 
+                            : type != 'notifications' && type != 'small' && type != 'deleteAccount' ? 80 + statusBarHeight 
+                            : 'auto',
                         width: (type == 'notifications' || type == 'deleteAccount')  ? '90%' : '100%',
                         height: 
                             type == 'notifications' ? 400 
                             : type == 'deleteAccount' && Platform.OS == 'ios' ? 470 
                             : type == 'deleteAccount' ? 500 
-                            // : type == "post" ? '79.5%'
                             : 'auto',
                         alignSelf: 'center',
                     }, 

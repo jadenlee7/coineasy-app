@@ -206,7 +206,7 @@ export default function PostSettingsModal() {
         return null;
     } else if(editedPost.type == 'notCreator'){
         return(
-            <Modal hide={() => {hide();setSuccess(false);}} animateModal={true} bottomDuration={200} bottomStart={-100} type='postEdit'>
+            <Modal hide={() => {hide();setSuccess(false);}} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
                 <View 
                     style={[
                         tailwind('flex flex-col w-full'), 
