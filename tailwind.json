@@ -245,6 +245,11 @@
 			"justifyContent": "center"
 		}
 	},
+	"justify-between": {
+		"style": {
+			"justifyContent": "space-between"
+		}
+	},
 	"rounded": {
 		"style": {
 			"borderTopLeftRadius": 4,

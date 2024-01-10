@@ -3,10 +3,11 @@ import { GlobalContext } from "../../contexts/GlobalContext";
 import Modal from "../Modal";
 import Button from "../Button";
 import { useTailwind } from 'tailwind-rn';
-import { Keyboard, StyleSheet, Text, View, TouchableHighlight, ActivityIndicator, Image } from 'react-native';
+import { Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { context } from '../../utils/config.js';
 import { sleep } from '../../utils';
+import { QuoteIcon, RepostIcon, RepostIcon2 } from "../Icons.js";
 
 export default function RepostModal() {
   const { user, orbis, repost, setRepost, showPostbox, postboxVis } = useContext(GlobalContext);
@@ -66,9 +67,14 @@ export default function RepostModal() {
                 </View>
               :
                 <>
-                  {/** Repost CTA */}
-                  <Button color="rounded-gray" onPress={() => shareRepost()} title="Repost" style={{marginBottom: 10}} />
-                  <Button color="rounded-gray" onPress={() => quote()} title="Quote" style={{marginBottom: 40}} />
+                    <TouchableOpacity style={[tailwind('bg-slate-100 rounded-full py-4 px-5 flex-row items-center justify-between')]} onPress={() => shareRepost()} underlayColor="#f8fafc">
+                        <Text style={[tailwind('text-center'), { fontSize: 14, fontFamily: "GmarketBold", lineHeight: 18 }]}>Repost</Text>
+                        <RepostIcon2 />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[tailwind('bg-slate-100 rounded-full py-4 px-5 flex-row items-center justify-between'), {marginTop: 10,marginBottom: 50,}]} onPress={() => quote()} underlayColor="#f8fafc">
+                        <Text style={[tailwind('text-center'), { fontSize: 14, fontFamily: "GmarketBold", lineHeight: 18 }]}>Quote</Text>
+                        <QuoteIcon />
+                    </TouchableOpacity>
                 </>
               }
             </>

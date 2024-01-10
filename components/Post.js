@@ -18,7 +18,7 @@ import { GlobalContext } from "../contexts/GlobalContext";
 import { getDomainName, getShorterString } from '../utils';
 import useGetMentionedDid from "../hooks/useGetMentionedDid";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
-import { CommentIcon, InterpunctIcon, LikeIcon, RepostIcon, PostMenuIcon, CloseIcon } from "./Icons";
+import { CommentIcon, InterpunctIcon, LikeIcon, RepostIcon, PostMenuIcon, CloseIcon, RepostIcon2, CommentIcon2, LikeIcon2 } from "./Icons";
 
 const Post = React.memo((props) => {
   return <PostDisplay {...props}/>;
@@ -431,7 +431,7 @@ export const CommentCTA = ({post}) => {
   return(
     <TouchableOpacity activeOpacity={0.7} style={[tailwind('flex flex-row items-center rounded-md py-1 px-2')]} onPress={() => openReplyBox()} underlayColor="#f1f5f9">
       <>
-        <CommentIcon />
+        <CommentIcon2 />
         <Text style={[tailwind('text-slate-900 text-sm font-normal ml-1'), { fontFamily: "GmarketMedium" }]}>
           {post.count_replies}
         </Text>
@@ -487,9 +487,9 @@ export const LikeCTA = ({post}) => {
     <TouchableOpacity activeOpacity={0.7} style={[tailwind('flex flex-row items-center ml-1 rounded-md py-1 px-2')]} onPress={() => like()} underlayColor="#f1f5f9">
       <>
         {hasLiked ?
-          <LikeIcon active={true} />
+          <LikeIcon2 active={true} />
         :
-          <LikeIcon active={false} />
+          <LikeIcon2 active={false} />
         }
 
         <Text style={[tailwind('text-sm font-normal ml-1'), { fontFamily: "GmarketMedium", color: hasLiked ? "#FF6B17" : "#0F172A" }]}>
@@ -530,9 +530,9 @@ export const RepostCTA = ({post}) => {
     <TouchableOpacity activeOpacity={0.7} style={[tailwind('flex flex-row items-center ml-1 rounded-md py-1 px-2')]} onPress={() => showRepostPane()} underlayColor="#f1f5f9">
       <>
         {hasLiked ?
-          <RepostIcon color="#FF6B17" />
+          <RepostIcon2 color="#FF6B17" />
         :
-          <RepostIcon />
+          <RepostIcon2 />
         }
 
         <Text style={[tailwind('text-sm font-normal ml-1'), { fontFamily: "GmarketMedium", color: hasLiked ? "#FF6B17" : "#0F172A" }]}>
