@@ -58,7 +58,7 @@ const FollowNavigation = ({navigation, route}) => {
         }
     }, []);
 
-    const [tabIndex, setIndex] = useState(origin == 'Followers' ? 0 : 1);
+    const [tabIndex, setIndex] = useState(origin == 'Followers' ? 0 : origin == 'Following' ? 1 : 2);
     const routes = [
         {key:0, title: 'Followers'},
         {key:1, title: 'Following'},

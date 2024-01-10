@@ -316,7 +316,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 {!commonFollowLoading && type == "selected" && listCommonFollowers.length > 0 ? (
                     <TouchableOpacity 
                         style={{width: '100%', justifyContent: 'center', marginTop: 15,}}
-                        onPress={() => {Haptics.selectionAsync();navigation.navigate('FollowNavigation', {origin: "Followers", profile, type, listCommonFollowers})}}
+                        onPress={() => {Haptics.selectionAsync();navigation.navigate('FollowNavigation', {origin: "Mutual", profile, type, listCommonFollowers})}}
                     >
                         {listCommonFollowers.length < 3 ? (
                             <View style={{flexDirection: 'row',alignItems: 'center',justifyContent: 'center',}}>
