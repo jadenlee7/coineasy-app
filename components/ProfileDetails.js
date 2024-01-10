@@ -123,7 +123,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         const tailwind = useTailwind();
       
         { return title != 'Posts' ? (
-            <TouchableOpacity style={tailwind('flex flex-col flex-1 items-center')} onPress={() => {Haptics.selectionAsync();navigation.navigate('FollowNavigation', {origin: title, profile, type})}}>
+            <TouchableOpacity style={tailwind('flex flex-col flex-1 items-center')} onPress={() => {Haptics.selectionAsync();navigation.navigate('FollowNavigation', {origin: title, profile, type, listCommonFollowers})}}>
                 <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
                 <Text style={[tailwind(`text-slate-400 mt-2 text-center`), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{title}</Text>
             </TouchableOpacity>
@@ -316,7 +316,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 {!commonFollowLoading && type == "selected" && listCommonFollowers.length > 0 ? (
                     <TouchableOpacity 
                         style={{width: '100%', justifyContent: 'center', marginTop: 15,}}
-                        onPress={() => {Haptics.selectionAsync();navigation.navigate('FollowNavigation', {origin: "Followers", profile, type})}}
+                        onPress={() => {Haptics.selectionAsync();navigation.navigate('FollowNavigation', {origin: "Followers", profile, type, listCommonFollowers})}}
                     >
                         {listCommonFollowers.length < 3 ? (
                             <View style={{flexDirection: 'row',alignItems: 'center',justifyContent: 'center',}}>

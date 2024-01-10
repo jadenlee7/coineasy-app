@@ -10,6 +10,7 @@ import HeaderImage from "../../components/HeaderImage";
 
 import FollowerScreen from "./FollowerScreen";
 import FollowingScreen from "./FollowingScreen";
+import CommonFollowerScreen from "./CommonFollowerScreen";
 
 import { TabBar, TabView } from 'react-native-tab-view';
 
@@ -20,7 +21,7 @@ const FollowNavigation = ({navigation, route}) => {
     const { orbis, user } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
-    const { origin, profile, type } = route.params
+    const { origin, profile, type, listCommonFollowers } = route.params
 
     const [list_followers, setList_followers ] = useState([]);
     const [list_following, setList_following ] = useState([]);
@@ -61,6 +62,7 @@ const FollowNavigation = ({navigation, route}) => {
     const routes = [
         {key:0, title: 'Followers'},
         {key:1, title: 'Following'},
+        {key:2, title: 'Mutual'},
     ];
     
     const renderLabel = ({route, focused}) => { 
@@ -73,8 +75,9 @@ const FollowNavigation = ({navigation, route}) => {
         if(followLoading){
             return <ActivityIndicator style={{marginTop: 50}} size="small" color="#020617" />
         }else{
-            if(route.key == 0 ) return <FollowerScreen profile={profile} type={type} followers={list_followers} following={list_following} own_followers={list_own_followers} own_following={list_own_following}/>
-            if(route.key == 1 ) return <FollowingScreen profile={profile} type={type} followers={list_followers} following={list_following} own_followers={list_own_followers} own_following={list_own_following}/>
+            if(route.key == 0 ) return <FollowerScreen profile={profile} type={type} followers={list_followers} following={list_following} own_followers={list_own_followers} own_following={list_own_following} listCommonFollowers={listCommonFollowers}/>
+            if(route.key == 1 ) return <FollowingScreen profile={profile} type={type} followers={list_followers} following={list_following} own_followers={list_own_followers} own_following={list_own_following} listCommonFollowers={listCommonFollowers}/>
+            if(route.key == 2 ) return <CommonFollowerScreen profile={profile} own_followers={list_own_followers} listCommonFollowers={listCommonFollowers}/>
         }
     };
  
@@ -84,7 +87,7 @@ const FollowNavigation = ({navigation, route}) => {
                 {...props}
                 style={styles.tab}
                 renderLabel={renderLabel}
-                indicatorStyle={[styles.indicator, { width: IndicatorWidth, left: (Dimensions.get('window').width / 2 - IndicatorWidth) / 2 }]}
+                indicatorStyle={[styles.indicator, { width: IndicatorWidth, left: (Dimensions.get('window').width / 3 - IndicatorWidth) / 2 }]}
             />
         );
     };

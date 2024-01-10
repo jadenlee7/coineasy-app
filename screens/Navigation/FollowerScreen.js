@@ -168,7 +168,9 @@ const FollowerScreen = (props) => {
                     );
                 }) : (
                     <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md')} >
-                        <Text style={tailwind('text-secondary items-center ml-1')}>{type == 'Selected' ? profile.profile.username+' doesn\'t' : 'You don\'t'} have any followers.</Text>
+                        <Text style={tailwind('text-secondary items-center ml-1')}>
+                            {type == 'selected' && profile.profile ? profile.profile.username+' doesn\'t' : type == 'selected' ? 'This user doesn\'t' : 'You don\'t'} have any followers.
+                        </Text>
                     </View>
                 )}
             </ScrollView>

@@ -64,8 +64,8 @@ export default function Postbox({isReply = false}) {
         const result_followers = await orbis.getProfileFollowers(user.did);
         const result_following = await orbis.getProfileFollowing(user.did);
 
-        result_followers.data.forEach(e => e.details.type = 'Followers');
-        result_following.data.forEach(e => e.details.type = 'Following');
+        result_followers.data?.forEach(e => e.details.type = 'Followers');
+        result_following.data?.forEach(e => e.details.type = 'Following');
 
         const full_list_follow = [...result_followers.data, ...result_following.data];
         setFullListFollow([...full_list_follow])
