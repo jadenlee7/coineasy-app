@@ -151,15 +151,13 @@ export default function UpdateProfileModal({callback}) {
                 data: user.profile?.data ? user.profile.data : {}
             }
 
-            if(linkText){
-                linkType == 'External Link' ? content.data.external = linkText : null
-                linkType == 'Twitter' ? content.data.twitter = linkText : null
-                linkType == 'Telegram' ? content.data.telegram = linkText : null
-                
-                linkType == 'External Link' ? content.data.external_title = titleText : null
-                linkType == 'Twitter' ? content.data.twitter_title = titleText : null
-                linkType == 'Telegram' ? content.data.telegram_title = titleText : null
-            }
+            linkType == 'External Link' ? content.data.external = linkText : null
+            linkType == 'Twitter' ? content.data.twitter = linkText : null
+            linkType == 'Telegram' ? content.data.telegram = linkText : null
+            
+            linkType == 'External Link' ? content.data.external_title = titleText : null
+            linkType == 'Twitter' ? content.data.twitter_title = titleText : null
+            linkType == 'Telegram' ? content.data.telegram_title = titleText : null
     
             const res = await orbis.updateProfile(content);
             
@@ -290,81 +288,43 @@ export default function UpdateProfileModal({callback}) {
                     
                     <View style={[tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3'), {marginTop: 40,}]}/>
 
-                    <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')} onPress={() => showDetailSocialLink('External Link')}>
+                    <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')} onPress={() => showDetailSocialLink('External Link')}>
                         <Image
                             style={{width: 30,height: 30}}
                             resizeMode='contain'
                             source={require('../../assets/add_icon.png')}
                             defaultSource={require('../../assets/add_icon.png')}
                         />
-                        <View style={[tailwind(''), {paddingTop: 6, marginLeft: 20,height: 30,}]}>
-                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",height: 30}]}>Add external link</Text>
+                        <View style={[{marginLeft: 15,}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Add external link</Text>
                         </View>
 
-                        {user.profile?.data?.external && (
-                            <View style={{position: 'absolute', right:8, top: 12, width:30,height: 30,borderRadius: 15, backgroundColor: '#FF6B17',alignItems: 'center',justifyContent: 'center',}}>
-                                <Text>1</Text>
-                            </View>
+                        {user.profile.data.external && (
+                            <Text style={[tailwind('text-secondary'), {fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 3 : 5,}]}>{user.profile.data.external}</Text>
                         )}
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')} onPress={() => showDetailSocialLink('Twitter')}>
+                    <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')} onPress={() => showDetailSocialLink('Twitter')}>
                         <TwitterIcon style={{marginLeft: 5,}}/>
-                        <View style={[tailwind(''), {paddingTop: 6, marginLeft: 20,height: 30}]}>
-                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",height: 30}]}>Twitter</Text>
+                        <View style={[{marginLeft: 15}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Twitter</Text>
                         </View>
-                        {user.profile?.data?.twitter && (
-                            <View style={{position: 'absolute', right:8, top: 10, width:30,height: 30,borderRadius: 15, backgroundColor: '#FF6B17',alignItems: 'center',justifyContent: 'center',}}>
-                                <Text>1</Text>
-                            </View>
+
+                        {user.profile.data.twitter && (
+                            <Text style={[tailwind('text-secondary'), {fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 3 : 5,}]}>{user.profile.data.twitter}</Text>
                         )}
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')} onPress={() => showDetailSocialLink('Telegram')}>
+                    <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')} onPress={() => showDetailSocialLink('Telegram')}>
                         <TelegramIcon style={{marginLeft: 6,}}/>
-                        <View style={[tailwind(''), {paddingTop: 6, marginLeft: 24,height: 30}]}>
-                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",height: 30}]}>Telegram</Text>
+                        <View style={[{paddingTop: 6, marginLeft: 19,height: 30}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Telegram</Text>
                         </View>
-                        {user.profile?.data?.telegram && (
-                            <View style={{position: 'absolute', right:8, top: 10, width:30,height: 30,borderRadius: 15, backgroundColor: '#FF6B17',alignItems: 'center',justifyContent: 'center',}}>
-                                <Text>1</Text>
-                            </View>
+
+                        {user.profile.data.telegram && (
+                            <Text style={[tailwind('text-secondary'), {fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 5 : 10,}]}>{user.profile.data.telegram}</Text>
                         )}
                     </TouchableOpacity>
-
-                    <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,marginTop: 30,width: 220,alignSelf: 'center',}}>My Social links</Text>
-
-                    {numberLink != 0 ? (
-                        <>
-                            <View style={[tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')]}/>
-
-                            <View>
-                                {user.profile?.data?.external && (
-                                    <View style={[tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')]}>
-                                        <LinkIcon />
-                                        {user.profile.data.external_title && <Text style={{marginLeft: 10,fontWeight: 'bold',}}>{user.profile.data.external_title} · </Text>}
-                                        <Text style={{marginLeft: user.profile.data.external_title ? 0 : 10,fontWeight: 'bold',}}>{user.profile.data.external}</Text>
-                                    </View>
-                                )}
-                                {user.profile?.data?.twitter && (
-                                    <View style={[tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')]}>
-                                        <TwitterIcon style={{marginLeft: 5,}}/>
-                                        {user.profile.data.twitter_title && <Text style={{marginLeft: 10,fontWeight: 'bold',}}>{user.profile.data.twitter_title} · </Text>}
-                                        <Text style={{marginLeft: user.profile.data.twitter_title ? 0 : 10,fontWeight: 'bold',}}>{user.profile.data.twitter}</Text>
-                                    </View>
-                                )}
-                                {user.profile?.data?.telegram && (
-                                    <View style={[tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')]}>
-                                        <TelegramIcon style={{marginLeft: 6,}}/>
-                                        {user.profile.data.telegram_title && <Text style={{marginLeft: 10,fontWeight: 'bold',}}>{user.profile.data.telegram_title} · </Text>}
-                                        <Text style={{marginLeft: user.profile.data.telegram_title ? 0 : 14,fontWeight: 'bold',}}>{user.profile.data.telegram}</Text>
-                                    </View>
-                                )}
-                            </View>
-                        </>
-                    ) : (
-                        <Text style={[tailwind('text-secondary'), {textAlign:'center',marginTop: 10,}]}>You don't have social links yet.</Text>
-                    )}
 
                 </Animated.View>
             )}
@@ -392,8 +352,6 @@ export default function UpdateProfileModal({callback}) {
                                 <Text style={[tailwind('text-white font-semibold'), {fontSize: 12, lineHeight: 16}]}>Save</Text>
                             }
                         </TouchableOpacity>
-
-                        {/* <Button title="Save" color="orange" size="md" loading={savingLink} onPress={saveLinks} /> */}
                     </View>
 
                     <View style={{flexDirection: 'row',justifyContent: 'center',alignItems: 'center',}}>
@@ -403,46 +361,44 @@ export default function UpdateProfileModal({callback}) {
 
                     <View style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')}/>
 
+                    {/* User inform his url */}
                     <View style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')}>
-                        <View style={[tailwind(''), {paddingTop: 6, width: 80, height: 30, justifyContent: 'center',}]}>
-                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",}]}>URL</Text>
+                        <View style={[tailwind(''), {width: 50,height: 30,justifyContent: 'center'}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>URL</Text>
                         </View>
 
-                        <View style={{height: 30,flexDirection: 'row', alignItems: 'center',justifyContent: 'space-between',}}>
-                            <TextInput
-                                value={linkText}
-                                onChangeText={setLinkText}
-                                style={[tailwind('text-slate-900'), { fontSize: 12, fontFamily: "GmarketMedium",width:'90%'}]}
-                                placeholder={'Your URL'} 
-                            />
+                        <TextInput
+                            value={linkText}
+                            onChangeText={setLinkText}
+                            style={[tailwind('text-slate-900'), { fontSize: 12,width:'78%',height:30,fontFamily: 'GmarketMedium',}]}
+                            placeholder={'Your URL'} 
+                        />
 
-                            {linkText != "" && (
-                                <TouchableOpacity onPress={() => setLinkText('')}>
-                                    <CancelIcon />
-                                </TouchableOpacity>
-                            )}
-                        </View>
+                        {linkText != "" && (
+                            <TouchableOpacity onPress={() => setLinkText('')} style={{position: 'absolute',right: 10,top: 15}}>
+                                <CancelIcon />
+                            </TouchableOpacity>
+                        )}
                     </View>
 
+                    {/* User inform his title */}
                     <View style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')}>
-                        <View style={[tailwind(''), {paddingTop: 6, width: 80, height: 30, justifyContent: 'center',}]}>
-                            <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontFamily: "GmarketBold",}]}>Title</Text>
+                        <View style={[tailwind(''), {width: 50,height: 30,justifyContent: 'center'}]}>
+                            <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Title</Text>
                         </View>
 
-                        <View style={[tailwind('flex flex-row flex-1'), {height: 30,alignItems: 'center',justifyContent: 'space-between',}]}>
-                            <TextInput
-                                value={titleText}
-                                onChangeText={setTitleText}
-                                style={[tailwind('text-slate-900'), { fontSize: 12, fontFamily: "GmarketMedium",width:'90%'}]}
-                                placeholder={'Your title (optionnal)'} 
-                            />
+                        <TextInput
+                            value={titleText}
+                            onChangeText={setTitleText}
+                            style={[tailwind('text-slate-900'), { fontSize: 12,width:'78%',height:30,fontFamily: 'GmarketMedium',}]}
+                            placeholder={'Your title (optionnal)'} 
+                        />
 
-                            {titleText != "" && (
-                                <TouchableOpacity onPress={() => setTitleText('')}>
-                                    <CancelIcon />
-                                </TouchableOpacity>
-                            )}
-                        </View>
+                        {titleText != "" && (
+                            <TouchableOpacity onPress={() => setTitleText('')} style={{position: 'absolute',right: 10,top: 15}}>
+                                <CancelIcon />
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </Animated.View>
             )}
@@ -488,7 +444,7 @@ const InputGroup = ({label, height = 20, placeholder, value, setValue, autoFocus
         <View style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')}>
 
             {/** Label */}
-            <View style={[tailwind(''), {width: 80,height:30,justifyContent: 'center',}]}>
+            <View style={[tailwind(''), {width: 80,height:30,justifyContent: 'center'}]}>
                 <Text style={[tailwind("text-slate-900"), { fontSize: 12,fontFamily: "GmarketBold" }]}>{label}</Text>
             </View>
 
@@ -516,14 +472,14 @@ const InputGroup = ({label, height = 20, placeholder, value, setValue, autoFocus
                     </TouchableOpacity>
                 </TouchableOpacity>
             ) : (
-                <View style={tailwind('flex flex-row pb-1 flex-1')}>
+                <View style={[tailwind('flex flex-row flex-1'), {alignItems: 'center',height: 30}]}>
                     <TextInput
                         autoFocus={autoFocus}
                         value={value}
                         onChangeText={new_text => setValue(new_text)}
                         multiline={height > 20 ? true : false}
-                        style={[tailwind('text-slate-900 w-full'), { fontSize: 12, fontFamily: "GmarketMedium", paddingTop: height > 20 ? 2 : 4 }]}
-                        placeholder={placeholder} 
+                        style={[tailwind('text-slate-900 w-full'), {fontSize: 12, fontFamily: "GmarketMedium", textAlignVertical:'center'}]}
+                        placeholder={placeholder}
                     />
                 </View>
             )}

@@ -259,16 +259,18 @@ const PostDisplay = (props) => {
                                 }
                             </View>
 
-                            {/** Show post menu if user is creator */}
-                            {user?.did == post.creator ?
-                                <TouchableOpacity onPress={() => setEditedPost({value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost})} style={[tailwind('flex flex-row items-center rounded-md py-2 px-1 -mr-1')]}>
-                                    <PostMenuIcon />
-                                </TouchableOpacity>
-                                :
-                                <TouchableOpacity onPress={() => setEditedPost({type:'notCreator',value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost})} style={[tailwind('flex flex-row items-center rounded-md py-2 px-1 -mr-1')]}>
-                                    <PostMenuIcon />
-                                </TouchableOpacity>
-                            }
+                            {/** Show post menu */}
+                            <TouchableOpacity 
+                                onPress={() => 
+                                    {user?.did == post.creator ? 
+                                        setEditedPost({value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost}) 
+                                        : setEditedPost({type:'notCreator',value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost})
+                                    }
+                                } 
+                                style={[tailwind('flex flex-row items-center rounded-md py-2 px-1 -mr-1')]}
+                            >
+                                <PostMenuIcon />
+                            </TouchableOpacity>
                         </View>
 
                         {/** Post content */}

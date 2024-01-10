@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Linking, Alert, Image } from 'react-native';
+import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Linking, Alert, Image, Dimensions } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -30,15 +30,22 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const [refreshing, setRefreshing] = useState(false);
     const [listCommonFollowers, setListCommonFollowers ] = useState([]);
     const [commonFollowLoading, setCommonFollowLoading] = useState(true)
-
-
     const [userInfo, setUserInfo] = useState(profile)
 
     const { address } = useDidToAddress(profile?.did);
 
     const scrollRef = useRef()
-
     const navigation = useNavigation()
+
+
+    let countLink = 0
+    if(userInfo.profile && userInfo.profile.data){
+        typeof userInfo.profile.data.external !== 'undefined' && userInfo.profile.data.external != '' ? countLink += 1 : null
+        typeof userInfo.profile.data.twitter !== 'undefined' && userInfo.profile.data.twitter != '' ? countLink += 1 : null
+        typeof userInfo.profile.data.telegram !== 'undefined' && userInfo.profile.data.telegram != '' ? countLink += 1 : null
+    }
+
+    const [numberLink, setNumberLink] = useState(countLink)
 
     useScrollToTop(scrollRef);
 
@@ -134,6 +141,14 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         const { data, error } = await orbis.getProfile(profile.did);
         setUserInfo(data.details)
 
+        let countLink = 0
+        if(data.details.profile && data.details.profile.data){
+            typeof data.details.profile.data.external !== 'undefined' && data.details.profile.data.external != '' ? countLink += 1 : null
+            typeof data.details.profile.data.twitter !== 'undefined' && data.details.profile.data.twitter != '' ? countLink += 1 : null
+            typeof data.details.profile.data.telegram !== 'undefined' && data.details.profile.data.telegram != '' ? countLink += 1 : null
+        }
+        setNumberLink(countLink)
+
         getCountPosts()
 
         setRefreshing(false)
@@ -199,33 +214,76 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     }
 
                     {userInfo?.profile?.data &&
-                        <View style={{alignItems: 'flex-start',marginBottom: 10,marginTop: 5,}}>
+                        <View style={{marginBottom: 10,marginTop: 5,flexDirection:'row',}}>
                             {userInfo.profile.data.external && (
-                                <TouchableOpacity style={{flexDirection: 'row',alignItems: 'center',justifyContent: 'center',}} onPress={() => openLink(userInfo.profile.data.external)}>
+                                <TouchableOpacity 
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: 
+                                            !userInfo.profile.data.external_title && countLink == 3 ? '30%' 
+                                            : countLink == 3 ? '30%' 
+                                            : countLink == 2 && !userInfo.profile.data.external_title ? '50%' 
+                                            : countLink == 2 && userInfo.profile.data.external_title ? '30%' 
+                                            : 'auto',
+                                        marginLeft: countLink == 3 && userInfo.profile.data.twitter_title && userInfo.profile.data.telegram_title ? 30 : 0,
+                                    }} 
+                                    onPress={() => openLink(userInfo.profile.data.external)}
+                                >
                                     <Image
                                         style={{width: 25,height: 25,}}
                                         resizeMode='contain'
                                         source={require('../assets/link_icon.png')}
                                         defaultSource={require('../assets/link_icon.png')}
                                     />
-                                    <Text style={[{fontSize: 11.5, fontFamily: "GmarketMedium", marginLeft: 3,color: 'rgb(29, 155, 240)', }]}>
-                                        {userInfo.profile.data.external_title ? userInfo.profile.data.external_title : userInfo.profile.data.external}
+                                    <Text style={[{marginLeft: 3,fontWeight: 'bold',width: '70%'}]} numberOfLines={1}>
+                                        {userInfo.profile.data.external_title ? 
+                                            userInfo.profile.data.external_title 
+                                            : userInfo.profile.data.external.replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '').replace('Http://www.', '').replace('Https://www.', '').replace('Http://', '').replace('Https://', '')}
                                     </Text>
                                 </TouchableOpacity>
                             )}
                             {userInfo.profile.data.twitter && (
-                                <TouchableOpacity style={{flexDirection: 'row',alignItems: 'center',justifyContent: 'center',marginTop: 5,}} onPress={() => openLink(userInfo.profile.data.twitter)}>
+                                <TouchableOpacity 
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width:
+                                            !userInfo.profile.data.twitter_title && countLink == 3 ? '27%' 
+                                            : countLink == 2 && !userInfo.profile.data.twitter_title ? '50%' 
+                                            : countLink == 2 && userInfo.profile.data.twitter_title ? '30%' 
+                                            : 'auto',
+                                        marginLeft: userInfo.profile.data.external && Platform.OS == 'ios' ? 20 : userInfo.profile.data.external ? 10 : 0,
+                                    }} 
+                                    onPress={() => openLink(userInfo.profile.data.twitter)}
+                                >
                                     <TwitterIcon />
-                                    <Text style={[{fontSize: 11.5, fontFamily: "GmarketMedium", marginLeft: 6,color: 'rgb(29, 155, 240)', }]}>
-                                        {userInfo.profile.data.twitter_title ? userInfo.profile.data.twitter_title : userInfo.profile.data.twitter}
+                                    <Text style={[{marginLeft: 3, fontWeight: 'bold',}]} numberOfLines={1}>
+                                        {userInfo.profile.data.twitter_title ? 
+                                            userInfo.profile.data.twitter_title 
+                                            : userInfo.profile.data.twitter.toLowerCase().replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '')}
                                         </Text>
                                 </TouchableOpacity>
                             )}
                             {userInfo.profile.data.telegram && (
-                                <TouchableOpacity style={{flexDirection: 'row',alignItems: 'center',justifyContent: 'center',marginTop: 8,}} onPress={() => openLink(userInfo.profile.data.telegram)}>
+                                <TouchableOpacity 
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        width: 
+                                            !userInfo.profile.data.telegram_title && countLink == 3 && Platform.OS == 'ios' ? '27%' 
+                                            : '27%',
+                                        marginLeft: userInfo.profile.data.twitter && Platform.OS == 'ios' ? 20 : userInfo.profile.data.twitter ? 15 : 0,
+                                    }} 
+                                    onPress={() => openLink(userInfo.profile.data.telegram)}
+                                >
                                     <TelegramIcon />
-                                    <Text style={[{fontSize: 11.5, fontFamily: "GmarketMedium", marginLeft: 10,color: 'rgb(29, 155, 240)', }]}>
-                                        {userInfo.profile.data.telegram_title ? userInfo.profile.data.telegram_title : userInfo.profile.data.telegram}
+                                    <Text style={[{marginLeft: 7,fontWeight: 'bold',width:'70%'}]} numberOfLines={1}>
+                                        {userInfo.profile.data.telegram_title ? 
+                                            userInfo.profile.data.telegram_title 
+                                            : userInfo.profile.data.telegram.toLowerCase().replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '')}
                                     </Text>
                                 </TouchableOpacity>
                             )}
