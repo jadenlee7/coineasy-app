@@ -719,7 +719,7 @@ export default function Postbox({isReply = false}) {
                                     defaultSource={require('../assets/back_button.png')}
                                 />
                             </TouchableOpacity>
-                            <View style={[tailwind('flex flex-row w-full flex-wrap mt-2')]}>
+                            <View style={[tailwind('flex flex-row w-full flex-wrap mt-2'), {marginLeft: 3,}]}>
                                 {/** Loop and display categories */}
                                 {categories.map((category, key) => {
                                     return (
