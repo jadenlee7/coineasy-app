@@ -144,6 +144,7 @@ export default function UpdateProfileModal({callback}) {
                 backgroundColor: "#3D3D3D",
                 icon: () => <CancelIcon style={{marginRight: 10,}}/>
             });
+            setSavingLink(false);
         }else{
             let content = {
                 username: name,
@@ -188,7 +189,7 @@ export default function UpdateProfileModal({callback}) {
                 if(callback) {
                     callback(_user);
                 }
-                
+
                 showMessage({
                     message: linkText && linkText != '' ? 'Social link added with success' : 'Social link removed with success',
                     type: "success",
@@ -311,7 +312,7 @@ export default function UpdateProfileModal({callback}) {
                             <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Add external link</Text>
                         </View>
 
-                        {user.profile.data?.external && (
+                        {user.profile?.data?.external && (
                             <Text numberOfLines={1} style={[tailwind('text-secondary'), {flex: 1,fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 3 : 5,}]}>{user.profile.data.external}</Text>
                         )}
                     </TouchableOpacity>
@@ -322,7 +323,7 @@ export default function UpdateProfileModal({callback}) {
                             <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Twitter</Text>
                         </View>
 
-                        {user.profile.data?.twitter && (
+                        {user.profile?.data?.twitter && (
                             <Text numberOfLines={1} style={[tailwind('text-secondary'), {flex: 1,fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 3 : 5,}]}>{user.profile.data.twitter}</Text>
                         )}
                     </TouchableOpacity>
@@ -333,7 +334,7 @@ export default function UpdateProfileModal({callback}) {
                             <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Telegram</Text>
                         </View>
 
-                        {user.profile.data?.telegram && (
+                        {user.profile?.data?.telegram && (
                             <Text numberOfLines={1} style={[tailwind('text-secondary'), {flex: 1,fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 5 : 10,}]}>{user.profile.data.telegram}</Text>
                         )}
                     </TouchableOpacity>

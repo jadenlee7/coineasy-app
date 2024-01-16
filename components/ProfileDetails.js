@@ -236,7 +236,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                                         source={require('../assets/link_icon.png')}
                                         defaultSource={require('../assets/link_icon.png')}
                                     />
-                                    <Text style={[{marginLeft: 3,fontWeight: 'bold',width: '70%'}]} numberOfLines={1}>
+                                    <Text style={[{marginLeft: 3,fontWeight: 'bold',width: countLink == 1 ? '30%' : '70%'}]} numberOfLines={1}>
                                         {userInfo.profile.data.external_title ? 
                                             userInfo.profile.data.external_title 
                                             : userInfo.profile.data.external.replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '').replace('Http://www.', '').replace('Https://www.', '').replace('Http://', '').replace('Https://', '')}
