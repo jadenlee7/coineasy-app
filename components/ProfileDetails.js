@@ -37,7 +37,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const scrollRef = useRef()
     const navigation = useNavigation()
 
-
     let countLink = 0
     if(userInfo.profile && userInfo.profile.data){
         typeof userInfo.profile.data.external !== 'undefined' && userInfo.profile.data.external != '' ? countLink += 1 : null
@@ -395,7 +394,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 {/** Edit CTA (only if user is connected) */}
                 {user.did == profile.did ?
                     <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
-                        {/**<View style={{backgroundColor: "red", width: 200, height: 20, position: "absolute", top: 0, left:0}}></View>*/}
                         <Button title="Edit Profile" color="orange" size="sm" onPress={() => {Haptics.selectionAsync();setUpdateProfileVis(true)}} />
                         <View style={{width: 10}} />
                         <Button title="Share Profile" color="white" size="sm" onPress={() => {Haptics.selectionAsync();setShareProfileVis(true)}} />

@@ -34,12 +34,13 @@ export default function UpdateProfileModal({callback}) {
     const moveAnimation2 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
     const moveAnimation3 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
 
-    let numberLink = 0
+    let countLink = 0
     if(user.profile && user.profile.data){
-        typeof user.profile.data.external !== 'undefined' && user.profile.data.external != '' ? numberLink += 1 : null
-        typeof user.profile.data.twitter !== 'undefined' && user.profile.data.twitter != '' ? numberLink += 1 : null
-        typeof user.profile.data.telegram !== 'undefined' && user.profile.data.telegram != '' ? numberLink += 1 : null
+        typeof user.profile.data.external !== 'undefined' && user.profile.data.external != '' ? countLink += 1 : null
+        typeof user.profile.data.twitter !== 'undefined' && user.profile.data.twitter != '' ? countLink += 1 : null
+        typeof user.profile.data.telegram !== 'undefined' && user.profile.data.telegram != '' ? countLink += 1 : null
     }
+    const [numberLink, setnumberLink] = useState(countLink)
 
     const onBackSocialLinks = () => {
         Haptics.selectionAsync();
@@ -151,39 +152,52 @@ export default function UpdateProfileModal({callback}) {
                 data: user.profile?.data ? user.profile.data : {}
             }
 
-            linkType == 'External Link' ? content.data.external = linkText : null
-            linkType == 'Twitter' ? content.data.twitter = linkText : null
-            linkType == 'Telegram' ? content.data.telegram = linkText : null
-            
-            linkType == 'External Link' ? content.data.external_title = titleText : null
-            linkType == 'Twitter' ? content.data.twitter_title = titleText : null
-            linkType == 'Telegram' ? content.data.telegram_title = titleText : null
+            const temp_link = typeof linkText !== 'undefined' ? linkText : ''
+
+            linkType == 'External Link' ? content.data.external = temp_link : null
+            linkType == 'Twitter' ? content.data.twitter = temp_link : null
+            linkType == 'Telegram' ? content.data.telegram = temp_link : null
+
+            const temp_title = typeof titleText !== 'undefined' ? titleText : ''
+
+            linkType == 'External Link' ? content.data.external_title = temp_title : null
+            linkType == 'Twitter' ? content.data.twitter_title = temp_title : null
+            linkType == 'Telegram' ? content.data.telegram_title = temp_title : null
     
             const res = await orbis.updateProfile(content);
-            
-            let _user = {...user};
-            if(user.profile){
-                _user.profile.data = content.data;
-            }else{
-                _user.profile = {
-                    data: content.data
-                }
-            }
-            setUser(_user);
-            setSavingLink(false);
-    
-            if(callback) {
-                callback(_user);
-            }
 
-            showMessage({
-                message: linkText && linkText != '' ? 'Social link added with success' : 'Social link removed with success',
-                type: "success",
-                floating: true,
-                backgroundColor: "#3D3D3D",
-                icon: () => <SuccessIcon style={{marginRight: 10,}}/>
-            });
-            onBackDetailSocialLink()
+            if(res.status == 300){
+                showMessage({
+                    message: 'An unexpected error occured. Please try again later.',
+                    type: "danger",
+                    floating: true,
+                });
+                setSavingLink(false);
+            }else{
+                let _user = {...user};
+                if(user.profile){
+                    _user.profile.data = content.data;
+                }else{
+                    _user.profile = {
+                        data: content.data
+                    }
+                }
+                setUser(_user);
+                setSavingLink(false);
+        
+                if(callback) {
+                    callback(_user);
+                }
+                
+                showMessage({
+                    message: linkText && linkText != '' ? 'Social link added with success' : 'Social link removed with success',
+                    type: "success",
+                    floating: true,
+                    backgroundColor: "#3D3D3D",
+                    icon: () => <SuccessIcon style={{marginRight: 10,}}/>
+                });
+                onBackDetailSocialLink()
+            }            
         }
     }
 
@@ -233,8 +247,6 @@ export default function UpdateProfileModal({callback}) {
         }
     }
 
-
-
     return(
         <Modal hide={() => setUpdateProfileVis(false)} animateModal={false}>
             <Animated.View style={{transform: [{ translateX: moveAnimation1 }],}}>
@@ -271,7 +283,7 @@ export default function UpdateProfileModal({callback}) {
                 <View style={tailwind('w-full flex flex-col border-t border-secondary mt-4')}>
                     <InputGroup label="Name" placeholder="Your name" value={name} setValue={setName} autoFocus={true} />
                     <InputGroup label="Bio" placeholder="Enter a short description" value={description} setValue={setDescription} height={60} />
-                    <InputGroup label="Social links" placeholder="Add links" height={60} animation1={moveAnimation1} animation2={moveAnimation2} setShowLinks={setShowLinks}/>
+                    <InputGroup label="Social links" placeholder="Add links" height={60} animation1={moveAnimation1} animation2={moveAnimation2} setShowLinks={setShowLinks} numberLink={numberLink}/>
                 </View>
             </Animated.View>
 
@@ -299,8 +311,8 @@ export default function UpdateProfileModal({callback}) {
                             <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Add external link</Text>
                         </View>
 
-                        {user.profile.data.external && (
-                            <Text style={[tailwind('text-secondary'), {fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 3 : 5,}]}>{user.profile.data.external}</Text>
+                        {user.profile.data?.external && (
+                            <Text numberOfLines={1} style={[tailwind('text-secondary'), {flex: 1,fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 3 : 5,}]}>{user.profile.data.external}</Text>
                         )}
                     </TouchableOpacity>
 
@@ -310,8 +322,8 @@ export default function UpdateProfileModal({callback}) {
                             <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Twitter</Text>
                         </View>
 
-                        {user.profile.data.twitter && (
-                            <Text style={[tailwind('text-secondary'), {fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 3 : 5,}]}>{user.profile.data.twitter}</Text>
+                        {user.profile.data?.twitter && (
+                            <Text numberOfLines={1} style={[tailwind('text-secondary'), {flex: 1,fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 3 : 5,}]}>{user.profile.data.twitter}</Text>
                         )}
                     </TouchableOpacity>
 
@@ -321,8 +333,8 @@ export default function UpdateProfileModal({callback}) {
                             <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Telegram</Text>
                         </View>
 
-                        {user.profile.data.telegram && (
-                            <Text style={[tailwind('text-secondary'), {fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 5 : 10,}]}>{user.profile.data.telegram}</Text>
+                        {user.profile.data?.telegram && (
+                            <Text numberOfLines={1} style={[tailwind('text-secondary'), {flex: 1,fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 5 : 10,}]}>{user.profile.data.telegram}</Text>
                         )}
                     </TouchableOpacity>
 
@@ -408,10 +420,9 @@ export default function UpdateProfileModal({callback}) {
 }
 
 
-const InputGroup = ({label, height = 20, placeholder, value, setValue, autoFocus = false, animation1, animation2, setShowLinks}) => {
+const InputGroup = ({label, height = 20, placeholder, value, setValue, autoFocus = false, animation1, animation2, setShowLinks, numberLink}) => {
     const { user } = useContext(GlobalContext);
     const tailwind = useTailwind();
-
 
     const showSocialLinks = () => {
         Haptics.selectionAsync();
@@ -431,13 +442,6 @@ const InputGroup = ({label, height = 20, placeholder, value, setValue, autoFocus
         ]).start();
 
         setShowLinks(true)
-    }
-
-    let numberLink = 0
-    if(user.profile && user.profile.data){
-        typeof user.profile.data.external !== 'undefined' && user.profile.data.external != '' ? numberLink += 1 : null
-        typeof user.profile.data.twitter !== 'undefined' && user.profile.data.twitter != '' ? numberLink += 1 : null
-        typeof user.profile.data.telegram !== 'undefined' && user.profile.data.telegram != '' ? numberLink += 1 : null
     }
 
     return(
