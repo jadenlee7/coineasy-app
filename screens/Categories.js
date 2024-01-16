@@ -180,32 +180,44 @@ const Categories = ({ navigation, route }) => {
                 <>
                     <HeaderImage />
 
-                    <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: 21,marginBottom: 10,}}>
-                        <Text style={[tailwind('text-slate-900 px-2'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20,marginLeft: 10, }]}>Categories</Text>
-
+                    <View style={{marginTop: 21,}}>
                         <TouchableOpacity 
                             activeOpacity={0.7} 
                             onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}
-                            style={{marginRight: 20,marginTop: -2,}}
+                            style={{position: 'absolute',top:0, right: 20}}
                         >
                             <NotificationsIcon />
                         </TouchableOpacity>
+
+                        <Text style={[
+                            tailwind('text-slate-900 px-5'), 
+                            { 
+                                fontSize: 16,
+                                fontFamily: "GmarketBold",
+                                lineHeight: 20,
+                                marginLeft: '2%',
+                                marginBottom: 10,
+                            }]}
+                        >
+                            Highlights for You
+                        </Text>
+
+                        <ScrollView
+                            contentContainerStyle={[tailwind('flex flex-row items-start px-5 py-2 w-full flex-wrap'), {marginLeft: '2%'}]}
+                            refreshControl={
+                                <RefreshControl refreshing={false} onRefresh={loadContexts} />
+                            }
+                        >
+                            {/** Loop and display categories */}
+                            {categories.map((category, key) => {
+                                return (
+                                    <Category key={key} category={category} />
+                                );
+                            })}
+                            <View style={{height: 50}}/>
+                        </ScrollView>
                     </View>
 
-                    <ScrollView
-                        contentContainerStyle={[tailwind('flex flex-row items-start px-5 py-2 w-full flex-wrap'), {marginLeft: 10,}]}
-                        refreshControl={
-                            <RefreshControl refreshing={false} onRefresh={loadContexts} />
-                        }
-                    >
-                        {/** Loop and display categories */}
-                        {categories.map((category, key) => {
-                            return (
-                                <Category key={key} category={category} />
-                            );
-                        })}
-                        <View style={{height: 50}}/>
-                    </ScrollView>
                 </>
             ) : (
                 <>
