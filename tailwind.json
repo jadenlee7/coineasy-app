@@ -58,11 +58,6 @@
 			"marginBottom": 12
 		}
 	},
-	"mb-4": {
-		"style": {
-			"marginBottom": 16
-		}
-	},
 	"mb-5": {
 		"style": {
 			"marginBottom": 20
@@ -248,6 +243,11 @@
 	"justify-between": {
 		"style": {
 			"justifyContent": "space-between"
+		}
+	},
+	"justify-evenly": {
+		"style": {
+			"justifyContent": "space-evenly"
 		}
 	},
 	"rounded": {
@@ -767,12 +767,12 @@
 	},
 	"font-normal": {
 		"style": {
-			"fontFamily": "GmarketMedium",
+			"fontFamily": "GmarketMedium"
 		}
 	},
 	"font-semibold": {
 		"style": {
-			"fontFamily": "GmarketBold",
+			"fontFamily": "GmarketBold"
 		}
 	},
 	"text-main": {

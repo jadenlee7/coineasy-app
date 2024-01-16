@@ -81,25 +81,23 @@ const FollowerScreen = (props) => {
                 </TouchableOpacity>
 
                 {is_following == -1 && follow.details.did != user.did ? (
-                    <TouchableOpacity 
-                        activeOpacity={0.7}
-                        style={[
-                            tailwind(`px-5 rounded-full border ${listFollowLoader[index] ? "bg-main-400" : "bg-main"}`), 
-                            {
-                                borderColor: "transparent",
-                                paddingVertical: listFollowLoader[index] ? 3.2 : 5
-                            }
-                        ]}
-                        onPress={() => doFollow(follow, index, true)}
-                    >
-                        {listFollowLoader[index] ?
-                            <ActivityIndicator size="small" color="#fff" style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }} />
-                        :
-                            <Text style={[tailwind('text-white font-semibold'), {fontSize: 12, lineHeight: 16}]}>Follow</Text>
-                        }
-                    </TouchableOpacity>
+                    <Button 
+                        loading={listFollowLoader[index]} 
+                        title='Follow'
+                        color="orange" 
+                        size="sm" 
+                        onPress={() => doFollow(follow, index, true)} 
+                        style={{height: 40, justifyContent: 'center',alignItems: 'center',width: 120}}
+                    />
                 ) : follow.details.did != user.did ? (
-                    <Button loading={listFollowLoader[index]} title="Following" color="white" size="sm" onPress={() => doFollow(follow, index, false)} style={{borderColor: 'black'}}/>
+                    <Button 
+                        loading={listFollowLoader[index]} 
+                        title="Following" 
+                        color="white" 
+                        size="sm" 
+                        onPress={() => doFollow(follow, index, false)} 
+                        style={{borderColor: 'black',height: 40, justifyContent: 'center',alignItems: 'center',width: 120}}
+                    />
                 ) : null}
 
             </View>

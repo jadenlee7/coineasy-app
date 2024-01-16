@@ -44,8 +44,12 @@ const CommonFollowerScreen = (props) => {
                     </View>
                 </TouchableOpacity>
 
-                <Button title="Following" color="white" size="sm" style={{borderColor: 'black',}}/>
-
+                <Button 
+                    title="Following" 
+                    color="white" 
+                    size="sm" 
+                    style={{borderColor: 'black',height: 40, justifyContent: 'center',alignItems: 'center',width: 120}}
+                />
             </View>
         )
     }

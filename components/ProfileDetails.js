@@ -393,17 +393,17 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         
                 {/** Edit CTA (only if user is connected) */}
                 {user.did == profile.did ?
-                    <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
-                        <Button title="Edit Profile" color="orange" size="sm" onPress={() => {Haptics.selectionAsync();setUpdateProfileVis(true)}} />
+                    <View style={[tailwind('flex flex-row px-4 pt-4 items-center justify-evenly'), {width: '95%',alignSelf: 'center',}]}>
+                        <Button title="Edit Profile" color="orange" size="sm" onPress={() => {Haptics.selectionAsync();setUpdateProfileVis(true)}} style={{height: 40,justifyContent: 'center',alignItems: 'center',flex: 1}}/>
                         <View style={{width: 10}} />
-                        <Button title="Share Profile" color="white" size="sm" onPress={() => {Haptics.selectionAsync();setShareProfileVis(true)}} />
+                        <Button title="Share Profile" color="white" size="sm" onPress={() => {Haptics.selectionAsync();setShareProfileVis(true)}} style={{height: 40, justifyContent: 'center',flex: 1}}/>
                     </View>
                 :
                     <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
                         {isFollowing ?
-                            <Button title="Following" icon={<CheckIcon color="#fff" style={{marginRight: 5}} />} color="green" size="sm" onPress={() => follow(false)} />
+                            <Button title="Following" icon={<CheckIcon color="#fff" style={{marginRight: 5}} />} color="green" size="sm" onPress={() => follow(false)} style={{height: 40, width:'80%',alignItems: 'center',justifyContent: 'center', }}/>
                         :
-                            <Button loading={followLoading} title="Follow" color="orange" size="sm" onPress={() => follow(true)} />
+                            <Button loading={followLoading} title="Follow" color="orange" size="sm" onPress={() => follow(true)} style={{height: 40, width:'80%',alignItems: 'center',justifyContent: 'center', }}/>
                         }
                     </View>
                 }
