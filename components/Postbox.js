@@ -711,14 +711,19 @@ export default function Postbox({isReply = false}) {
                                 : -90
                             }]}
                         >
-                            <TouchableOpacity onPress={() => closeCategory()} style={{padding: 12,marginBottom: 0,}}>
-                                <Image
-                                    style={{width: 27,height: 27}}
-                                    resizeMode='contain'
-                                    source={require('../assets/back_button.png')}
-                                    defaultSource={require('../assets/back_button.png')}
-                                />
-                            </TouchableOpacity>
+                            <View style={{flexDirection: 'row',alignItems: 'center',justifyContent: 'center',height: 50}}>
+                                <TouchableOpacity onPress={() => closeCategory()} style={{padding: 12,marginBottom: 0,position: 'absolute',left: 0}}>
+                                    <Image
+                                        style={{width: 27,height: 27}}
+                                        resizeMode='contain'
+                                        source={require('../assets/back_button.png')}
+                                        defaultSource={require('../assets/back_button.png')}
+                                    />
+                                </TouchableOpacity>
+
+                                <Text style={{fontWeight: 'bold',fontSize: 18,textAlign:'center'}}>Choose Category</Text>
+                            </View>
+
                             <View style={[tailwind('flex flex-row w-full flex-wrap mt-2'), {marginLeft: 3,}]}>
                                 {/** Loop and display categories */}
                                 {categories.map((category, key) => {
