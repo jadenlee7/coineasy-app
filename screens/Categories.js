@@ -193,7 +193,7 @@ const Categories = ({ navigation, route }) => {
                     </View>
 
                     <ScrollView
-                        contentContainerStyle={tailwind('flex flex-row items-start px-5 py-2 w-full flex-wrap')}
+                        contentContainerStyle={[tailwind('flex flex-row items-start px-5 py-2 w-full flex-wrap'), {marginLeft: 10,}]}
                         refreshControl={
                             <RefreshControl refreshing={false} onRefresh={loadContexts} />
                         }

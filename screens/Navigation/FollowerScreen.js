@@ -113,7 +113,7 @@ const FollowerScreen = (props) => {
                         color="orange" 
                         size="sm" 
                         onPress={() => doFollow(follow, index, true)} 
-                        style={{height: 40, justifyContent: 'center',alignItems: 'center',width: 120}}
+                        style={{height: 40, justifyContent: 'center',alignItems: 'center',minWidth: 120}}
                     />
                 ) : follow.details.did != user.did ? (
                     <Button 
