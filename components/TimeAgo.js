@@ -21,8 +21,13 @@ moment.updateLocale('en', {
 export default function TimeAgo({ timestamp }) {
   const tailwind = useTailwind();
   if(timestamp) {
-    const timeAgo = moment(timestamp * 1000).fromNow();
-    return <Text style={tailwind("text-xs")}>{timeAgo}</Text>
+    const timeAgo = moment(timestamp*1000).fromNow();
+
+    const unixTime = moment.unix(timestamp);
+    const now = moment();
+    const diff = now.diff(unixTime, 'days')
+
+    return <Text style={tailwind("text-xs")}>{diff > 30 ? unixTime.format('DD/MM/YYYY') : timeAgo}</Text>
   } else {
     return null;
   }
