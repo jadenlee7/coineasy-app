@@ -27,7 +27,7 @@ export default function TimeAgo({ timestamp }) {
     const now = moment();
     const diff = now.diff(unixTime, 'days')
 
-    return <Text style={tailwind("text-xs")}>{diff > 30 ? unixTime.format('DD/MM/YYYY') : timeAgo}</Text>
+    return <Text style={tailwind("text-xs")}>{diff > 30 ? unixTime.format('DD/MM/YYYY') : timeAgo == '1m ago' && diff >= 26 ? diff+'d ago' : timeAgo}</Text>
   } else {
     return null;
   }

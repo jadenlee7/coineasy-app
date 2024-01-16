@@ -10,6 +10,7 @@ import ConnectModal from "../components/modals/ConnectModal";
 export default function Login() {
     const tailwind = useTailwind();
     const [connectModalVis, setConnectModalVis] = useState(false);
+    const [connectType, setConnectType] = useState('')
 
     async function openTerms() {
         Haptics.selectionAsync();
@@ -66,7 +67,7 @@ export default function Login() {
                                 paddingBottom: Platform.OS == 'ios' ? 12 : 10
                             }
                         ]}
-                        onPress={() => {Haptics.selectionAsync();setConnectModalVis(true)}}
+                        onPress={() => {Haptics.selectionAsync();setConnectModalVis(true);setConnectType('Signup')}}
                     >
                         <Text style={[tailwind(`text-white px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign up</Text>
                     </TouchableOpacity>
@@ -79,7 +80,7 @@ export default function Login() {
                                 paddingBottom: Platform.OS == 'ios' ? 12 : 10
                             }
                         ]} 
-                        onPress={() => {Haptics.selectionAsync();setConnectModalVis(true)}} 
+                        onPress={() => {Haptics.selectionAsync();setConnectModalVis(true);setConnectType('Signin')}} 
                         activeOpacity={0.8}
                     >
                         <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign in</Text>
@@ -110,7 +111,7 @@ export default function Login() {
             </View>
 
             {connectModalVis &&
-                <ConnectModal hide={() => setConnectModalVis(false)} />
+                <ConnectModal hide={() => setConnectModalVis(false)} type={connectType}/>
             }
 
         </View>

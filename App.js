@@ -26,6 +26,7 @@ import PostSettingsModal from "./components/modals/PostSettingsModal";
 import UpdateProfileModal from "./components/modals/UpdateProfileModal";
 import { context, onboard_context, edu_context } from './utils/config.js';
 import PushNotificationsModal from "./components/modals/PushNotificationsModal";
+import NicknameModal from "./components/modals/NicknameModal";
 
 /** Expo */
 import { useFonts } from 'expo-font';
@@ -73,6 +74,7 @@ export default function App() {
   const [quotedPost, setQuotedPost] = useState();
   const [shareProfileVis, setShareProfileVis] = useState(false);
   const [notificationsVis, setNotificationsVis] = useState(false);
+  const [nicknameVis, setNicknameVis] = useState(false)
 
   const [listBlockedUser, setListBlockedUser] = useState(null)
 //   const [listFollowers, setListFollowers] = useState([])
@@ -403,7 +405,8 @@ export default function App() {
   }, [category]);
 
   async function callbackConnect() {
-    setPushNotifsVis(true);
+    setNicknameVis(true)
+    // setPushNotifsVis(true); --> later
   }
 
   /** Show postbox while saving the callback function */
@@ -537,8 +540,8 @@ export default function App() {
                 setCurrentRoute,
                 listBlockedUser,
                 setListBlockedUser,
-                // listFollowers,
-                // setListFollowers
+                nicknameVis,
+                setNicknameVis
             }}
         >
           <TailwindProvider utilities={utilities}>
@@ -554,9 +557,9 @@ export default function App() {
             } */}
 
             {/** Display connect modal if user clicked on connect button */}
-            {showConnectModal &&
+            {/* {showConnectModal &&
               <ConnectModal />
-            }
+            } */}
 
             {/** Display the edit profile details modal */}
             {updateProfileVis &&
@@ -566,6 +569,11 @@ export default function App() {
             {/** Display push notifications pane */}
             {pushNotifsVis &&
               <PushNotificationsModal />
+            }
+
+            {/** Display nickname pane */}
+            {!nicknameVis &&
+              <NicknameModal />
             }
 
             {/** Render repost modal */}
