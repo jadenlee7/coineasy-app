@@ -6,11 +6,12 @@ import { useTailwind } from 'tailwind-rn';
 import * as WebBrowser from 'expo-web-browser';
 
 import ConnectModal from "../components/modals/ConnectModal";
+import { GlobalContext } from "../contexts/GlobalContext";
 
 export default function Login() {
+    const { connectType, setConnectType } = useContext(GlobalContext);
     const tailwind = useTailwind();
     const [connectModalVis, setConnectModalVis] = useState(false);
-    const [connectType, setConnectType] = useState('')
 
     async function openTerms() {
         Haptics.selectionAsync();
@@ -21,10 +22,6 @@ export default function Login() {
         Haptics.selectionAsync();
         let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1Dhijs_O61shJEKNy6Sga16Iu3vgqwc8I/view?usp=sharing");
     }
-
-
-
-
 
     // const moveAnimation = useRef(new Animated.Value(0)).current;
     // const animate = () => {
@@ -67,7 +64,7 @@ export default function Login() {
                                 paddingBottom: Platform.OS == 'ios' ? 12 : 10
                             }
                         ]}
-                        onPress={() => {Haptics.selectionAsync();setConnectModalVis(true);setConnectType('Signup')}}
+                        onPress={() => {Haptics.selectionAsync();setConnectModalVis(true);setConnectType('signup')}}
                     >
                         <Text style={[tailwind(`text-white px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign up</Text>
                     </TouchableOpacity>
@@ -80,7 +77,7 @@ export default function Login() {
                                 paddingBottom: Platform.OS == 'ios' ? 12 : 10
                             }
                         ]} 
-                        onPress={() => {Haptics.selectionAsync();setConnectModalVis(true);setConnectType('Signin')}} 
+                        onPress={() => {Haptics.selectionAsync();setConnectModalVis(true);setConnectType('signin')}} 
                         activeOpacity={0.8}
                     >
                         <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign in</Text>

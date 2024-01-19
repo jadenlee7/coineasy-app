@@ -54,6 +54,7 @@
     "react-native": "0.72.4",
     "react-native-confetti-cannon": "^1.5.2",
     "react-native-flash-message": "^0.4.2",
+    "react-native-floating-label-input": "^1.4.3",
     "react-native-get-random-values": "1.9.0",
     "react-native-image-zoom-viewer": "^3.0.1",
     "react-native-modal": "^13.0.1",

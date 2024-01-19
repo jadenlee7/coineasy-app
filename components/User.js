@@ -36,7 +36,7 @@ export function UserPfp({height = 40, details, style, origin}) {
     }
   }
 
-  if(details && details.profile && details.profile.pfp) {
+  if(details && details.profile && details.profile.pfp && details.profile.pfp != '') {
     return(
       <View>
         <Image

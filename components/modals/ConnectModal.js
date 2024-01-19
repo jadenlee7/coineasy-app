@@ -30,7 +30,7 @@ const web3auth = new Web3Auth(WebBrowser, {
 
 /** Modal explaining what connecting is on mobile */
 export default function ConnectModal({hide, type}) {
-    const { user, setUser, orbis, callbackConnect } = useContext(GlobalContext);
+    const { user, setUser, orbis, callbackConnect, setConnectType } = useContext(GlobalContext);
     const tailwind = useTailwind();
     
     const [loading, setLoading] = useState(false);
@@ -132,7 +132,15 @@ export default function ConnectModal({hide, type}) {
         Haptics.selectionAsync();
         let link = Linking.createURL('google-auth');
         setLoading(true);
-        let result = await WebBrowser.openBrowserAsync('https://lit.orbis.club/oauth-google/' + encodeURIComponent(link));
+
+        WebBrowser.openBrowserAsync('https://lit.orbis.club/oauth-google/' + encodeURIComponent(link))
+        .then(() => {
+            if(type == 'signup'){
+                setConnectType('signup')
+            }
+        }).catch(e => {
+            alert("An unexpected error occured. Please try again.");
+        })
     }
 
     /** Will hide modal only if user isn't currently logging in */

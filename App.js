@@ -75,6 +75,7 @@ export default function App() {
   const [shareProfileVis, setShareProfileVis] = useState(false);
   const [notificationsVis, setNotificationsVis] = useState(false);
   const [nicknameVis, setNicknameVis] = useState(false)
+  const [connectType, setConnectType] = useState('')
 
   const [listBlockedUser, setListBlockedUser] = useState(null)
 //   const [listFollowers, setListFollowers] = useState([])
@@ -183,13 +184,7 @@ export default function App() {
   useEffect(() => {
     page = 0;
     loadPosts();
-  }, [category]);
-
-
-  /** Will be triggered when a user is blocked */
-  useEffect(() => {
-    loadPosts();
-  }, [listBlockedUser]);
+  }, [category, listBlockedUser]);
 
   /** Will be triggered when a new deeplink is received */
   useEffect(() => {
@@ -405,8 +400,11 @@ export default function App() {
   }, [category]);
 
   async function callbackConnect() {
-    setNicknameVis(true)
-    // setPushNotifsVis(true); --> later
+    if(connectType == "signup"){
+        setNicknameVis(true)
+    }else{
+        setPushNotifsVis(true);
+    }
   }
 
   /** Show postbox while saving the callback function */
@@ -541,7 +539,9 @@ export default function App() {
                 listBlockedUser,
                 setListBlockedUser,
                 nicknameVis,
-                setNicknameVis
+                setNicknameVis,
+                connectType,
+                setConnectType
             }}
         >
           <TailwindProvider utilities={utilities}>
@@ -572,7 +572,7 @@ export default function App() {
             }
 
             {/** Display nickname pane */}
-            {!nicknameVis &&
+            {nicknameVis &&
               <NicknameModal />
             }
 
