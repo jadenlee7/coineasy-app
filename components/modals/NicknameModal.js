@@ -4,7 +4,6 @@ import { Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity, Anima
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as ImagePicker from 'expo-image-picker';
-import { showMessage } from "react-native-flash-message";
 
 import Modal from "../Modal";
 import Button from "../Button";

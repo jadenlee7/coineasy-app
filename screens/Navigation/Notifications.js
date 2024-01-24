@@ -50,14 +50,16 @@ const Notifications = ({navigation, route}) => {
             switch (notification.family) {
                 /** Open post details */
                 case "reaction":
-                    setNotificationsVis(false);
-                    setPostDetailsVis(notification?.post_details?.stream_id);
+                    Haptics.selectionAsync();
+                    setPostDetailsVis(notification?.post_details?.stream_id)
+                    navigation.navigate('PostDetails')
                     break;
         
                 /** Open post details */
                 case "reply_to":
-                    setNotificationsVis(false);
-                    setPostDetailsVis(notification?.post_details?.stream_id);
+                    Haptics.selectionAsync();
+                    setPostDetailsVis(notification?.post_details?.stream_id)
+                    navigation.navigate('PostDetails')
                     break;
             }
         }

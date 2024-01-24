@@ -6,8 +6,9 @@ import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as Clipboard from 'expo-clipboard';
 import SvgQRCode from 'react-native-qrcode-svg';
+import { showMessage } from "react-native-flash-message";
 
-import { CloseIcon, ShareIcon, CopyIcon } from "../Icons";
+import { CloseIcon, ShareIcon, CopyIcon, SuccessIcon } from "../Icons";
 import { GlobalContext } from "../../contexts/GlobalContext";
 import useStatusBarHeight from "../../hooks/useStatusBarHeight";
 
@@ -27,39 +28,33 @@ export default function QR({hide}) {
         return () => backhandler.remove();
     }, [])
 
-  /** Will build follow link */
-  let link = Linking.createURL('user', {
-    queryParams: { did: user.did },
-  });
-  console.log("link:", link);
+    /** Will build follow link */
+    let link = Linking.createURL('user', {
+        queryParams: { did: user.did },
+    });
 
-  /** Will open the native sharing modal */
-  const shareProfile = async () => {
-    try {
-      const result = await Share.share({
-        url: link,
-      });
-      if (result.action === Share.sharedAction) {
-        if (result.activityType) {
-          console.log("shared with activity type of:", result.activityType)
-        } else {
-          // shared
+    /** Will open the native sharing modal */
+    const shareProfile = async () => {
+        try {
+            const result = await Share.share({ url: link });
+        } catch (error) {
+            Alert.alert(error.message);
         }
-      } else if (result.action === Share.dismissedAction) {
-        // dismissed
-      }
-    } catch (error) {
-      Alert.alert(error.message);
+    };
+
+    /** Will copy link in Clipboard */
+    async function copyLink() {
+        await Clipboard.setStringAsync(link);
+        showMessage({
+            message: "Profile link copied!",
+            type: "success",
+            floating: true,
+            backgroundColor: "#3D3D3D",
+            icon: () => <SuccessIcon style={{marginRight: 10,}}/>
+        });
     }
-  };
 
-  /** Will copy link in Clipboard */
-  async function copyLink() {
-    await Clipboard.setStringAsync(link);
-    alert("Profile link copied!");
-  }
-
-  let logo = require('../../assets/qr-code-logo.png');
+    let logo = require('../../assets/qr-code-logo.png');
 
   return(
     <View style={[tailwind('absolute w-full h-full'), {elevation: 50}]}>

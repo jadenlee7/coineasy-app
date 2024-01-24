@@ -615,8 +615,8 @@ export default function Postbox({isReply = false}) {
                                     <View style={tailwind('flex flex-row items-center')}>
                                         <UserPfp details={user} height={20} />
                                         <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, lineHeight: 18, color: "#959595", marginLeft: 8, marginRight: 4}]}>Replying to</Text>
-                                        <Text style={{fontWeight: 'bold',marginTop: -5,}}>@</Text>
-                                        <Username details={replyTo.creator_details} style={{fontSize: 13}} />
+                                        <Text style={{fontWeight: 'bold',marginTop: Platform.OS == 'ios' ? 0 : -5,}}>@</Text>
+                                        <Username details={replyTo.creator_details} style={{fontSize: 13,marginTop: Platform.OS == 'ios' ? 1 : 0,}} />
                                     </View>
                                 :
                                     <User details={user} height={40} />
