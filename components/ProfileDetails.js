@@ -83,7 +83,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         /** Will check if the connected user is following this user */
         async function loadiIsFollowing() {
             const res = await orbis.getIsFollowing(user.did, profile.did);
-            console.log("res isFollowing():", res);
             setIsFollowing(res.data);
             setFollowLoading(false);
         }
@@ -113,7 +112,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         setFollowLoading(true);
 
         const res = await orbis.setFollow(profile.did, active);
-        console.log("res:", res);
         setFollowLoading(false);
         setIsFollowing(active);
     }
@@ -401,9 +399,9 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 :
                     <View style={tailwind('flex flex-row px-4 pt-4 items-center w-full justify-center')}>
                         {isFollowing ?
-                            <Button title="Following" icon={<CheckIcon color="#fff" style={{marginRight: 5}} />} color="green" size="sm" onPress={() => follow(false)} style={{height: 40, width:'80%',alignItems: 'center',justifyContent: 'center', }}/>
+                            <Button title="Following" icon={<CheckIcon color="#fff" style={{marginRight: 5}} />} color="green" size="sm" onPress={() => follow(false)} style={{height: 40, width:'90%',alignItems: 'center',justifyContent: 'center', }}/>
                         :
-                            <Button loading={followLoading} title="Follow" color="orange" size="sm" onPress={() => follow(true)} style={{height: 40, width:'80%',alignItems: 'center',justifyContent: 'center', }}/>
+                            <Button loading={followLoading} title="Follow" color="orange" size="sm" onPress={() => follow(true)} style={{height: 40, width:'90%',alignItems: 'center',justifyContent: 'center', }}/>
                         }
                     </View>
                 }
@@ -438,7 +436,6 @@ const Posts = ({type, profile}) => {
   /** Will retrieve all posts shared in the global context */
   async function loadPosts() {
     setRefreshing(true);
-    console.log("Enter loadPosts for:", type);
     setPosts([]);
 
     let options;
@@ -483,8 +480,30 @@ const Posts = ({type, profile}) => {
 
     let { data } = await orbis.getPosts(options);
     if(data) {
-      console.log(data.length + " posts retrieved.");
-      setPosts(data);
+
+        if(options.is_reply){
+            data.map(async (e, index) => {
+                if(e.content.reply_to){
+                    const resultPost = await orbis.getPost(e.content.reply_to)
+        
+                    e.reply_to_details.count_likes = resultPost.data?.count_likes
+                    e.reply_to_details.count_replies = resultPost.data?.count_replies
+                    e.reply_to_details.count_repost = resultPost.data?.count_repost
+                    e.reply_to_details.timestamp = resultPost.data?.timestamp
+                }
+
+                if(index == data.length -1){
+                    setPosts(data);
+                }
+
+                return e
+            })
+        }else{
+            setPosts(data);
+        }
+
+
+
     }
     setRefreshing(false);
   }

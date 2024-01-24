@@ -245,7 +245,7 @@ const PostDisplay = (props) => {
 
                                 {/** Display time */}
                                 <Text style={[{fontFamily: "GmarketMedium", fontSize: 13, color: "#959595", marginRight: 6}]}>
-                                    <TimeAgo timestamp={post.timestamp} />
+                                    <TimeAgo timestamp={isReply ? post.content.timestamp : post.timestamp} />
                                 </Text>
 
                                 {/** Display category name */}
@@ -385,9 +385,9 @@ const PostDisplay = (props) => {
                         {/** Post CTAs */}
                         {showReactions &&
                         <View style={[tailwind('flex flex-row mt-0')]}>
-                            <CommentCTA post={post} />
-                            <LikeCTA post={post} />
-                            <RepostCTA post={post} />
+                            <CommentCTA post={post} isReply={isReply} />
+                            <LikeCTA post={post} isReply={isReply} />
+                            <RepostCTA post={post} isReply={isReply} />
                         </View>
                         }
                     </View>
@@ -418,7 +418,7 @@ const InteractiveMention = ({match, showProfileDetails, mentions}) => {
 
 }
 
-export const CommentCTA = ({post}) => {
+export const CommentCTA = ({post, isReply}) => {
   const { setPostDetailsVis, showPostbox, setReplyTo } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
@@ -433,7 +433,7 @@ export const CommentCTA = ({post}) => {
       <>
         <CommentIcon2 />
         <Text style={[tailwind('text-slate-900 text-sm font-normal ml-1'), { fontFamily: "GmarketMedium" }]}>
-          {post.count_replies}
+          {isReply && typeof post.reply_to_details?.count_replies != 'undefined' ? post.reply_to_details?.count_replies : isReply ? post.content.count_replies : post.count_replies}
         </Text>
       </>
     </TouchableOpacity>
@@ -441,9 +441,9 @@ export const CommentCTA = ({post}) => {
 }
 
 
-export const LikeCTA = ({post}) => {
+export const LikeCTA = ({post, isReply}) => {
   const [hasLiked, setHasLiked] = useState(false);
-  const [countLikes, setCountLikes] = useState(post.count_likes);
+  const [countLikes, setCountLikes] = useState(isReply && typeof post.reply_to_details?.count_likes != 'undefined' ? post.reply_to_details?.count_likes : isReply ? post.content.count_likes : post.count_likes);
   const { user, orbis, showConnectModal, setShowConnectModal } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
@@ -477,7 +477,6 @@ export const LikeCTA = ({post}) => {
         post.stream_id,
         "like"
       );
-      console.log("res:", res);
     } else {
       alert("You must be connected to react to posts.");
     }
@@ -500,10 +499,10 @@ export const LikeCTA = ({post}) => {
   )
 }
 
-export const RepostCTA = ({post}) => {
+export const RepostCTA = ({post, isReply}) => {
   const { user, orbis, showConnectModal, setShowConnectModal, setRepost } = useContext(GlobalContext);
   const [hasLiked, setHasLiked] = useState(false);
-  const [countReposts, setCountReposts] = useState(post.count_repost);
+  const [countReposts, setCountReposts] = useState(isReply && typeof post.reply_to_details?.count_repost != 'undefined' ? post.reply_to_details?.count_repost : isReply ? post.content.count_repost : post.count_repost);
   const tailwind = useTailwind();
 
   /** Check if user liked this post */

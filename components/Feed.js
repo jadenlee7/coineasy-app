@@ -11,99 +11,113 @@ import { GlobalContext } from "../contexts/GlobalContext";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
 export default function Feed({posts, refreshing, refreshingBottom, onRefresh, loadMore, header, feedRef }) {
-  const { homeFeedRef, scrollAnim, listBlockedUser } = useContext(GlobalContext);
-  const tailwind = useTailwind();
+    const { orbis, homeFeedRef, scrollAnim, listBlockedUser, setRefreshing } = useContext(GlobalContext);
+    const tailwind = useTailwind();
 
-  const statusBarHeight = useStatusBarHeight();
+    const statusBarHeight = useStatusBarHeight();
 
-  const onEndReached = async () => {
-    if(loadMore) {
-      loadMore()
+    const onEndReached = async () => {
+        if(loadMore) {
+            loadMore()
+        }
     }
-  }
-  
-  const filteredPosts = posts.filter(e => !listBlockedUser?.includes(e.creator) && !listBlockedUser?.includes(e.reply_to_creator_details?.did)) 
+    
+    let filteredPosts = posts.filter(e => !listBlockedUser?.includes(e.creator) && !listBlockedUser?.includes(e.reply_to_creator_details?.did)) 
 
-  useScrollToTop(feedRef ? feedRef : homeFeedRef);
+    filteredPosts.map(async (e)=>{
+        if(e.content.reply_to){
+            const resultPost = await orbis.getPost(e.content.reply_to)
 
-  return(
-    <>
-      {(refreshing && posts.length == 0) ?
-        <ActivityIndicator style={{marginTop: 190}} size="small" color="#020617" />
-      :
+            e.reply_to_details.count_likes = resultPost.data?.count_likes
+            e.reply_to_details.count_replies = resultPost.data?.count_replies
+            e.reply_to_details.count_repost = resultPost.data?.count_repost
+            e.reply_to_details.timestamp = resultPost.data?.timestamp
+        }
+
+        return e
+    })
+
+    useScrollToTop(feedRef ? feedRef : homeFeedRef);
+
+    return(
         <>
-          {posts.length > 0 ?
-            <Animated.FlatList
-              ref={feedRef ? feedRef : homeFeedRef}
-              style={tailwind('w-full')}
-              data={filteredPosts}
-              ListHeaderComponent={header}
-              ListHeaderComponentStyle={tailwind('flex flex-1')}
-              renderItem={({item, index}) => {
-                if(index == 0){
-                    return (
-                        <>
-                            <View style={{height: Platform.OS == 'ios' ? 0 : 115 + statusBarHeight, width: '100%', backgroundColor: 'white',}} />
-                            <PostInFeed post={item} key={item.stream_id} />
-                        </>
-                    )
-                }else{
-                    return (<PostInFeed post={item} key={item.stream_id} />)
+            {(refreshing && posts.length == 0) ?
+                <ActivityIndicator style={{marginTop: 190}} size="small" color="#020617" />
+            :
+                <>
+                {posts.length > 0 ?
+                    <Animated.FlatList
+                        ref={feedRef ? feedRef : homeFeedRef}
+                        style={tailwind('w-full')}
+                        data={filteredPosts}
+                        ListHeaderComponent={header}
+                        ListHeaderComponentStyle={tailwind('flex flex-1')}
+                        renderItem={({item, index}) => {
+                            if(index == 0){
+                                return (
+                                    <>
+                                        <View style={{height: Platform.OS == 'ios' ? 0 : 115 + statusBarHeight, width: '100%', backgroundColor: 'white',}} />
+                                        <PostInFeed post={item} key={item.stream_id} />
+                                    </>
+                                )
+                            }else{
+                                return (<PostInFeed post={item} key={item.stream_id} />)
+                            }
+                        }}
+                        keyExtractor={item => item.stream_id}
+                        refreshing={refreshing}
+                        scrollEventThrottle={16}
+                        onEndReached={onEndReached}
+                        onStartReachedThreshold={4} // optional
+                        onEndReachedThreshold={1} // optional
+                        refreshControl={
+                            <RefreshControl
+                                colors={["#020617"]}
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                progressViewOffset={120 + statusBarHeight}
+                                style={{marginTop: 120 + statusBarHeight}}
+                            />
+                        }
+                        onScroll={Animated.event(
+                            [{ nativeEvent: { contentOffset: { y: scrollAnim }} }],
+                            { useNativeDriver: true }
+                        )}
+                    />
+                :
+                    <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md mt-160px')} >
+                    <Text style={tailwind('text-secondary items-center ml-1')}>There isn't any post shared here.</Text>
+                    </View>
                 }
-              }}
-              keyExtractor={item => item.stream_id}
-              refreshing={refreshing}
-              scrollEventThrottle={16}
-              onEndReached={onEndReached}
-              onStartReachedThreshold={4} // optional
-              onEndReachedThreshold={1} // optional
-              refreshControl={
-                <RefreshControl
-                  colors={["#020617"]}
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  progressViewOffset={120 + statusBarHeight}
-                  style={{marginTop: 120 + statusBarHeight}}
-                />
-              }
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { y: scrollAnim }} }],
-                { useNativeDriver: true }
-              )}
-            />
-          :
-            <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md mt-160px')} >
-              <Text style={tailwind('text-secondary items-center ml-1')}>There isn't any post shared here.</Text>
-            </View>
-          }
+                </>
+            }
+
+
+            {(refreshingBottom && posts && posts.length > 0) &&
+                <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
+            }
         </>
-      }
-
-
-      {(refreshingBottom && posts && posts.length > 0) &&
-        <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
-      }
-    </>
-  )
+    )
 }
-const PostInFeed = React.memo(({post}) => {
-  const tailwind = useTailwind();
 
-  if(post?.content?.repost != null && post.content.body == " ") {
-    return (
-      <View style={tailwind('flex flex-col')}>
-        <View style={[tailwind('flex flex-row items-center px-5 mt-3'), { marginBottom: -2 }]}>
-          <RepostIcon color="#959595" />
-          <Text style={tailwind('text-secondary items-center ml-1')}>
-            <Username details={post.creator_details} style={tailwind('text-secondary font-normal')} /> reposted
-          </Text>
-        </View>
-        <Post post={post.repost_details} showRepostDetails={false} />
-      </View>
-    );
-  } else {
-    return (
-      <Post post={post} />
-    );
-  }
+const PostInFeed = React.memo(({post}) => {
+    const tailwind = useTailwind();
+
+    if(post?.content?.repost != null && post.content.body == " ") {
+        return (
+            <View style={tailwind('flex flex-col')}>
+                <View style={[tailwind('flex flex-row items-center px-5 mt-3'), { marginBottom: -2 }]}>
+                    <RepostIcon color="#959595" />
+                    <Text style={tailwind('text-secondary items-center ml-1')}>
+                        <Username details={post.creator_details} style={tailwind('text-secondary font-normal')} /> reposted
+                    </Text>
+                </View>
+                <Post post={post.repost_details} showRepostDetails={false} />
+            </View>
+        );
+    } else {
+        return (
+            <Post post={post} />
+        );
+    }
 });
