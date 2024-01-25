@@ -168,11 +168,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         }
     }
 
-    const showSocialLinks = () => {
-        Haptics.selectionAsync()
-        setShowLinkModal(true)
-    }
-
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
             { type == 'selected' ? (
