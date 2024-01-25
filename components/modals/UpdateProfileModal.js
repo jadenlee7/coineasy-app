@@ -4,7 +4,7 @@ import { Text, View, TextInput, TouchableHighlight, Platform, ActivityIndicator,
 import Modal from "../Modal";
 import Button from "../Button";
 import { UserPfp } from "../User";
-import { CancelIcon, LinkIcon, LinktreeIcon, PlusIcon, SuccessIcon, TelegramIcon, TwitterIcon } from "../Icons";
+import { CancelIcon, FacebookIcon, InstagramIcon, LinkIcon, LinktreeIcon, PlusIcon, SuccessIcon, TelegramIcon, TwitterIcon } from "../Icons";
 import { GlobalContext } from "../../contexts/GlobalContext";
 
 import mime from 'mime'
@@ -26,7 +26,9 @@ export default function UpdateProfileModal({callback}) {
 
     const [showLinks, setShowLinks] = useState(false)
     const [showDetailLink, setShowDetailLink] = useState(false)
-    const [linkType, setLinkType] = useState("")
+    const [linkIndex, setLinkIndex] = useState(null)
+    const [link, setLink] = useState("")
+
     const [linkText, setLinkText] = useState("")
     const [titleText, setTitleText] = useState("")
 
@@ -61,7 +63,7 @@ export default function UpdateProfileModal({callback}) {
         });
     }
 
-    const showDetailSocialLink = (type) => {
+    const showDetailSocialLink = (index) => {
         Haptics.selectionAsync();
         Keyboard.dismiss()
 
@@ -77,11 +79,11 @@ export default function UpdateProfileModal({callback}) {
                 useNativeDriver: true
             })
         ]).start(() => {
-            setLinkType(type)
-            setLinkText(type == 'External Link' ? user.profile?.data?.external : type == 'Twitter' ? user.profile?.data?.twitter : type == 'Telegram' ? user.profile?.data?.telegram : '')
-            setTitleText(type == 'External Link' ? user.profile?.data?.external_title : type == 'Twitter' ? user.profile?.data?.twitter_title : type == 'Telegram' ? user.profile?.data?.telegram_title : '')
+            setLinkIndex(index !== null ? index : null)
+            setLinkText(index !== null ? user.profile.data.list_link[index].link : '')
+            setTitleText(index !== null ? user.profile.data.list_link[index].title : '')
         });
-
+        
         setShowDetailLink(true)
     }
 
@@ -100,7 +102,7 @@ export default function UpdateProfileModal({callback}) {
                 useNativeDriver: true
             })
         ]).start(() => {
-            setLinkType('')
+            setLinkText('')
             setTitleText('')
             setShowDetailLink(false)
         });
@@ -136,7 +138,17 @@ export default function UpdateProfileModal({callback}) {
         Haptics.selectionAsync();
         setSavingLink(true);
 
-        if(titleText != '' && linkText == ''){
+        const temp_link = typeof linkText !== 'undefined' ? linkText : ''
+        const temp_title = typeof titleText !== 'undefined' ? titleText : ''
+    
+        let content = {
+            username: name,
+            description: description,
+            pfp: pfp,
+            data: user.profile?.data ? user.profile.data : {}
+        }
+
+        if(temp_title != '' && temp_link == ''){
             showMessage({
                 message: 'URL can not be empty with a title.',
                 type: "danger",
@@ -145,26 +157,42 @@ export default function UpdateProfileModal({callback}) {
                 icon: () => <CancelIcon style={{marginRight: 10,}}/>
             });
             setSavingLink(false);
+        }else if(temp_title == '' && temp_link == '' && linkIndex == null ){
+            showMessage({
+                message: 'URL can not be empty.',
+                type: "danger",
+                floating: true,
+                backgroundColor: "#3D3D3D",
+                icon: () => <CancelIcon style={{marginRight: 10,}}/>
+            });
+            setSavingLink(false);
         }else{
-            let content = {
-                username: name,
-                description: description,
-                pfp: pfp,
-                data: user.profile?.data ? user.profile.data : {}
-            }
+            if(linkIndex == null){
+                if(content.data.list_link){
+                    content.data.list_link.push({
+                        link: temp_link,
+                        title: temp_title
+                    })
+                }else{
+                    content.data.list_link = [
+                        {
+                            link: temp_link,
+                            title: temp_title
+                        }
+                    ]
+                }
+            }else{
+                if(temp_link != ''){
+                    content.data.list_link[linkIndex] = {
+                        link: temp_link,
+                        title: temp_title
+                    }
+                }else{
+                    content.data.list_link.splice(linkIndex, 1)
+                }       
+            }   
 
-            const temp_link = typeof linkText !== 'undefined' ? linkText : ''
 
-            linkType == 'External Link' ? content.data.external = temp_link : null
-            linkType == 'Twitter' ? content.data.twitter = temp_link : null
-            linkType == 'Telegram' ? content.data.telegram = temp_link : null
-
-            const temp_title = typeof titleText !== 'undefined' ? titleText : ''
-
-            linkType == 'External Link' ? content.data.external_title = temp_title : null
-            linkType == 'Twitter' ? content.data.twitter_title = temp_title : null
-            linkType == 'Telegram' ? content.data.telegram_title = temp_title : null
-    
             const res = await orbis.updateProfile(content);
 
             if(res.status == 300){
@@ -197,12 +225,17 @@ export default function UpdateProfileModal({callback}) {
                     backgroundColor: "#3D3D3D",
                     icon: () => <SuccessIcon style={{marginRight: 10,}}/>
                 });
+
+                setLinkIndex(null)
+                setTitleText('')
+                setLinkText('')
                 onBackDetailSocialLink()
-            }            
+            }    
         }
     }
 
     async function selectPhoto() {
+        Haptics.selectionAsync();
         try {
             // No permissions request is necessary for launching the image library
             let result = await ImagePicker.launchImageLibraryAsync({
@@ -233,7 +266,6 @@ export default function UpdateProfileModal({callback}) {
                 /** Handle result returned by Orbis SDK */
                 if(resUpload.status == 200) {
                     let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
-                    console.log("finalUrl:", finalUrl);
                     setPfp(finalUrl);
                     setPfpLoading(false);
                 } else {
@@ -249,10 +281,10 @@ export default function UpdateProfileModal({callback}) {
     }
 
     return(
-        <Modal hide={() => setUpdateProfileVis(false)} animateModal={false}>
+        <Modal hide={() => {Haptics.selectionAsync();setUpdateProfileVis(false)}} animateModal={false}>
             <Animated.View style={{transform: [{ translateX: moveAnimation1 }],}}>
                 <View style={tailwind('flex flex-row px-4 items-center w-full justify-center p-5')}>
-                    <Button title="Cancel" color="white" size="sm" onPress={() => setUpdateProfileVis(false)} />
+                    <Button title="Cancel" color="white" size="sm" onPress={() => {Haptics.selectionAsync();setUpdateProfileVis(false)}} />
                     <View style={tailwind('flex flex-1')} />
                     <Button title="Save" color="orange" size="sm" loading={saving} onPress={saveProfile} />
                 </View>
@@ -301,7 +333,10 @@ export default function UpdateProfileModal({callback}) {
                     
                     <View style={[tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3'), {marginTop: 40,}]}/>
 
-                    <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')} onPress={() => showDetailSocialLink('External Link')}>
+                    <TouchableOpacity 
+                        style={tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')} 
+                        onPress={() => showDetailSocialLink(null)}
+                    >
                         <Image
                             style={{width: 30,height: 30}}
                             resizeMode='contain'
@@ -311,13 +346,69 @@ export default function UpdateProfileModal({callback}) {
                         <View style={[{marginLeft: 15,}]}>
                             <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Add external link</Text>
                         </View>
-
-                        {user.profile?.data?.external && (
-                            <Text numberOfLines={1} style={[tailwind('text-secondary'), {flex: 1,fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 3 : 5,}]}>{user.profile.data.external}</Text>
-                        )}
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')} onPress={() => showDetailSocialLink('Twitter')}>
+                    {user.profile?.data?.list_link && user.profile.data.list_link.length != 0 ?(
+                        user.profile.data.list_link.map((e, index) => {
+                            return(
+                                <TouchableOpacity 
+                                    style={tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')} 
+                                    onPress={() => showDetailSocialLink(index)}
+                                    key={Math.random()}
+                                >
+                                    {e.link.toLowerCase().includes('twitter.com') ? (
+                                        <>
+                                            <TwitterIcon style={{marginLeft: 5,}}/>
+                                            <View style={[{marginLeft: 7}]}>
+                                                <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Twitter</Text>
+                                            </View>
+                                        </>
+                                    ) : e.link.toLowerCase().includes('t.me') ? (
+                                        <>
+                                            <TelegramIcon style={{marginLeft: 6,}}/>
+                                            <View style={[{paddingTop: 6, marginLeft: 10,height: 30}]}>
+                                                <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Telegram</Text>
+                                            </View>
+                                        </>
+                                    ) : e.link.toLowerCase().includes('facebook.com') ? (
+                                        <>
+                                            <FacebookIcon style={{marginLeft: 6,}}/>
+                                            <View style={[{paddingTop: 6, marginLeft: 10,height: 30}]}>
+                                                <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Facebook</Text>
+                                            </View>
+                                        </>
+                                    ) : e.link.toLowerCase().includes('instagram.com') ? (
+                                        <>
+                                            <InstagramIcon style={{marginLeft: 6,}}/>
+                                            <View style={[{paddingTop: 6, marginLeft: 10,height: 30}]}>
+                                                <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Facebook</Text>
+                                            </View>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <LinkIcon />
+                                            <View style={[{marginLeft: 5}]}>
+                                                <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>External</Text>
+                                            </View>
+                                        </>
+                                    )}
+
+                                    <Text 
+                                        numberOfLines={1} 
+                                        style={[tailwind('text-secondary'), {flex: 1,fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 3 : 5,}]}
+                                    >
+                                        {e.title ? e.title : e.link}
+                                    </Text>
+
+                                </TouchableOpacity>
+                            )
+                        })
+                    ) : (
+                        <Text style={[tailwind('text-secondary'), {textAlign:'center',marginTop: 20,}]}>No social links added.</Text>
+                    )}
+
+
+                    {/* <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')} onPress={() => showDetailSocialLink('Twitter')}>
                         <TwitterIcon style={{marginLeft: 5,}}/>
                         <View style={[{marginLeft: 15}]}>
                             <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Twitter</Text>
@@ -337,7 +428,7 @@ export default function UpdateProfileModal({callback}) {
                         {user.profile?.data?.telegram && (
                             <Text numberOfLines={1} style={[tailwind('text-secondary'), {flex: 1,fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 5 : 10,}]}>{user.profile.data.telegram}</Text>
                         )}
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
 
                 </Animated.View>
             )}
@@ -368,8 +459,33 @@ export default function UpdateProfileModal({callback}) {
                     </View>
 
                     <View style={{flexDirection: 'row',justifyContent: 'center',alignItems: 'center',}}>
-                        {linkType == 'External Link' ? <LinkIcon /> : linkType == 'Twitter' ? <TwitterIcon /> : linkType == 'Telegram' ? <TelegramIcon /> : null} 
-                        <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,marginLeft: 5,}}>{linkType}</Text>
+                        {linkText.toLowerCase().includes('twitter.com') ? (
+                            <>
+                                <TwitterIcon />
+                                <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,marginLeft: 5,}}>Twitter</Text>
+                            </>
+
+                        ) : linkText.toLowerCase().includes('t.me') ? (
+                            <>
+                                <TelegramIcon />
+                                <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,marginLeft: 5,}}>Telegram</Text>
+                            </>
+                        ) : linkText.toLowerCase().includes('facebook.com') ? (
+                            <>
+                                <FacebookIcon />
+                                <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,marginLeft: 5,}}>Facebook</Text>
+                            </>
+                        ) : linkText.toLowerCase().includes('instagram.com') ? (
+                            <>
+                                <InstagramIcon />
+                                <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,marginLeft: 5,}}>Instagram</Text>
+                            </>
+                        ) : (
+                            <>
+                                <LinkIcon />
+                                <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,marginLeft: 5,}}>External Link</Text>
+                            </>
+                        )}
                     </View>
 
                     <View style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')}/>
@@ -449,7 +565,7 @@ const InputGroup = ({label, height = 20, placeholder, value, setValue, autoFocus
         <View style={tailwind('w-full flex flex-row border-b border-secondary items-start px-4 py-3')}>
 
             {/** Label */}
-            <View style={[tailwind(''), {width: 80,height:30,justifyContent: 'center'}]}>
+            <View style={[tailwind(''), {width: 95,height:30,justifyContent: 'center'}]}>
                 <Text style={[tailwind("text-slate-900"), { fontSize: 12,fontFamily: "GmarketBold" }]}>{label}</Text>
             </View>
 
@@ -464,7 +580,9 @@ const InputGroup = ({label, height = 20, placeholder, value, setValue, autoFocus
                             {numberLink}
                         </Text>
                     ) : (
-                        <Text style={{fontSize: 12,fontFamily: "GmarketMedium",color: '#959595',}}>Add links</Text>
+                        <Text style={{fontSize: 12,fontFamily: "GmarketMedium",color: Platform.OS == 'ios' ? '#C5C5C7' : '#676767',}}>
+                            {user.profile?.data?.list_link ? user.profile.data.list_link.length : 'Add links'}
+                        </Text>
                     )}
 
                     <TouchableOpacity onPress={() => showSocialLinks()}>

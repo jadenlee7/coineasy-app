@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Linking, Alert, Image, Dimensions } from 'react-native';
+import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Linking, Alert, Image, Dimensions, ScrollView } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -11,12 +11,13 @@ import Button from "./Button";
 import { shortAddress } from "../utils";
 import { UserPfp, Username } from "./User";
 import { context } from '../utils/config.js';
-import { BackIcon, CheckIcon, CopyIconBadge, LinkIcon, NotificationsIcon, SettingsIcon, TelegramIcon, TwitterIcon } from "./Icons";
+import { BackIcon, CheckIcon, CopyIconBadge, FacebookIcon, InstagramIcon, LinkIcon, NotificationsIcon, SettingsIcon, TelegramIcon, TwitterIcon } from "./Icons";
 import useDidToAddress from "../hooks/useDidToAddress";
 import { GlobalContext } from "../contexts/GlobalContext";
 import { useNavigation } from "@react-navigation/core";
 import { useScrollToTop } from "@react-navigation/native";
 import HeaderImage from "./HeaderImage";
+import Modal from "./Modal.js";
 
 
 export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
@@ -31,6 +32,8 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const [listCommonFollowers, setListCommonFollowers ] = useState([]);
     const [commonFollowLoading, setCommonFollowLoading] = useState(true)
     const [userInfo, setUserInfo] = useState(profile)
+
+    const [showLinkModal, setShowLinkModal] = useState(false)
 
     const { address } = useDidToAddress(profile?.did);
 
@@ -165,6 +168,11 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         }
     }
 
+    const showSocialLinks = () => {
+        Haptics.selectionAsync()
+        setShowLinkModal(true)
+    }
+
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
             { type == 'selected' ? (
@@ -210,84 +218,91 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>{userInfo.profile.description}</Text>
                     }
 
-                    {userInfo?.profile?.data &&
-                        <View style={{marginBottom: 10,marginTop: 15,flexDirection:'row',}}>
-                            {userInfo.profile.data.external && (
-                                <TouchableOpacity 
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        width: 
-                                            !userInfo.profile.data.external_title && countLink == 3 ? '30%' 
-                                            : countLink == 3 ? '30%' 
-                                            : countLink == 2 && !userInfo.profile.data.external_title ? '50%' 
-                                            : countLink == 2 && userInfo.profile.data.external_title ? '30%' 
-                                            : 'auto',
-                                        marginLeft: countLink == 3 && userInfo.profile.data.twitter_title && userInfo.profile.data.telegram_title ? 30 : 0,
-                                    }} 
-                                    onPress={() => openLink(userInfo.profile.data.external)}
-                                >
-                                    <Image
-                                        style={{width: 25,height: 25,}}
-                                        resizeMode='contain'
-                                        source={require('../assets/link_icon.png')}
-                                        defaultSource={require('../assets/link_icon.png')}
-                                    />
-                                    <Text style={[{marginLeft: 3,fontWeight: 'bold',width: countLink == 1 ? '50%' : '70%'}]} numberOfLines={1}>
-                                        {userInfo.profile.data.external_title ? 
-                                            userInfo.profile.data.external_title 
-                                            : userInfo.profile.data.external.replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '').replace('Http://www.', '').replace('Https://www.', '').replace('Http://', '').replace('Https://', '')}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
-                            {userInfo.profile.data.twitter && (
-                                <TouchableOpacity 
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        width:
-                                            !userInfo.profile.data.twitter_title && countLink == 3 ? '27%' 
-                                            : countLink == 2 && !userInfo.profile.data.twitter_title ? '50%' 
-                                            : countLink == 2 && userInfo.profile.data.twitter_title ? '30%' 
-                                            : 'auto',
-                                        marginLeft: userInfo.profile.data.external && Platform.OS == 'ios' ? 20 : userInfo.profile.data.external ? 10 : 0,
-                                    }} 
-                                    onPress={() => openLink(userInfo.profile.data.twitter)}
-                                >
-                                    <TwitterIcon />
-                                    <Text style={[{marginLeft: 3, fontWeight: 'bold',}]} numberOfLines={1}>
-                                        {userInfo.profile.data.twitter_title ? 
-                                            userInfo.profile.data.twitter_title 
-                                            : userInfo.profile.data.twitter.toLowerCase().replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '')}
+                    {userInfo?.profile?.data?.list_link && userInfo.profile.data.list_link.length > 1 && userInfo.profile.data.list_link.length < 4 ? (
+                        <View 
+                            horizontal={true} 
+                            style={{
+                                height: 40,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flex: 1,
+                            }}
+                        >
+                            {userInfo.profile.data.list_link.map((e, index) => {
+                                return (
+                                    <TouchableOpacity 
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            marginLeft: index == 2 && e.title == '' && Platform.OS == 'ios' ? 20 : 0,
+                                            marginRight: index == 2 && e.title == '' && Platform.OS == 'ios' ? 10 : 0,
+                                        }} 
+                                        onPress={() => openLink(e.link)}
+                                        key={Math.random()}
+                                    >
+                                        {e.link.toLowerCase().includes('twitter.com') ? (
+                                            <TwitterIcon />
+                                        ) : e.link.toLowerCase().includes('t.me') ? (
+                                            <TelegramIcon />
+                                        ) : e.link.toLowerCase().includes('facebook.com') ? (
+                                            <FacebookIcon />
+                                        ) : e.link.toLowerCase().includes('instagram.com') ? (
+                                            <InstagramIcon />
+                                        ) : (
+                                            <LinkIcon />
+                                        )}
+
+                                        <Text 
+                                            style={[{marginLeft: 3,fontWeight: 'bold',fontSize: 12,}]} 
+                                            numberOfLines={1}
+                                        >
+                                            {e.title ? e.title : e.link.replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '').replace('Http://www.', '').replace('Https://www.', '').replace('Http://', '').replace('Https://', '')}
                                         </Text>
-                                </TouchableOpacity>
-                            )}
-                            {userInfo.profile.data.telegram && (
-                                <TouchableOpacity 
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        width: 
-                                            !userInfo.profile.data.telegram_title && countLink == 3 && Platform.OS == 'ios' ? '27%' 
-                                            : '27%',
-                                        marginLeft: userInfo.profile.data.twitter && Platform.OS == 'ios' ? 20 : userInfo.profile.data.twitter ? 15 : 0,
-                                    }} 
-                                    onPress={() => openLink(userInfo.profile.data.telegram)}
-                                >
-                                    <TelegramIcon />
-                                    <Text style={[{marginLeft: 7,fontWeight: 'bold',width:'70%'}]} numberOfLines={1}>
-                                        {userInfo.profile.data.telegram_title ? 
-                                            userInfo.profile.data.telegram_title 
-                                            : userInfo.profile.data.telegram.toLowerCase().replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '')}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
-
-
+                                    </TouchableOpacity>
+                                )
+                            })}
                         </View>
-                    }
+                    ) : userInfo?.profile?.data?.list_link && userInfo.profile.data.list_link.length >= 4 ? (
+                        <TouchableOpacity 
+                            onPress={() => {Haptics.selectionAsync();setShowLinkModal(true)}} 
+                            style={{height: 35,alignItems: 'center',justifyContent: 'center',borderWidth:1,borderColor: '#FF6B17',borderRadius: 15,width:'60%',marginVertical: 10,}}
+                        >
+                            <Text style={{fontSize: 13,fontFamily: 'GmarketMedium',}}>My Social links</Text>
+                        </TouchableOpacity>
+                    ) : userInfo?.profile?.data?.list_link && userInfo.profile.data.list_link.length == 1 && (
+                        <TouchableOpacity 
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                height: 50
+                            }} 
+                            onPress={() => openLink(userInfo.profile.data.list_link[0].link)}
+                            key={Math.random()}
+                        >
+                            {userInfo.profile.data.list_link[0].link.toLowerCase().includes('twitter.com') ? (
+                                <TwitterIcon />
+                            ) : userInfo.profile.data.list_link[0].link.toLowerCase().includes('t.me') ? (
+                                <TelegramIcon />
+                            ) : userInfo.profile.data.list_link[0].link.toLowerCase().includes('facebook.com') ? (
+                                <FacebookIcon />
+                            ) : userInfo.profile.data.list_link[0].link.toLowerCase().includes('instagram.com') ? (
+                                <InstagramIcon />
+                            ) : (
+                                <LinkIcon />
+                            )}
+
+                            <Text 
+                                style={[{marginLeft: 3,fontWeight: 'bold',fontSize: 13,}]} 
+                                numberOfLines={1}
+                            >
+                                {userInfo.profile.data.list_link[0].title ? userInfo.profile.data.list_link[0].title : userInfo.profile.data.list_link[0].link.replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '').replace('Http://www.', '').replace('Https://www.', '').replace('Http://', '').replace('Https://', '')}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
                     
                     { type !== 'selected' && (
 
@@ -418,6 +433,55 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     <Posts type={nav} profile={userInfo} />
                 </View>
             </Animated.ScrollView>
+
+            {showLinkModal && (
+                <Modal hide={() => {Haptics.selectionAsync();setShowLinkModal(false)}} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
+                    <View style={{zIndex: 2}}>
+                        <View style={{justifyContent: 'center',alignItems: 'center',marginTop: 20,}}>
+                                {userInfo.profile.data.list_link.map((e, index) => {
+                                    return (
+                                        <TouchableOpacity 
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                borderWidth: 1,
+                                                borderRadius: 10,
+                                                width: '80%',
+                                                height: 40,
+                                                marginVertical: 10
+                                            }} 
+                                            onPress={() => openLink(e.link)}
+                                            key={Math.random()}
+                                        >
+                                            {e.link.toLowerCase().includes('twitter.com') ? (
+                                                <TwitterIcon />
+                                            ) : e.link.toLowerCase().includes('t.me') ? (
+                                                <TelegramIcon />
+                                            ) : e.link.toLowerCase().includes('facebook.com') ? (
+                                                <FacebookIcon />
+                                            ) : e.link.toLowerCase().includes('instagram.com') ? (
+                                                <InstagramIcon />
+                                            ) : (
+                                                <LinkIcon />
+                                            )}
+
+                                            <Text 
+                                                style={[{marginLeft: 3,fontWeight: 'bold',fontSize: 12,}]} 
+                                                numberOfLines={1}
+                                            >
+                                                {e.title ? e.title : e.link.replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '').replace('Http://www.', '').replace('Https://www.', '').replace('Http://', '').replace('Https://', '')}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )
+                                })}
+                        </View>
+                    </View>
+
+                </Modal>
+            )}
+
         </View>
     )
 }
