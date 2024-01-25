@@ -11,7 +11,7 @@ import { GlobalContext } from "../contexts/GlobalContext";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
 export default function Feed({posts, refreshing, refreshingBottom, onRefresh, loadMore, header, feedRef }) {
-    const { orbis, homeFeedRef, scrollAnim, listBlockedUser, setRefreshing } = useContext(GlobalContext);
+    const { orbis, homeFeedRef, scrollAnim, listBlockedUser, listHiddenPost, listMutedUsers } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const statusBarHeight = useStatusBarHeight();
@@ -23,6 +23,8 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
     }
     
     let filteredPosts = posts.filter(e => !listBlockedUser?.includes(e.creator) && !listBlockedUser?.includes(e.reply_to_creator_details?.did)) 
+    filteredPosts = filteredPosts.filter(e => !listHiddenPost?.includes(e.stream_id) && !listHiddenPost?.includes(e.reply_to))
+    filteredPosts = filteredPosts.filter(e => !listMutedUsers?.includes(e.creator) && !listMutedUsers?.includes(e.reply_to_creator_details?.did))
 
     filteredPosts.map(async (e)=>{
         if(e.content.reply_to){

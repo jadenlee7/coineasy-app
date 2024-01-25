@@ -443,7 +443,8 @@ export const CommentCTA = ({post, isReply}) => {
 
 export const LikeCTA = ({post, isReply}) => {
   const [hasLiked, setHasLiked] = useState(false);
-  const [countLikes, setCountLikes] = useState(isReply && typeof post.reply_to_details?.count_likes != 'undefined' ? post.reply_to_details?.count_likes : isReply ? post.content.count_likes : post.count_likes);
+  const numLikes = isReply && typeof post.reply_to_details?.count_likes != 'undefined' ? post.reply_to_details?.count_likes : isReply ? post.content.count_likes : post.count_likes
+  const [countLikes, setCountLikes] = useState(numLikes);
   const { user, orbis, showConnectModal, setShowConnectModal } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
@@ -502,7 +503,8 @@ export const LikeCTA = ({post, isReply}) => {
 export const RepostCTA = ({post, isReply}) => {
   const { user, orbis, showConnectModal, setShowConnectModal, setRepost } = useContext(GlobalContext);
   const [hasLiked, setHasLiked] = useState(false);
-  const [countReposts, setCountReposts] = useState(isReply && typeof post.reply_to_details?.count_repost != 'undefined' ? post.reply_to_details?.count_repost : isReply ? post.content.count_repost : post.count_repost);
+  const numRepost = isReply && typeof post.reply_to_details?.count_repost != 'undefined' ? post.reply_to_details?.count_repost : isReply ? post.content.count_repost : post.count_repost
+  const [countReposts, setCountReposts] = useState(numRepost);
   const tailwind = useTailwind();
 
   /** Check if user liked this post */

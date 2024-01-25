@@ -78,6 +78,8 @@ export default function App() {
   const [connectType, setConnectType] = useState('')
 
   const [listBlockedUser, setListBlockedUser] = useState(null)
+  const [listHiddenPost, setListHiddenPost] = useState(null)
+  const [listMutedUsers, setListMutedUsers] = useState(null)
 //   const [listFollowers, setListFollowers] = useState([])
 
   const confetti = useRef();
@@ -146,7 +148,9 @@ export default function App() {
   useEffect(() => {
     connect();
     loadContexts();
-    fecthBlockedUser()
+    fecthBlockedUser();
+    fecthHiddenPost();
+    fecthMuteUser();
 
     /** Will re-connect automatically the user to the account found in local storage */
     async function connect() {
@@ -167,16 +171,35 @@ export default function App() {
 
     // Will fetch all blocked user
     async function fecthBlockedUser() {
-      /** Check if user exists in local storage */
-
-    //   await AsyncStorage.removeItem("list_blocked_user");
-
-
       let temp_list = await AsyncStorage.getItem("list_blocked_user");
       const list_blocked_user = JSON.parse(temp_list)
 
+
       if(list_blocked_user) {
         setListBlockedUser([...list_blocked_user])
+      }
+    }
+    // Will fetch Hidden post
+    async function fecthHiddenPost() {
+      let temp_list = await AsyncStorage.getItem("list_hidden_post");
+      const list_hidden_post = JSON.parse(temp_list)
+
+      console.log('ICIIII');
+      console.log(list_hidden_post);
+
+      if(list_hidden_post) {
+        setListHiddenPost([...list_hidden_post])
+      }
+    }
+    // Will fetch mute users
+    async function fecthMuteUser() {
+    //   await AsyncStorage.removeItem("list_muted_users");
+      let temp_list = await AsyncStorage.getItem("list_muted_users");
+      const list_muted_users = JSON.parse(temp_list)
+
+
+      if(list_muted_users) {
+        setListMutedUsers([...list_muted_users])
       }
     }
   }, []);
@@ -184,7 +207,7 @@ export default function App() {
   useEffect(() => {
     page = 0;
     loadPosts();
-  }, [category, listBlockedUser]);
+  }, [category]);
 
   /** Will be triggered when a new deeplink is received */
   useEffect(() => {
@@ -538,6 +561,10 @@ export default function App() {
                 setCurrentRoute,
                 listBlockedUser,
                 setListBlockedUser,
+                listHiddenPost,
+                setListHiddenPost,
+                listMutedUsers,
+                setListMutedUsers,
                 nicknameVis,
                 setNicknameVis,
                 connectType,

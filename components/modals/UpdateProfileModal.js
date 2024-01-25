@@ -581,7 +581,7 @@ const InputGroup = ({label, height = 20, placeholder, value, setValue, autoFocus
                         </Text>
                     ) : (
                         <Text style={{fontSize: 12,fontFamily: "GmarketMedium",color: Platform.OS == 'ios' ? '#C5C5C7' : '#676767',}}>
-                            {user.profile?.data?.list_link ? user.profile.data.list_link.length : 'Add links'}
+                            {user.profile?.data?.list_link && user.profile.data.list_link.length > 0 ? user.profile.data.list_link.length : 'Add links'}
                         </Text>
                     )}
 

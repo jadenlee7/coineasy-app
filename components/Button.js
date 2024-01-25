@@ -57,7 +57,11 @@ export default function Button({icon, iconRight, size, title, onPress, color, st
         case "md":
           return(
             <TouchableOpacity activeOpacity={0.7}  style={[tailwind('px-7 py-3 rounded-full'), {backgroundColor: "#FF6B17", ...style}]} onPress={onPress}>
-              <Text style={tailwind('text-white font-semibold')}>{title}</Text>
+              {loading ?
+                <ActivityIndicator size="small" color="#fff" style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }} />
+              :
+                <Text style={tailwind('text-white font-semibold')}>{title}</Text>
+              }
             </TouchableOpacity>
           );
         case "centered":
