@@ -8,12 +8,12 @@ import * as WebBrowser from 'expo-web-browser';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { GlobalContext } from "../contexts/GlobalContext";
-import useStatusBarHeight from "../hooks/useStatusBarHeight";
-import { context, onboard_context, edu_context } from '../utils/config.js';
+import { onboard_context, edu_context } from '../utils/config.js';
 import { InterpunctIcon, NotificationsIcon } from "../components/Icons";
 import Header from "../components/Header";
 import Feed from "../components/Feed";
 import HeaderImage from "../components/HeaderImage";
+import moment from "moment";
 
 let page = 0
 
@@ -27,8 +27,6 @@ const News = ({ navigation, route }) => {
     const [nav, setNav] = useState("news");
     const [eduCategories, setEduCategories] = useState([]);
     const [onboardCategories, setOnboardCategories] = useState([]);
-
-    const statusBarHeight = useStatusBarHeight();
 
     const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
         Haptics.selectionAsync()
@@ -178,7 +176,7 @@ const News = ({ navigation, route }) => {
                     <>
                     {news.map((item, key) => {
                         return (
-                        <NewsItem item={item} key={key} />
+                            <NewsItem item={item} key={key} />
                         );
                     })}
                     </>
@@ -189,7 +187,7 @@ const News = ({ navigation, route }) => {
                 return(
                 <>
                     {onboardCategories.length == 0 ?
-                    <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
+                        <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
                     :
                     <>
                         {onboardCategories.map((item, key) => {
@@ -210,7 +208,7 @@ const News = ({ navigation, route }) => {
                     <>
                     {eduCategories.map((item, key) => {
                         return (
-                        <OnboardItem item={item} key={item.stream_id} />
+                            <OnboardItem item={item} key={item.stream_id} />
                         );
                     })}
                     </>
@@ -332,35 +330,47 @@ export const NewsItem = ({item}) => {
     async function openNews() {
       let result = await WebBrowser.openBrowserAsync(item.url);
     }
+
+    const news_image = item.content_html?.slice(item.content_html.indexOf('src="') + 5,item.content_html.indexOf('" style'));
   
     return(
-      <TouchableHighlight style={tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-10px')} onPress={() => openNews()} underlayColor="#f8fafc">
-        <>
-          {item.image &&
-            <Image
-              resizeMode="cover"
-              style={[tailwind('rounded-md'), { aspectRatio: 1, height: 100, marginRight: 3 }]}
-              source={{
-                uri: item.image
-              }}  />
-          }
-  
-          <View style={tailwind('flex flex-col ml-2 flex-1 justify-center')}>
-            <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15 }]}>{item.title}</Text>
-            <View style={tailwind('flex flex-row items-center mt-2')}>
-              {item.author &&
-                <>
-                  <Text style={[tailwind(`flex flex-row text-secondary`), { fontSize: 11, lineHeight: 15 }]}>{item.author}</Text>
-                  <View style={tailwind('flex ml-2 mr-2')}>
-                    <InterpunctIcon />
-                  </View>
-                </>
-              }
-              <Text style={[tailwind(`items-center flex flex-row text-secondary`), { fontSize: 11, lineHeight: 15 }]}>{item.hostname}</Text>
-            </View>
-          </View>
-        </>
-      </TouchableHighlight>
+        <TouchableHighlight style={tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-10px')} onPress={() => openNews()} underlayColor="#f8fafc">
+            <>
+                {item.image ?
+                    <Image
+                        resizeMode="cover"
+                        style={[tailwind('rounded-md'), { aspectRatio: 1, height: 100, marginRight: 3 }]}
+                        source={{
+                            uri: item.image
+                        }}  
+                    />
+                : typeof news_image !== 'undefined' &&
+                    <Image
+                        resizeMode="cover"
+                        style={[tailwind('rounded-md'), { aspectRatio: 1, height: 100, marginRight: 3 }]}
+                        source={{
+                            uri: news_image
+                        }}  
+                    />
+                }
+        
+                <View style={tailwind('flex flex-col ml-2 flex-1 justify-center')}>
+                    <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15 }]}>{item.title}</Text>
+                    <View style={tailwind('flex flex-row items-center mt-2')}>
+                        {item.authors && item.authors.length > 0 && item.authors[0].name &&
+                            <>
+                                <Text style={[tailwind(`flex flex-row text-secondary`), { fontSize: 11, lineHeight: 15 }]}>{item.authors[0].name}</Text>
+                                <View style={tailwind('flex ml-2 mr-2')}>
+                                    <InterpunctIcon />
+                                </View>
+                                <Text style={[tailwind(`flex flex-row text-secondary`), { fontSize: 11, lineHeight: 15 }]}>{moment(item.date_published).format('DD/MM/YYYY')}</Text>
+                            </>
+                        }
+                        <Text style={[tailwind(`items-center flex flex-row text-secondary`), { fontSize: 11, lineHeight: 15 }]}>{item.hostname}</Text>
+                    </View>
+                </View>
+            </>
+        </TouchableHighlight>
     )
   }
 

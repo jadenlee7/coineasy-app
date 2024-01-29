@@ -156,7 +156,6 @@ export default function App() {
     async function connect() {
       /** Check if user exists in local storage */
       let _userDid = await AsyncStorage.getItem("user-connected");
-      console.log("User connected is:", _userDid);
       if(_userDid) {
         setUser({did: _userDid})
       }
@@ -183,9 +182,6 @@ export default function App() {
     async function fecthHiddenPost() {
       let temp_list = await AsyncStorage.getItem("list_hidden_post");
       const list_hidden_post = JSON.parse(temp_list)
-
-      console.log('ICIIII');
-      console.log(list_hidden_post);
 
       if(list_hidden_post) {
         setListHiddenPost([...list_hidden_post])
@@ -271,10 +267,7 @@ export default function App() {
 
  /** Will handle links opened with the coineasy:// sheme */
   async function handleURL(url) {
-    console.log("Enter handleURL with:", url);
     const { path, queryParams } = Linking.parse(url);
-    console.log("queryParams:", queryParams);
-    console.log("path:", path);
     let token;
     switch (path) {
       case "user":
@@ -303,11 +296,9 @@ export default function App() {
         break;
       default:
         try {
-          console.log("url:", url);
           if(url.includes("google-auth")) {
             console.log("URL contains google-auth")
             token = queryParams.token;
-            console.log("token:", token);
             googleConnect(token);
           } else if(url.includes("profile")) {
             setScreen("profile");
@@ -322,7 +313,6 @@ export default function App() {
   }
 
   async function googleConnect(token) {
-    console.log("Enter googleConnect with:", token);
     let resUser = await orbis.connect_v2({
        provider: "oauth",
        oauth: {
@@ -330,7 +320,6 @@ export default function App() {
          token: token
        }
      });
-     console.log("resUser:", resUser);
 
      if(resUser.status == 200) {
        setUser(resUser.details);
@@ -353,19 +342,12 @@ export default function App() {
     setPosts([]);
     setRefreshing(true);
     let _contexts = [context, onboard_context, edu_context];
-    console.log("_contexts:", _contexts);
     let { data } = await orbis.getPosts({
       contexts: category ? [category.stream_id] : _contexts,
       include_child_contexts: true
     });
-    // console.log(data?.map(e => {
-    //     if(e.repost_details?.content != null){
-    //         console.log('LAAAAAAAAA');
-    //         console.log(e);
-    //     }
-    // }));
+
     if(data) {
-      console.log(data.length + " posts retrieved.");
       setPosts(data);
     }
     setRefreshing(false);
@@ -373,15 +355,12 @@ export default function App() {
 
   /** This will load more posts and add those to the current list */
   async function loadMorePosts() {
-    console.log("Enter loadMorePosts() with page:", page);
     if(refreshingBottom) {
-      console.log("Already refreshing.");
       return;
     }
     if (posts.length % 50 === 0) {
       setRefreshingBottom(true);
       page++;
-      console.log("Enter loadMorePosts with page:", page);
       let { data } = await orbis.getPosts(
         {
           contexts: category ? [category.stream_id] : [context, onboard_context, edu_context],
@@ -411,12 +390,11 @@ export default function App() {
       contexts: category ? [category.stream_id] : [context, onboard_context, edu_context],
       include_child_contexts: true
     });
-    console.log("Data loaded.");
+
     if(error) {
       console.log("Error getPosts:", error);
     }
     if(data) {
-      console.log(data.length + " posts retrieved.");
       setPosts(data);
     }
     setRefreshing(false);
