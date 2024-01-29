@@ -261,11 +261,14 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                             })}
                         </View>
                     ) : userInfo?.profile?.data?.list_link && userInfo.profile.data.list_link.length >= 4 ? (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => {Haptics.selectionAsync();setShowLinkModal(true)}} 
-                            style={{height: 35,alignItems: 'center',justifyContent: 'center',borderWidth:1,borderColor: '#FF6B17',borderRadius: 15,width:'60%',marginVertical: 10,}}
+                            style={{flexDirection:'row',alignItems: 'center',justifyContent: 'center',height: 35}}
                         >
-                            <Text style={{fontSize: 13,fontFamily: 'GmarketMedium',}}>My Social links</Text>
+                            <LinkIcon />
+                            <View style={[{marginLeft: 5}]}>
+                                <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontWeight: 'bold',}]}>My Social links</Text>
+                            </View>
                         </TouchableOpacity>
                     ) : userInfo?.profile?.data?.list_link && userInfo.profile.data.list_link.length == 1 && (
                         <TouchableOpacity 
@@ -433,44 +436,78 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 <Modal hide={() => {Haptics.selectionAsync();setShowLinkModal(false)}} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
                     <View style={{zIndex: 2}}>
                         <View style={{justifyContent: 'center',alignItems: 'center',marginTop: 20,}}>
-                                {userInfo.profile.data.list_link.map((e, index) => {
-                                    return (
-                                        <TouchableOpacity 
-                                            style={{
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                borderWidth: 1,
-                                                borderRadius: 10,
-                                                width: '80%',
-                                                height: 40,
-                                                marginVertical: 10
-                                            }} 
-                                            onPress={() => openLink(e.link)}
-                                            key={Math.random()}
-                                        >
-                                            {e.link.toLowerCase().includes('twitter.com') ? (
-                                                <TwitterIcon />
-                                            ) : e.link.toLowerCase().includes('t.me') ? (
-                                                <TelegramIcon />
-                                            ) : e.link.toLowerCase().includes('facebook.com') ? (
-                                                <FacebookIcon />
-                                            ) : e.link.toLowerCase().includes('instagram.com') ? (
-                                                <InstagramIcon />
-                                            ) : (
-                                                <LinkIcon />
-                                            )}
+                            {userInfo.profile.data.list_link.map((e, index) => {
+                                return (
+                                    <TouchableOpacity 
+                                        style={{backgroundColor: '#F6F6F6',borderRadius: 25,height: 50,marginTop: 10,flexDirection:'row', justifyContent: 'space-between',alignItems: 'center',width:'90%'}}
+                                        key={Math.random()}
+                                        onPress={() => openLink(e.link)}
+                                    >
+                                        <Text style={{fontWeight: 'bold',fontSize: 17,paddingLeft: 20}}>
+                                            {e.title ? e.title : e.link.replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '').replace('Http://www.', '').replace('Https://www.', '').replace('Http://', '').replace('Https://', '')}
+                                        </Text>
 
-                                            <Text 
-                                                style={[{marginLeft: 3,fontWeight: 'bold',fontSize: 12,}]} 
-                                                numberOfLines={1}
-                                            >
-                                                {e.title ? e.title : e.link.replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '').replace('Http://www.', '').replace('Https://www.', '').replace('Http://', '').replace('Https://', '')}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    )
-                                })}
+                                        {e.link.toLowerCase().includes('twitter.com') ? (
+                                            <TwitterIcon style={{marginRight: 20}}/>
+                                        ) : e.link.toLowerCase().includes('t.me') ? (
+                                            <TelegramIcon style={{marginRight: 20}}/>
+                                        ) : e.link.toLowerCase().includes('facebook.com') ? (
+                                            <Image
+                                                style={{width: 25,height: 25,marginLeft: 3,marginRight: 20}}
+                                                resizeMode='contain'
+                                                source={require('../assets/facebook_icon.png')}
+                                                defaultSource={require('../assets/facebook_icon.png')}
+                                            />
+                                        ) : e.link.toLowerCase().includes('instagram.com') ? (
+                                            <Image
+                                                style={{width: 25,height: 25,marginLeft: 3,marginRight: 20}}
+                                                resizeMode='contain'
+                                                source={require('../assets/instagram_icon.png')}
+                                                defaultSource={require('../assets/instagram_icon.png')}
+                                            />
+                                        ) : (
+                                            <LinkIcon style={{marginRight: 20}}/>
+                                        )}
+                                    </TouchableOpacity>
+
+
+
+                                    // <TouchableOpacity 
+                                    //     style={{
+                                    //         flex: 1,
+                                    //         flexDirection: 'row',
+                                    //         alignItems: 'center',
+                                    //         justifyContent: 'center',
+                                    //         borderWidth: 1,
+                                    //         borderRadius: 10,
+                                    //         width: '80%',
+                                    //         height: 40,
+                                    //         marginVertical: 10
+                                    //     }} 
+                                    //     onPress={() => openLink(e.link)}
+                                    //     key={Math.random()}
+                                    // >
+                                    //     {e.link.toLowerCase().includes('twitter.com') ? (
+                                    //         <TwitterIcon />
+                                    //     ) : e.link.toLowerCase().includes('t.me') ? (
+                                    //         <TelegramIcon />
+                                    //     ) : e.link.toLowerCase().includes('facebook.com') ? (
+                                    //         <FacebookIcon />
+                                    //     ) : e.link.toLowerCase().includes('instagram.com') ? (
+                                    //         <InstagramIcon />
+                                    //     ) : (
+                                    //         <LinkIcon />
+                                    //     )}
+
+                                    //     <Text 
+                                    //         style={[{marginLeft: 3,fontWeight: 'bold',fontSize: 12,}]} 
+                                    //         numberOfLines={1}
+                                    //     >
+                                    //         {e.title ? e.title : e.link.replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '').replace('Http://www.', '').replace('Https://www.', '').replace('Http://', '').replace('Https://', '')}
+                                    //     </Text>
+                                    // </TouchableOpacity>
+                                )
+                            })}
                         </View>
                     </View>
 

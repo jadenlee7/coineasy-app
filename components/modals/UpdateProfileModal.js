@@ -4,7 +4,7 @@ import { Text, View, TextInput, TouchableHighlight, Platform, ActivityIndicator,
 import Modal from "../Modal";
 import Button from "../Button";
 import { UserPfp } from "../User";
-import { CancelIcon, FacebookIcon, InstagramIcon, LinkIcon, LinktreeIcon, PlusIcon, SuccessIcon, TelegramIcon, TwitterIcon } from "../Icons";
+import { CancelIcon, LinkIcon, PlusIcon, SuccessIcon, TelegramIcon, TwitterIcon } from "../Icons";
 import { GlobalContext } from "../../contexts/GlobalContext";
 
 import mime from 'mime'
@@ -366,22 +366,32 @@ export default function UpdateProfileModal({callback}) {
                                     ) : e.link.toLowerCase().includes('t.me') ? (
                                         <>
                                             <TelegramIcon style={{marginLeft: 6,}}/>
-                                            <View style={[{paddingTop: 6, marginLeft: 10,height: 30}]}>
+                                            <View style={[{paddingTop: Platform.OS == 'ios' ? 5 : 3, marginLeft: 10,height: 30}]}>
                                                 <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Telegram</Text>
                                             </View>
                                         </>
                                     ) : e.link.toLowerCase().includes('facebook.com') ? (
                                         <>
-                                            <FacebookIcon style={{marginLeft: 6,}}/>
-                                            <View style={[{paddingTop: 6, marginLeft: 10,height: 30}]}>
+                                            <Image
+                                                style={{width: 25,height: 25,marginLeft: 4}}
+                                                resizeMode='contain'
+                                                source={require('../../assets/facebook_icon.png')}
+                                                defaultSource={require('../../assets/facebook_icon.png')}
+                                            />
+                                            <View style={[{paddingTop: Platform.OS == 'ios' ? 5 : 3, marginLeft: 10,height: 30}]}>
                                                 <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Facebook</Text>
                                             </View>
                                         </>
                                     ) : e.link.toLowerCase().includes('instagram.com') ? (
                                         <>
-                                            <InstagramIcon style={{marginLeft: 6,}}/>
-                                            <View style={[{paddingTop: 6, marginLeft: 10,height: 30}]}>
-                                                <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Facebook</Text>
+                                            <Image
+                                                style={{width: 25,height: 25,marginLeft: 3,}}
+                                                resizeMode='contain'
+                                                source={require('../../assets/instagram_icon.png')}
+                                                defaultSource={require('../../assets/instagram_icon.png')}
+                                            />
+                                            <View style={[{paddingTop: Platform.OS == 'ios' ? 5 : 3, marginLeft: 10,height: 30}]}>
+                                                <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Instagram</Text>
                                             </View>
                                         </>
                                     ) : (
@@ -406,30 +416,6 @@ export default function UpdateProfileModal({callback}) {
                     ) : (
                         <Text style={[tailwind('text-secondary'), {textAlign:'center',marginTop: 20,}]}>No social links added.</Text>
                     )}
-
-
-                    {/* <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')} onPress={() => showDetailSocialLink('Twitter')}>
-                        <TwitterIcon style={{marginLeft: 5,}}/>
-                        <View style={[{marginLeft: 15}]}>
-                            <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Twitter</Text>
-                        </View>
-
-                        {user.profile?.data?.twitter && (
-                            <Text numberOfLines={1} style={[tailwind('text-secondary'), {flex: 1,fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 3 : 5,}]}>{user.profile.data.twitter}</Text>
-                        )}
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={tailwind('w-full flex flex-row border-b border-secondary items-center px-4 py-3')} onPress={() => showDetailSocialLink('Telegram')}>
-                        <TelegramIcon style={{marginLeft: 6,}}/>
-                        <View style={[{paddingTop: 6, marginLeft: 19,height: 30}]}>
-                            <Text style={[tailwind("text-slate-900"), { fontSize: 16,fontWeight: 'bold',}]}>Telegram</Text>
-                        </View>
-
-                        {user.profile?.data?.telegram && (
-                            <Text numberOfLines={1} style={[tailwind('text-secondary'), {flex: 1,fontSize: 11,marginLeft: 5,marginTop: Platform.OS == 'ios' ? 5 : 10,}]}>{user.profile.data.telegram}</Text>
-                        )}
-                    </TouchableOpacity> */}
-
                 </Animated.View>
             )}
 
@@ -472,12 +458,23 @@ export default function UpdateProfileModal({callback}) {
                             </>
                         ) : linkText.toLowerCase().includes('facebook.com') ? (
                             <>
-                                <FacebookIcon />
+                                <Image
+                                    style={{width: 25,height: 25,marginLeft: 4}}
+                                    resizeMode='contain'
+                                    source={require('../../assets/facebook_icon.png')}
+                                    defaultSource={require('../../assets/facebook_icon.png')}
+                                />
                                 <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,marginLeft: 5,}}>Facebook</Text>
                             </>
                         ) : linkText.toLowerCase().includes('instagram.com') ? (
                             <>
-                                <InstagramIcon />
+                                <Image
+                                    style={{width: 25,height: 25,}}
+                                    resizeMode='contain'
+                                    source={require('../../assets/instagram_icon.png')}
+                                    defaultSource={require('../../assets/instagram_icon.png')}
+                                />
+
                                 <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,marginLeft: 5,}}>Instagram</Text>
                             </>
                         ) : (
