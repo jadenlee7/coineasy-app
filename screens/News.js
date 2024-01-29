@@ -154,6 +154,12 @@ const News = ({ navigation, route }) => {
     /** Will load onboard categories */
     async function loadOnboard() {
         let { data, error } = await orbis.api.from("orbis_contexts").select().eq('context', onboard_context).order('created_at', { ascending: false });
+
+        // Switch 1inch Network to first position
+        const indexItem = data.findIndex(e => e.content.displayName == '1inch Network')
+        const first_element = data.splice(indexItem, 1)[0];
+        data.splice(0, 0, first_element);
+
         setOnboardCategories(data);
     }
 
@@ -189,13 +195,13 @@ const News = ({ navigation, route }) => {
                     {onboardCategories.length == 0 ?
                         <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
                     :
-                    <>
-                        {onboardCategories.map((item, key) => {
-                        return (
-                            <OnboardItem item={item} key={item.stream_id} />
-                        );
-                        })}
-                    </>
+                        <>
+                            {onboardCategories.map((item, key) => {
+                                return (
+                                    <OnboardItem item={item} key={item.stream_id} />
+                                );
+                            })}
+                        </>
                     }
                 </>
                 );
