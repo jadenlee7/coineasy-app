@@ -194,7 +194,8 @@ let owners = [
 
 let admins = [
   "did:pkh:eip155:1:0x015777E15a7c27Bb888DF6CAB3755833Db0a722d",
-  "did:pkh:eip155:1:0x5EAa9faE7064E5E06b98DD51c2371c8b22bB2693"
+  "did:pkh:eip155:1:0x5EAa9faE7064E5E06b98DD51c2371c8b22bB2693",
+  "did:pkh:eip155:1:0xfc9ad33fcc790d98ecfe79ca0b048fb3aa838dcf"
 ];
 
 /** Will return true if user is part of the owners list */
