@@ -24,7 +24,7 @@ export default function User({height = 40, details, isFollow}) {
 }
 
 /** Will render the user's pfp or empty state */
-export function UserPfp({height = 40, details, style, origin}) {
+export function UserPfp({height = 40, details, style, badge_style, origin}) {
   const tailwind = useTailwind();
 //   const { user, listFollowers } = useContext(GlobalContext);
 
@@ -49,7 +49,7 @@ export function UserPfp({height = 40, details, style, origin}) {
         {/** Will display admin badge if available */}
         {isAdmin(details.did) &&
           <Image
-            style={{width: height / 2, height: height / 2, position: "absolute", right: -4, top: 0}}
+            style={[{width: height / 2, height: height / 2, position: "absolute", right: -4, top: 0}, badge_style]}
             source={require('../assets/AdminBadge.png')} />
         }
 

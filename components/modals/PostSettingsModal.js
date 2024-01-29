@@ -306,7 +306,11 @@ export default function PostSettingsModal() {
                             </TouchableOpacity>
                             
                             <Animated.View style={{transform: [{ translateX: moveAnimation2 }],position: 'absolute',width: '90%',marginTop:60,alignSelf: 'center',}}>
-                                <UserPfp details={editedPost.value.creator_details} style={{alignSelf: 'center',marginTop: -30,width: 60,height: 60}}/>
+                                <UserPfp 
+                                    details={editedPost.value.creator_details} 
+                                    style={{alignSelf: 'center',marginTop: -30,width: 60,height: 60}}
+                                    badge_style={{right:Dimensions.get('window').width/2.7,top:-30}}
+                                />
 
                                 <Text style={{textAlign:'center',fontWeight: 'bold',fontSize: 19,marginTop: 2,}}>Why are you reporting this post ?</Text>
                                 <Text style={{color: '#959595',textAlign:'center',margin: 15,marginTop: 5,marginBottom: 10,fontSize: 12,}}>Your report is anonymous, except if you're reporting an intellectual property infringement</Text>
@@ -358,7 +362,11 @@ export default function PostSettingsModal() {
                             </TouchableOpacity>
                             
                             <Animated.View style={{transform: [{ translateX: moveAnimation3 }],position: 'absolute',width: '90%',marginTop: 50,alignSelf: 'center',}}>
-                                <UserPfp details={editedPost.value.creator_details} style={{alignSelf: 'center',marginTop: -30,}}/>
+                                <UserPfp 
+                                    details={editedPost.value.creator_details} 
+                                    style={{alignSelf: 'center',marginTop: -30,}} 
+                                    badge_style={{right:Dimensions.get('window').width/2.6,top:-30}}
+                                />
 
                                 <Text style={styles.modalText}>Block @{username} ?</Text>
                                 <Text style={{marginTop: 10, color: '#959595', fontSize: 14,textAlign:'center'}}>
@@ -399,7 +407,11 @@ export default function PostSettingsModal() {
                             </TouchableOpacity>
                             
                             <Animated.View style={{transform: [{ translateX: moveAnimation4 }],position: 'absolute',width: '90%',marginTop: 50,alignSelf: 'center',}}>
-                                <UserPfp details={editedPost.value.creator_details} style={{alignSelf: 'center',marginTop: -30,}}/>
+                                <UserPfp 
+                                    details={editedPost.value.creator_details} 
+                                    style={{alignSelf: 'center',marginTop: -30,}}
+                                    badge_style={{right:Dimensions.get('window').width/2.6,top:-30}}
+                                />
 
                                 <Text style={styles.modalText}>Hide this post by @{username} ?</Text>
                                 <Text style={{marginTop: 10, color: '#959595', fontSize: 14,textAlign:'center'}}>
@@ -440,7 +452,11 @@ export default function PostSettingsModal() {
                             </TouchableOpacity>
                             
                             <Animated.View style={{transform: [{ translateX: moveAnimation5 }],position: 'absolute',width: '90%',marginTop: 50,alignSelf: 'center',}}>
-                                <UserPfp details={editedPost.value.creator_details} style={{alignSelf: 'center',marginTop: -30,}}/>
+                                <UserPfp 
+                                    details={editedPost.value.creator_details} 
+                                    style={{alignSelf: 'center',marginTop: -30,}}
+                                    badge_style={{right:Dimensions.get('window').width/2.6,top:-30}}
+                                />
 
                                 <Text style={styles.modalText}>Mute @{username} ?</Text>
                                 <Text style={{marginTop: 10, color: '#959595', fontSize: 14,textAlign:'center'}}>
