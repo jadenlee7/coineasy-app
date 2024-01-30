@@ -189,13 +189,13 @@ const Categories = ({ navigation, route }) => {
                             <NotificationsIcon />
                         </TouchableOpacity>
 
+
                         <Text style={[
                             tailwind('text-slate-900 px-5'), 
                             { 
                                 fontSize: 16,
                                 fontFamily: "GmarketBold",
                                 lineHeight: 20,
-                                marginLeft: '2%',
                                 marginBottom: 10,
                             }]}
                         >

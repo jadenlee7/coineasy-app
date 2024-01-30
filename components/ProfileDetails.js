@@ -450,7 +450,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     </View>
                 }
         
-            {/** Profile navigation */}
+                {/** Profile navigation */}
                 {Platform.OS == 'ios' ? (
                     <>
                         <View style={tailwind('flex flex-row px-4 border-b border-slate-100 mt-30px')}>

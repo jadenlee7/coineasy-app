@@ -283,7 +283,7 @@ const News = ({ navigation, route }) => {
                     <HeaderImage />
 
                     <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: 21,}}>
-                        <Text style={[tailwind('text-slate-900 px-2'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20,marginLeft: 10, }]}>Explore EASY World!</Text>
+                        <Text style={[tailwind('text-slate-900 px-5'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20, }]}>Explore EASY World!</Text>
 
                         <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('Notifications')} style={{marginRight: 20,}}>
                             <NotificationsIcon />
