@@ -17,7 +17,6 @@ const FollowerScreen = (props) => {
 
     const { profile, type, followers, following, own_followers, own_following } = props
 
-    const [pageLoader, setPageLoader ] = useState(false);
     const [refreshing, setRefreshing] = useState(false)
     
     const [list_followers, setList_followers ] = useState(followers);
@@ -26,30 +25,6 @@ const FollowerScreen = (props) => {
     const [list_own_following, setList_own_following] = useState(own_following);
 
     const [listFollowLoader, setListFollowLoader] = useState([])
-
-    /** Check if user liked this post */
-    // useEffect(() => {
-    //     getListFollower();
-
-    //     /** Will load main post details */
-    //     async function getListFollower() {
-    //         setPageLoader(true);
-
-    //         const result_followers = await orbis.getProfileFollowers(profile.did)
-            
-    //         // If user visits another profile, We'll fetch his own followers/following to compare the two lists
-    //         if(type == 'selected'){
-    //             const result_own_followers = await orbis.getProfileFollowers(user.did)
-    //             setList_own_followers(result_own_followers.data)
-    //         }
-
-    //         result_followers.data.forEach(e => listFollowLoader.push(false))
-            
-    //         setList_followers(result_followers.data);
-    //         setListFollowLoader([...listFollowLoader])
-    //         setPageLoader(false);
-    //     }
-    // }, []);
 
 
     const Follow = ({follow, index}) => {    

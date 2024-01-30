@@ -49,21 +49,78 @@ const FollowNavigation = ({navigation, route}) => {
                 const result_own_following = await orbis.getProfileFollowing(user.did)
 
                 setList_own_followers(result_own_followers.data)
-                setList_own_following(result_own_following.data)
+                setList_own_following(result_own_following.data)                
+                
+                // Switch own followers to first place
+                // for the followers and following tabs
+                let list_common_for_followers = []
+                for (let i = 0; i < result_own_following.data.length; i++) {
+                    for (let j = 0; j < result_followers.data.length; j++) {
+                        if (result_own_following.data[i].details.did === result_followers.data[j].details.did) {
+                            list_common_for_followers.push(result_followers.data[j].details.did)
+                        }
+                    }
+                }
+
+                let list_common_for_following = []
+                for (let i = 0; i < result_own_following.data.length; i++) {
+                    for (let j = 0; j < result_following.data.length; j++) {
+                        if (result_own_following.data[i].details.did === result_following.data[j].details.did) {
+                            list_common_for_following.push(result_following.data[j].details.did)
+                        }
+                    }
+                }
+
+                list_common_for_followers.map(elt => {
+                    const indexItem = result_followers.data.findIndex(e => e.details.did == elt)
+                    const switch_element = result_followers.data.splice(indexItem, 1)[0];
+                    result_followers.data.splice(0, 0, switch_element);
+                })
+                list_common_for_following.map(elt => {
+                    const indexItem = result_following.data.findIndex(e => e.details.did == elt)
+                    const switch_element = result_following.data.splice(indexItem, 1)[0];
+                    result_following.data.splice(0, 0, switch_element);
+                })
+
+                setList_followers(result_followers.data);
+                setList_following(result_following.data);
+                setFollowLoading(false);
+            }else{
+
+                // Switch own followers to first place
+                // for the followers tab
+                let list_common = []
+                for (let i = 0; i < result_following.data.length; i++) {
+                    for (let j = 0; j < result_followers.data.length; j++) {
+                        if (result_following.data[i].details.did === result_followers.data[j].details.did) {
+                            list_common.push(result_followers.data[j].details.did)
+                        }
+                    }
+                }
+
+                list_common.map(elt => {
+                    const indexItem = result_followers.data.findIndex(e => e.details.did == elt)
+                    const switch_element = result_followers.data.splice(indexItem, 1)[0];
+                    result_followers.data.splice(0, 0, switch_element);
+                })
+
+                setList_followers(result_followers.data);
+                setList_following(result_following.data);
+                setFollowLoading(false);
             }
 
-            setList_followers(result_followers.data);
-            setList_following(result_following.data);
-            setFollowLoading(false);
         }
     }, []);
 
     const [tabIndex, setIndex] = useState(origin == 'Followers' ? 0 : origin == 'Following' ? 1 : 2);
-    const routes = [
+    const routes = type == 'selected' ? [
         {key:0, title: 'Followers'},
         {key:1, title: 'Following'},
         {key:2, title: 'Mutual'},
-    ];
+    ] : [
+        {key:0, title: 'Followers'},
+        {key:1, title: 'Following'},
+    ]
     
     const renderLabel = ({route, focused}) => { 
         return ( 
@@ -77,7 +134,7 @@ const FollowNavigation = ({navigation, route}) => {
         }else{
             if(route.key == 0 ) return <FollowerScreen profile={profile} type={type} followers={list_followers} following={list_following} own_followers={list_own_followers} own_following={list_own_following} listCommonFollowers={listCommonFollowers}/>
             if(route.key == 1 ) return <FollowingScreen profile={profile} type={type} followers={list_followers} following={list_following} own_followers={list_own_followers} own_following={list_own_following} listCommonFollowers={listCommonFollowers}/>
-            if(route.key == 2 ) return <CommonFollowerScreen profile={profile} own_followers={list_own_followers} listCommonFollowers={listCommonFollowers}/>
+            if(route.key == 2 && type == 'selected' ) return <CommonFollowerScreen profile={profile} own_followers={list_own_followers} listCommonFollowers={listCommonFollowers}/>
         }
     };
  
@@ -87,7 +144,13 @@ const FollowNavigation = ({navigation, route}) => {
                 {...props}
                 style={styles.tab}
                 renderLabel={renderLabel}
-                indicatorStyle={[styles.indicator, { width: IndicatorWidth, left: (Dimensions.get('window').width / 3 - IndicatorWidth) / 2 }]}
+                indicatorStyle={[
+                    styles.indicator, 
+                    { 
+                        width: IndicatorWidth, 
+                        left: type == 'selected' ? (Dimensions.get('window').width / 3 - IndicatorWidth) / 2 : (Dimensions.get('window').width / 2 - IndicatorWidth) / 2
+                    }
+                ]}
             />
         );
     };
