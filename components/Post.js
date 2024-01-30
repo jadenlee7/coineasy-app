@@ -62,8 +62,13 @@ const PostDisplay = (props) => {
     const [imageIndex, setImageIndex] = useState(0)
 
     const [lengthMore,setLengthMore] = useState(false);
-    const onTextLayout = useCallback(e =>{
-        setLengthMore(e.nativeEvent.lines.length > 4);
+    const onTextLayout = useCallback(e => {
+        var count_lines = 0
+        e.nativeEvent.lines.map(e => {
+            if(e.text.indexOf("\n") != 0) count_lines += 1
+        })
+
+        setLengthMore(count_lines > 4);
     },[]);
 
     const tailwind = useTailwind();
