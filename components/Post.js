@@ -143,9 +143,9 @@ const PostDisplay = (props) => {
 
         // Match URLs
         replacedText = reactStringReplace(replacedText, /(https?:\/\/\S+)/g, (match, i) => (
-        <TouchableWithoutFeedback key={match + i} onPress={() => openNews(match)}>
-            <Text style={{ color: '#ff6b17', fontFamily: "GmarketMedium", backgroundColor: "#FFF" }}>{match}</Text>
-        </TouchableWithoutFeedback>
+            <TouchableWithoutFeedback key={match + i} onPress={() => openNews(match)}>
+                <Text style={{ color: '#ff6b17', fontFamily: "GmarketMedium", backgroundColor: "#FFF" }}>{match}</Text>
+            </TouchableWithoutFeedback>
         ));
 
         return replacedText;
@@ -274,8 +274,12 @@ const PostDisplay = (props) => {
                         </View>
 
                         {/** Post content */}
-                        <TouchableOpacity activeOpacity={0.7} style={[tailwind('ml-1 px-1 flex flex-1 rounded-md mr-8')]} onPress={() => showPostDetails()} disabled={notTouchable ? true : false}>
-                            <>
+                        <TouchableOpacity 
+                            activeOpacity={0.7} 
+                            style={[tailwind('ml-1 px-1 rounded-md mr-8')]} 
+                            onPress={() => showPostDetails()} 
+                            disabled={notTouchable ? true : false}
+                        >
                                 {body && body == 'Message sans body' ?(
                                     <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: -10, paddingBottom: 0, }, stylePostContent]} />
                                 ) : (body && body != "") ?
@@ -358,21 +362,20 @@ const PostDisplay = (props) => {
                                         </View>
                                     </Modal>
                                 }
-                            </>
                         </TouchableOpacity>
 
                         {/** Display URL Metadata */}
                         {(post.indexing_metadata?.urlMetadata && post.indexing_metadata?.urlMetadata.title) &&
-                        <View style={{width: Platform.OS == 'ios' ? '97.5%' : '97%',marginLeft: 8}}>
-                            <NewsItem 
-                                item={{
-                                    title: getShorterString(post.indexing_metadata.urlMetadata.title, 60),
-                                    image: post.indexing_metadata.urlMetadata.image,
-                                    url: post.indexing_metadata.urlMetadata.source,
-                                    hostname: getDomainName(post.indexing_metadata.urlMetadata.source)
-                                }} 
-                            />
-                        </View>
+                            <View style={{width: Platform.OS == 'ios' ? '97.5%' : '97%',marginLeft: 8}}>
+                                <NewsItem 
+                                    item={{
+                                        title: getShorterString(post.indexing_metadata.urlMetadata.title, 60),
+                                        image: post.indexing_metadata.urlMetadata.image,
+                                        url: post.indexing_metadata.urlMetadata.source,
+                                        hostname: getDomainName(post.indexing_metadata.urlMetadata.source)
+                                    }} 
+                                />
+                            </View>
                         }
 
                         {/** Quoted post details if any */}
@@ -384,11 +387,11 @@ const PostDisplay = (props) => {
 
                         {/** Post CTAs */}
                         {showReactions &&
-                        <View style={[tailwind('flex flex-row mt-0')]}>
-                            <CommentCTA post={post} isReply={isReply} />
-                            <LikeCTA post={post} isReply={isReply} />
-                            <RepostCTA post={post} isReply={isReply} />
-                        </View>
+                            <View style={[tailwind('flex flex-row')]}>
+                                <CommentCTA post={post} isReply={isReply} />
+                                <LikeCTA post={post} isReply={isReply} />
+                                <RepostCTA post={post} isReply={isReply} />
+                            </View>
                         }
                     </View>
                 </View>

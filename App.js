@@ -103,6 +103,8 @@ export default function App() {
   const [selectedNews, setSelectedNews] = useState(null)
   const [currentRoute, setCurrentRoute] = useState(null)
 
+  const [tabViewHeight, setTabViewHeight] = useState(500)
+
   const [scrollAnim, setScrollAnim] = useState(new Animated.Value(0));
   const [offsetAnim, setOffsetAnim] = useState(new Animated.Value(0));
   const [clampedScroll, setClampedScroll] = useState(Animated.diffClamp(
@@ -546,7 +548,9 @@ export default function App() {
                 nicknameVis,
                 setNicknameVis,
                 connectType,
-                setConnectType
+                setConnectType,
+                tabViewHeight,
+                setTabViewHeight
             }}
         >
           <TailwindProvider utilities={utilities}>

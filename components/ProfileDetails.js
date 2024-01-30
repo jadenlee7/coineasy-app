@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Linking, Alert, Image, Dimensions, ScrollView } from 'react-native';
+import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Linking, Alert, Image, Dimensions, ScrollView, StyleSheet } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -18,10 +18,19 @@ import { useNavigation } from "@react-navigation/core";
 import { useScrollToTop } from "@react-navigation/native";
 import HeaderImage from "./HeaderImage";
 import Modal from "./Modal.js";
+import { TabBar, TabView } from "react-native-tab-view";
+
+import ProfileFeed from '../screens/Navigation/ProfileFeed'
+import ProfileReplies from '../screens/Navigation/ProfileReplies'
+import ProfileReposts from '../screens/Navigation/ProfileReposts'
+
+
+const TabBarHeight = 44;
+const IndicatorWidth = 50
 
 
 export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
-    const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, setUser, setPushNotifsVis } = useContext(GlobalContext);
+    const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, tabViewHeight } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const [nav, setNav] = useState("feed");
@@ -40,14 +49,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const scrollRef = useRef()
     const navigation = useNavigation()
 
-    let countLink = 0
-    if(userInfo.profile && userInfo.profile.data){
-        typeof userInfo.profile.data.external !== 'undefined' && userInfo.profile.data.external != '' ? countLink += 1 : null
-        typeof userInfo.profile.data.twitter !== 'undefined' && userInfo.profile.data.twitter != '' ? countLink += 1 : null
-        typeof userInfo.profile.data.telegram !== 'undefined' && userInfo.profile.data.telegram != '' ? countLink += 1 : null
-    }
-
-    const [numberLink, setNumberLink] = useState(countLink)
+    const [numberLink, setNumberLink] = useState(userInfo.profile && userInfo.profile.data && userInfo.profile.data.length != 0 ? userInfo.profile.data.length : 0)
 
     useScrollToTop(scrollRef);
 
@@ -140,14 +142,8 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         
         const { data, error } = await orbis.getProfile(profile.did);
         setUserInfo(data.details)
-
-        let countLink = 0
-        if(data.details.profile && data.details.profile.data){
-            typeof data.details.profile.data.external !== 'undefined' && data.details.profile.data.external != '' ? countLink += 1 : null
-            typeof data.details.profile.data.twitter !== 'undefined' && data.details.profile.data.twitter != '' ? countLink += 1 : null
-            typeof data.details.profile.data.telegram !== 'undefined' && data.details.profile.data.telegram != '' ? countLink += 1 : null
-        }
-        setNumberLink(countLink)
+        
+        setNumberLink(data.details.profile && data.details.profile.data && data.details.profile.data.length != 0 ? data.details.profile.data.length : 0)
 
         getCountPosts()
 
@@ -167,6 +163,40 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
             Alert.alert('Could not open URL '+url)
         }
     }
+
+    const [tabIndex, setIndex] = useState(0);
+    const routes = [
+        {key:0, title: 'Feed'},
+        {key:1, title: 'Replies'},
+        {key:2, title: 'Reposts'},
+    ];
+    
+    const renderLabel = ({route, focused}) => { 
+        return ( 
+            <Text style={[styles.label, {opacity: focused ? 1 : 0.5}]}>{route.title}</Text>
+        );
+    };
+
+    const renderScene = ({route}) => {
+        if(followLoading){
+            return <ActivityIndicator style={{marginTop: 50}} size="small" color="#020617" />
+        }else{
+            if(route.key == 0 ) return <ProfileFeed profile={userInfo} />
+            if(route.key == 1 ) return <ProfileReplies profile={userInfo} />
+            if(route.key == 2 ) return <ProfileReposts profile={userInfo} />
+        }
+    };
+ 
+    const renderTabBar = (props) => {
+        return (
+            <TabBar
+                {...props}
+                style={styles.tab}
+                renderLabel={renderLabel}
+                indicatorStyle={[styles.indicator, { width: IndicatorWidth, left: (Dimensions.get('window').width / 3 - IndicatorWidth) / 2 }]}
+            />
+        );
+    };
 
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
@@ -191,7 +221,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 <HeaderImage/>
             )}
 
-            <Animated.ScrollView 
+            <ScrollView 
                 scrollEventThrottle={16}
                 style={{backgroundColor: 'white',marginTop: type == 'selected' ? -10 : 0,}}
                 ref={scrollRef}
@@ -419,9 +449,20 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     </View>
                 }
         
+                <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
+                    <TabView
+                        navigationState={{index: tabIndex, routes}}
+                        renderScene={renderScene}
+                        renderTabBar={renderTabBar}
+                        onIndexChange={setIndex}
+                        initialLayout={{width: Dimensions.get('window').width}}
+                        style={{height: tabViewHeight}}
+                    />
+                </View>
+
         
                 {/** Profile navigation */}
-                <View style={tailwind('flex flex-row px-4 border-b border-slate-100 mt-30px')}>
+                {/* <View style={tailwind('flex flex-row px-4 border-b border-slate-100 mt-30px')}>
                     <NavItem slug="feed" title="Feed" setNav={setNav} nav={nav} />
                     <NavItem slug="replies" selected={true} title="Replies" nav={nav} setNav={setNav} />
                     <NavItem slug="reposts" title="Reposts" nav={nav} setNav={setNav} />
@@ -429,8 +470,8 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         
                 <View style={tailwind('flex flex-col')}>
                     <Posts type={nav} profile={userInfo} />
-                </View>
-            </Animated.ScrollView>
+                </View> */}
+            </ScrollView>
 
             {showLinkModal && (
                 <Modal hide={() => {Haptics.selectionAsync();setShowLinkModal(false)}} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
@@ -469,43 +510,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                                             <LinkIcon style={{marginRight: 20}}/>
                                         )}
                                     </TouchableOpacity>
-
-
-
-                                    // <TouchableOpacity 
-                                    //     style={{
-                                    //         flex: 1,
-                                    //         flexDirection: 'row',
-                                    //         alignItems: 'center',
-                                    //         justifyContent: 'center',
-                                    //         borderWidth: 1,
-                                    //         borderRadius: 10,
-                                    //         width: '80%',
-                                    //         height: 40,
-                                    //         marginVertical: 10
-                                    //     }} 
-                                    //     onPress={() => openLink(e.link)}
-                                    //     key={Math.random()}
-                                    // >
-                                    //     {e.link.toLowerCase().includes('twitter.com') ? (
-                                    //         <TwitterIcon />
-                                    //     ) : e.link.toLowerCase().includes('t.me') ? (
-                                    //         <TelegramIcon />
-                                    //     ) : e.link.toLowerCase().includes('facebook.com') ? (
-                                    //         <FacebookIcon />
-                                    //     ) : e.link.toLowerCase().includes('instagram.com') ? (
-                                    //         <InstagramIcon />
-                                    //     ) : (
-                                    //         <LinkIcon />
-                                    //     )}
-
-                                    //     <Text 
-                                    //         style={[{marginLeft: 3,fontWeight: 'bold',fontSize: 12,}]} 
-                                    //         numberOfLines={1}
-                                    //     >
-                                    //         {e.title ? e.title : e.link.replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '').replace('Http://www.', '').replace('Https://www.', '').replace('Http://', '').replace('Https://', '')}
-                                    //     </Text>
-                                    // </TouchableOpacity>
                                 )
                             })}
                         </View>
@@ -643,3 +647,24 @@ const NavItem = ({title, selected, nav, setNav, slug}) => {
     </TouchableOpacity>
   )
 }
+
+
+const styles = StyleSheet.create({
+    label: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        // color: 'white'
+    },
+    tab: {
+        elevation: 0,
+        shadowOpacity: 0,
+        backgroundColor: 'white',
+        height: TabBarHeight,
+    },
+    indicator: {
+        height: 4, 
+        borderRadius: 10,
+        width: '20%',
+        backgroundColor: '#FF6B17'
+    },
+})

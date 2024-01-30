@@ -10,11 +10,11 @@ const HeaderImage = (props) => {
 
     return(
         <Image
-            style={{ 
+            style={[props.style, { 
                 width: Dimensions.get('window').width,
                 height: statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight,
                 paddingTop: statusBarHeight,
-            }}
+            }]}
             source={require('../assets/HeaderBg_2024.png')}
             // resizeMode="stretch"
             defaultSource={require('../assets/HeaderBg_2024.png')}
