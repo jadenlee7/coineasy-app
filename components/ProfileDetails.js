@@ -25,7 +25,7 @@ import ProfileReplies from '../screens/Navigation/ProfileReplies'
 import ProfileReposts from '../screens/Navigation/ProfileReposts'
 
 
-const TabBarHeight = 44;
+const TabBarHeight = 50;
 const IndicatorWidth = 50
 
 
@@ -221,9 +221,10 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 <HeaderImage/>
             )}
 
-            <ScrollView 
+            <Animated.ScrollView 
                 scrollEventThrottle={16}
-                style={{backgroundColor: 'white',marginTop: type == 'selected' ? -10 : 0,}}
+                style={{backgroundColor: 'white',marginTop: type == 'selected' ? -10 : 0}}
+                // contentContainerStyle={{flex:1}}
                 ref={scrollRef}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={updateProfile} />
@@ -449,29 +450,33 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     </View>
                 }
         
-                <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
-                    <TabView
-                        navigationState={{index: tabIndex, routes}}
-                        renderScene={renderScene}
-                        renderTabBar={renderTabBar}
-                        onIndexChange={setIndex}
-                        initialLayout={{width: Dimensions.get('window').width}}
-                        style={{height: tabViewHeight}}
-                    />
-                </View>
+            {/** Profile navigation */}
+                {Platform.OS == 'ios' ? (
+                    <>
+                        <View style={tailwind('flex flex-row px-4 border-b border-slate-100 mt-30px')}>
+                            <NavItem slug="feed" title="Feed" setNav={setNav} nav={nav} />
+                            <NavItem slug="replies" selected={true} title="Replies" nav={nav} setNav={setNav} />
+                            <NavItem slug="reposts" title="Reposts" nav={nav} setNav={setNav} />
+                        </View>
+                        <View style={tailwind('flex flex-col')}>
+                            <Posts type={nav} profile={userInfo} />
+                        </View>
+                    </>
+                ) : (
+                    <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
+                        <TabView
+                            navigationState={{index: tabIndex, routes}}
+                            renderScene={renderScene}
+                            renderTabBar={renderTabBar}
+                            onIndexChange={setIndex}
+                            initialLayout={{width: Dimensions.get('window').width}}
+                            style={{height: tabViewHeight,}}
+                        />
+                    </View>
+                )}
 
-        
-                {/** Profile navigation */}
-                {/* <View style={tailwind('flex flex-row px-4 border-b border-slate-100 mt-30px')}>
-                    <NavItem slug="feed" title="Feed" setNav={setNav} nav={nav} />
-                    <NavItem slug="replies" selected={true} title="Replies" nav={nav} setNav={setNav} />
-                    <NavItem slug="reposts" title="Reposts" nav={nav} setNav={setNav} />
-                </View>
-        
-                <View style={tailwind('flex flex-col')}>
-                    <Posts type={nav} profile={userInfo} />
-                </View> */}
-            </ScrollView>
+
+            </Animated.ScrollView>
 
             {showLinkModal && (
                 <Modal hide={() => {Haptics.selectionAsync();setShowLinkModal(false)}} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
@@ -653,18 +658,20 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 16,
         fontWeight: 'bold',
-        // color: 'white'
+        marginTop: 10,
     },
     tab: {
         elevation: 0,
         shadowOpacity: 0,
         backgroundColor: 'white',
         height: TabBarHeight,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ebebeb'
     },
     indicator: {
         height: 4, 
         borderRadius: 10,
         width: '20%',
-        backgroundColor: '#FF6B17'
+        backgroundColor: '#FF6B17',
     },
 })
