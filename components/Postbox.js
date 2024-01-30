@@ -746,7 +746,7 @@ export default function Postbox({isReply = false}) {
             </ScrollView>
             
             {!categoriesVis && (
-                <KeyboardAvoidingView style={[tailwind('flex flex-row w-full p-3 px-5'), {position: 'absolute',bottom: 10}]} behavior='height'>
+                <KeyboardAvoidingView style={[tailwind('flex flex-row w-full p-3 px-5'), {position: 'absolute',bottom: 0, backgroundColor: 'white',}]} behavior='height'>
                     {/** Image picker icon */}
                     <View style={tailwind('flex flex-1 flex-row items-start')}>
                         {imageLoading ?
