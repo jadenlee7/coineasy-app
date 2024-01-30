@@ -14,6 +14,7 @@ import Header from "../components/Header";
 import Feed from "../components/Feed";
 import HeaderImage from "../components/HeaderImage";
 import moment from "moment";
+import TimeAgo from "../components/TimeAgo.js";
 
 let page = 0
 
@@ -235,7 +236,7 @@ const News = ({ navigation, route }) => {
         }
     
         return(
-            <TouchableHighlight style={tailwind(`rounded-full py-3 border flex-1 border-slate-800 ${nav == item ? " bg-slate-800" : ""} ${item == "onboard" ? "mr-3 ml-3" : ""}`)} onPress={() => select(item)} underlayColor="#f8fafc">
+            <TouchableHighlight style={tailwind(`rounded-full py-3 border flex-1 border-slate-800 ${nav == item ? " bg-slate-800" : ""} ${item == "easy-edu" ? "mr-3 ml-3" : ""}`)} onPress={() => select(item)} underlayColor="#f8fafc">
                 <Text style={[tailwind(`text-center ${nav == item ? "text-white" : "text-slate-900" }`), { fontSize: 11, fontFamily: "GmarketBold" }]}>{label}</Text>
             </TouchableHighlight>
         )
@@ -255,7 +256,11 @@ const News = ({ navigation, route }) => {
         }
     
         return(
-            <TouchableHighlight style={tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-10px')} onPress={() => selectCat()} underlayColor="#f8fafc">
+            <TouchableHighlight 
+                style={[tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-10px'), {elevation: 0}]} 
+                onPress={() => selectCat()} 
+                underlayColor="#f8fafc"
+            >
                 <>
                     {/** Display image if any */}
                     {item.content.imageUrl &&
@@ -293,8 +298,8 @@ const News = ({ navigation, route }) => {
                     <View style={tailwind('flex flex-col flex-1')}>
                         <View style={tailwind('flex flex-row mt-30px px-5')}>
                             <NavItem setNav={setNav} nav={nav} item="news" label="NEWS" />
-                            <NavItem setNav={setNav} nav={nav} item="onboard" label="FEATURED" />
                             <NavItem setNav={setNav} nav={nav} item="easy-edu" label="EASY EDU" />
+                            <NavItem setNav={setNav} nav={nav} item="onboard" label="FEATURED" />
                         </View>
 
                         <ScrollView 
@@ -340,7 +345,11 @@ export const NewsItem = ({item}) => {
     const news_image = item.content_html?.slice(item.content_html.indexOf('src="') + 5,item.content_html.indexOf('" style'));
   
     return(
-        <TouchableHighlight style={tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-10px')} onPress={() => openNews()} underlayColor="#f8fafc">
+        <TouchableHighlight 
+            style={tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-10px')} 
+            onPress={() => openNews()} 
+            underlayColor="#f8fafc"
+        >
             <>
                 {item.image ?
                     <Image
@@ -360,16 +369,16 @@ export const NewsItem = ({item}) => {
                     />
                 }
         
-                <View style={tailwind('flex flex-col ml-2 flex-1 justify-center')}>
-                    <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15 }]}>{item.title}</Text>
+                <View style={tailwind('flex flex-col ml-2 flex-1 justify-between')}>
+                    <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15,}]}>{item.title}</Text>
                     <View style={tailwind('flex flex-row items-center mt-2')}>
                         {item.authors && item.authors.length > 0 && item.authors[0].name &&
                             <>
-                                <Text style={[tailwind(`flex flex-row text-secondary`), { fontSize: 11, lineHeight: 15 }]}>{item.authors[0].name}</Text>
+                                <Text style={[tailwind(`flex flex-row text-secondary`), { fontSize: 11, lineHeight: 15 }]}>By {item.authors[0].name}</Text>
                                 <View style={tailwind('flex ml-2 mr-2')}>
                                     <InterpunctIcon />
                                 </View>
-                                <Text style={[tailwind(`flex flex-row text-secondary`), { fontSize: 11, lineHeight: 15 }]}>{moment(item.date_published).format('DD/MM/YYYY')}</Text>
+                                <TimeAgo timestamp={Date.parse(item.date_published)/1000} style={[tailwind(`flex flex-row text-secondary`), { fontSize: 11, lineHeight: 15 }]}/>
                             </>
                         }
                         <Text style={[tailwind(`items-center flex flex-row text-secondary`), { fontSize: 11, lineHeight: 15 }]}>{item.hostname}</Text>

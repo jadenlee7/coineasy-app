@@ -18,7 +18,7 @@ moment.updateLocale('en', {
   },
 });
 
-export default function TimeAgo({ timestamp }) {
+export default function TimeAgo({ timestamp, style }) {
   const tailwind = useTailwind();
   if(timestamp) {
     const timeAgo = moment(timestamp*1000).fromNow();
@@ -27,7 +27,7 @@ export default function TimeAgo({ timestamp }) {
     const now = moment();
     const diff = now.diff(unixTime, 'days')
 
-    return <Text style={tailwind("text-xs")}>{diff > 30 ? unixTime.format('DD/MM/YYYY') : timeAgo == '1m ago' && diff >= 26 ? diff+'d ago' : timeAgo}</Text>
+    return <Text style={[tailwind("text-xs"), style]}>{diff > 30 ? unixTime.format('DD/MM/YYYY') : timeAgo == '1m ago' && diff >= 26 ? diff+'d ago' : timeAgo}</Text>
   } else {
     return null;
   }
