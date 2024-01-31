@@ -580,16 +580,17 @@ export default function Postbox({isReply = false}) {
 
     const Media = ({media, deleteMedia, index}) => {
         const tailwind = useTailwind();
+
         if(media && media.length > 0) {
             return(
-                <View style={{marginLeft: index != 0 ? 8 : 0,marginTop: 10,marginBottom: 10,}} key={Math.random()}>
+                <View style={{marginTop: 0,marginBottom: 10,marginLeft: typeof index === 'undefined' ? 0 : index != 0 ? 10 : 20,}}>
                     <Image
-                        style={[tailwind('rounded-md shadow-md border border-secondary'), { height: 150, width: 150 }]}
+                        style={[tailwind('rounded-md shadow-md border'), { height: '100%', width: Dimensions.get('window').width - 40, height:400 }]}
                         source={{
                             uri: media[0].url,
                         }}
                     />
-                    <TouchableHighlight onPress={deleteMedia} style={{ position: "absolute", right: -5, top: -5}} underlayColor="transparent">
+                    <TouchableHighlight onPress={deleteMedia} style={{ position: "absolute", right: 6, top: 6}} underlayColor="transparent">
                         <CloseIcon />
                     </TouchableHighlight>
                 </View>
@@ -683,11 +684,12 @@ export default function Postbox({isReply = false}) {
                         ) : (
                             <ScrollView
                                 horizontal={true}
-                                // style={{width: Dimensions.get('window').width}}
+                                style={{width: Dimensions.get('window').width, marginLeft: -20}}
+                                showsHorizontalScrollIndicator={false}
                             >
                                 { listMedia.map((item, index) => {
                                     return(
-                                        <Media media={item} deleteMedia={() => deleteMedia(index)} index={index}/>
+                                        <Media media={item} deleteMedia={() => deleteMedia(index)} index={index} key={Math.random()}/>
                                     )
                                 })}
                                 <View style={{width: 20}}/>

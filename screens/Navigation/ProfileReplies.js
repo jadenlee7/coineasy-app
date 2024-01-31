@@ -33,16 +33,35 @@ const ProfileReplies = (props) => {
   
         let { data } = await orbis.getPosts(options);
         if(data) {
-            setPosts(data);
+            data.map(async (e, index)=>{
+                if(e.content.reply_to){
+                    const resultPost = await orbis.getPost(e.content.reply_to)
 
-            if(data.length == 50){
-                setTabViewHeight(20000)
-            }else if(data.length * 300 > tabViewHeight){
-                setTabViewHeight(data.length * 300)
-            }
+                    if(resultPost.data.content.body.includes('SBF')){
+                        console.log(index);
+                    }
+        
+                    e.reply_to_details.count_likes = resultPost.data?.count_likes
+                    e.reply_to_details.count_replies = resultPost.data?.count_replies
+                    e.reply_to_details.count_repost = resultPost.data?.count_repost
+                    e.reply_to_details.timestamp = resultPost.data?.timestamp
+                }
+
+                if(index == data.length -1){
+                    setPosts(data);
+
+                    if(data.length == 50){
+                        setTabViewHeight(20000)
+                    }else if(data.length * 300 > tabViewHeight){
+                        setTabViewHeight(data.length * 300)
+                    }
+
+                    setRefreshing(false);
+                }
+        
+                return e
+            })
         }
-    
-        setRefreshing(false);
     }
   
     if(refreshing) {

@@ -36,13 +36,7 @@ export default function UpdateProfileModal({callback}) {
     const moveAnimation2 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
     const moveAnimation3 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
 
-    let countLink = 0
-    if(user.profile && user.profile.data){
-        typeof user.profile.data.external !== 'undefined' && user.profile.data.external != '' ? countLink += 1 : null
-        typeof user.profile.data.twitter !== 'undefined' && user.profile.data.twitter != '' ? countLink += 1 : null
-        typeof user.profile.data.telegram !== 'undefined' && user.profile.data.telegram != '' ? countLink += 1 : null
-    }
-    const [numberLink, setnumberLink] = useState(countLink)
+    const [numberLink, setnumberLink] = useState(user.profile && user.profile.data && user.profile.data.list_link ? user.profile.data.list_link.length : 0)
 
     const onBackSocialLinks = () => {
         Haptics.selectionAsync();

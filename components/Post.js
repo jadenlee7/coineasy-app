@@ -392,7 +392,13 @@ const PostDisplay = (props) => {
 
                         {/** Post CTAs */}
                         {showReactions &&
-                            <View style={[tailwind('flex flex-row')]}>
+                            <View style={[
+                                tailwind('flex flex-row'), 
+                                {
+                                    marginTop: showRepostDetails && post.content.repost != null ? 6 : showParent ? -3 : 0,
+                                    marginBottom: showParent ? 6 : 0,
+                                }
+                            ]}>
                                 <CommentCTA post={post} isReply={isReply} />
                                 <LikeCTA post={post} isReply={isReply} />
                                 <RepostCTA post={post} isReply={isReply} />
