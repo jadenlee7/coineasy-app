@@ -11,7 +11,7 @@ import Button from "./Button";
 import { shortAddress } from "../utils";
 import { UserPfp, Username } from "./User";
 import { context } from '../utils/config.js';
-import { BackIcon, CheckIcon, CloseIcon, CopyIconBadge, FacebookIcon, InstagramIcon, LinkIcon, NotificationsIcon, RepostIcon, SettingsIcon, TelegramIcon, TwitterIcon } from "./Icons";
+import { BackIcon, CheckIcon, CloseIcon, CopyIconBadge, FacebookIcon, InstagramIcon, LinkIcon, NotificationsIcon, PostMenuIcon, RepostIcon, SettingsIcon, TelegramIcon, TwitterIcon } from "./Icons";
 import useDidToAddress from "../hooks/useDidToAddress";
 import { GlobalContext } from "../contexts/GlobalContext";
 import { useNavigation } from "@react-navigation/core";
@@ -594,7 +594,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 const Posts = ({type, profile}) => {
   const [posts, setPosts] = useState([]);
   const [refreshing, setRefreshing] = useState(true);
-  const { user, orbis } = useContext(GlobalContext);
+  const { user, orbis, setEditedPost } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
   useEffect(() => {
@@ -696,15 +696,29 @@ const Posts = ({type, profile}) => {
 
 
   return posts.map((post, key) => {
-    
+
     if(post?.content?.repost != null && post.content.body == " ") {
         return (
             <View style={tailwind('flex flex-col')} key={key}>
-                <View style={[tailwind('flex flex-row items-center px-5 mt-3'), { marginBottom: -2 }]}>
-                    <RepostIcon color="#959595" />
-                    <Text style={tailwind('text-secondary items-center ml-1')}>
-                        <Username details={post.creator_details} style={tailwind('text-secondary font-normal')} /> reposted
-                    </Text>
+                <View style={[tailwind('flex flex-row justify-between px-5 mt-3'), { marginBottom: -2 }]}>
+                    <View style={[tailwind('flex flex-row items-center')]}>
+                        <RepostIcon color="#959595" />
+                        <Text style={tailwind('text-secondary items-center ml-1')}>
+                            <Username details={post.creator_details} style={tailwind('text-secondary font-normal')} /> reposted
+                        </Text>
+                    </View>
+
+                    <TouchableOpacity 
+                        onPress={() => 
+                            {user?.did == post.creator ? 
+                                setEditedPost({value: post,}) 
+                                : setEditedPost({type:'notCreatorReposted',value: post,})
+                            }
+                        } 
+                        style={[tailwind('flex flex-row items-center rounded-md py-2 px-1 -mr-1')]}
+                    >
+                        <PostMenuIcon />
+                    </TouchableOpacity>
                 </View>
                 <Post post={post.repost_details} showRepostDetails={false} />
             </View>
