@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, Image } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -159,14 +159,18 @@ const FollowNavigation = ({navigation, route}) => {
         <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
             <HeaderImage />
 
-            <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 5}}>
-                <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
-                    <View style={{zIndex:100000, justifyContent: 'center',alignItems: 'center',margin: 15, backgroundColor: 'white',flexDirection:'row',}}>
-                        <BackIcon />
-                        <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
-                    </View>
+            <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 4}}>
+                <TouchableOpacity style={{margin: 15,}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
+                    <Image
+                        style={{width: 24,height: 24}}
+                        resizeMode='contain'
+                        source={require('../../assets/back_button.png')}
+                        defaultSource={require('../../assets/back_button.png')}
+                    />
                 </TouchableOpacity>
             </View>
+
+            
 
             <TabView
                 navigationState={{index: tabIndex, routes}}

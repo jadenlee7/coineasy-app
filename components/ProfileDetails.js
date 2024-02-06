@@ -11,7 +11,7 @@ import Button from "./Button";
 import { shortAddress } from "../utils";
 import { UserPfp, Username } from "./User";
 import { context } from '../utils/config.js';
-import { BackIcon, CheckIcon, CloseIcon, CopyIconBadge, FacebookIcon, InstagramIcon, LinkIcon, NotificationsIcon, SettingsIcon, TelegramIcon, TwitterIcon } from "./Icons";
+import { BackIcon, CheckIcon, CloseIcon, CopyIconBadge, FacebookIcon, InstagramIcon, LinkIcon, NotificationsIcon, RepostIcon, SettingsIcon, TelegramIcon, TwitterIcon } from "./Icons";
 import useDidToAddress from "../hooks/useDidToAddress";
 import { GlobalContext } from "../contexts/GlobalContext";
 import { useNavigation } from "@react-navigation/core";
@@ -649,6 +649,8 @@ const Posts = ({type, profile}) => {
     let { data } = await orbis.getPosts(options);
     if(data) {
 
+        console.log(data);
+
         if(options.is_reply){
             data.map(async (e, index) => {
                 if(e.content.reply_to){
@@ -692,15 +694,27 @@ const Posts = ({type, profile}) => {
     )
   }
 
-  return posts.map((post, key) => {
-    return (
-      <Post key={key} post={post} />
-    );
-  });
 
-  /*return(
-    <Feed posts={posts} refreshing={refreshing} onRefresh={loadPosts} />
-  )*/
+  return posts.map((post, key) => {
+    
+    if(post?.content?.repost != null && post.content.body == " ") {
+        return (
+            <View style={tailwind('flex flex-col')} key={key}>
+                <View style={[tailwind('flex flex-row items-center px-5 mt-3'), { marginBottom: -2 }]}>
+                    <RepostIcon color="#959595" />
+                    <Text style={tailwind('text-secondary items-center ml-1')}>
+                        <Username details={post.creator_details} style={tailwind('text-secondary font-normal')} /> reposted
+                    </Text>
+                </View>
+                <Post post={post.repost_details} showRepostDetails={false} />
+            </View>
+        );
+    } else {
+        return (
+            <Post key={key} post={post} />
+        );
+    }
+  });
 }
 
 const NavItem = ({title, selected, nav, setNav, slug}) => {

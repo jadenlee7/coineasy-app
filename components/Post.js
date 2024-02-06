@@ -286,7 +286,7 @@ const PostDisplay = (props) => {
                             disabled={notTouchable ? true : false}
                         >
                                 {body && body == 'Message sans body' ?(
-                                    <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: -10, paddingBottom: 0, }, stylePostContent]} />
+                                    <Text style={[tailwind('text-slate-900 font-normal'), { marginTop: 5, paddingBottom: 0, }, stylePostContent]} />
                                 ) : (body && body != "") ?
                                     <>
                                         <Text 
