@@ -11,7 +11,7 @@ import Button from "./Button";
 import { shortAddress } from "../utils";
 import { UserPfp, Username } from "./User";
 import { context } from '../utils/config.js';
-import { BackIcon, CheckIcon, CopyIconBadge, FacebookIcon, InstagramIcon, LinkIcon, NotificationsIcon, SettingsIcon, TelegramIcon, TwitterIcon } from "./Icons";
+import { BackIcon, CheckIcon, CloseIcon, CopyIconBadge, FacebookIcon, InstagramIcon, LinkIcon, NotificationsIcon, SettingsIcon, TelegramIcon, TwitterIcon } from "./Icons";
 import useDidToAddress from "../hooks/useDidToAddress";
 import { GlobalContext } from "../contexts/GlobalContext";
 import { useNavigation } from "@react-navigation/core";
@@ -23,11 +23,11 @@ import { TabBar, TabView } from "react-native-tab-view";
 import ProfileFeed from '../screens/Navigation/ProfileFeed'
 import ProfileReplies from '../screens/Navigation/ProfileReplies'
 import ProfileReposts from '../screens/Navigation/ProfileReposts'
-
+import ImageViewer from "react-native-image-zoom-viewer";
+import useStatusBarHeight from "../hooks/useStatusBarHeight.js";
 
 const TabBarHeight = 50;
 const IndicatorWidth = 50
-
 
 export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, tabViewHeight } = useContext(GlobalContext);
@@ -43,8 +43,11 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const [userInfo, setUserInfo] = useState(profile)
 
     const [showLinkModal, setShowLinkModal] = useState(false)
+    const [showProfileImage, setShowProfileImage] = useState(false)
 
     const { address } = useDidToAddress(profile?.did);
+
+    const statusBarHeight = useStatusBarHeight();
 
     const scrollRef = useRef()
     const navigation = useNavigation()
@@ -198,18 +201,35 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         );
     };
 
+    function getProfilePicture(details) {
+        if(details.profile.pfp.includes("ipfs://")) {
+          return details.profile.pfp.replace("ipfs://", "https://ipfs.io/ipfs")
+        } else {
+          return details.profile.pfp
+        }
+    }
+
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
             { type == 'selected' ? (
                 <>
                     <HeaderImage />
 
-                    <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 5}}>
-                        <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}} hitSlop={{top: 50, bottom: 150, left: 50, right: 50}}>
+                    <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 4}}>
+                        {/* <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}} hitSlop={{top: 50, bottom: 150, left: 50, right: 50}}>
                             <View style={{justifyContent: 'center',alignItems: 'center',margin: 15, backgroundColor: 'white',flexDirection:'row',}}>
                                 <BackIcon />
                                 <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
                             </View>
+                        </TouchableOpacity> */}
+
+                        <TouchableOpacity style={{margin: 15,}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
+                            <Image
+                                style={{width: 24,height: 24}}
+                                resizeMode='contain'
+                                source={require('../assets/back_button.png')}
+                                defaultSource={require('../assets/back_button.png')}
+                            />
                         </TouchableOpacity>
 
                         <TouchableOpacity activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
@@ -233,9 +253,13 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
                 {/** Display profile details */}
                 <View style={[tailwind('flex flex-col items-center'), {marginTop: type == 'selected' ? pfpMarginTop : 0,}]}>
-                    <View style={[tailwind("rounded-full"), {marginTop: type == 'selected' ? 0 : 42,}]}>
+                    <TouchableOpacity 
+                        style={[tailwind("rounded-full"), {marginTop: type == 'selected' ? 0 : 42,}]}
+                        onPress={() => {Haptics.selectionAsync();setShowProfileImage(true)}}
+                    >
                         <UserPfp details={profile} height={60} />
-                    </View>
+                    </TouchableOpacity>
+                    
                     <View style={tailwind('mt-2 flex flex-row items-center')}>
                         <Username details={userInfo} fontSize={15} />
                         <Button color="badge-gray" icon={<CopyIconBadge style={{marginLeft: 4}} />} title={userInfo?.metadata?.ensName ? userInfo.metadata.ensName : shortAddress(address, 4)} style={{marginLeft: 8}} onPress={() => copy(address)} />
@@ -522,6 +546,45 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
                 </Modal>
             )}
+
+            {showProfileImage &&
+                <Modal 
+                    visible={true}
+                    transparent={true}
+                    statusBarTranslucent
+                    style={{backgroundColor: "#000"}}
+                    onRequestClose={() => setShowProfileImage(false)}
+                >
+                    <View 
+                        style={[
+                            tailwind("h-full w-full"), 
+                            {
+                                height:'120%',
+                                marginTop: -120,
+                                backgroundColor: "#000",
+                                paddingTop: statusBarHeight + 10,
+                            }
+                        ]}
+                    >
+                        <View style={[tailwind('flex justify-end w-full'), {height: 40}]}>
+                            <TouchableOpacity onPress={() => setShowProfileImage(!showProfileImage)} style={{left: 20}} activeOpacity={0.6}>
+                                <CloseIcon />
+                            </TouchableOpacity>
+                        </View>
+                        <ImageViewer 
+                            imageUrls={[{url: getProfilePicture(profile)}]}
+                            onSwipeDown={() => setShowProfileImage(!showProfileImage)} 
+                            enableSwipeDown={true} 
+                            loadingRender={() => { return (
+                                <ActivityIndicator style={{marginTop: 10}} 
+                                    size="small" 
+                                    color="#fff" 
+                                /> 
+                            )}}
+                        />
+                    </View>
+                </Modal>
+            }
 
         </View>
     )

@@ -447,7 +447,7 @@ export const CommentCTA = ({post, isReply}) => {
       <>
         <CommentIcon2 />
         <Text style={[tailwind('text-slate-900 text-sm font-normal ml-1'), { fontFamily: "GmarketMedium" }]}>
-          {isReply && typeof post.reply_to_details?.count_replies != 'undefined' ? post.reply_to_details?.count_replies : isReply ? post.content.count_replies : post.count_replies}
+          {isReply && typeof post.reply_to_details?.count_replies !== 'undefined' ? post.reply_to_details?.count_replies : isReply ? post.content.count_replies : post.count_replies}
         </Text>
       </>
     </TouchableOpacity>
@@ -457,8 +457,13 @@ export const CommentCTA = ({post, isReply}) => {
 
 export const LikeCTA = ({post, isReply}) => {
   const [hasLiked, setHasLiked] = useState(false);
-  const numLikes = isReply && typeof post.reply_to_details?.count_likes != 'undefined' ? post.reply_to_details?.count_likes : isReply ? post.content.count_likes : post.count_likes
-  const [countLikes, setCountLikes] = useState(numLikes);
+  const numLikes = 
+    isReply && typeof post.reply_to_details?.count_likes !== 'undefined' && post.reply_to_details?.count_likes ? 
+        post.reply_to_details?.count_likes 
+    : isReply && (post.content.count_likes || post.content.count_likes == 0) ? 
+        post.content.count_likes 
+    : post.count_likes
+  const [countLikes, setCountLikes] = useState(numLikes ? numLikes : 0);
   const { user, orbis, showConnectModal, setShowConnectModal } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
@@ -485,9 +490,12 @@ export const LikeCTA = ({post, isReply}) => {
     if(user) {
       setHasLiked(true);
       Haptics.selectionAsync();
-      if(Number.isInteger(post.count_likes)){
-          setCountLikes(post.count_likes + 1);
-      }
+    //   if(Number.isInteger(post.count_likes)){
+    //       setCountLikes(post.count_likes + 1);
+    //   }
+
+      setCountLikes(countLikes ? countLikes+1 : numLikes+1)
+
       let res = await orbis.react(
         post.stream_id,
         "like"
@@ -507,7 +515,7 @@ export const LikeCTA = ({post, isReply}) => {
         }
 
         <Text style={[tailwind('text-sm font-normal ml-1'), { fontFamily: "GmarketMedium", color: hasLiked ? "#FF6B17" : "#0F172A" }]}>
-          {countLikes}
+          {countLikes ? countLikes : numLikes}
         </Text>
       </>
     </TouchableOpacity>
@@ -517,8 +525,13 @@ export const LikeCTA = ({post, isReply}) => {
 export const RepostCTA = ({post, isReply}) => {
   const { user, orbis, showConnectModal, setShowConnectModal, setRepost } = useContext(GlobalContext);
   const [hasLiked, setHasLiked] = useState(false);
-  const numRepost = isReply && typeof post.reply_to_details?.count_repost != 'undefined' ? post.reply_to_details?.count_repost : isReply ? post.content.count_repost : post.count_repost
-  const [countReposts, setCountReposts] = useState(numRepost);
+  const numRepost = 
+    isReply && typeof post.reply_to_details?.count_repost !== 'undefined' && post.reply_to_details?.count_repost ? 
+        post.reply_to_details?.count_repost 
+    : isReply && (post.content.count_repost || post.content.count_repost == 0) ? 
+        post.content.count_repost 
+    : post.count_repost
+  const [countReposts, setCountReposts] = useState(numRepost ? numRepost : 0);
   const tailwind = useTailwind();
 
   /** Check if user liked this post */
@@ -551,7 +564,7 @@ export const RepostCTA = ({post, isReply}) => {
         }
 
         <Text style={[tailwind('text-sm font-normal ml-1'), { fontFamily: "GmarketMedium", color: hasLiked ? "#FF6B17" : "#0F172A" }]}>
-          {countReposts}
+            {(countReposts || countReposts == 0) ? countReposts : numRepost}
         </Text>
       </>
     </TouchableOpacity>

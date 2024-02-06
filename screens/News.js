@@ -370,7 +370,7 @@ export const NewsItem = ({item}) => {
                 }
         
                 <View style={tailwind('flex flex-col ml-2 flex-1 justify-between')}>
-                    <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15,}]}>{item.title}</Text>
+                    <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 16,}]}>{item.title}</Text>
                     <View style={tailwind('flex flex-row items-center mt-2')}>
                         {item.authors && item.authors.length > 0 && item.authors[0].name &&
                             <>

@@ -583,9 +583,9 @@ export default function Postbox({isReply = false}) {
 
         if(media && media.length > 0) {
             return(
-                <View style={{marginTop: 0,marginBottom: 10,marginLeft: typeof index === 'undefined' ? 0 : index != 0 ? 10 : 20,}}>
+                <View style={{marginTop: 0,marginBottom: 10,marginLeft: typeof index === 'undefined' ? 0 : index != 0 ? 10 : 20,borderWidth: 0}}>
                     <Image
-                        style={[tailwind('rounded-md shadow-md border'), { height: '100%', width: Dimensions.get('window').width - 40, height:400 }]}
+                        style={[tailwind('rounded-md'), { width: Dimensions.get('window').width - 40, height:400 }]}
                         source={{
                             uri: media[0].url,
                         }}
@@ -709,7 +709,7 @@ export default function Postbox({isReply = false}) {
                             marginTop: 
                                 (categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) && listMedia.length != 0 ? -310 
                                 : (categorySelected?.content?.accessRules && categorySelected?.content?.accessRules.length > 0) && listMedia.length == 0 ? -140 
-                                : listMedia.length != 0 ? -260 
+                                : listMedia.length != 0 ? -500 
                                 : -90
                             }]}
                         >
@@ -774,7 +774,7 @@ export default function Postbox({isReply = false}) {
                         title={editedPost != null ? "Edit" : "Post"}
                         color="orange"
                         size="sm"
-                        style={{height: 30}}
+                        style={{height: 30,justifyContent: 'center',}}
                         onPress={editedPost ? () => edit() : () => send()}
                     />
                 </KeyboardAvoidingView>

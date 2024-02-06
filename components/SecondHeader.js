@@ -81,7 +81,7 @@ const SecondHeader = (props) => {
 
             {/** Back button */}
             <View style={[tailwind('flex flex-1 items-start pt-1'),]}>
-                <HeaderLabel label={label} showBack={label == 'GM! CoinEasy Frens!' ? false : showBack} back={back} />
+                <HeaderLabel label={label} showBack={label == '' ? false : showBack} back={back} />
             </View>
 
             {/** Notifications button */}

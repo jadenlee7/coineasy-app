@@ -48,7 +48,7 @@ export default function Header(props) {
         <HeaderImage />
 
         {screen == 'home' && props.route != 'Categories' && props.route != 'News'? (
-            <SecondHeader label={"GM! CoinEasy Frens!"} back={category ? () => setCategory(null) : null} />
+            <SecondHeader label={""} back={category ? () => setCategory(null) : null} />
          ) : props.route == 'Categories' ? (
             <SecondHeader back={props.backCategory}/>
         ) : props.route == 'News' ? (

@@ -75,7 +75,6 @@ export default function PostSettingsModal() {
     async function deletePost() {
         setLoading(true);
         let res = await orbis.deletePost(editedPost.value.stream_id);
-        console.log("res:", res);
         setLoading(false);
         setSuccess(true);
         editedPost.callbackDelete();
@@ -229,9 +228,6 @@ export default function PostSettingsModal() {
             setLoader(true)
     
             const userInfo = editedPost.value.creator_details.did
-            console.log('OUI');
-            console.log(userInfo);
-            console.log(editedPost);
             let temp_list = listMutedUsers
             if(listMutedUsers && !listMutedUsers?.includes(userInfo)){
                 temp_list.push(userInfo)

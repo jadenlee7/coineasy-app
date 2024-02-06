@@ -117,13 +117,65 @@ const FollowerScreen = (props) => {
             const result_own_following = await orbis.getProfileFollowing(user.did)
 
             setList_own_followers(result_own_followers.data)
-            setList_own_following(result_own_following.data)
+            setList_own_following(result_own_following.data)                
+            
+            // Switch own followers to first place
+            // for the followers and following tabs
+            let list_common_for_followers = []
+            for (let i = 0; i < result_own_following.data.length; i++) {
+                for (let j = 0; j < result_followers.data.length; j++) {
+                    if (result_own_following.data[i].details.did === result_followers.data[j].details.did) {
+                        list_common_for_followers.push(result_followers.data[j].details.did)
+                    }
+                }
+            }
+
+            let list_common_for_following = []
+            for (let i = 0; i < result_own_following.data.length; i++) {
+                for (let j = 0; j < result_following.data.length; j++) {
+                    if (result_own_following.data[i].details.did === result_following.data[j].details.did) {
+                        list_common_for_following.push(result_following.data[j].details.did)
+                    }
+                }
+            }
+
+            list_common_for_followers.map(elt => {
+                const indexItem = result_followers.data.findIndex(e => e.details.did == elt)
+                const switch_element = result_followers.data.splice(indexItem, 1)[0];
+                result_followers.data.splice(0, 0, switch_element);
+            })
+            list_common_for_following.map(elt => {
+                const indexItem = result_following.data.findIndex(e => e.details.did == elt)
+                const switch_element = result_following.data.splice(indexItem, 1)[0];
+                result_following.data.splice(0, 0, switch_element);
+            })
+
+            setList_followers(result_followers.data);
+            setList_following(result_following.data);
+            setRefreshing(false)
+        }else{
+
+            // Switch own followers to first place
+            // for the followers tab
+            let list_common = []
+            for (let i = 0; i < result_following.data.length; i++) {
+                for (let j = 0; j < result_followers.data.length; j++) {
+                    if (result_following.data[i].details.did === result_followers.data[j].details.did) {
+                        list_common.push(result_followers.data[j].details.did)
+                    }
+                }
+            }
+
+            list_common.map(elt => {
+                const indexItem = result_followers.data.findIndex(e => e.details.did == elt)
+                const switch_element = result_followers.data.splice(indexItem, 1)[0];
+                result_followers.data.splice(0, 0, switch_element);
+            })
+
+            setList_followers(result_followers.data);
+            setList_following(result_following.data);
+            setRefreshing(false)
         }
-
-        setList_followers(result_followers.data);
-        setList_following(result_following.data);
-
-        setRefreshing(false)
     }
 
     return(
