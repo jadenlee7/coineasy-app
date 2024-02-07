@@ -1,11 +1,11 @@
 import React, { useContext } from "react";
-import { Text, View, TouchableOpacity } from 'react-native';
+import { Text, View, TouchableOpacity, Image } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import { GlobalContext } from "../contexts/GlobalContext";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
-import { BackIcon, NotificationsIcon, SettingsIcon } from "./Icons";
+import { BackIcon, NotificationsIcon, SettingsIcon, TelegramIcon } from "./Icons";
 import { useNavigation } from "@react-navigation/core";
 
 const SecondHeader = (props) => {
@@ -33,28 +33,34 @@ const SecondHeader = (props) => {
         if(back) {
             return(
                 <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-3')]} activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();back()}}>
-                    <>
-                        <BackIcon />
-                        <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
-                    </>
+                    <Image
+                        style={{width: 24,height: 24}}
+                        resizeMode='contain'
+                        source={require('../assets/back_button.png')}
+                        defaultSource={require('../assets/back_button.png')}
+                    />
                 </TouchableOpacity>
             )
         } else if(postDetailsVis && showBack) {
             return(
                 <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-3')]} activeOpacity={0.7} onPress={() => hidePostPane()}>
-                    <>
-                        <BackIcon />
-                        <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
-                    </>
+                    <Image
+                        style={{width: 24,height: 24}}
+                        resizeMode='contain'
+                        source={require('../assets/back_button.png')}
+                        defaultSource={require('../assets/back_button.png')}
+                    />
                 </TouchableOpacity>
             )
         } else if(profileSelected && showBack) {
             return(
                 <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-3')]} activeOpacity={0.7} onPress={() => hideProfilePane()}>
-                    <>
-                        <BackIcon />
-                        <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
-                    </>
+                    <Image
+                        style={{width: 24,height: 24}}
+                        resizeMode='contain'
+                        source={require('../assets/back_button.png')}
+                        defaultSource={require('../assets/back_button.png')}
+                    />
                 </TouchableOpacity>
             )
         } else {
@@ -86,9 +92,18 @@ const SecondHeader = (props) => {
 
             {/** Notifications button */}
             {cta == "notifications" &&
-                <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2'),{marginTop: category ? -4 : 1,}]} activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
-                    <NotificationsIcon />
-                </TouchableOpacity>
+                <>
+                    <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2'),{marginTop: category ? -4 : 1,}]} activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
+                        <NotificationsIcon />
+                    </TouchableOpacity>
+                    {/* <TouchableOpacity 
+                        style={[tailwind('flex flex-row items-center rounded-md py-2 px-3'),{marginTop: category ? -4 : 1,}]} 
+                        activeOpacity={0.7} 
+                        onPress={() => {Haptics.selectionAsync();navigation.navigate('ConversationScreen')}}
+                    >
+                        <TelegramIcon />
+                    </TouchableOpacity> */}
+                </>
             }
 
             {/** Settings button */}

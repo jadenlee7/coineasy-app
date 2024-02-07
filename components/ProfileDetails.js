@@ -5,26 +5,38 @@ import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as Clipboard from 'expo-clipboard';
 import Animated from 'react-native-reanimated';
+import { useNavigation } from "@react-navigation/core";
+import { TabBar, TabView } from "react-native-tab-view";
+import ImageViewer from "react-native-image-zoom-viewer";
+import { useScrollToTop } from "@react-navigation/native";
 
 import Post from "./Post";
 import Button from "./Button";
+import Modal from "./Modal.js";
+import HeaderImage from "./HeaderImage";
 import { shortAddress } from "../utils";
 import { UserPfp, Username } from "./User";
 import { context } from '../utils/config.js';
-import { BackIcon, CheckIcon, CloseIcon, CopyIconBadge, FacebookIcon, InstagramIcon, LinkIcon, NotificationsIcon, PostMenuIcon, RepostIcon, SettingsIcon, TelegramIcon, TwitterIcon } from "./Icons";
 import useDidToAddress from "../hooks/useDidToAddress";
 import { GlobalContext } from "../contexts/GlobalContext";
-import { useNavigation } from "@react-navigation/core";
-import { useScrollToTop } from "@react-navigation/native";
-import HeaderImage from "./HeaderImage";
-import Modal from "./Modal.js";
-import { TabBar, TabView } from "react-native-tab-view";
-
-import ProfileFeed from '../screens/Navigation/ProfileFeed'
-import ProfileReplies from '../screens/Navigation/ProfileReplies'
-import ProfileReposts from '../screens/Navigation/ProfileReposts'
-import ImageViewer from "react-native-image-zoom-viewer";
 import useStatusBarHeight from "../hooks/useStatusBarHeight.js";
+import { 
+    CheckIcon,
+    CloseIcon,
+    CopyIconBadge,
+    FacebookIcon,
+    InstagramIcon,
+    LinkIcon,
+    NotificationsIcon,
+    PostMenuIcon,
+    RepostIcon,
+    SettingsIcon,
+    TelegramIcon,
+    TwitterIcon } from "./Icons";
+
+import ProfileFeed from '../screens/Navigation/Profile/ProfileFeed'
+import ProfileReplies from '../screens/Navigation/Profile/ProfileReplies'
+import ProfileReposts from '../screens/Navigation/Profile/ProfileReposts'
 
 const TabBarHeight = 50;
 const IndicatorWidth = 50
@@ -216,13 +228,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     <HeaderImage />
 
                     <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 4}}>
-                        {/* <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}} hitSlop={{top: 50, bottom: 150, left: 50, right: 50}}>
-                            <View style={{justifyContent: 'center',alignItems: 'center',margin: 15, backgroundColor: 'white',flexDirection:'row',}}>
-                                <BackIcon />
-                                <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
-                            </View>
-                        </TouchableOpacity> */}
-
                         <TouchableOpacity style={{margin: 15,}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
                             <Image
                                 style={{width: 24,height: 24}}
@@ -475,7 +480,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 }
         
                 {/** Profile navigation */}
-                {Platform.OS == 'ios' ? (
+                {/* {Platform.OS == 'ios' ? (
                     <>
                         <View style={tailwind('flex flex-row px-4 border-b border-slate-100 mt-30px')}>
                             <NavItem slug="feed" title="Feed" setNav={setNav} nav={nav} />
@@ -486,7 +491,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                             <Posts type={nav} profile={userInfo} />
                         </View>
                     </>
-                ) : (
+                ) : ( */}
                     <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
                         <TabView
                             navigationState={{index: tabIndex, routes}}
@@ -497,7 +502,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                             style={{height: tabViewHeight,}}
                         />
                     </View>
-                )}
+                {/* )} */}
 
 
             </Animated.ScrollView>
@@ -649,8 +654,6 @@ const Posts = ({type, profile}) => {
     let { data } = await orbis.getPosts(options);
     if(data) {
 
-        console.log(data);
-
         if(options.is_reply){
             data.map(async (e, index) => {
                 if(e.content.reply_to){
@@ -694,9 +697,7 @@ const Posts = ({type, profile}) => {
     )
   }
 
-
   return posts.map((post, key) => {
-
     if(post?.content?.repost != null && post.content.body == " ") {
         return (
             <View style={tailwind('flex flex-col')} key={key}>

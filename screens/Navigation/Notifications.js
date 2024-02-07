@@ -12,7 +12,7 @@ import useStatusBarHeight from "../../hooks/useStatusBarHeight";
 import { BackIcon, FilterIcon, InterpunctIcon, NotificationsIcon } from "../../components/Icons";
 import HeaderImage from "../../components/HeaderImage";
 import Modal from "../../components/Modal";
-import Button from "../../components/Button";
+
 
 const Notifications = ({navigation, route}) => {
     const { orbis } = useContext(GlobalContext);

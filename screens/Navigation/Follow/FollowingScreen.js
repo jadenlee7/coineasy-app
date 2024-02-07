@@ -4,9 +4,9 @@ import { View, ActivityIndicator, ScrollView, Text, TouchableOpacity, RefreshCon
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 
-import { UserPfp, Username } from "../../components/User";
-import { GlobalContext } from "../../contexts/GlobalContext";
-import Button from "../../components/Button";
+import { UserPfp, Username } from "../../../components/User";
+import { GlobalContext } from "../../../contexts/GlobalContext";
+import Button from "../../../components/Button";
 import { useNavigation } from "@react-navigation/core";
 
 const FollowerScreen = (props) => {

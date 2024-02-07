@@ -3,9 +3,9 @@ import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from 'react-nat
 
 import { useTailwind } from 'tailwind-rn';
 
-import Post from '../../components/Post';
-import { context } from '../../utils/config.js';
-import { GlobalContext } from '../../contexts/GlobalContext';
+import Post from '../../../components/Post.js';
+import { context } from '../../../utils/config.js';
+import { GlobalContext } from '../../../contexts/GlobalContext.js';
 
 const ProfileReplies = (props) => {
     const { user, orbis,  tabViewHeight, setTabViewHeight } = useContext(GlobalContext);

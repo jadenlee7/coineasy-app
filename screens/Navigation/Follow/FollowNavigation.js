@@ -4,9 +4,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 
-import { GlobalContext } from "../../contexts/GlobalContext";
-import { BackIcon } from "../../components/Icons";
-import HeaderImage from "../../components/HeaderImage";
+import { GlobalContext } from "../../../contexts/GlobalContext";
+import HeaderImage from "../../../components/HeaderImage";
 
 import FollowerScreen from "./FollowerScreen";
 import FollowingScreen from "./FollowingScreen";
@@ -164,8 +163,8 @@ const FollowNavigation = ({navigation, route}) => {
                     <Image
                         style={{width: 24,height: 24}}
                         resizeMode='contain'
-                        source={require('../../assets/back_button.png')}
-                        defaultSource={require('../../assets/back_button.png')}
+                        source={require('../../../assets/back_button.png')}
+                        defaultSource={require('../../../assets/back_button.png')}
                     />
                 </TouchableOpacity>
             </View>
