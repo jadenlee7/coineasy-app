@@ -172,7 +172,18 @@ const PostDisplay = (props) => {
     const Media = ({media, index, isRepost}) => {
         const tailwind = useTailwind();
         const [loaded, setLoaded] = useState(false);
-        const { width } = Dimensions.get('window');
+        const screenWidth = Dimensions.get('window');
+        const [ratioHeight, setRatioHeight] = useState(screenWidth.width - 87)
+
+
+        Image.getSize(media[0].url ? media[0].url : media[0][0].url, (width, height) => {
+
+            if(width>height){
+                const ratioWidth = (isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87)/width
+                const newHeight = height*ratioWidth < screenWidth.width - 87 ? height*ratioWidth : screenWidth.width - 87
+                setRatioHeight(newHeight)
+            }
+        })
 
         if(media && media.length > 0) {
             return(
@@ -186,8 +197,8 @@ const PostDisplay = (props) => {
                             style={[
                                 tailwind('rounded-md'), 
                                 { 
-                                    height: width - 87,
-                                    width: isRepost && !quotedPost ? width - 135  : quotedPost ? width - 160 : width - 87 ,
+                                    height: ratioHeight,
+                                    width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87 ,
                                     marginLeft: isRepost && !quotedPost ? -20 : 0,
                                 }
                             ]}

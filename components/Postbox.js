@@ -278,8 +278,8 @@ export default function Postbox({isReply = false}) {
             /** Open Image library to allow user to select a picture */
             let result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: "Images",
-                allowsEditing: true,
-                aspect: [1, 1],
+                // allowsEditing: true,
+                // aspect: [1, 1],
                 quality: 0.25,
             });
 
@@ -580,15 +580,31 @@ export default function Postbox({isReply = false}) {
 
     const Media = ({media, deleteMedia, index}) => {
         const tailwind = useTailwind();
+        const [ratioHeight, setRatioHeight] = useState(400)
 
-        if(media && media.length > 0) {
+        if(media && media.length > 0) { 
+
+            Image.getSize(media[0].url, (width, height) => {
+                const ratioWidth = (Dimensions.get('window').width - 40)/width
+                const newHeight = height*ratioWidth
+                setRatioHeight(newHeight)
+            })
+
             return(
                 <View style={{marginTop: 0,marginBottom: 10,marginLeft: typeof index === 'undefined' ? 0 : index != 0 ? 10 : 20,borderWidth: 0}}>
                     <Image
-                        style={[tailwind('rounded-md'), { width: Dimensions.get('window').width - 40, height:400 }]}
+                        style={[
+                            tailwind('rounded-md'), 
+                            { 
+                                width: Dimensions.get('window').width - 40,
+                                height:ratioHeight,
+                                resizeMode: 'contain',
+                            }
+                        ]}
                         source={{
                             uri: media[0].url,
                         }}
+                        
                     />
                     <TouchableHighlight onPress={deleteMedia} style={{ position: "absolute", right: 6, top: 6}} underlayColor="transparent">
                         <CloseIcon />

@@ -1,12 +1,19 @@
-import React, { useContext, useEffect, useState } from 'react'
-import { ActivityIndicator, Button, Image, Keyboard, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import HeaderImage from '../../../components/HeaderImage';
-import { useTailwind } from 'tailwind-rn';
-import { GlobalContext } from '../../../contexts/GlobalContext';
+import React, { useContext, useEffect, useRef, useState } from 'react'
+import { ActivityIndicator, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, PermissionsAndroid, Animated, KeyboardAvoidingView, ScrollView, Dimensions } from 'react-native'
 
+import mime from 'mime';
 import * as Haptics from 'expo-haptics';
+import { useTailwind } from 'tailwind-rn';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+
 import { UserPfp } from '../../../components/User';
-import { AddIcon, PlusIcon, TelegramIcon } from '../../../components/Icons';
+import HeaderImage from '../../../components/HeaderImage';
+import Conversation from '../../../components/Conversation';
+import { GlobalContext } from '../../../contexts/GlobalContext';
+import { AttachmentsMenu } from '../../../components/modals/AttachmentMenu';
+import { AddIcon, CloseIcon, DocumentIcon, PlusIcon, TelegramIcon } from '../../../components/Icons';
+
 
 
 const ConversationDetail = ({navigation, route}) => {
@@ -14,45 +21,27 @@ const ConversationDetail = ({navigation, route}) => {
     const tailwind = useTailwind();
 
     const { conversation } = route.params
-    // console.log('ici');
-    // console.log(conversation);
 
     const [profile, setProfile] = useState(conversation.recipients_details ? conversation.recipients_details[0] : null)
+    
     const [message, setMessage] = useState('')
+    const [listAttachment, setListAttachment] = useState([])
+
     const [listMessages, setListMessages] = useState([])
     const [loadMessage, setLoadMessage] = useState(false)
 
+    const [attachmentsMenuVisible, setAttachmentsMenuVisible] = useState(false)
+
     useEffect(() => {
         conversation.messages.length > 0 && decryptMessages()
-
-        !conversation.recipients_details && getUser()
 
         async function decryptMessages() {
             setLoadMessage(true)
 
             const list_messages = []
             conversation.messages.map(async (e, index) => {
-                console.log(e.content);
                 const decryptedMessage = await orbis.decryptMessage(e.content)
-                console.log(decryptedMessage.result)
-                list_messages.push(decryptedMessage.result)
-
-                if(index == conversation.messages.length -1){
-                    setListMessages([...list_messages])
-                    setLoadMessage(false)
-                }
-
-            })
-        }
-
-        async function getUser() {
-            setLoadMessage(true)
-
-            const list_messages = []
-            conversation.messages.map(async (e, index) => {
-                const decryptedMessage = await orbis.decryptMessage(data[data.length -1].content)
-                console.log(decryptedMessage.result)
-                list_messages.push(decryptMessages.result)
+                list_messages.push({'message': decryptedMessage.result, 'creator': e.creator})
 
                 if(index == conversation.messages.length -1){
                     setListMessages([...list_messages])
@@ -62,21 +51,241 @@ const ConversationDetail = ({navigation, route}) => {
             })
         }
     }, [])
+
     
-    const onOpenSettingsPress = () => {
-        console.log('open settings');
+    const onOpenSettingsPress = () => {        
+        setAttachmentsMenuVisible(true)
     }
 
     const onSendPress = async () => {
+        console.log('ici');
         const content = {
             conversation_id: conversation.stream_id,
             body: message
         }
-        const res = await orbis.sendMessage(content, {});
 
-        setListMessages([...listMessages, message])
-        setMessage('')
-        console.log('send pressed');
+        const new_message = {
+            'message': message,
+            'creator': user.did
+        }
+
+        const data = {}
+        if(listAttachment.length != 0){
+
+            listAttachment.map(async (e, index) => {
+                /** Handle Image picked */
+                let imagePath = e.item;
+                const imageType = mime.getType(imagePath)
+
+                /** Create file object */
+                let file = {
+                    name: "test",
+                    type: imageType,
+                    uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
+                }
+
+                /** Upload image to IPFS */
+                const resUpload = await orbis.uploadMedia(file);
+
+                /** Handle result returned by Orbis SDK */
+                if(resUpload.status == 200) {
+                    let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
+                    data[index] = finalUrl
+                } else {
+                    alert("Error uploading image.");
+                }
+
+                if(index == listAttachment.length-1){
+                    console.log('oui');
+                    console.log(data);
+                    const res = await orbis.sendMessage(content, data);
+
+                    console.log(res);
+    
+                    setListMessages([...listMessages, new_message])
+                    setMessage('') 
+                    setListAttachment([])
+                }
+
+            })
+        }else{
+            const res = await orbis.sendMessage(content, data);
+    
+            setListMessages([...listMessages, new_message])
+            setMessage('')
+        }
+
+    }
+
+    const toggleAttachmentsMenu = () => {
+        setAttachmentsMenuVisible(!attachmentsMenuVisible);
+    };
+
+    const renderAttachmentsMenu = () => (
+        <AttachmentsMenu
+            setVisible={setAttachmentsMenuVisible}
+            onSelectPhoto={onSelectPhoto}
+            onSelectFile={onSelectFile}
+            onSelectLocation={toggleAttachmentsMenu}
+            onSelectContact={toggleAttachmentsMenu}
+            onAttachmentSelect={onAttachmentSelect}
+            onCameraPress={onCameraPress}
+            onDismiss={toggleAttachmentsMenu}
+        />
+    );
+
+    const onAttachmentSelect = (info) => {
+        Haptics.selectionAsync()
+        setListAttachment([...listAttachment, info])
+    }
+
+    const onCameraPress = async () => {
+        Haptics.selectionAsync()
+
+        try {
+            const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+
+            console.log(permissionResult);
+
+            if (permissionResult.granted === false) {
+                alert("You have refused to allow this app to access your camera.");
+            } else {
+                let result = await ImagePicker.launchCameraAsync();
+    
+                if(!result.canceled){
+                    /** Handle Image picked */
+                    let imagePath = result.assets[0].uri;
+        
+                    const imageType = mime.getType(imagePath)
+        
+                    /** Create file object */
+                    let file = {
+                        name: "test",
+                        type: imageType,
+                        uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
+                    }
+        
+                    /** Upload Image to IPFS */
+                    const resUpload = await orbis.uploadMedia(file);
+        
+                    /** Handle result returned by Orbis SDK */
+                    if(resUpload.status == 200) {
+                        let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
+                        let media = [{
+                            gateway: resUpload.result.gateway,
+                            item: finalUrl
+                        }]
+        
+                        setListAttachment([...listAttachment, media]);
+
+                        toggleAttachmentsMenu()
+                    } else {
+                        alert("Error uploading image.");
+                    }
+                }
+            }
+        } catch (error) {
+            console.log('ICI');
+            console.log(error);
+        }
+    }
+
+    const onSelectPhoto = async () => {
+        try {
+            /** Open Image library to allow user to select a picture */
+            let result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: "Images",
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.25,
+            });
+
+            if (!result.canceled) {
+                /** Handle Image picked */
+                let imagePath = result.assets[0].uri;
+
+                const imageType = mime.getType(imagePath)
+
+                /** Create file object */
+                let file = {
+                    name: "test",
+                    type: imageType,
+                    uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
+                }
+
+                /** Upload Image to IPFS */
+                const resUpload = await orbis.uploadMedia(file);
+
+                /** Handle result returned by Orbis SDK */
+                if(resUpload.status == 200) {
+                    let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
+                    let media = [{
+                        type: 'image',
+                        gateway: resUpload.result.gateway,
+                        item: finalUrl
+                    }]
+
+                    setListAttachment([...listAttachment, media]);
+                    toggleAttachmentsMenu()
+                } else {
+                    alert("Error uploading image.");
+                }
+            }
+        } catch(e) {
+            console.log("Error selecting photo:", e);
+        }
+    }
+
+    const onSelectFile = async () => {
+        try {
+            /** Open Image library to allow user to select a picture */
+            let result = await DocumentPicker.getDocumentAsync();
+
+            if (!result.canceled) {
+                /** Handle Image picked */
+                let imagePath = result.assets[0].uri;
+
+                const imageType = mime.getType(imagePath)
+
+                /** Create file object */
+                let file = {
+                    name: "test",
+                    type: imageType,
+                    uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
+                }
+
+                /** Upload Image to IPFS */
+                const resUpload = await orbis.uploadMedia(file);
+
+                /** Handle result returned by Orbis SDK */
+                if(resUpload.status == 200) {
+                    let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
+                    let media = [{
+                        type: 'document',
+                        gateway: resUpload.result.gateway,
+                        item: finalUrl
+                    }]
+
+                    setListAttachment([...listAttachment, media]);
+                    toggleAttachmentsMenu()
+                } else {
+                    alert("Error uploading file.");
+                }
+            }
+        } catch(e) {
+            console.log("Error selecting photo:", e);
+        }
+    }
+
+    const keyboardOffset = (height) => Platform.select({
+        android: 0,
+        ios: height,
+    });
+
+    const removeItemFromAttachments = (index) => {
+        Haptics.selectionAsync()
+        listAttachment.splice(index, 1)
+        setListAttachment([...listAttachment])
     }
 
     return (
@@ -96,7 +305,7 @@ const ConversationDetail = ({navigation, route}) => {
 
                 {profile && <Text style={{fontWeight: 'bold',fontSize: 18,}}>{profile.profile.username}</Text>}
 
-                <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.navigate('ProfileSelected', { did: conversation?.details.did })}}>
+                <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.navigate('ProfileSelected', { did: profile.did })}}>
                     {profile && <UserPfp details={profile} />}
                 </TouchableOpacity>
             </View>
@@ -108,49 +317,52 @@ const ConversationDetail = ({navigation, route}) => {
                 <View>
                     <ActivityIndicator style={{marginTop: 50}} size="small" color="#020617" />
                 </View>
+            ) : listMessages.length > 0 ? (
+                <Conversation listMessages={listMessages}/>
             ) : (
-                <ScrollView>
-                    {listMessages.length > 0 ? listMessages.map(e => {
-                        return(
-                            <View style={{borderRadius: 8, height: 50, width: '50%', backgroundColor: '#ccc',justifyContent: 'center'}} key={Math.random()}>
-                                <Text>{e}</Text>
-                            </View>
-                        )
-                    }) : (
-                        <View style={{backgroundColor: '#cccccc',width:'80%',height: 60,borderRadius: 8,alignItems: 'center',justifyContent: 'center',alignSelf: 'center',marginTop: 30,}}>
-                            <Text>Send your first message to {profile.profile.username} !</Text>
-                        </View>
-                    )}
-                </ScrollView>
+                <View style={{backgroundColor: '#cccccc',width:'80%',height: 60,borderRadius: 8,alignItems: 'center',justifyContent: 'center',alignSelf: 'center',marginTop: 30,}}>
+                    <Text>Send your first message to {profile.profile.username} !</Text>
+                </View>
             )}
             {/* End Conversation Content Part */}
 
 
 
-
             {/* Bottom Part */}
-            <View style={{position: 'absolute',bottom: 0,height:80,width:'100%',borderTopWidth: 1,borderTopColor: '#DCDCDC',flexDirection:'row',alignItems: 'center',justifyContent: 'center',}}>
+
+            <KeyboardAvoidingView
+                style={{flexDirection:'row',alignItems: 'center',}}
+                offset={keyboardOffset}
+            >
                 <TouchableOpacity 
-                    style={{width:'15%',height:'100%',justifyContent: 'center',alignItems: 'center',}}
-                    onPress={() => onOpenSettingsPress()}
+                    style={{width:'15%',justifyContent: 'center',alignItems: 'center',backgroundColor: '#F6F6F6',marginBottom: 20,height: 50,borderTopLeftRadius: 30,borderBottomLeftRadius: 30,marginLeft: 10,}}
+                    onPress={() => {Haptics.selectionAsync();onOpenSettingsPress()}}
                 >
-                    <AddIcon />
+                    <Image
+                        style={{width: 28,height: 28}}
+                        resizeMode='contain'
+                        source={require('../../../assets/addUser_icon.png')}
+                        defaultSource={require('../../../assets/addUser_icon.png')}
+                    />
+                    {/* <AddIcon style={{width: 60}}/> */}
                 </TouchableOpacity>
 
                 <TextInput
-                    style={{width:'70%',borderWidth: 1,borderColor: '#DCDCDC',borderRadius: 8,height:'65%'}}
+                    style={{padding: 5,height:50,backgroundColor: '#F6F6F6',width: '68%',marginBottom: 20,borderTopRightRadius: 30,borderBottomRightRadius: 30}}
                     onChangeText={setMessage}
                     value={message}
                     placeholder='Message...'
                 />
 
                 <TouchableOpacity 
-                    style={{width:'15%',justifyContent: 'center',alignItems: 'center',}}
-                    onPress={() => onSendPress()}
+                    style={{justifyContent: 'center',alignItems: 'center',marginBottom: 20,marginLeft: 15,}}
+                    onPress={() => {(message != '' || listAttachment.length != 0) ? onSendPress() : null}}
                 >
                     <TelegramIcon />
                 </TouchableOpacity>
-            </View>
+            </KeyboardAvoidingView>
+
+            {attachmentsMenuVisible && renderAttachmentsMenu()}
             {/* End Bottom Part */}
 
         </View>
