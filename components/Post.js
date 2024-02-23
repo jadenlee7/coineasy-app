@@ -171,19 +171,17 @@ const PostDisplay = (props) => {
 
     const Media = ({media, index, isRepost}) => {
         const tailwind = useTailwind();
-        const [loaded, setLoaded] = useState(false);
         const screenWidth = Dimensions.get('window');
         const [ratioHeight, setRatioHeight] = useState(screenWidth.width - 87)
 
-
-        Image.getSize(media[0].url ? media[0].url : media[0][0].url, (width, height) => {
-
-            if(width>height){
+        const renderImage = (values) => {
+            const {width, height} = values.nativeEvent.source
+            if(width > height){
                 const ratioWidth = (isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87)/width
                 const newHeight = height*ratioWidth < screenWidth.width - 87 ? height*ratioWidth : screenWidth.width - 87
                 setRatioHeight(newHeight)
             }
-        })
+        }
 
         if(media && media.length > 0) {
             return(
@@ -202,13 +200,10 @@ const PostDisplay = (props) => {
                                     marginLeft: isRepost && !quotedPost ? -20 : 0,
                                 }
                             ]}
-                            onLoad={() => setLoaded(true)}
-                            loadingIndicatorSource={require("../assets/loader_001.gif")}
-                            source={loaded ?
-                                { uri: media[0].url ? media[0].url : media[0][0].url}
-                                :
-                                require("../assets/loader_001.gif")
-                            } 
+                            onLoad={(values) => renderImage(values)}
+                            source={{ uri: media[0].url ? media[0].url : media[0][0].url}}
+                            defaultSource={require("../assets/loader_001.gif")} // A static image to display while loading the image source.
+                            progressiveRenderingEnabled={true}
                         />
                     </TouchableOpacity>
                 </View>

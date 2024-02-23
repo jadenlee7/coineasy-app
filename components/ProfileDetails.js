@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as Clipboard from 'expo-clipboard';
 import Animated from 'react-native-reanimated';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from "@react-navigation/core";
 import { TabBar, TabView } from "react-native-tab-view";
 import ImageViewer from "react-native-image-zoom-viewer";
@@ -42,10 +43,9 @@ const TabBarHeight = 50;
 const IndicatorWidth = 50
 
 export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
-    const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, tabViewHeight } = useContext(GlobalContext);
+    const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, setSwitchAccountVis ,tabViewHeight } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
-    const [nav, setNav] = useState("feed");
     const [isFollowing, setIsFollowing] = useState(false);
     const [countPosts, setCountPosts] = useState("-");
     const [followLoading, setFollowLoading] = useState(false);
@@ -63,8 +63,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
     const scrollRef = useRef()
     const navigation = useNavigation()
-
-    const [numberLink, setNumberLink] = useState(userInfo.profile && userInfo.profile.data && userInfo.profile.data.length != 0 ? userInfo.profile.data.length : 0)
 
     useScrollToTop(scrollRef);
 
@@ -95,7 +93,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     }, []);
 
     useEffect(() => {
-
+        getProfile()
         loadiIsFollowing();
         getCountPosts();
         setFollowLoading(true);
@@ -105,6 +103,11 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
             const res = await orbis.getIsFollowing(user.did, profile.did);
             setIsFollowing(res.data);
             setFollowLoading(false);
+        }
+    
+        async function getProfile() {
+            const { data, error } = await orbis.getProfile(user.did);
+            setUserInfo(data.details);
         }
 
     }, [profile]);
@@ -158,8 +161,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         const { data, error } = await orbis.getProfile(profile.did);
         setUserInfo(data.details)
         
-        setNumberLink(data.details.profile && data.details.profile.data && data.details.profile.data.length != 0 ? data.details.profile.data.length : 0)
-
         getCountPosts()
 
         setRefreshing(false)
@@ -196,9 +197,9 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         if(followLoading){
             return <ActivityIndicator style={{marginTop: 50}} size="small" color="#020617" />
         }else{
-            if(route.key == 0 ) return <ProfileFeed profile={userInfo} />
-            if(route.key == 1 ) return <ProfileReplies profile={userInfo} />
-            if(route.key == 2 ) return <ProfileReposts profile={userInfo} />
+            if(route.key == 0 ) return <ProfileFeed profile={userInfo} type={type} />
+            if(route.key == 1 ) return <ProfileReplies profile={userInfo} type={type} />
+            if(route.key == 2 ) return <ProfileReposts profile={userInfo} type={type} />
         }
     };
  
@@ -363,15 +364,26 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     )}
                     
                     { type !== 'selected' && (
+                        <>
+                            {/* <TouchableOpacity 
+                                activeOpacity={0.7}
+                                onPress={() => {Haptics.selectionAsync();setSwitchAccountVis(true)}} 
+                                style={{width: 60,height: 50,alignItems: 'center',justifyContent: 'center',position: 'absolute',top: 0,left:0}}
+                                hitSlop={{top: 20, bottom: 20, left: 50, right: 50}}
+                            >
+                                <MaterialIcons name="switch-account" size={24} color="black" />
+                            </TouchableOpacity> */}
 
-                        <TouchableOpacity 
-                            activeOpacity={0.7}
-                            onPress={() => {Haptics.selectionAsync();setSettingsVis(true)}} 
-                            style={{width: 60,height: 50,alignItems: 'center',justifyContent: 'center',position: 'absolute',top: 0,right:0}}
-                            hitSlop={{top: 20, bottom: 20, left: 50, right: 50}}
-                        >
-                            <SettingsIcon />
-                        </TouchableOpacity>
+                            <TouchableOpacity 
+                                activeOpacity={0.7}
+                                onPress={() => {Haptics.selectionAsync();setSettingsVis(true)}} 
+                                style={{width: 60,height: 50,alignItems: 'center',justifyContent: 'center',position: 'absolute',top: 0,right:0}}
+                                hitSlop={{top: 20, bottom: 20, left: 50, right: 50}}
+                            >
+                                <SettingsIcon />
+                            </TouchableOpacity>
+                        </>
+
                     )}
                 </View>
         

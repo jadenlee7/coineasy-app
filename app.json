@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "EASY",
+    "name": "CoinEasy",
     "slug": "coineasy_app",
     "scheme": "coineasyapp",
     "owner": "useorbis",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
-    "icon": "./assets/icon_2024.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash_2024.png",
+      "image": "./assets/splash.png",
       "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },
@@ -18,7 +18,7 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "42",
+      "buildNumber": "43",
       "bundleIdentifier": "com.coineasy.coineasysocial",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow CoinEasy to access your photos. Photos will be used for profile picture and post with Media. This is not mandatory, user can leave the default profile picture. It can then be updated in the user Profil page. Example: You want to create a Post with a photo, we'll need to access your media library",
@@ -27,9 +27,9 @@
       }
     },
     "android": {
-      "versionCode": 19,
+      "versionCode": 20,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon_2024.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
@@ -42,7 +42,7 @@
       "package": "com.coineasy.coineasy"
     },
     "web": {
-      "favicon": "./assets/icon_2024.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
       [

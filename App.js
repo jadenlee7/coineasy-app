@@ -38,6 +38,8 @@ import * as WebBrowser from 'expo-web-browser';
 
 /** Import Orbis SDK */
 import { Orbis } from "@orbisclub/orbis-sdk";
+import moment from 'moment';
+import SwitchAccountModal from './components/modals/SwitchAccountModal';
 
 /** Initialize the Orbis class object */
 let orbis = new Orbis({
@@ -67,6 +69,9 @@ export default function App() {
   const [updateProfileVis, setUpdateProfileVis] = useState(false);
   const [pushNotifsVis, setPushNotifsVis] = useState(false);
   const [settingsVis, setSettingsVis] = useState(false);
+  const [switchAccountVis, setSwitchAccountVis] = useState(false);
+  const [switchLoading, setSwitchLoading] = useState(false)
+
   const [postSettingsModalVis, setPostSettingsModalVis] = useState(false);
   const [postboxVis, setPostboxVis] = useState(false);
   const [replyTo, setReplyTo] = useState();
@@ -81,6 +86,8 @@ export default function App() {
   const [listHiddenPost, setListHiddenPost] = useState(null)
   const [listMutedUsers, setListMutedUsers] = useState(null)
 //   const [listFollowers, setListFollowers] = useState([])
+
+  const [listAccount, setListAccount] = useState([])
 
   const confetti = useRef();
   const [posts, setPosts] = useState([]);
@@ -130,6 +137,35 @@ export default function App() {
     'GmarketBold': require('./assets/fonts/GmarketSansBold.otf'),
   });
 
+//   useEffect(() => {
+//     saveUserInStorage();
+
+//     async function saveUserInStorage() {
+//       if(user) {
+//         // await AsyncStorage.removeItem("user-connected");
+
+//         const listDid = await AsyncStorage.getItem("user-connected")
+
+//         var listConnected = JSON.parse(listDid)
+//         if(listConnected && listConnected.length > 0){
+//             const indexUser = listConnected.findIndex(e => e.user.did == user.did)
+//             if(indexUser != -1){
+//                 listConnected[indexUser].time = moment().format('YYYY-MM-DD HH:mm:ss')
+//             }else{
+//                 listConnected.push({'user': user, 'time': moment().format('YYYY-MM-DD HH:mm:ss')})
+//             }
+//         }else{
+//             listConnected = [{'user': user, 'time': moment().format('YYYY-MM-DD HH:mm:ss')}]
+//         }
+
+//         await AsyncStorage.setItem("user-connected", JSON.stringify(listConnected));
+//         setListAccount([...listConnected])
+//         setSwitchLoading(false)
+//         setSwitchAccountVis(false)
+//       }
+//     }
+//   }, [user]);
+
   useEffect(() => {
     saveUserInStorage();
 
@@ -155,20 +191,49 @@ export default function App() {
     fecthMuteUser();
 
     /** Will re-connect automatically the user to the account found in local storage */
-    async function connect() {
-      /** Check if user exists in local storage */
-      let _userDid = await AsyncStorage.getItem("user-connected");
-      if(_userDid) {
-        setUser({did: _userDid})
-      }
-      setIsReady(true);
+    // async function connect() {
+    //   /** Check if user exists in local storage */
+    // //   await AsyncStorage.removeItem("user-connected");
 
-      /** Retrieve user details */
-      let res = await orbis.isConnected();
-      if(res.status == 200) {
-        setUser(res.details);
+    //   let _userDid = await AsyncStorage.getItem("user-connected");
+    //   let listDid = []
+    //   if(_userDid){
+    //       if(_userDid.charAt(0) != '['){
+    //           await AsyncStorage.removeItem("user-connected");
+    //       }else{
+    //           listDid = JSON.parse(_userDid)
+    //       }
+    //   }
+      
+    //   if(listDid && listDid.length != 0) {
+    //     if(listDid.length > 1){
+    //         listDid.sort((a, b) => (a.time < b.time) ? 1 : -1)
+    //     }
+    //     setUser({did: listDid[0].user.did})
+    //   }
+    //   setIsReady(true);
+
+    //   /** Retrieve user details */
+    //   let res = await orbis.isConnected();
+    //   if(res.status == 200) {
+    //     setUser(res.details);
+    //   }
+    // }
+
+    async function connect() {
+        /** Check if user exists in local storage */
+        let _userDid = await AsyncStorage.getItem("user-connected");
+        if(_userDid) {
+          setUser({did: _userDid})
+        }
+        setIsReady(true);
+  
+        /** Retrieve user details */
+        let res = await orbis.isConnected();
+        if(res.status == 200) {
+          setUser(res.details);
+        }
       }
-    }
 
     // Will fetch all blocked user
     async function fecthBlockedUser() {
@@ -506,6 +571,7 @@ export default function App() {
                 replyTo,
                 setReplyTo,
                 setSettingsVis,
+                setSwitchAccountVis,
                 setShareProfileVis,
                 category,
                 setCategory,
@@ -550,7 +616,11 @@ export default function App() {
                 connectType,
                 setConnectType,
                 tabViewHeight,
-                setTabViewHeight
+                setTabViewHeight,
+                listAccount,
+                setListAccount,
+                switchLoading,
+                setSwitchLoading
             }}
         >
           <TailwindProvider utilities={utilities}>
@@ -599,6 +669,11 @@ export default function App() {
             {settingsVis &&
               <SettingsModal />
             }
+
+            {/** Switch account container */}
+            {/* {switchAccountVis &&
+              <SwitchAccountModal />
+            } */}
 
             {/** Show post settings modal */}
             {editedPost != null &&

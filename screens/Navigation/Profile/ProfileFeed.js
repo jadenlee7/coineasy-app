@@ -12,14 +12,14 @@ import { Username } from '../../../components/User.js';
 const ProfileFeed = (props) => {
     const { user, orbis, tabViewHeight, setTabViewHeight, setEditedPost } = useContext(GlobalContext);
     const tailwind = useTailwind();
-    const { profile } = props
+    const { profile, type } = props
 
     const [posts, setPosts] = useState([]);
     const [refreshing, setRefreshing] = useState(true);
   
     useEffect(() => {
         loadPosts();
-    }, [profile])
+    }, [type == 'selected' ? profile : user])
   
     /** Will retrieve all posts shared in the global context */
     async function loadPosts() {
@@ -27,7 +27,7 @@ const ProfileFeed = (props) => {
         setPosts([]);
     
         let options= {
-            did: profile.did,
+            did: type == 'selected' ? profile.did : user.did,
             context,
             include_child_contexts: true
         };

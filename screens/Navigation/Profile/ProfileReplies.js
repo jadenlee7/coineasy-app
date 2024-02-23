@@ -10,14 +10,14 @@ import { GlobalContext } from '../../../contexts/GlobalContext.js';
 const ProfileReplies = (props) => {
     const { user, orbis,  tabViewHeight, setTabViewHeight } = useContext(GlobalContext);
     const tailwind = useTailwind();
-    const { profile } = props
+    const { profile, type } = props
 
     const [posts, setPosts] = useState([]);
     const [refreshing, setRefreshing] = useState(true);
   
     useEffect(() => {
         loadPosts();
-    }, [profile])
+    }, [type == 'selected' ? profile : user])
   
     /** Will retrieve all posts shared in the global context */
     async function loadPosts() {
@@ -25,7 +25,7 @@ const ProfileReplies = (props) => {
         setPosts([]);
     
         options = {
-            did: profile.did,
+            did: type == 'selected' ? profile.did : user.did,
             context,
             is_reply: true,
             include_child_contexts: true

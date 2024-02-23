@@ -7,7 +7,6 @@ import useStatusBarHeight from "../hooks/useStatusBarHeight";
 const HeaderImage = (props) => {
     const statusBarHeight = useStatusBarHeight();
    
-
     return(
         <Image
             style={[props.style, { 
@@ -15,9 +14,9 @@ const HeaderImage = (props) => {
                 height: statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight,
                 paddingTop: statusBarHeight,
             }]}
-            source={require('../assets/HeaderBg_2024.png')}
+            source={require('../assets/HeaderBg_correct.png')}
             // resizeMode="stretch"
-            defaultSource={require('../assets/HeaderBg_2024.png')}
+            defaultSource={require('../assets/HeaderBg_correct.png')}
             height={statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight}
         />
     )
