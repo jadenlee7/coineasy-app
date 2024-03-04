@@ -8,6 +8,9 @@ import { useRoute } from '@react-navigation/native';
 import reactStringReplace from 'react-string-replace';
 import { useNavigation } from '@react-navigation/core';
 import ImageViewer from 'react-native-image-zoom-viewer';
+import * as MediaLibrary from "expo-media-library";
+import * as FileSystem from "expo-file-system";
+
 
 import Button from "./Button";
 import TimeAgo from "./TimeAgo";
@@ -18,7 +21,8 @@ import { GlobalContext } from "../contexts/GlobalContext";
 import { getDomainName, getShorterString } from '../utils';
 import useGetMentionedDid from "../hooks/useGetMentionedDid";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
-import { CommentIcon, InterpunctIcon, LikeIcon, RepostIcon, PostMenuIcon, CloseIcon, RepostIcon2, CommentIcon2, LikeIcon2 } from "./Icons";
+import { CommentIcon, InterpunctIcon, LikeIcon, RepostIcon, PostMenuIcon, CloseIcon, RepostIcon2, CommentIcon2, LikeIcon2, SuccessIcon } from "./Icons";
+import { showMessage } from "react-native-flash-message";
 
 const Post = React.memo((props) => {
   return <PostDisplay {...props}/>;
@@ -60,6 +64,8 @@ const PostDisplay = (props) => {
     const [isDeleted, setIsDeleted] = useState(false);
     const [modalVis, setModalVis] = useState(false);
     const [imageIndex, setImageIndex] = useState(0)
+
+    const [showSuccessMessage, setShowSuccessMessage] = useState(false)
 
     const [lengthMore,setLengthMore] = useState(false);
     const onTextLayout = useCallback(e => {
@@ -213,6 +219,14 @@ const PostDisplay = (props) => {
         }
     }
 
+    // if(body == 'Gma'){
+    //     console.log('POSTTTT');
+    //     console.log(post);
+    // }
+
+    const delay = ms => new Promise(res => setTimeout(res, ms));
+
+
     return(
         <>
             <View style={[tailwind(`flex w-full flex-col ${!verticalDivider ? "border-b border-slate-200" : "" } ${isReply ? "" : "px-5 py-4"}`), style, {backgroundColor: 'white',}]}>
@@ -358,6 +372,14 @@ const PostDisplay = (props) => {
                                                     <CloseIcon />
                                                 </TouchableOpacity>
                                             </View>
+
+                                            {showSuccessMessage && (
+                                                <View style={{backgroundColor: '#3D3D3D',width: Dimensions.get('window').width-20,alignSelf: 'center',flexDirection:'row',alignItems: 'center', height: 60,borderRadius: 10}}>
+                                                    <SuccessIcon style={{marginLeft: 20,}}/>
+                                                    <Text style={{marginLeft: 10,color:'white'}}>Media saved to library !</Text>
+                                                </View>
+                                            )}
+
                                             <ImageViewer 
                                                 imageUrls={list_images}
                                                 index={imageIndex}
@@ -369,6 +391,30 @@ const PostDisplay = (props) => {
                                                         color="#fff" 
                                                     /> 
                                                 )}}
+                                                onSave={async (uri) => {
+                                                    try {
+                                                        // Request device storage access permission
+                                                        const { status } = await MediaLibrary.requestPermissionsAsync();
+                                                        if (status === "granted") {
+                                                            const splitted = uri.split('/')
+                                                            const filename = splitted[splitted.length-1]
+                                                            
+                                                            const fileUri = FileSystem.documentDirectory + filename + `.jpg`;
+                                                            const res = await FileSystem.downloadAsync(uri, fileUri);
+                                                            await MediaLibrary.saveToLibraryAsync(res.uri);
+
+                                                            setShowSuccessMessage(true)
+                                                            await delay(2000);
+                                                            setShowSuccessMessage(false)
+
+                                                        } else {
+                                                            alert('Please enable permission to access your media library')
+                                                        }
+                                                      } catch (error) {
+                                                        console.log(error);
+                                                        alert('Failed to save media')
+                                                      }
+                                                }}
                                             />
                                         </View>
                                     </Modal>

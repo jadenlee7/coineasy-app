@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, PermissionsAndroid, Animated, KeyboardAvoidingView, ScrollView, Dimensions } from 'react-native'
 
 import mime from 'mime';
@@ -8,16 +8,16 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { UserPfp } from '../../../components/User';
+import { TelegramIcon } from '../../../components/Icons';
 import HeaderImage from '../../../components/HeaderImage';
 import Conversation from '../../../components/Conversation';
 import { GlobalContext } from '../../../contexts/GlobalContext';
 import { AttachmentsMenu } from '../../../components/modals/AttachmentMenu';
-import { AddIcon, CloseIcon, DocumentIcon, PlusIcon, TelegramIcon } from '../../../components/Icons';
 
 
 
 const ConversationDetail = ({navigation, route}) => {
-    const { orbis, user } = useContext(GlobalContext);
+    const { orbis, user, setShowImageSender, listMessages, setListMessages } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const { conversation } = route.params
@@ -25,10 +25,9 @@ const ConversationDetail = ({navigation, route}) => {
     const [profile, setProfile] = useState(conversation.recipients_details ? conversation.recipients_details[0] : null)
     
     const [message, setMessage] = useState('')
-    const [listAttachment, setListAttachment] = useState([])
 
-    const [listMessages, setListMessages] = useState([])
     const [loadMessage, setLoadMessage] = useState(false)
+    const [cameraLoading, setCameraLoading] = useState(false)
 
     const [attachmentsMenuVisible, setAttachmentsMenuVisible] = useState(false)
 
@@ -131,6 +130,7 @@ const ConversationDetail = ({navigation, route}) => {
             onAttachmentSelect={onAttachmentSelect}
             onCameraPress={onCameraPress}
             onDismiss={toggleAttachmentsMenu}
+            isCameraLoading={cameraLoading}
         />
     );
 
@@ -150,10 +150,14 @@ const ConversationDetail = ({navigation, route}) => {
             if (permissionResult.granted === false) {
                 alert("You have refused to allow this app to access your camera.");
             } else {
-                let result = await ImagePicker.launchCameraAsync();
+                let result = await ImagePicker.launchCameraAsync({
+                    allowsEditing: false
+                });
     
                 if(!result.canceled){
+                    setCameraLoading(true)
                     /** Handle Image picked */
+
                     let imagePath = result.assets[0].uri;
         
                     const imageType = mime.getType(imagePath)
@@ -173,11 +177,14 @@ const ConversationDetail = ({navigation, route}) => {
                         let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
                         let media = [{
                             gateway: resUpload.result.gateway,
-                            item: finalUrl
+                            item: finalUrl,
+                            width: result.assets[0].width,
+                            height: result.assets[0].height,
+                            conversation: conversation
                         }]
-        
-                        setListAttachment([...listAttachment, media]);
-
+    
+                        setCameraLoading(false)
+                        setShowImageSender(media)
                         toggleAttachmentsMenu()
                     } else {
                         alert("Error uploading image.");

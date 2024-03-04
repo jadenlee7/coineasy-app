@@ -20,7 +20,7 @@ const windowSize = Dimensions.get('window')
 const projectId = '9fe6eef52f4985e5849a5c1e2c80fabb'
 
 export default function SwitchAccountModal() {
-    const { user, setUser, orbis, setSwitchAccountVis, listAccount, callbackConnect, switchLoading, setSwitchLoading } = useContext(GlobalContext);
+    const { user, setUser, orbis, setSwitchAccountVis, listAccount, callbackConnect, switchLoading, setSwitchLoading, setTypeNewSwitchAccount } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const [checked, setChecked] = useState(null);
@@ -72,7 +72,9 @@ export default function SwitchAccountModal() {
     }
 
     useEffect(() => {
+        console.log('enter useEffect for provider and isConnected');
         if(isConnected && provider != null && multipleConnect) {
+            console.log('real try to connect with WC');
             connectWithWC(provider);
         }
     }, [provider, isConnected])
@@ -87,6 +89,11 @@ export default function SwitchAccountModal() {
         });
 
         if(resUser.status == 200) {
+            setTypeNewSwitchAccount({
+                type: 'WC',
+                provider: _provider,
+                appName: "CoinEasyApp"
+            })
             setUser(resUser.details);
             AsyncStorage.setItem("provider-type", "wallet-connect");
             callbackConnect()
@@ -97,10 +104,11 @@ export default function SwitchAccountModal() {
     }
     
 
-    const switchAccount = (index) => {
+    const switchAccount = async (index) => {
         Haptics.selectionAsync();
         setSwitchLoading(true)
 
+        // console.log(listAccount);
         setUser(listAccount[checked.index].user)
     }
 
@@ -144,7 +152,16 @@ export default function SwitchAccountModal() {
                 }
             });
             if(resUser.status == 200) {
+                setTypeNewSwitchAccount({
+                    type: 'apple',
+                    provider: "oauth",
+                    oauth: {
+                        type: "apple",
+                        token: identityToken
+                    }
+                })
                 setUser(resUser.details);
+
                 AsyncStorage.setItem("provider-type", "apple");
                 callbackConnect()
                 setConnectLoading(false);
@@ -176,23 +193,23 @@ export default function SwitchAccountModal() {
 
         WebBrowser.openBrowserAsync('https://lit.orbis.club/oauth-google/' + encodeURIComponent(link))
         .then(() => {
-            // setConnectLoading(false);
-            console.log('OK');
-            // if(type == 'signup'){
-            //     setConnectType('signup')
-            // }
         }).catch(e => {
             alert("An unexpected error occured. Please try again.");
         })
     }
-    
-    console.log('test');
 
+    const connectWallet = () => {
+        Haptics.selectionAsync();
+        console.log('Connect Wallet pressed !');
+        setMultipleConnect(true);
+        open();
+    }
+    
     return(
         <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
             <Animated.View style={{transform: [{ translateX: moveAnimation1 }],paddingHorizontal: 20}}>
                 <View style={{height: 65, zIndex: 2}}>
-                    <View style={{padding: 20,marginBottom: 0,}}>
+                    <View style={{padding: 20,marginBottom: 0,paddingLeft: 3}}>
                         <Text style={[tailwind('text-primary'), {fontSize: Platform.OS == 'ios' ? 18 : 15,}]}>Switch Account</Text>
                     </View>
                 </View>
@@ -311,7 +328,7 @@ export default function SwitchAccountModal() {
                                     title="With Wallet Connect" 
                                     icon={<WalletConnectIcon style={{marginRight: 8}} />} 
                                     style={{marginTop: 10}} 
-                                    onPress={() => {Haptics.selectionAsync();setMultipleConnect(true); open();}} 
+                                    onPress={() => connectWallet()} 
                                 />
 
                                 <WalletConnectModal 

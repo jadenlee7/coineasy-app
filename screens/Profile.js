@@ -19,9 +19,22 @@ const Profile = ({ navigation, route }) => {
         getProfile();
     }, [user]);
 
+    const delay = ms => new Promise(res => setTimeout(res, ms));
+
     async function getProfile() {
         const { data, error } = await orbis.getProfile(user.did);
-        setProfile(data);
+
+        if(error?.message == 'FetchError: Network request failed'){
+            await delay(2000);
+            const resultRetry = await orbis.getProfile(user.did);
+            if(resultRetry.error?.message == 'FetchError: Network request failed'){
+                alert('FetchError: Network request failed')
+            }else{
+                setProfile(resultRetry.data)
+            }
+        }else{
+            setProfile(data);
+        }
     }
 
 

@@ -43,7 +43,7 @@ const TabBarHeight = 50;
 const IndicatorWidth = 50
 
 export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
-    const { user, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, setSwitchAccountVis ,tabViewHeight } = useContext(GlobalContext);
+    const { user, setUser, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, setSwitchAccountVis ,tabViewHeight } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const [isFollowing, setIsFollowing] = useState(false);
@@ -106,7 +106,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         }
     
         async function getProfile() {
-            const { data, error } = await orbis.getProfile(user.did);
+            const { data, error } = await orbis.getProfile(type == 'selected' ? profile.did : user.did);
             setUserInfo(data.details);
         }
 
@@ -160,6 +160,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         
         const { data, error } = await orbis.getProfile(profile.did);
         setUserInfo(data.details)
+        setUser(data)
         
         getCountPosts()
 
@@ -365,14 +366,14 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     
                     { type !== 'selected' && (
                         <>
-                            {/* <TouchableOpacity 
+                            <TouchableOpacity 
                                 activeOpacity={0.7}
                                 onPress={() => {Haptics.selectionAsync();setSwitchAccountVis(true)}} 
                                 style={{width: 60,height: 50,alignItems: 'center',justifyContent: 'center',position: 'absolute',top: 0,left:0}}
                                 hitSlop={{top: 20, bottom: 20, left: 50, right: 50}}
                             >
                                 <MaterialIcons name="switch-account" size={24} color="black" />
-                            </TouchableOpacity> */}
+                            </TouchableOpacity>
 
                             <TouchableOpacity 
                                 activeOpacity={0.7}

@@ -14,6 +14,7 @@ import { sleep } from './utils';
 import Login from "./screens/Login";
 import utilities from './tailwind.json';
 import QR from "./components/modals/QR.js";
+import ImageSender from "./components/modals/ImageSender.js";
 import PostPane from "./components/panes/PostPane";
 import AppNavigator from './navigation/AppNavigator';
 import { GlobalContext } from "./contexts/GlobalContext";
@@ -78,6 +79,8 @@ export default function App() {
   const [editedPost, setEditedPost] = useState();
   const [quotedPost, setQuotedPost] = useState();
   const [shareProfileVis, setShareProfileVis] = useState(false);
+  const [showImageSender, setShowImageSender] = useState(null);
+  const [listMessages, setListMessages] = useState([])
   const [notificationsVis, setNotificationsVis] = useState(false);
   const [nicknameVis, setNicknameVis] = useState(false)
   const [connectType, setConnectType] = useState('')
@@ -88,6 +91,7 @@ export default function App() {
 //   const [listFollowers, setListFollowers] = useState([])
 
   const [listAccount, setListAccount] = useState([])
+  const [typeNewSwitchAccount, setTypeNewSwitchAccount] = useState(null)
 
   const confetti = useRef();
   const [posts, setPosts] = useState([]);
@@ -137,44 +141,56 @@ export default function App() {
     'GmarketBold': require('./assets/fonts/GmarketSansBold.otf'),
   });
 
-//   useEffect(() => {
-//     saveUserInStorage();
-
-//     async function saveUserInStorage() {
-//       if(user) {
-//         // await AsyncStorage.removeItem("user-connected");
-
-//         const listDid = await AsyncStorage.getItem("user-connected")
-
-//         var listConnected = JSON.parse(listDid)
-//         if(listConnected && listConnected.length > 0){
-//             const indexUser = listConnected.findIndex(e => e.user.did == user.did)
-//             if(indexUser != -1){
-//                 listConnected[indexUser].time = moment().format('YYYY-MM-DD HH:mm:ss')
-//             }else{
-//                 listConnected.push({'user': user, 'time': moment().format('YYYY-MM-DD HH:mm:ss')})
-//             }
-//         }else{
-//             listConnected = [{'user': user, 'time': moment().format('YYYY-MM-DD HH:mm:ss')}]
-//         }
-
-//         await AsyncStorage.setItem("user-connected", JSON.stringify(listConnected));
-//         setListAccount([...listConnected])
-//         setSwitchLoading(false)
-//         setSwitchAccountVis(false)
-//       }
-//     }
-//   }, [user]);
-
   useEffect(() => {
     saveUserInStorage();
 
     async function saveUserInStorage() {
       if(user) {
-        await AsyncStorage.setItem("user-connected", user.did);
+        // await AsyncStorage.removeItem("user-connected");
+
+        const listDid = await AsyncStorage.getItem("user-connected")
+
+        var listConnected = JSON.parse(listDid)
+        if(listConnected && listConnected.length > 0){
+            const indexUser = listConnected.findIndex(e => e.user.did == user.did)
+            if(indexUser != -1){
+                listConnected[indexUser].time = moment().format('YYYY-MM-DD HH:mm:ss')
+                listConnected[indexUser].user = user
+            }else{
+                listConnected.push({
+                    'user': user, 
+                    'time': moment().format('YYYY-MM-DD HH:mm:ss'),
+                    'type': typeNewSwitchAccount
+                })
+            }
+        }else{
+            listConnected = [{
+                'user': user,
+                'time': moment().format('YYYY-MM-DD HH:mm:ss'),
+                'type': typeNewSwitchAccount
+            }]
+        }
+
+        console.log('CONNECTED');
+        console.log(listConnected);
+        await AsyncStorage.setItem("user-connected", JSON.stringify(listConnected));
+        setListAccount([...listConnected])
+        setSwitchLoading(false)
+        setSettingsVis(false);
+        setSwitchAccountVis(false)
       }
     }
   }, [user]);
+
+//   useEffect(() => {
+//     saveUserInStorage();
+
+//     async function saveUserInStorage() {
+//       if(user) {
+//         await AsyncStorage.setItem("user-connected", user.did);
+//       }
+//     }
+//   }, [user]);
 
   const onLayoutRootView = useCallback(async () => {
    if (isReady) {
@@ -191,49 +207,52 @@ export default function App() {
     fecthMuteUser();
 
     /** Will re-connect automatically the user to the account found in local storage */
-    // async function connect() {
-    //   /** Check if user exists in local storage */
-    // //   await AsyncStorage.removeItem("user-connected");
-
-    //   let _userDid = await AsyncStorage.getItem("user-connected");
-    //   let listDid = []
-    //   if(_userDid){
-    //       if(_userDid.charAt(0) != '['){
-    //           await AsyncStorage.removeItem("user-connected");
-    //       }else{
-    //           listDid = JSON.parse(_userDid)
-    //       }
-    //   }
-      
-    //   if(listDid && listDid.length != 0) {
-    //     if(listDid.length > 1){
-    //         listDid.sort((a, b) => (a.time < b.time) ? 1 : -1)
-    //     }
-    //     setUser({did: listDid[0].user.did})
-    //   }
-    //   setIsReady(true);
-
-    //   /** Retrieve user details */
-    //   let res = await orbis.isConnected();
-    //   if(res.status == 200) {
-    //     setUser(res.details);
-    //   }
-    // }
-
     async function connect() {
-        /** Check if user exists in local storage */
-        let _userDid = await AsyncStorage.getItem("user-connected");
-        if(_userDid) {
-          setUser({did: _userDid})
-        }
-        setIsReady(true);
-  
-        /** Retrieve user details */
-        let res = await orbis.isConnected();
-        if(res.status == 200) {
-          setUser(res.details);
-        }
+      /** Check if user exists in local storage */
+    //   await AsyncStorage.removeItem("user-connected");
+
+      let _userDid = await AsyncStorage.getItem("user-connected");
+      let listDid = []
+      if(_userDid){
+          if(_userDid.charAt(0) != '['){
+              await AsyncStorage.removeItem("user-connected");
+          }else{
+              listDid = JSON.parse(_userDid)
+          }
       }
+      
+      if(listDid && listDid.length != 0) {
+        if(listDid.length > 1){
+            listDid.sort((a, b) => (a.time < b.time) ? 1 : -1)
+        }
+        setUser(listDid[0].user)
+      }
+      setIsReady(true);
+
+      /** Retrieve user details */
+      let res = await orbis.isConnected();
+      console.log('RESSSSSS');
+      console.log(res);
+
+      if(res.status == 200) {
+        setUser(res.details);
+      }
+    }
+
+    // async function connect() {
+    //     /** Check if user exists in local storage */
+    //     let _userDid = await AsyncStorage.getItem("user-connected");
+    //     if(_userDid) {
+    //       setUser({did: _userDid})
+    //     }
+    //     setIsReady(true);
+  
+    //     /** Retrieve user details */
+    //     let res = await orbis.isConnected();
+    //     if(res.status == 200) {
+    //       setUser(res.details);
+    //     }
+    // }
 
     // Will fetch all blocked user
     async function fecthBlockedUser() {
@@ -275,6 +294,9 @@ export default function App() {
   /** Will be triggered when a new deeplink is received */
   useEffect(() => {
     if (url) {
+        console.log('LAAAA');
+        console.log(url);
+        //exp://192.168.1.14:8081/--/google-auth?token=eyJhbGciOiJSUzI1NiIsImtpZCI6IjZmOTc3N2E2ODU5MDc3OThlZjc5NDA2MmMwMGI2NWQ2NmMyNDBiMWIiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI3MjgyODI2NDk2MTItbmgwcWhmMDVnOHEzYWxvMTJwMzAxbzlqYmxzMDE1bWsuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI3MjgyODI2NDk2MTItbmgwcWhmMDVnOHEzYWxvMTJwMzAxbzlqYmxzMDE1bWsuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMTQ3OTU5NTYwNjU1NzY3MDQ2MTgiLCJhdF9oYXNoIjoiUXJYQWpQSE5QTzJ3MmRNUWR1QXRBZyIsIm5hbWUiOiJZZWxvZGEiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jTFgzLURSYkhMcFBZZ25qQkRZYVpaNU1EalNHVVE3R3ZkWUw5V09XOGlBLVhjPXM5Ni1jIiwiZ2l2ZW5fbmFtZSI6IlllbG9kYSIsImxvY2FsZSI6ImZyIiwiaWF0IjoxNzA5MTIxNTE5LCJleHAiOjE3MDkxMjUxMTl9.QvUoEQll3ti1TxOdWeQMzuRq1v4gvnYsGvwm9w7jP-dbgS4yxVmitiS9gq6u6EucWqOfDKf5F8_S8RqOpvp62SLUZj9vCg2iS7o_Xy4LGSYv-6oQZEa9zprTCCsIZ8a0rOjdy2Z5OJlQYTjpaeh_4JdTyumg7M0bZqF-iWXFJOJG8NBGCmjH4Pp50AwKE85HiFXTw9Z6y9GfVhXgSHMpjCiG7XVOMaB_vNInaCNdHm0GT84Mi6tcg1ScvU-GotJ4vqIyyqgkpQwd2hQEnbG23P35t7jf4EY_dk3BtGBgyZg_uLY7N9YVdOadSc1Es6anlBJsgftcoGyYaGXceiAEqQ
       handleURL(url);
     }
   }, [url]);
@@ -283,20 +305,16 @@ export default function App() {
   useEffect(() => {
    responseListener.current = Notifications.addNotificationResponseReceivedListener(async (response) => {
      try {
-       //console.log("response:", response);
        let data = response.notification?.request?.content?.data;
-       console.log("Enter addNotificationResponseReceivedListener:", data);
 
        switch (data?.type) {
          /** Open post pane for reactions */
          case "reaction":
-           console.log("Open post id:" + data.post_id);
            hideModals();
            setPostDetailsVis(data.post_id);
            break;
          /** Open post pane for replies */
          case "reply":
-           console.log("Open post id:" + data.post_id);
            hideModals();
            setPostDetailsVis(data.master ? data.master : data.post_id);
 
@@ -309,7 +327,6 @@ export default function App() {
 
          /** Open post pane for mentions */
          case "mention":
-           console.log("Open post id:" + data.post_id);
            hideModals();
            setPostDetailsVis(data.post_id);
 
@@ -351,7 +368,6 @@ export default function App() {
         }
 
         //setLoading(true);
-        console.log("Connecting with Google with token:" + token);
         if(token) {
           try {
             googleConnect(token);
@@ -415,6 +431,9 @@ export default function App() {
     });
 
     if(data) {
+        // console.log('DATAAA');
+        // console.log(data[0].creator);
+
       setPosts(data);
     }
     setRefreshing(false);
@@ -620,7 +639,13 @@ export default function App() {
                 listAccount,
                 setListAccount,
                 switchLoading,
-                setSwitchLoading
+                setSwitchLoading,
+                showImageSender,
+                setShowImageSender,
+                listMessages,
+                setListMessages,
+                typeNewSwitchAccount,
+                setTypeNewSwitchAccount
             }}
         >
           <TailwindProvider utilities={utilities}>
@@ -671,9 +696,9 @@ export default function App() {
             }
 
             {/** Switch account container */}
-            {/* {switchAccountVis &&
+            {switchAccountVis &&
               <SwitchAccountModal />
-            } */}
+            }
 
             {/** Show post settings modal */}
             {editedPost != null &&
@@ -684,6 +709,15 @@ export default function App() {
             {shareProfileVis &&
               <QR hide={() => setShareProfileVis(false)} />
             }
+
+            {/** Image sender for DM */}
+            {/* {showImageSender &&
+                <ImageSender 
+                    hide={() => setShowImageSender(null)} 
+                    media={showImageSender} 
+                    updateListeMessages={(listMessage) => {console.log('ICIIIIII');console.log(listMessage); setListMessages(listMessage)}}
+                />
+            } */}
 
             {/** Show notifications pane */}
             {notificationsVis &&

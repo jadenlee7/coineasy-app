@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, Image, Linking, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, Linking, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import { CameraIcon, ImagePickerIcon, OrangeLinkIcon, WhiteCameraIcon } from '../Icons';
 
 import * as MediaLibrary from 'expo-media-library';
@@ -39,13 +39,17 @@ export const AttachmentsMenu = (props) => {
             }
         }
     }
-    
+
     const renderActionAttachment = () => (
         <TouchableOpacity 
             style={{alignItems: 'center',justifyContent: 'center',borderRadius: 20,backgroundColor: '#FF6B17', height: 88,width:88}} 
             onPress={props.onCameraPress}
         >
-            <WhiteCameraIcon />
+            {props.isCameraLoading ? (
+                <ActivityIndicator size="small" color="white" />
+            ) : (
+                <WhiteCameraIcon />
+            )}
         </TouchableOpacity>
     );
 

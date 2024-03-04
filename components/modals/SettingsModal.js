@@ -18,6 +18,7 @@ import TimeAgo from "../TimeAgo";
 
 export default function SettingsModal() {
     const { 
+        user,
         setUser, 
         orbis, 
         setSettingsVis, 
@@ -27,7 +28,11 @@ export default function SettingsModal() {
         listMutedUsers, 
         setListMutedUsers,
         listHiddenPost,
-        setListHiddenPost
+        setListHiddenPost,
+        listAccount,
+        switchLoading, 
+        setSwitchLoading,
+        setListAccount
     } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
@@ -39,6 +44,7 @@ export default function SettingsModal() {
     const [showBackHiddenPosts, setShowBackHiddenPosts] = useState(false)
     const [logOutLoading, setLogOutLoading] = useState(false)
     const [showConfirm, setShowConfirm] = useState(false)
+    const [showSignOutSwitch, setShowSignOutSwitch] = useState(false)
 
     const [listBlockLoader, setListBlockLoader] = useState([])
     const [blockedUsers, setBlockedUsers] = useState([])
@@ -47,11 +53,14 @@ export default function SettingsModal() {
     const [listHiddenLoader, setListHiddenLoader] = useState([])
     const [hiddenPosts, setHiddenPosts] = useState([])
 
+    const [checked, setChecked] = useState(null);
+
     const moveAnimation1 = useRef(new Animated.Value(0)).current;
     const moveAnimation2 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
     const moveAnimation3 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
     const moveAnimation4 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
     const moveAnimation5 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
+    const moveAnimation6 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
 
     function hideSettings() {
         setSettingsVis(false);
@@ -75,27 +84,69 @@ export default function SettingsModal() {
     }
 
     async function logout() {
-        setLogOutLoading(true)
         Haptics.selectionAsync();
-        setSettingsVis(false);
 
-        await AsyncStorage.removeItem("user-connected");
-        let res = await orbis.logout();
-        console.log("res:", res);
-
-        await AsyncStorage.removeItem("provider-type");       
-        if(provider){
-            provider?.disconnect().then( res => {
+        const listDid = await AsyncStorage.getItem("user-connected")
+        var listConnected = JSON.parse(listDid)
+        
+        if(listConnected && listConnected.length > 1){
+            doAnimation(moveAnimation1, moveAnimation6, -Dimensions.get('window').width, 0, () => {setShowSignOutSwitch(true)})
+        }else{
+            setLogOutLoading(true)
+            
+            await AsyncStorage.removeItem("user-connected");
+            let res = await orbis.logout();
+            
+            provider?.disconnect().then(async res => {
+                await AsyncStorage.removeItem("provider-type");       
                 setUser(null);
+                setSettingsVis(false);
                 setLogOutLoading(false)
             }).catch(e => {
-                console.log(e);
                 setUser(null);
+                setSettingsVis(false);
                 setLogOutLoading(false)
             })
-        }else{
-            setUser(null);
+
+            if(!provider){
+                setUser(null);
+                setSettingsVis(false);
+                setLogOutLoading(false)
+            }
         }
+
+    }
+
+    async function logoutAnyway() {
+        Haptics.selectionAsync();
+        setLogOutLoading(true)
+
+        const listDid = await AsyncStorage.getItem("user-connected")
+        var listConnected = JSON.parse(listDid)
+
+        const indexUser = listConnected.findIndex(e => e.user.did == user.did)
+        if(indexUser != -1){
+            listConnected.splice(indexUser, 1)
+            setListAccount([...listConnected])
+        }else{
+            alert("Could not find user.")
+        }
+
+        await AsyncStorage.setItem("user-connected", JSON.stringify(listConnected));
+
+        let res = await orbis.logout();
+
+        provider?.disconnect().then(async res => {
+            await AsyncStorage.removeItem("provider-type");       
+            setUser(null);
+            setLogOutLoading(false)
+        }).catch(e => {
+            setUser(null);
+            setLogOutLoading(false)
+        })
+
+
+        setSettingsVis(false);
     }
 
     const doAnimation = (ref1, ref2, value1, value2, return_function) => {
@@ -147,13 +198,8 @@ export default function SettingsModal() {
     const showHiddenPosts = () => {
         Haptics.selectionAsync();
 
-        console.log('OUIIII');
-        console.log(listHiddenPost);
-
         listHiddenPost?.map(async e => {
             const { data, error } = await orbis.getPost(e);
-            console.log('!!!!!!');
-            console.log(data);
             hiddenPosts.push(data)
             setHiddenPosts([...hiddenPosts])
         })
@@ -204,11 +250,12 @@ export default function SettingsModal() {
         doAnimation(moveAnimation1, moveAnimation5, 0, Dimensions.get('window').width, () => {setHiddenPosts([]);setShowBackHiddenPosts(false)})
     }
 
-    const UserInfo = ({userInfo, index, type}) => {   
+    function onBackSwitchAccountLogout() {
+        Haptics.selectionAsync();
+        doAnimation(moveAnimation1, moveAnimation6, 0, Dimensions.get('window').width, () => setShowSignOutSwitch(false))
+    }
 
-        console.log('LAAAA');
-        console.log(userInfo);
-        
+    const UserInfo = ({userInfo, index, type}) => {           
         /** Will unblock the user */
         async function doUnblock (userInfo, index_follow) {
             listBlockLoader[index_follow] = true
@@ -438,6 +485,40 @@ export default function SettingsModal() {
         )
     }
 
+    const switchAccount = async (index) => {
+        Haptics.selectionAsync();
+        setSwitchLoading(true)
+
+        const listDid = await AsyncStorage.getItem("user-connected")
+        var listConnected = JSON.parse(listDid)
+
+        const indexUser = listConnected.findIndex(e => e.user.did == user.did)
+        if(indexUser != -1){
+            listConnected.splice(indexUser, 1)
+            setListAccount([...listConnected])
+        }else{
+            alert("Could not find user.")
+        }
+
+        await AsyncStorage.setItem("user-connected", JSON.stringify(listConnected));
+
+        let res = await orbis.logout();
+
+        await AsyncStorage.removeItem("provider-type");       
+        if(provider){
+            provider?.disconnect().then( res => {
+                setUser(listAccount[checked.index].user);
+                setLogOutLoading(false)
+            }).catch(e => {
+                setUser(listAccount[checked.index].user);
+                setLogOutLoading(false)
+            })
+        }else{
+            setUser(listAccount[checked.index].user);
+        }
+
+        setSettingsVis(false);
+    }
 
     return(
         <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
@@ -471,6 +552,15 @@ export default function SettingsModal() {
                     </TouchableOpacity>
                 ) : showBackHiddenPosts && !showConfirm ? (
                     <TouchableOpacity onPress={() => onBackHiddenPostsPress()} style={{position: 'absolute',top: 20, left: 20,}}>
+                        <Image
+                            style={{width: 30,height: 30}}
+                            resizeMode='contain'
+                            source={require('../../assets/back_button.png')}
+                            defaultSource={require('../../assets/back_button.png')}
+                        />
+                    </TouchableOpacity>
+                ) : showSignOutSwitch && !showConfirm ? (
+                    <TouchableOpacity onPress={() => onBackSwitchAccountLogout()} style={{position: 'absolute',top: 20, left: 20,}}>
                         <Image
                             style={{width: 30,height: 30}}
                             resizeMode='contain'
@@ -563,6 +653,61 @@ export default function SettingsModal() {
                             </View>
                         )}
                     </ScrollView>
+
+                </Animated.View>
+            )}
+
+            {showSignOutSwitch && (
+                <Animated.View style={{transform: [{ translateX: moveAnimation6 }],position: 'absolute',width: '100%',padding: 20,marginTop: 30,alignSelf: 'center',}}>
+                    <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,}}>Switch Account ?</Text>
+
+                    <Text style={{textAlign:'center',marginVertical: 20,}}>Do you wish to switch to your other accounts after signing out ?</Text>
+
+                    {listAccount.map((e, index) => {
+                        if(e.user.did != user.did){
+                            return(
+                                <TouchableOpacity 
+                                    style={{borderColor: '#F6F6F6',borderWidth:1, borderRadius: 25,height: 50, flexDirection:'row',alignItems: 'center',alignSelf: 'center',width: '100%'}} 
+                                    key={Math.random()}
+                                    onPress={() => setChecked({'user': e.user, 'index':index})}
+                                >
+                                    <UserPfp 
+                                        details={e.user} 
+                                        style={{alignSelf: 'center',width: 30,height: 30,marginLeft: 15,}}
+                                        badge_style={{right:Dimensions.get('window').width/2.7,top:-30}}
+                                    />
+    
+                                    <Username details={e.user} fontSize={15} style={{marginLeft: 15,}}/>
+    
+                                    <View style={{backgroundColor: 'white',width: 26,height: 26,borderWidth: 1,borderColor: '#999',borderRadius: 13,justifyContent: 'center',alignItems: 'center',position: 'absolute',right: 10}}>
+                                        {((checked && checked.user.did == e.user.did) || (!checked && e.user.did == user.did)) && (
+                                            <View style={{backgroundColor: '#FF6E31',width: 24,height: 24,borderRadius: 13,justifyContent: 'center',alignItems: 'center',}}>
+                                                <View style={{backgroundColor: 'white',width: 10,height: 10,borderRadius: 5,}} />
+                                            </View>
+                                        )}
+                                    </View>
+                                </TouchableOpacity>
+                            )
+                        }
+                    })}
+
+                {switchLoading ? (
+                    <View style={[tailwind('rounded-full py-4 px-8 flex-row items-center justify-center'), {alignSelf: 'center',width: '100%',backgroundColor: '#FF6E31',marginTop: 30,}]}>
+                        <ActivityIndicator size="small" color="#020617" />
+                    </View>
+                ) : checked ? (
+                    <Button color="orange" size='centered' onPress={() => switchAccount()} title="Yes, Switch me" style={{marginBottom: 0, marginTop: 30,}} />
+                ) : (
+                    <Button color="disabled" title="Yes, Switch me" style={{marginBottom: 0, marginTop: 30,}} />
+                )}
+
+                {logOutLoading ? (
+                    <View style={[tailwind('bg-slate-100 rounded-full py-4 px-8 flex-row items-center justify-center'), {alignSelf: 'center',marginTop: 20, width: '100%'}]}>
+                        <ActivityIndicator size="small" color="#020617" />
+                    </View>
+                ) : (
+                    <Button color="rounded-gray" title="No, Sign me out" onPress={() => logoutAnyway()} style={{marginTop: 20,}}/>
+                )}
 
                 </Animated.View>
             )}
