@@ -41,6 +41,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Orbis } from "@orbisclub/orbis-sdk";
 import moment from 'moment';
 import SwitchAccountModal from './components/modals/SwitchAccountModal';
+import { useWalletConnectModal } from '@walletconnect/modal-react-native';
 
 /** Initialize the Orbis class object */
 let orbis = new Orbis({
@@ -91,7 +92,6 @@ export default function App() {
 //   const [listFollowers, setListFollowers] = useState([])
 
   const [listAccount, setListAccount] = useState([])
-  const [typeNewSwitchAccount, setTypeNewSwitchAccount] = useState(null)
 
   const confetti = useRef();
   const [posts, setPosts] = useState([]);
@@ -115,6 +115,8 @@ export default function App() {
   const [currentRoute, setCurrentRoute] = useState(null)
 
   const [tabViewHeight, setTabViewHeight] = useState(500)
+
+  const { provider } = useWalletConnectModal();    
 
   const [scrollAnim, setScrollAnim] = useState(new Animated.Value(0));
   const [offsetAnim, setOffsetAnim] = useState(new Animated.Value(0));
@@ -149,35 +151,59 @@ export default function App() {
         // await AsyncStorage.removeItem("user-connected");
 
         const listDid = await AsyncStorage.getItem("user-connected")
+        
+        const currentCeramicSession = await AsyncStorage.getItem("ceramic-session")
 
         var listConnected = JSON.parse(listDid)
+
+        const indexUser = listConnected?.findIndex(e => e.user.did == user.did)
+
         if(listConnected && listConnected.length > 0){
-            const indexUser = listConnected.findIndex(e => e.user.did == user.did)
-            if(indexUser != -1){
+            if(typeof indexUser !== 'undefined' && indexUser != -1){
                 listConnected[indexUser].time = moment().format('YYYY-MM-DD HH:mm:ss')
                 listConnected[indexUser].user = user
             }else{
                 listConnected.push({
                     'user': user, 
                     'time': moment().format('YYYY-MM-DD HH:mm:ss'),
-                    'type': typeNewSwitchAccount
+                    'ceramicSession': currentCeramicSession
                 })
             }
         }else{
             listConnected = [{
                 'user': user,
                 'time': moment().format('YYYY-MM-DD HH:mm:ss'),
-                'type': typeNewSwitchAccount
+                'ceramicSession': currentCeramicSession
             }]
         }
 
-        console.log('CONNECTED');
+
+        console.log('LIST_CONNECTED');
         console.log(listConnected);
+
         await AsyncStorage.setItem("user-connected", JSON.stringify(listConnected));
+
+        if(typeof indexUser !== 'undefined' && indexUser != -1){
+            await orbis.isConnected(listConnected[indexUser].ceramicSession);
+        }else if(currentCeramicSession){
+            await orbis.isConnected(currentCeramicSession);
+        }else{
+            await orbis.isConnected();
+        }
+  
         setListAccount([...listConnected])
         setSwitchLoading(false)
         setSettingsVis(false);
         setSwitchAccountVis(false)
+      }else{
+        let res = await orbis.logout();
+        
+        provider?.disconnect().then(async res => {
+            setUser(null);
+        }).catch(e => {
+            console.log(e);
+            setUser(null);
+        })
       }
     }
   }, [user]);
@@ -225,18 +251,22 @@ export default function App() {
         if(listDid.length > 1){
             listDid.sort((a, b) => (a.time < b.time) ? 1 : -1)
         }
+
         setUser(listDid[0].user)
-      }
-      setIsReady(true);
 
-      /** Retrieve user details */
-      let res = await orbis.isConnected();
-      console.log('RESSSSSS');
-      console.log(res);
+        setIsReady(true);
+        
+      }else{
+          /** Retrieve user details */
+          let res = await orbis.isConnected();
 
-      if(res.status == 200) {
-        setUser(res.details);
+          if(res.status == 200) {
+            setUser(res.details);
+          }
+        
+        setIsReady(true);
       }
+
     }
 
     // async function connect() {
@@ -294,9 +324,6 @@ export default function App() {
   /** Will be triggered when a new deeplink is received */
   useEffect(() => {
     if (url) {
-        console.log('LAAAA');
-        console.log(url);
-        //exp://192.168.1.14:8081/--/google-auth?token=eyJhbGciOiJSUzI1NiIsImtpZCI6IjZmOTc3N2E2ODU5MDc3OThlZjc5NDA2MmMwMGI2NWQ2NmMyNDBiMWIiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI3MjgyODI2NDk2MTItbmgwcWhmMDVnOHEzYWxvMTJwMzAxbzlqYmxzMDE1bWsuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI3MjgyODI2NDk2MTItbmgwcWhmMDVnOHEzYWxvMTJwMzAxbzlqYmxzMDE1bWsuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMTQ3OTU5NTYwNjU1NzY3MDQ2MTgiLCJhdF9oYXNoIjoiUXJYQWpQSE5QTzJ3MmRNUWR1QXRBZyIsIm5hbWUiOiJZZWxvZGEiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jTFgzLURSYkhMcFBZZ25qQkRZYVpaNU1EalNHVVE3R3ZkWUw5V09XOGlBLVhjPXM5Ni1jIiwiZ2l2ZW5fbmFtZSI6IlllbG9kYSIsImxvY2FsZSI6ImZyIiwiaWF0IjoxNzA5MTIxNTE5LCJleHAiOjE3MDkxMjUxMTl9.QvUoEQll3ti1TxOdWeQMzuRq1v4gvnYsGvwm9w7jP-dbgS4yxVmitiS9gq6u6EucWqOfDKf5F8_S8RqOpvp62SLUZj9vCg2iS7o_Xy4LGSYv-6oQZEa9zprTCCsIZ8a0rOjdy2Z5OJlQYTjpaeh_4JdTyumg7M0bZqF-iWXFJOJG8NBGCmjH4Pp50AwKE85HiFXTw9Z6y9GfVhXgSHMpjCiG7XVOMaB_vNInaCNdHm0GT84Mi6tcg1ScvU-GotJ4vqIyyqgkpQwd2hQEnbG23P35t7jf4EY_dk3BtGBgyZg_uLY7N9YVdOadSc1Es6anlBJsgftcoGyYaGXceiAEqQ
       handleURL(url);
     }
   }, [url]);
@@ -431,8 +458,8 @@ export default function App() {
     });
 
     if(data) {
-        // console.log('DATAAA');
-        // console.log(data[0].creator);
+        console.log('DATAAA');
+        console.log(data[0]);
 
       setPosts(data);
     }
@@ -644,8 +671,6 @@ export default function App() {
                 setShowImageSender,
                 listMessages,
                 setListMessages,
-                typeNewSwitchAccount,
-                setTypeNewSwitchAccount
             }}
         >
           <TailwindProvider utilities={utilities}>

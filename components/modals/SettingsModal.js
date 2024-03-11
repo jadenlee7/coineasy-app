@@ -506,7 +506,7 @@ export default function SettingsModal() {
 
         await AsyncStorage.removeItem("provider-type");       
         if(provider){
-            provider?.disconnect().then( res => {
+            provider.disconnect().then( res => {
                 setUser(listAccount[checked.index].user);
                 setLogOutLoading(false)
             }).catch(e => {

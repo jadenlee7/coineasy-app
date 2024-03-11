@@ -20,7 +20,7 @@ const windowSize = Dimensions.get('window')
 const projectId = '9fe6eef52f4985e5849a5c1e2c80fabb'
 
 export default function SwitchAccountModal() {
-    const { user, setUser, orbis, setSwitchAccountVis, listAccount, callbackConnect, switchLoading, setSwitchLoading, setTypeNewSwitchAccount } = useContext(GlobalContext);
+    const { user, setUser, orbis, setSwitchAccountVis, listAccount, callbackConnect, switchLoading, setSwitchLoading } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const [checked, setChecked] = useState(null);
@@ -74,7 +74,7 @@ export default function SwitchAccountModal() {
     useEffect(() => {
         console.log('enter useEffect for provider and isConnected');
         if(isConnected && provider != null && multipleConnect) {
-            console.log('real try to connect with WC');
+            console.log('real try to connect with WC on Switch');
             connectWithWC(provider);
         }
     }, [provider, isConnected])
@@ -89,11 +89,6 @@ export default function SwitchAccountModal() {
         });
 
         if(resUser.status == 200) {
-            setTypeNewSwitchAccount({
-                type: 'WC',
-                provider: _provider,
-                appName: "CoinEasyApp"
-            })
             setUser(resUser.details);
             AsyncStorage.setItem("provider-type", "wallet-connect");
             callbackConnect()
@@ -107,6 +102,16 @@ export default function SwitchAccountModal() {
     const switchAccount = async (index) => {
         Haptics.selectionAsync();
         setSwitchLoading(true)
+
+        let res = await orbis.logout();
+
+        await AsyncStorage.removeItem("provider-type");       
+        if(provider){
+            provider?.disconnect().then( res => {
+            }).catch(e => {
+                console.log(e);
+            })
+        }
 
         // console.log(listAccount);
         setUser(listAccount[checked.index].user)
@@ -152,14 +157,6 @@ export default function SwitchAccountModal() {
                 }
             });
             if(resUser.status == 200) {
-                setTypeNewSwitchAccount({
-                    type: 'apple',
-                    provider: "oauth",
-                    oauth: {
-                        type: "apple",
-                        token: identityToken
-                    }
-                })
                 setUser(resUser.details);
 
                 AsyncStorage.setItem("provider-type", "apple");
@@ -195,6 +192,7 @@ export default function SwitchAccountModal() {
         .then(() => {
         }).catch(e => {
             alert("An unexpected error occured. Please try again.");
+            console.log(e);
         })
     }
 
