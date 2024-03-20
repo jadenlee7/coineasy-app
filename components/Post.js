@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useCallback } from "react";
-import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Modal, ActivityIndicator, Dimensions, ScrollView, Animated, Platform } from 'react-native';
+import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Modal, ActivityIndicator, Dimensions, ScrollView, Animated, Platform, StyleSheet } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -433,6 +433,25 @@ const PostDisplay = (props) => {
                                                         alert('Failed to save media')
                                                       }
                                                 }}
+                                                menus={(props) => {
+                                                    return(
+                                                        <Modal 
+                                                            animationType="slide" 
+                                                            transparent={true}
+                                                            onRequestClose={props.cancel}
+                                                        >
+                                                            <View style={styles.centeredView}>
+                                                                <View style={styles.modalView}>
+                                                                    <Button color="orange" size='centered' onPress={props.saveToLocal} title="Save to the Album" style={{marginBottom: 0, marginTop: 0,width:'100%'}} />
+
+                                                                    <TouchableHighlight style={[tailwind('bg-slate-100 rounded-full py-4 px-8'), {marginTop: 20,width:'100%',alignItems: 'center',}]} onPress={props.cancel} underlayColor="#f8fafc">
+                                                                        <Text style={[{fontSize: 14, fontFamily: "GmarketBold", lineHeight: 18 }]}>Cancel</Text>
+                                                                    </TouchableHighlight>
+                                                                </View>
+                                                            </View>
+                                                        </Modal>
+                                                    )
+                                                }}
                                             />
                                         </View>
                                     </Modal>
@@ -547,6 +566,8 @@ export const LikeCTA = ({post, isReply}) => {
       let { data, error } = await orbis.getReaction(post.stream_id, user.did);
       if(data && data.type && data.type == "like") {
         setHasLiked(true);
+      }else{
+        setHasLiked(false);
       }
     }
   }, [user]);
@@ -640,5 +661,29 @@ export const RepostCTA = ({post, isReply}) => {
     </TouchableOpacity>
   )
 }
+
+const styles = StyleSheet.create({
+    centeredView: {
+      flex: 1,
+      justifyContent: 'center',
+      marginTop: 22,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    modalView: {
+      margin: 20,
+      backgroundColor: 'white',
+      borderRadius: 20,
+      padding: 35,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+});
 
 export default Post;

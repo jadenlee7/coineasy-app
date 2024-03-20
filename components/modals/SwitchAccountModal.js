@@ -208,7 +208,7 @@ export default function SwitchAccountModal() {
             <Animated.View style={{transform: [{ translateX: moveAnimation1 }],paddingHorizontal: 20}}>
                 <View style={{height: 65, zIndex: 2}}>
                     <View style={{padding: 20,marginBottom: 0,paddingLeft: 3}}>
-                        <Text style={[tailwind('text-primary'), {fontSize: Platform.OS == 'ios' ? 18 : 15,}]}>Switch Account</Text>
+                        <Text style={[tailwind('text-primary'), {fontSize: Platform.OS == 'ios' ? 16 : 15,}]}>Switch Account</Text>
                     </View>
                 </View>
 
