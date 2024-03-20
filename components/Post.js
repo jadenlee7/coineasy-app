@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useCallback } from "react";
-import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Image, Modal, ActivityIndicator, Dimensions, ScrollView, Animated, Platform } from 'react-native';
+import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Modal, ActivityIndicator, Dimensions, ScrollView, Animated, Platform } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -11,6 +11,7 @@ import ImageViewer from 'react-native-image-zoom-viewer';
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
 
+import { Image } from 'expo-image';
 
 import Button from "./Button";
 import TimeAgo from "./TimeAgo";
@@ -206,11 +207,28 @@ const PostDisplay = (props) => {
                                     marginLeft: isRepost && !quotedPost ? -20 : 0,
                                 }
                             ]}
+                            source={media[0].url ? media[0].url : media[0][0].url}
+                            placeholder={require("../assets/loader_001.gif")}
+                            // contentFit="cover"
+                            transition={1000}
+                            onLoad={(values) => renderImage(values)}
+                            priority="high"
+                        />
+
+                        {/* <Image
+                            style={[
+                                tailwind('rounded-md'), 
+                                { 
+                                    height: ratioHeight,
+                                    width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87 ,
+                                    marginLeft: isRepost && !quotedPost ? -20 : 0,
+                                }
+                            ]}
                             onLoad={(values) => renderImage(values)}
                             source={{ uri: media[0].url ? media[0].url : media[0][0].url}}
                             defaultSource={require("../assets/loader_001.gif")} // A static image to display while loading the image source.
                             progressiveRenderingEnabled={true}
-                        />
+                        /> */}
                     </TouchableOpacity>
                 </View>
             )

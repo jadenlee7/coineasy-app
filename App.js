@@ -177,10 +177,6 @@ export default function App() {
             }]
         }
 
-
-        console.log('LIST_CONNECTED');
-        console.log(listConnected);
-
         await AsyncStorage.setItem("user-connected", JSON.stringify(listConnected));
 
         if(typeof indexUser !== 'undefined' && indexUser != -1){
@@ -458,9 +454,6 @@ export default function App() {
     });
 
     if(data) {
-        console.log('DATAAA');
-        console.log(data[0]);
-
       setPosts(data);
     }
     setRefreshing(false);
