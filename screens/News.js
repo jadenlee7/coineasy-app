@@ -1,11 +1,13 @@
 import React, { useState, useContext, useEffect, useCallback } from "react";
-import { Text, View, TouchableOpacity, Image, TouchableHighlight, ScrollView, ActivityIndicator, RefreshControl, Dimensions, Animated, BackHandler } from 'react-native';
+import { Text, View, TouchableOpacity, Image as RNImage, TouchableHighlight, ScrollView, ActivityIndicator, RefreshControl, Dimensions, Animated, BackHandler } from 'react-native';
 
 import fetch from 'cross-fetch';
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as WebBrowser from 'expo-web-browser';
 import { useFocusEffect } from '@react-navigation/native';
+
+import { Image } from 'expo-image';
 
 import { GlobalContext } from "../contexts/GlobalContext";
 import { onboard_context, edu_context } from '../utils/config.js';
@@ -265,12 +267,20 @@ const News = ({ navigation, route }) => {
                     {/** Display image if any */}
                     {item.content.imageUrl &&
                         <Image
-                            resizeMode="cover"
                             style={[tailwind('rounded-md'), { aspectRatio: 1, width: 70 }]}
-                            source={{
-                                uri: item.content.imageUrl
-                            }}  
+                            source={item.content.imageUrl}
+                            transition={500}
+                            contentFit="cover"
+                            priority="high"
                         />
+
+                        // <Image
+                        //     resizeMode="cover"
+                        //     style={[tailwind('rounded-md'), { aspectRatio: 1, width: 70 }]}
+                        //     source={{
+                        //         uri: item.content.imageUrl
+                        //     }}  
+                        // />
                     }
                     <View style={tailwind('flex flex-col ml-2 flex-1 justify-center')}>
                         <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15 }]}>{item.content.displayName}</Text>
@@ -321,7 +331,7 @@ const News = ({ navigation, route }) => {
             
                             {/** Share button */}
                             <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => showPostbox()}>
-                                <Image
+                                <RNImage
                                     style={{ height: 70, width: 70 }}
                                     source={require('../assets/share_btn.png')} 
                                 />
@@ -353,20 +363,34 @@ export const NewsItem = ({item}) => {
             <>
                 {item.image ?
                     <Image
-                        resizeMode="cover"
                         style={[tailwind('rounded-md'), { aspectRatio: 1, height: 100, marginRight: 3 }]}
-                        source={{
-                            uri: item.image
-                        }}  
+                        source={item.image}
+                        transition={200}
+                        contentFit="cover"
+                        priority="high"
                     />
+                    // <Image
+                    //     resizeMode="cover"
+                    //     style={[tailwind('rounded-md'), { aspectRatio: 1, height: 100, marginRight: 3 }]}
+                    //     source={{
+                    //         uri: item.image
+                    //     }}  
+                    // />
                 : typeof news_image !== 'undefined' &&
                     <Image
-                        resizeMode="cover"
                         style={[tailwind('rounded-md'), { aspectRatio: 1, height: 100, marginRight: 3 }]}
-                        source={{
-                            uri: news_image
-                        }}  
+                        source={news_image}
+                        transition={200}
+                        contentFit="cover"
+                        priority="high"
                     />
+                    // <Image
+                    //     resizeMode="cover"
+                    //     style={[tailwind('rounded-md'), { aspectRatio: 1, height: 100, marginRight: 3 }]}
+                    //     source={{
+                    //         uri: news_image
+                    //     }}  
+                    // />
                 }
         
                 <View style={tailwind('flex flex-col ml-2 flex-1 justify-between')}>

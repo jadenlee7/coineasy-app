@@ -209,8 +209,8 @@ const PostDisplay = (props) => {
                             ]}
                             source={media[0].url ? media[0].url : media[0][0].url}
                             placeholder={require("../assets/loader_001.gif")}
-                            // contentFit="cover"
                             transition={1000}
+                            contentFit="contain"
                             onLoad={(values) => renderImage(values)}
                             priority="high"
                         />

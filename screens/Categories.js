@@ -1,9 +1,11 @@
 import React, { useCallback, useContext, useEffect, useState } from "react";
-import { ScrollView, RefreshControl, Text, View, TouchableOpacity, Image, TouchableHighlight, Animated, Dimensions, BackHandler, ActivityIndicator } from 'react-native';
+import { ScrollView, RefreshControl, Text, View, TouchableOpacity, Image as RNImage, TouchableHighlight, Animated, Dimensions, BackHandler, ActivityIndicator } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import { useFocusEffect } from '@react-navigation/native';
+
+import { Image } from 'expo-image';
 
 import { BackIcon, NotificationsIcon } from "../components/Icons";
 import { GlobalContext } from "../contexts/GlobalContext";
@@ -156,11 +158,20 @@ const Categories = ({ navigation, route }) => {
                     {category.content.imageUrl &&
                         <Image
                             style={[tailwind("absolute"), { width: "100%", height: "100%" }]}
-                            source={{
-                                uri: category.content.imageUrl,
-                                cache: 'force-cache'
-                            }}
+                            source={category.content.imageUrl}
+                            transition={500}
+                            // contentFit="contain"
+                            // onLoad={(values) => renderImage(values)}
+                            priority="high"
                         />
+
+                        // <Image
+                        //     style={[tailwind("absolute"), { width: "100%", height: "100%" }]}
+                        //     source={{
+                        //         uri: category.content.imageUrl,
+                        //         cache: 'force-cache'
+                        //     }}
+                        // />
                     }
             
                     {/** Dark background */}
@@ -233,7 +244,7 @@ const Categories = ({ navigation, route }) => {
                 
                                 {/** Share button */}
                                 <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => showPostbox()}>
-                                    <Image
+                                    <RNImage
                                         style={{ height: 70, width: 70 }}
                                         source={require('../assets/share_btn.png')} 
                                     />

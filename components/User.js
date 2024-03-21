@@ -1,4 +1,4 @@
-import { Text, View, TouchableOpacity, Image } from 'react-native';
+import { Text, View, TouchableOpacity, Image as RNImage } from 'react-native';
 import { useTailwind } from 'tailwind-rn';
 
 import useDidToAddress from "../hooks/useDidToAddress";
@@ -7,6 +7,8 @@ import { isAdmin } from "../utils";
 import { useContext } from 'react';
 import { GlobalContext } from '../contexts/GlobalContext';
 import { FollowIcon, UnfollowIcon } from './Icons';
+
+import { Image } from 'expo-image';
 
 export default function User({height = 40, details, isFollow}) {
   const tailwind = useTailwind();
@@ -41,14 +43,21 @@ export function UserPfp({height = 40, details, style, badge_style, origin}) {
       <View>
         <Image
           style={[tailwind('rounded-full bg-slate-100'), { height: height, width: height }, style]}
+          source={getProfilePicture()}
+          placeholder={require("../assets/loader_001.gif")}
+          transition={500}
+          priority="high"
+        />
+        {/* <Image
+          style={[tailwind('rounded-full bg-slate-100'), { height: height, width: height }, style]}
           loadingIndicatorSource={require("../assets/loader_001.gif")}
           source={{
             uri: getProfilePicture(),
             cache: 'force-cache'
-          }} />
+          }} /> */}
         {/** Will display admin badge if available */}
         {isAdmin(details.did) &&
-          <Image
+          <RNImage
             style={[{width: height / 2, height: height / 2, position: "absolute", right: -4, top: 0}, badge_style]}
             source={require('../assets/AdminBadge.png')} />
         }
@@ -63,7 +72,7 @@ export function UserPfp({height = 40, details, style, badge_style, origin}) {
   } else {
     return(
         <>
-            <Image
+            <RNImage
                 style={[tailwind('rounded-full'), { height: height, width: height }, style]}
                 source={require('../assets/empty-state-user.png')} 
             />
