@@ -400,7 +400,7 @@ const PostDisplay = (props) => {
                                             </View>
 
                                             {showSuccessMessage && (
-                                                <View style={{backgroundColor: '#3D3D3D',width: Dimensions.get('window').width-20,alignSelf: 'center',flexDirection:'row',alignItems: 'center', height: 60,borderRadius: 10}}>
+                                                <View style={{position: 'absolute',top: 50,zIndex: 999999999999, backgroundColor: '#3D3D3D',width: Dimensions.get('window').width-20,alignSelf: 'center',flexDirection:'row',alignItems: 'center', height: 60,borderRadius: 10}}>
                                                     <SuccessIcon style={{marginLeft: 20,}}/>
                                                     <Text style={{marginLeft: 10,color:'white'}}>Media saved to library !</Text>
                                                 </View>
