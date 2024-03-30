@@ -72,7 +72,21 @@ export default function SwitchAccountModal() {
     }
 
     useEffect(() => {
-        console.log('enter useEffect for provider and isConnected');
+        fetchUsername()
+
+        async function fetchUsername(){
+            listAccount.map(async e => {
+                if(!e.user?.profile?.username){
+                    const { data, error } = await orbis.getProfile(e.user.did);
+                    e.user.profile = data.profile
+                }
+            })
+        }
+    }, [])
+    
+
+    useEffect(() => {
+        // console.log('enter useEffect for provider and isConnected');
         if(isConnected && provider != null && multipleConnect) {
             console.log('real try to connect with WC on Switch');
             connectWithWC(provider);

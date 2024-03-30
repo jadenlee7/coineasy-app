@@ -659,7 +659,7 @@ export default function Postbox({isReply = false}) {
                                     <LockIcon color="#959595" style={{marginRight: 2}} />
                                 }
 
-                                <Text style={tailwind('text-secondary items-center ml-1')}>This category is gated.</Text>
+                                <Text style={tailwind('text-secondary items-center ml-1')}>This category is {hasAccess ? "opened" : "gated"}.</Text>
                             </View>
                         }
 

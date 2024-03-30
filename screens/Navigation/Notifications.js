@@ -27,6 +27,17 @@ const Notifications = ({navigation, route}) => {
 
     const statusBarHeight = useStatusBarHeight();
 
+
+    const list_filters = [
+        {label: 'Follows', family:'follow'},
+        {label: 'Likes', family:'reaction'},
+        {label: 'Replies', family:'reply_to'},
+        {label: 'Mentions', family:'mention'},
+        {label: 'Reposts', family:'repost'},
+        {label: 'Quotes', family:'quote'},
+        // {label: 'News', family:'unknown'},
+    ];
+
     /** Check if user liked this post */
     useEffect(() => {
         getNotifications();
@@ -36,11 +47,15 @@ const Notifications = ({navigation, route}) => {
             setNotificationsLoading(true);
             let { data, error } = await orbis.getNotifications({
                 type: 'social',
-                context: context,
-                include_child_contexts: true
+                // context: context,
+                // include_child_contexts: true
             });
 
             if(data) {
+                // const listType = data.map(e => e.content.type)
+                // const listFamily = data.map(e => e.family)
+                // console.log(listType);
+                // console.log(listFamily);
                 setNotifications(data);
                 setNotificationsLoading(false);
             }
@@ -52,20 +67,10 @@ const Notifications = ({navigation, route}) => {
         const tailwind = useTailwind();
       
         function selectNotif() {
-            switch (notification.family) {
-                /** Open post details */
-                case "reaction":
-                    Haptics.selectionAsync();
-                    setPostDetailsVis(notification?.post_details?.stream_id)
-                    navigation.navigate('PostDetails')
-                    break;
-        
-                /** Open post details */
-                case "reply_to":
-                    Haptics.selectionAsync();
-                    setPostDetailsVis(notification?.post_details?.stream_id)
-                    navigation.navigate('PostDetails')
-                    break;
+            Haptics.selectionAsync();
+            if(notification?.post_details?.stream_id){
+                setPostDetailsVis(notification?.post_details?.stream_id)
+                navigation.navigate('PostDetails')
             }
         }
       
@@ -105,6 +110,14 @@ const Notifications = ({navigation, route}) => {
             return(
                 <Text style={tailwind("text-secondary")}>Replied to your post</Text>
             );
+        case "follow":
+            return(
+                <Text style={tailwind("text-secondary")}>Followed you</Text>
+            );
+        case "mention":
+            return(
+                <Text style={tailwind("text-secondary")}>Mentionned you</Text>
+            );
         }
     }
 
@@ -123,27 +136,13 @@ const Notifications = ({navigation, route}) => {
         setRefreshing(false)
     }
 
-    const list_filters = [
-        {label: 'Reactions'},
-        {label: 'Replies'},
-    ];
-    // const list_filters = [
-    //     {label: 'Follows'},
-    //     {label: 'Likes'},
-    //     {label: 'Replies'},
-    //     {label: 'Mentions'},
-    //     {label: 'Reposts'},
-    //     {label: 'Quotes'},
-    //     {label: 'News'},
-    // ];
 
     const onFilterPress = (filter) => {
-        const filterType = filter.label == 'Reactions' ? 'reaction' : 'reply_to'
-        const indexItem = checked.findIndex(e => e == filterType)
+        const indexItem = checked.findIndex(e => e.family == filter.family)
         if(indexItem != -1){
             checked.splice(indexItem, 1)
         }else{
-            checked.push(filterType)
+            checked.push(filter)
         }
 
         console.log(checked);
@@ -156,13 +155,6 @@ const Notifications = ({navigation, route}) => {
             <HeaderImage />
 
             <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 4}}>
-                {/* <TouchableOpacity onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
-                    <View style={{zIndex:100000, justifyContent: 'center',alignItems: 'center',margin: 15, backgroundColor: 'white',flexDirection:'row',}}>
-                        <BackIcon />
-                        <Text style={[tailwind('text-slate-900 ml-3'), { fontFamily: "GmarketMedium" }]}>Back</Text>
-                    </View>
-                </TouchableOpacity> */}
-
                 <TouchableOpacity style={{margin: 15,}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
                     <Image
                         style={{width: 24,height: 24}}
@@ -185,7 +177,7 @@ const Notifications = ({navigation, route}) => {
                 >
                     {notifications.map((notification, key) => {
                         if(checked.length != 0){
-                            if(checked.includes(notification.family)){
+                            if(checked.findIndex(e => e.family == notification.family) != -1){
                                 return (
                                     <Notification notification={notification} key={key} />
                                 );
@@ -204,18 +196,15 @@ const Notifications = ({navigation, route}) => {
             }
 
             {showFilter && (
-                <Modal hide={() => {Haptics.selectionAsync();setShowFilter(false)}} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
-                    <View 
-                        style={[
-                            tailwind('flex flex-col'), 
-                            {paddingHorizontal: 20}
-                        ]}
-                    >
-
-                    {/* <View style={{position: 'absolute',width: '90%',marginTop:60,alignSelf: 'center',}}> */}
-
-
-                        <Text style={{fontWeight: 'bold',fontSize: 17,marginTop: 14,marginBottom: 5,marginLeft: 2,fontFamily: 'GmarketMedium',}}>Notification Filters</Text>
+                <Modal 
+                    hide={() => {Haptics.selectionAsync();setShowFilter(false)}} 
+                    animateModal={true} 
+                    bottomDuration={200} 
+                    bottomStart={-100} 
+                    type='small'
+                >
+                    <View style={[tailwind('flex flex-col'), {paddingHorizontal: 20,marginBottom: 27}]}>
+                        <Text style={{fontWeight: 'bold',fontSize: 17,marginTop: 14,marginBottom: 5,marginLeft: -2,fontFamily: 'GmarketMedium',}}>Notification Filters</Text>
                         {list_filters.map(e => {
                             return(
                                 <TouchableOpacity 
@@ -226,7 +215,7 @@ const Notifications = ({navigation, route}) => {
                                     <Text style={{fontWeight: 'bold',fontSize: 17,paddingLeft: 20}}>{e.label}</Text>
 
                                     <View style={{backgroundColor: 'white',width: 26,height: 26,borderWidth: 1,borderColor: '#999',borderRadius: 13,marginRight: 15, justifyContent: 'center',alignItems: 'center',}}>
-                                        {checked.includes(e.label == 'Reactions' ? 'reaction' : 'reply_to') && (
+                                        {checked.findIndex(elt => elt.family == e.family) != -1 && (
                                             <View style={{backgroundColor: '#FF6E31',width: 24,height: 24,borderRadius: 13,justifyContent: 'center',alignItems: 'center',}}>
                                                 <View style={{backgroundColor: 'white',width: 10,height: 10,borderRadius: 5,}} />
                                             </View>

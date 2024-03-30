@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useCallback } from "react";
-import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Modal, ActivityIndicator, Dimensions, ScrollView, Animated, Platform, StyleSheet } from 'react-native';
+import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Modal, ActivityIndicator, Dimensions, ScrollView, Animated, Platform, StyleSheet, Alert, Linking } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -24,6 +24,7 @@ import useGetMentionedDid from "../hooks/useGetMentionedDid";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 import { CommentIcon, InterpunctIcon, LikeIcon, RepostIcon, PostMenuIcon, CloseIcon, RepostIcon2, CommentIcon2, LikeIcon2, SuccessIcon } from "./Icons";
 import { showMessage } from "react-native-flash-message";
+import { AntDesign } from "@expo/vector-icons";
 
 const Post = React.memo((props) => {
   return <PostDisplay {...props}/>;
@@ -179,14 +180,18 @@ const PostDisplay = (props) => {
     const Media = ({media, index, isRepost}) => {
         const tailwind = useTailwind();
         const screenWidth = Dimensions.get('window');
+        
         const [ratioHeight, setRatioHeight] = useState(screenWidth.width - 87)
+        const [isHorizontal, setIsHorizontal] = useState(null)
 
         const renderImage = (values) => {
             const {width, height} = values.nativeEvent.source
+
             if(width > height){
                 const ratioWidth = (isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87)/width
                 const newHeight = height*ratioWidth < screenWidth.width - 87 ? height*ratioWidth : screenWidth.width - 87
                 setRatioHeight(newHeight)
+                setIsHorizontal(true)
             }
         }
 
@@ -202,8 +207,25 @@ const PostDisplay = (props) => {
                             style={[
                                 tailwind('rounded-md'), 
                                 { 
+                                    height: isHorizontal ? ratioHeight : screenWidth.width - 87,
+                                    width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87,
+                                    marginLeft: isRepost && !quotedPost ? -20 : 0,
+                                }
+                            ]}
+                            source={media[0].url ? media[0].url : media[0][0].url}
+                            placeholder={require("../assets/loader_001.gif")}
+                            transition={1000}
+                            contentFit="cover"
+                            onLoad={(values) => renderImage(values)}
+                            priority="high"
+                        />
+                        {/* <Image
+                            style={[
+                                tailwind('rounded-md'), 
+                                { 
                                     height: ratioHeight,
-                                    width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87 ,
+                                    width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : isVertical ? isVertical : screenWidth.width - 87,
+                                    // width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87,
                                     marginLeft: isRepost && !quotedPost ? -20 : 0,
                                 }
                             ]}
@@ -213,21 +235,6 @@ const PostDisplay = (props) => {
                             contentFit="contain"
                             onLoad={(values) => renderImage(values)}
                             priority="high"
-                        />
-
-                        {/* <Image
-                            style={[
-                                tailwind('rounded-md'), 
-                                { 
-                                    height: ratioHeight,
-                                    width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87 ,
-                                    marginLeft: isRepost && !quotedPost ? -20 : 0,
-                                }
-                            ]}
-                            onLoad={(values) => renderImage(values)}
-                            source={{ uri: media[0].url ? media[0].url : media[0][0].url}}
-                            defaultSource={require("../assets/loader_001.gif")} // A static image to display while loading the image source.
-                            progressiveRenderingEnabled={true}
                         /> */}
                     </TouchableOpacity>
                 </View>
@@ -384,10 +391,11 @@ const PostDisplay = (props) => {
                                         statusBarTranslucent
                                         onRequestClose={() => setModalVis(false)}
                                     >
-                                        <View style={[tailwind("h-full w-full"), {backgroundColor: "#000", paddingTop: statusBarHeight + 10}]}>
-                                            <View style={[tailwind('flex justify-end w-full'), {height: 40}]}>
-                                                <TouchableOpacity onPress={() => setModalVis(!modalVis)} style={{left: 20}} activeOpacity={0.6}>
-                                                    <CloseIcon />
+                                        <View style={[tailwind("h-full w-full"), {height: Dimensions.get('window').height+50}]}>
+                                            {/* <View style={[tailwind('flex justify-end w-full'), {height: 40,backgroundColor: '#000',}]}> */}
+                                            <View style={[tailwind('absolute w-full'), {height: 40,top: 50,zIndex: 2,justifyContent:'center'}]}>
+                                                <TouchableOpacity onPress={() => setModalVis(!modalVis)} activeOpacity={0.6} style={{left: 20}}>
+                                                    <AntDesign name="close" size={24} color="white" />
                                                 </TouchableOpacity>
                                             </View>
 
@@ -401,6 +409,13 @@ const PostDisplay = (props) => {
                                             <ImageViewer 
                                                 imageUrls={list_images}
                                                 index={imageIndex}
+                                                renderIndicator={(currentIndex, allSize) => {
+                                                    return(
+                                                        <View style={{position:'absolute',alignSelf:'center',top: 80, width: 100,height: 40,justifyContent:'center',alignItems:'center',zIndex: 99999999}}>
+                                                            <Text style={{color: 'white'}}>{currentIndex}/{allSize}</Text>
+                                                        </View>
+                                                    )
+                                                }}
                                                 onSwipeDown={() => setModalVis(!modalVis)} 
                                                 enableSwipeDown={true} 
                                                 loadingRender={() => { return (
@@ -426,7 +441,13 @@ const PostDisplay = (props) => {
                                                             setShowSuccessMessage(false)
 
                                                         } else {
-                                                            alert('Please enable permission to access your media library')
+                                                            Alert.alert('Media Permission', 'Please enable permission to access your media library', [
+                                                                {
+                                                                  text: 'Cancel',
+                                                                  style: 'cancel',
+                                                                },
+                                                                {text: 'Open Settings', onPress: () => Linking.openSettings()},
+                                                            ]);
                                                         }
                                                       } catch (error) {
                                                         console.log(error);

@@ -38,7 +38,11 @@ export default function QR({hide}) {
     /** Will open the native sharing modal */
     const shareProfile = async () => {
         try {
-            const result = await Share.share({ url: link });
+            const result = await Share.share({ 
+                message: link, 
+                url: link, 
+                title: "My CoinEasy Profile" 
+            });
         } catch (error) {
             Alert.alert(error.message);
         }
