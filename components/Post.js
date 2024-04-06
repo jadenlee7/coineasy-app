@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useCallback } from "react";
+import React, { useState, useContext, useEffect, useCallback, useRef, useMemo } from "react";
 import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Modal, ActivityIndicator, Dimensions, ScrollView, Animated, Platform, StyleSheet, Alert, Linking } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
@@ -24,7 +24,11 @@ import useGetMentionedDid from "../hooks/useGetMentionedDid";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 import { CommentIcon, InterpunctIcon, LikeIcon, RepostIcon, PostMenuIcon, CloseIcon, RepostIcon2, CommentIcon2, LikeIcon2, SuccessIcon } from "./Icons";
 import { showMessage } from "react-native-flash-message";
-import { AntDesign } from "@expo/vector-icons";
+import { AntDesign, Entypo, Feather } from "@expo/vector-icons";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+
 
 const Post = React.memo((props) => {
   return <PostDisplay {...props}/>;
@@ -58,6 +62,12 @@ const PostDisplay = (props) => {
         console.log(error);        
     }
 
+    const settingsRef = useRef(null);
+    const snapPoints = useMemo(() => ['75%','75%'], []);
+    const handleSettingsPress = useCallback(() => {
+        settingsRef.current?.present();
+    }, []);
+
     const [body, setBody] = useState(post?.content?.body);
     const [postContext, setPostContext] = useState(post?.content?.context ? post.content.context : post?.context);
     const [postContextDetails, setPostContextDetails] = useState(post?.content?.context_details ? post.content.context_details : post?.context_details);
@@ -66,10 +76,10 @@ const PostDisplay = (props) => {
     const [isDeleted, setIsDeleted] = useState(false);
     const [modalVis, setModalVis] = useState(false);
     const [imageIndex, setImageIndex] = useState(0)
-
     const [showSuccessMessage, setShowSuccessMessage] = useState(false)
-
+    const [currentIndex, setCurrentIndex] = useState(0)
     const [lengthMore,setLengthMore] = useState(false);
+
     const onTextLayout = useCallback(e => {
         var count_lines = 0
         e.nativeEvent.lines.map(e => {
@@ -251,6 +261,37 @@ const PostDisplay = (props) => {
 
     const delay = ms => new Promise(res => setTimeout(res, ms));
 
+    const onSaveImageToLocal = async (uri) => {
+        try{
+            // Request device storage access permission
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status === "granted") {
+                const splitted = uri.split('/')
+                const filename = splitted[splitted.length-1]
+                
+                const fileUri = FileSystem.documentDirectory + filename + `.jpg`;
+                const res = await FileSystem.downloadAsync(uri, fileUri);
+                await MediaLibrary.saveToLibraryAsync(res.uri);
+
+                settingsRef.current?.close()
+                setShowSuccessMessage(true)
+                await delay(2000);
+                setShowSuccessMessage(false)
+
+            } else {
+                Alert.alert('Media Permission', 'Please enable permission to access your media library', [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
+                    },
+                    {text: 'Open Settings', onPress: () => Linking.openSettings()},
+                ]);
+            }
+        } catch (error) {
+        console.log(error);
+        alert('Failed to save media')
+        }
+    }
 
     return(
         <>
@@ -387,15 +428,16 @@ const PostDisplay = (props) => {
                                     <Modal 
                                         visible={true}
                                         transparent={true}
-                                        style={{backgroundColor: "#000"}}
                                         statusBarTranslucent
                                         onRequestClose={() => setModalVis(false)}
                                     >
-                                        <View style={[tailwind("h-full w-full"), {height: Dimensions.get('window').height+50}]}>
-                                            {/* <View style={[tailwind('flex justify-end w-full'), {height: 40,backgroundColor: '#000',}]}> */}
-                                            <View style={[tailwind('absolute w-full'), {height: 40,top: 50,zIndex: 2,justifyContent:'center'}]}>
+                                        <GestureHandlerRootView style={[tailwind("h-full w-full"), {height: Dimensions.get('window').height+50,marginTop: Platform.OS == 'ios' ? -30 : -10}]}>
+                                            <View style={[tailwind('absolute w-full'), {height: 40,top: Platform.OS == 'ios' ? 80 : 50,zIndex: 2,justifyContent:'space-between',flexDirection:'row',alignItems:'center'}]}>
                                                 <TouchableOpacity onPress={() => setModalVis(!modalVis)} activeOpacity={0.6} style={{left: 20}}>
                                                     <AntDesign name="close" size={24} color="white" />
+                                                </TouchableOpacity>
+                                                <TouchableOpacity onPress={handleSettingsPress} activeOpacity={0.6} style={{right: 20}}>
+                                                    <Entypo name="dots-three-horizontal" size={24} color="white" />
                                                 </TouchableOpacity>
                                             </View>
 
@@ -424,36 +466,8 @@ const PostDisplay = (props) => {
                                                         color="#fff" 
                                                     /> 
                                                 )}}
-                                                onSave={async (uri) => {
-                                                    try {
-                                                        // Request device storage access permission
-                                                        const { status } = await MediaLibrary.requestPermissionsAsync();
-                                                        if (status === "granted") {
-                                                            const splitted = uri.split('/')
-                                                            const filename = splitted[splitted.length-1]
-                                                            
-                                                            const fileUri = FileSystem.documentDirectory + filename + `.jpg`;
-                                                            const res = await FileSystem.downloadAsync(uri, fileUri);
-                                                            await MediaLibrary.saveToLibraryAsync(res.uri);
-
-                                                            setShowSuccessMessage(true)
-                                                            await delay(2000);
-                                                            setShowSuccessMessage(false)
-
-                                                        } else {
-                                                            Alert.alert('Media Permission', 'Please enable permission to access your media library', [
-                                                                {
-                                                                  text: 'Cancel',
-                                                                  style: 'cancel',
-                                                                },
-                                                                {text: 'Open Settings', onPress: () => Linking.openSettings()},
-                                                            ]);
-                                                        }
-                                                      } catch (error) {
-                                                        console.log(error);
-                                                        alert('Failed to save media')
-                                                      }
-                                                }}
+                                                onSave={(uri) => onSaveImageToLocal(uri)}
+                                                onChange={(index) => {setCurrentIndex(index)}}
                                                 menus={(props) => {
                                                     return(
                                                         <Modal 
@@ -474,7 +488,29 @@ const PostDisplay = (props) => {
                                                     )
                                                 }}
                                             />
-                                        </View>
+
+                                            <BottomSheetModalProvider>
+                                                <BottomSheetModal
+                                                    ref={settingsRef}
+                                                    index={1}
+                                                    snapPoints={snapPoints}
+                                                    backgroundStyle={{backgroundColor: '#333',}}
+                                                    handleIndicatorStyle={{backgroundColor: 'white',}}
+                                                    handleStyle={{height: 40,justifyContent: 'center',}}
+                                                    backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
+                                                >                                                    
+                                                    <TouchableOpacity
+                                                        style={{backgroundColor: '#595959',padding: 20,width: '90%',alignSelf:'center',marginTop: 20,borderRadius: 5,flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}
+                                                        onPress={() => onSaveImageToLocal(list_images[currentIndex].url)}
+                                                    >
+                                                        <Text style={{color: 'white'}}>Save the image</Text>
+                                                        <Feather name="download" size={24} color="white" />
+                                                    </TouchableOpacity>
+                                                </BottomSheetModal>
+                                            </BottomSheetModalProvider>
+
+
+                                        </GestureHandlerRootView>
                                     </Modal>
                                 }
                         </TouchableOpacity>

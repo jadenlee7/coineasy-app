@@ -204,7 +204,7 @@ const Notifications = ({navigation, route}) => {
                     type='small'
                 >
                     <View style={[tailwind('flex flex-col'), {paddingHorizontal: 20,marginBottom: 27}]}>
-                        <Text style={{fontWeight: 'bold',fontSize: 17,marginTop: 14,marginBottom: 5,marginLeft: -2,fontFamily: 'GmarketMedium',}}>Notification Filters</Text>
+                        <Text style={{fontWeight: 'bold',fontSize: 17,marginTop: 14,marginBottom: 5,}}>Notification Filters</Text>
                         {list_filters.map(e => {
                             return(
                                 <TouchableOpacity 
