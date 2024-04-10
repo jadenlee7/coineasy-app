@@ -114,7 +114,6 @@ const News = ({ navigation, route }) => {
     const onRefresh = useCallback(async () => {
         page = 0;
         setRefreshing(true);
-        console.log(selectedNews);
         let { data, error } = await orbis.getPosts({
           contexts: [selectedNews.stream_id],
           include_child_contexts: true
@@ -210,19 +209,19 @@ const News = ({ navigation, route }) => {
                 );
             case "easy-edu":
                 return(
-                <>
-                {eduCategories.length == 0 ?
-                    <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
-                :
                     <>
-                    {eduCategories.map((item, key) => {
-                        return (
-                            <OnboardItem item={item} key={item.stream_id} />
-                        );
-                    })}
+                        {eduCategories.length == 0 ?
+                            <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
+                        :
+                            <>
+                                {eduCategories.map((item, key) => {
+                                    return (
+                                        <OnboardItem item={item} key={item.stream_id} />
+                                    );
+                                })}
+                            </>
+                        }
                     </>
-                }
-                </>
                 );
             default:
         

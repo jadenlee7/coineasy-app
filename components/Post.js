@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useCallback, useRef, useMemo } from "react";
-import { Text, View, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Modal, ActivityIndicator, Dimensions, ScrollView, Animated, Platform, StyleSheet, Alert, Linking } from 'react-native';
+import { Text, View, Image as RNImage, TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback, Pressable, Modal, ActivityIndicator, Dimensions, ScrollView, Animated, Platform, StyleSheet, Alert, Linking } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -22,13 +22,43 @@ import { GlobalContext } from "../contexts/GlobalContext";
 import { getDomainName, getShorterString } from '../utils';
 import useGetMentionedDid from "../hooks/useGetMentionedDid";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
-import { CommentIcon, InterpunctIcon, LikeIcon, RepostIcon, PostMenuIcon, CloseIcon, RepostIcon2, CommentIcon2, LikeIcon2, SuccessIcon } from "./Icons";
-import { showMessage } from "react-native-flash-message";
 import { AntDesign, Entypo, Feather } from "@expo/vector-icons";
+import { InterpunctIcon, PostMenuIcon, RepostIcon2, CommentIcon2, LikeIcon2, SuccessIcon } from "./Icons";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
+// const listPost = [
+//     1712122694, 
+//     1711023640, 
+//     1710312877, 
+//     1710147978, 
+//     1709716199, 
+//     1709544853, 
+//     1709205686, 
+//     1709094196, 
+//     1708680202, 
+//     1708578728, 
+//     1708499834, 
+//     1707873845, 
+// ]
+
+const listPostFailure = [
+    1707811820, // --> bug 2
+    1707787339, // --> bug 2
+    1707388758, // --> bug 2
+    1707379256, // --> bug 2
+    1707109006,  // --> bug 2
+    1708499786, // -->  bug 2
+    1708420612, // -->  bug 2
+    1708403907, // -->  bug 2
+    1708322086, // -->  bug 2
+    1708321902, // -->  bug 2
+    1708321741, // -->  bug 2
+    1707896173, // -->  bug 2
+    1708500015, // -->  bug 2
+    1708680086, // -->  bug 2
+]
 
 const Post = React.memo((props) => {
   return <PostDisplay {...props}/>;
@@ -174,14 +204,6 @@ const PostDisplay = (props) => {
         return replacedText;
     };
 
-    if(!post || !post.content) {
-        return null;
-    }
-
-    if(isDeleted) {
-        return null;
-    }
-
     const onImagePress = (index) => {
         setModalVis(true)
         setImageIndex(index)
@@ -213,7 +235,8 @@ const PostDisplay = (props) => {
                         style={[tailwind('rounded-md border border-secondary'), { marginBottom: 6, marginTop: 2 }]} 
                         onPress={() => onImagePress(index)}
                     >
-                        <Image
+                        {listPostFailure.includes(post.timestamp) ? (
+                            <RNImage
                             style={[
                                 tailwind('rounded-md'), 
                                 { 
@@ -222,30 +245,28 @@ const PostDisplay = (props) => {
                                     marginLeft: isRepost && !quotedPost ? -20 : 0,
                                 }
                             ]}
-                            source={media[0].url ? media[0].url : media[0][0].url}
-                            placeholder={require("../assets/loader_001.gif")}
-                            transition={1000}
-                            contentFit="cover"
+                            source={{uri: media[0].url ? media[0].url : media[0][0].url}}
+                            resizeMode="cover"
                             onLoad={(values) => renderImage(values)}
-                            priority="high"
                         />
-                        {/* <Image
-                            style={[
-                                tailwind('rounded-md'), 
-                                { 
-                                    height: ratioHeight,
-                                    width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : isVertical ? isVertical : screenWidth.width - 87,
-                                    // width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87,
-                                    marginLeft: isRepost && !quotedPost ? -20 : 0,
-                                }
-                            ]}
-                            source={media[0].url ? media[0].url : media[0][0].url}
-                            placeholder={require("../assets/loader_001.gif")}
-                            transition={1000}
-                            contentFit="contain"
-                            onLoad={(values) => renderImage(values)}
-                            priority="high"
-                        /> */}
+                        ) : (
+                            <Image
+                                style={[
+                                    tailwind('rounded-md'), 
+                                    { 
+                                        height: isHorizontal ? ratioHeight : screenWidth.width - 87,
+                                        width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87,
+                                        marginLeft: isRepost && !quotedPost ? -20 : 0,
+                                    }
+                                ]}
+                                source={media[0].url ? media[0].url : media[0][0].url}
+                                placeholder={require("../assets/loader_001.gif")}
+                                transition={1000}
+                                contentFit="cover"
+                                onLoad={(values) => renderImage(values)}
+                                priority="high"
+                            />
+                        )}
                     </TouchableOpacity>
                 </View>
             )
@@ -253,11 +274,6 @@ const PostDisplay = (props) => {
             return null
         }
     }
-
-    // if(body == 'Gma'){
-    //     console.log('POSTTTT');
-    //     console.log(post);
-    // }
 
     const delay = ms => new Promise(res => setTimeout(res, ms));
 
@@ -291,6 +307,15 @@ const PostDisplay = (props) => {
         console.log(error);
         alert('Failed to save media')
         }
+    }
+
+
+    if(!post || !post.content) {
+        return null;
+    }
+
+    if(isDeleted) {
+        return null;
     }
 
     return(
@@ -461,10 +486,7 @@ const PostDisplay = (props) => {
                                                 onSwipeDown={() => setModalVis(!modalVis)} 
                                                 enableSwipeDown={true} 
                                                 loadingRender={() => { return (
-                                                    <ActivityIndicator style={{marginTop: 10}} 
-                                                        size="small" 
-                                                        color="#fff" 
-                                                    /> 
+                                                    <ActivityIndicator style={{marginTop: 10}}  size="small"  color="#fff" /> 
                                                 )}}
                                                 onSave={(uri) => onSaveImageToLocal(uri)}
                                                 onChange={(index) => {setCurrentIndex(index)}}
