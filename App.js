@@ -1,7 +1,7 @@
 import './utils/polyfill';
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { StyleSheet, View, Keyboard, Platform, Animated } from 'react-native';
+import { StyleSheet, View, Keyboard, Platform, Animated, Image } from 'react-native';
 
 import { StatusBar } from 'expo-status-bar';
 import { TailwindProvider } from 'tailwind-rn';
@@ -149,6 +149,11 @@ export default function App() {
     async function saveUserInStorage() {
       if(user) {
         // await AsyncStorage.removeItem("user-connected");
+
+        if(!user?.profile){
+            const { data, error } = await orbis.getProfile(user.did);
+            user.profile = data.details.profile
+        }
 
         const listDid = await AsyncStorage.getItem("user-connected")
         
@@ -454,7 +459,34 @@ export default function App() {
     });
 
     if(data) {
-      setPosts(data);
+        data.map(async (e, indexPost) => {
+            if(e.content.media?.length > 0){
+                e.content.media.map(async (elt, indexImage) => {
+                    if(elt.url){
+                        await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                    }else if(elt[0].url){
+                        await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                    }else{
+                        console.log('AUCUNNNN');
+                        console.log(elt);
+                    }
+
+                    // if(e.content.body.includes('Duskbreakers')){
+                    //     console.log('ici');
+                    //     console.log(elt);
+                    // }
+        
+
+                    if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                        setPosts(data);
+                    }
+                })
+            }else{
+                if(indexPost == data.length -1){
+                    setPosts(data);
+                }
+            }
+        })
     }
     setRefreshing(false);
   }
@@ -475,9 +507,36 @@ export default function App() {
         page
       );
 
-      let _posts = [...posts, ...data];
-      setRefreshingBottom(false);
-      setPosts(_posts);
+      if(data){
+        data.map(async (e, indexPost) => {
+            if(e.content.media?.length > 0){
+                e.content.media.map(async (elt, indexImage) => {
+                    if(elt.url){
+                        await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                    }else if(elt[0].url){
+                        await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                    }
+    
+                    if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                        let _posts = [...posts, ...data];
+                        setRefreshingBottom(false);
+                        setPosts(_posts);
+                    }
+                })
+            }else{
+                if(indexPost == data.length -1){
+                    let _posts = [...posts, ...data];
+                    setRefreshingBottom(false);
+                    setPosts(_posts);
+                }
+            }
+        })
+      }
+
+
+    //   let _posts = [...posts, ...data];
+    //   setRefreshingBottom(false);
+    //   setPosts(_posts);
     } else {
       console.log("Reached the end.");
     }

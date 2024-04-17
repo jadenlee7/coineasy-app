@@ -667,9 +667,9 @@ const Posts = ({type, profile}) => {
     let { data } = await orbis.getPosts(options);
     if(data) {
 
-        if(options.is_reply){
-            data.map(async (e, index) => {
-                if(e.content.reply_to){
+        data.map(async (e, indexPost) => {
+            if(e.content.media?.length > 0){
+                if(options.is_reply && e.content.reply_to){
                     const resultPost = await orbis.getPost(e.content.reply_to)
         
                     e.reply_to_details.count_likes = resultPost.data?.count_likes
@@ -678,18 +678,48 @@ const Posts = ({type, profile}) => {
                     e.reply_to_details.timestamp = resultPost.data?.timestamp
                 }
 
-                if(index == data.length -1){
+
+                e.content.media.map(async (elt, indexImage) => {
+                    if(elt.url){
+                        await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                    }else if(elt[0].url){
+                        await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                    }else{
+                        console.log('AUCUNNNN');
+                        console.log(elt);
+                    }
+
+                    if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                        setPosts(data);
+                    }
+                })
+            }else{
+                if(indexPost == data.length -1){
                     setPosts(data);
                 }
+            }
+        })
 
-                return e
-            })
-        }else{
-            setPosts(data);
-        }
+        // if(options.is_reply){
+        //     data.map(async (e, index) => {
+        //         if(e.content.reply_to){
+        //             const resultPost = await orbis.getPost(e.content.reply_to)
+        
+        //             e.reply_to_details.count_likes = resultPost.data?.count_likes
+        //             e.reply_to_details.count_replies = resultPost.data?.count_replies
+        //             e.reply_to_details.count_repost = resultPost.data?.count_repost
+        //             e.reply_to_details.timestamp = resultPost.data?.timestamp
+        //         }
 
+        //         if(index == data.length -1){
+        //             setPosts(data);
+        //         }
 
-
+        //         return e
+        //     })
+        // }else{
+        //     setPosts(data);
+        // }
     }
     setRefreshing(false);
   }

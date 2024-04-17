@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, View } from 'react-native'
 
 import { useTailwind } from 'tailwind-rn';
 
@@ -33,13 +33,32 @@ const ProfileReplies = (props) => {
   
         let { data } = await orbis.getPosts(options);
         if(data) {
+            data.map(async (e, indexPost) => {
+                if(e.content.media?.length > 0){
+                    e.content.media.map(async (elt, indexImage) => {
+                        if(elt.url){
+                            await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                        }else if(elt[0].url){
+                            await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                        }else{
+                            console.log('AUCUNNNN');
+                            console.log(elt);
+                        }
+    
+                        if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                            setPosts(data);
+                        }
+                    })
+                }else{
+                    if(indexPost == data.length -1){
+                        setPosts(data);
+                    }
+                }
+            })
+
             data.map(async (e, index)=>{
                 if(e.content.reply_to){
                     const resultPost = await orbis.getPost(e.content.reply_to)
-
-                    if(resultPost.data.content.body.includes('SBF')){
-                        console.log(index);
-                    }
         
                     e.reply_to_details.count_likes = resultPost.data?.count_likes
                     e.reply_to_details.count_replies = resultPost.data?.count_replies

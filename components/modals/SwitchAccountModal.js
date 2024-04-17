@@ -20,7 +20,7 @@ const windowSize = Dimensions.get('window')
 const projectId = '9fe6eef52f4985e5849a5c1e2c80fabb'
 
 export default function SwitchAccountModal() {
-    const { user, setUser, orbis, setSwitchAccountVis, listAccount, callbackConnect, switchLoading, setSwitchLoading } = useContext(GlobalContext);
+    const { user, setUser, orbis, setSwitchAccountVis, listAccount, setListAccount, callbackConnect, switchLoading, setSwitchLoading } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const [checked, setChecked] = useState(null);
@@ -75,10 +75,16 @@ export default function SwitchAccountModal() {
         fetchUsername()
 
         async function fetchUsername(){
-            listAccount.map(async e => {
-                if(!e.user?.profile?.username){
+            
+            listAccount.map(async (e, index)=> {
+                if(e.user?.profile){
                     const { data, error } = await orbis.getProfile(e.user.did);
-                    e.user.profile = data.profile
+                    console.log(data);
+                    e.user.profile = data.details.profile
+                }
+
+                if(index == listAccount.length-1){
+                    setListAccount([...listAccount])
                 }
             })
         }

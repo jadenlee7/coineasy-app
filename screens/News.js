@@ -78,7 +78,28 @@ const News = ({ navigation, route }) => {
             include_child_contexts: true
         });
         if(data) {
-            console.log(data.length + " news posts retrieved.");
+            data.map(async (e, indexPost) => {
+                if(e.content.media?.length > 0){
+                    e.content.media.map(async (elt, indexImage) => {
+                        if(elt.url){
+                            await RNImage.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                        }else if(elt[0].url){
+                            await RNImage.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                        }else{
+                            console.log('AUCUNNNN');
+                            console.log(elt);
+                        }
+    
+                        if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                            setNewsPosts(data);
+                        }
+                    })
+                }else{
+                    if(indexPost == data.length -1){
+                        setNewsPosts(data);
+                    }
+                }
+            })
             setNewsPosts(data);
         }
         setRefreshing(false);
@@ -103,9 +124,38 @@ const News = ({ navigation, route }) => {
                 page
             );
 
-            let _posts = [...selectedNews, ...data];
-            setRefreshingBottom(false);
-            setNewsPosts(_posts);
+            if(data){
+                data.map(async (e, indexPost) => {
+                    if(e.content.media?.length > 0){
+                        e.content.media.map(async (elt, indexImage) => {
+                            if(elt.url){
+                                await RNImage.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                            }else if(elt[0].url){
+                                await RNImage.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                            }else{
+                                console.log('AUCUNNNN');
+                                console.log(elt);
+                            }
+        
+                            if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                                let _posts = [...selectedNews, ...data];
+                                setRefreshingBottom(false);
+                                setNewsPosts(_posts);
+                            }
+                        })
+                    }else{
+                        if(indexPost == data.length -1){
+                            let _posts = [...selectedNews, ...data];
+                            setRefreshingBottom(false);
+                            setNewsPosts(_posts);
+                        }
+                    }
+                })
+            }
+
+            // let _posts = [...selectedNews, ...data];
+            // setRefreshingBottom(false);
+            // setNewsPosts(_posts);
         } else {
             console.log("Reached the end news.");
         }
@@ -115,16 +165,36 @@ const News = ({ navigation, route }) => {
         page = 0;
         setRefreshing(true);
         let { data, error } = await orbis.getPosts({
-          contexts: [selectedNews.stream_id],
-          include_child_contexts: true
+            contexts: [selectedNews.stream_id],
+            include_child_contexts: true
         });
-        console.log("Data loaded.");
-        if(error) {
-          console.log("Error getPosts:", error);
-        }
+
         if(data) {
-          console.log(data.length + " posts retrieved.");
-          setNewsPosts(data);
+            data.map((e, indexPost) => {
+                if(e.content.media?.length > 0){
+                    e.content.media.map(async (elt, indexImage) => {
+                        if(elt.url){
+                            await RNImage.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                        }else if(elt[0].url){
+                            await RNImage.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                        }else{
+                            console.log('AUCUNNNN');
+                            console.log(elt);
+                        }
+    
+                        if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                            setNewsPosts(data);
+                        }
+                    })
+                }else{
+                    if(indexPost == data.length -1){
+                        setNewsPosts(data);
+                    }
+                }
+            })
+
+
+        //   setNewsPosts(data);
         }
         setRefreshing(false);
       }, [selectedNews]);

@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { useTailwind } from 'tailwind-rn';
 
@@ -34,7 +34,29 @@ const ProfileFeed = (props) => {
   
         let { data } = await orbis.getPosts(options);
         if(data) {
-            setPosts(data);
+            data.map((e, indexPost) => {
+                if(e.content.media?.length > 0){
+                    e.content.media.map(async (elt, indexImage) => {
+                        if(elt.url){
+                            await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                        }else if(elt[0].url){
+                            await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                        }else{
+                            console.log('AUCUNNNN');
+                            console.log(elt);
+                        }
+    
+                        if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                            setPosts(data);
+                        }
+                    })
+                }else{
+                    if(indexPost == data.length -1){
+                        setPosts(data);
+                    }
+                }
+            })
+            // setPosts(data);
 
             if(data.length == 50){
                 setTabViewHeight(20000)

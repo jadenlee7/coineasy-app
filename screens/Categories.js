@@ -84,8 +84,30 @@ const Categories = ({ navigation, route }) => {
             include_child_contexts: true
         });
         if(data) {
-            console.log(data.length + " category posts retrieved.");
-            setCategoryPosts(data);
+            data.map(async (e, indexPost) => {
+                if(e.content.media?.length > 0){
+                    e.content.media.map(async (elt, indexImage) => {
+                        if(elt.url){
+                            await RNImage.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                        }else if(elt[0].url){
+                            await RNImage.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                        }else{
+                            console.log('AUCUNNNN');
+                            console.log(elt);
+                        }
+    
+                        if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                            setCategoryPosts(data);
+                        }
+                    })
+                }else{
+                    if(indexPost == data.length -1){
+                        setCategoryPosts(data);
+                    }
+                }
+            })
+
+            // setCategoryPosts(data);
         }
         setRefreshing(false);
         setLoadingPosts(false)
@@ -110,9 +132,38 @@ const Categories = ({ navigation, route }) => {
                 page
             );
 
-            let _posts = [...categoryPosts, ...data];
-            setRefreshingBottom(false);
-            setCategoryPosts(_posts);
+            if(data){
+                data.map(async (e, indexPost) => {
+                    if(e.content.media?.length > 0){
+                        e.content.media.map(async (elt, indexImage) => {
+                            if(elt.url){
+                                await RNImage.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                            }else if(elt[0].url){
+                                await RNImage.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                            }else{
+                                console.log('AUCUNNNN');
+                                console.log(elt);
+                            }
+        
+                            if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                                let _posts = [...categoryPosts, ...data];
+                                setRefreshingBottom(false);
+                                setCategoryPosts(_posts);
+                            }
+                        })
+                    }else{
+                        if(indexPost == data.length -1){
+                            let _posts = [...categoryPosts, ...data];
+                            setRefreshingBottom(false);
+                            setCategoryPosts(_posts);
+                        }
+                    }
+                })
+            }
+
+            // let _posts = [...categoryPosts, ...data];
+            // setRefreshingBottom(false);
+            // setCategoryPosts(_posts);
         } else {
             console.log("Reached the end category.");
         }
@@ -122,16 +173,34 @@ const Categories = ({ navigation, route }) => {
         page = 0;
         setRefreshing(true);
         let { data, error } = await orbis.getPosts({
-          contexts: [selectedCategory.stream_id],
-          include_child_contexts: true
+            contexts: [selectedCategory.stream_id],
+            include_child_contexts: true
         });
-        console.log("Data loaded.");
-        if(error) {
-          console.log("Error getPosts:", error);
-        }
+        
         if(data) {
-          console.log(data.length + " posts retrieved.");
-          setCategoryPosts(data);
+            data.map(async (e, indexPost) => {
+                if(e.content.media?.length > 0){
+                    e.content.media.map(async (elt, indexImage) => {
+                        if(elt.url){
+                            await RNImage.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                        }else if(elt[0].url){
+                            await RNImage.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                        }else{
+                            console.log('AUCUNNNN');
+                            console.log(elt);
+                        }
+    
+                        if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                            setCategoryPosts(data);
+                        }
+                    })
+                }else{
+                    if(indexPost == data.length -1){
+                        setCategoryPosts(data);
+                    }
+                }
+            })
+        //   setCategoryPosts(data);
         }
         setRefreshing(false);
       }, [selectedCategory]);

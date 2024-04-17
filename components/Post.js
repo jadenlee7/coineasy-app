@@ -66,6 +66,7 @@ const Post = React.memo((props) => {
 
 const PostDisplay = (props) => {
 
+
     const { user, setPostDetailsVis, setCategory, setEditedPost, hidePostbox, setScrollAnim, setOffsetAnim } = useContext(GlobalContext);
     const {
         post,
@@ -212,22 +213,20 @@ const PostDisplay = (props) => {
     const Media = ({media, index, isRepost}) => {
         const tailwind = useTailwind();
         const screenWidth = Dimensions.get('window');
-        
-        const [ratioHeight, setRatioHeight] = useState(screenWidth.width - 87)
-        const [isHorizontal, setIsHorizontal] = useState(null)
 
-        const renderImage = (values) => {
-            const {width, height} = values.nativeEvent.source
+        const imgObj = media && media[0].url ? media[0] : media[0][0]
 
-            if(width > height){
-                const ratioWidth = (isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87)/width
-                const newHeight = height*ratioWidth < screenWidth.width - 87 ? height*ratioWidth : screenWidth.width - 87
-                setRatioHeight(newHeight)
-                setIsHorizontal(true)
-            }
+        let ratioWidth
+        let ratioHeight = screenWidth.width - 87
+        let isHorizontal = false
+
+        if(imgObj && imgObj.width && imgObj.width > imgObj.height){
+            ratioWidth = (isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87)/imgObj.width
+            ratioHeight = imgObj.height*ratioWidth < screenWidth.width - 87 ? imgObj.height*ratioWidth : screenWidth.width - 87
+            isHorizontal = true
         }
 
-        if(media && media.length > 0) {
+        if(imgObj && imgObj.width) {
             return(
                 <View style={{marginLeft: index && index != 0 ? 8 : 0}} key={Math.random()}>
                     <TouchableOpacity 
@@ -235,7 +234,64 @@ const PostDisplay = (props) => {
                         style={[tailwind('rounded-md border border-secondary'), { marginBottom: 6, marginTop: 2 }]} 
                         onPress={() => onImagePress(index)}
                     >
-                        {listPostFailure.includes(post.timestamp) ? (
+                        {(listPostFailure.includes(post.timestamp) || post.content.context == 'kjzl6cwe1jw14aqybm3jlqo0aczxbogwehz8lrywu2r9ompi4pi0amaqjshapo6') ? (
+                            <RNImage
+                                style={[
+                                    tailwind('rounded-md'), 
+                                    { 
+                                        height: isHorizontal ? ratioHeight : screenWidth.width - 87,
+                                        width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87,
+                                        marginLeft: isRepost && !quotedPost ? -20 : 0,
+                                    }
+                                ]}
+                                source={{uri: imgObj.url}}
+                                resizeMode="cover"
+                                // onLoad={(values) => renderImage(values)}
+                            />
+                        ) : (
+                            <Image
+                                style={[
+                                    tailwind('rounded-md'), 
+                                    { 
+                                        height: isHorizontal ? ratioHeight : screenWidth.width - 87,
+                                        width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87,
+                                        marginLeft: isRepost && !quotedPost ? -20 : 0,
+                                    }
+                                ]}
+                                source={imgObj.url}
+                                placeholder={require("../assets/loader_001.gif")}
+                                transition={1000}
+                                contentFit="cover"
+                                // onLoad={(values) => renderImage(values)}
+                                priority="high"
+                            />
+                        )}
+                    </TouchableOpacity>
+                </View>
+            )
+        } else {
+            const [ratioHeight, setRatioHeight] = useState(screenWidth.width - 87)
+            const [isHorizontal, setIsHorizontal] = useState(null)
+
+            const renderImage = (values) => {
+                const {width, height} = values.nativeEvent.source
+
+                if(width > height){
+                    const ratioWidth = (isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87)/width
+                    const newHeight = height*ratioWidth < screenWidth.width - 87 ? height*ratioWidth : screenWidth.width - 87
+                    setRatioHeight(newHeight)
+                    setIsHorizontal(true)
+                }
+            }
+
+            return(
+                <View style={{marginLeft: index && index != 0 ? 8 : 0}} key={Math.random()}>
+                    <TouchableOpacity 
+                        activeOpacity={0.8} 
+                        style={[tailwind('rounded-md border border-secondary'), { marginBottom: 6, marginTop: 2 }]} 
+                        onPress={() => onImagePress(index)}
+                    >
+                        {(listPostFailure.includes(post.timestamp) || post.content.context == 'kjzl6cwe1jw14aqybm3jlqo0aczxbogwehz8lrywu2r9ompi4pi0amaqjshapo6') ? (
                             <RNImage
                             style={[
                                 tailwind('rounded-md'), 
@@ -245,9 +301,9 @@ const PostDisplay = (props) => {
                                     marginLeft: isRepost && !quotedPost ? -20 : 0,
                                 }
                             ]}
-                            source={{uri: media[0].url ? media[0].url : media[0][0].url}}
+                            source={{uri: imgObj.url}}
                             resizeMode="cover"
-                            onLoad={(values) => renderImage(values)}
+                            // onLoad={(values) => renderImage(values)}
                         />
                         ) : (
                             <Image
@@ -259,19 +315,17 @@ const PostDisplay = (props) => {
                                         marginLeft: isRepost && !quotedPost ? -20 : 0,
                                     }
                                 ]}
-                                source={media[0].url ? media[0].url : media[0][0].url}
+                                source={imgObj.url}
                                 placeholder={require("../assets/loader_001.gif")}
                                 transition={1000}
                                 contentFit="cover"
-                                onLoad={(values) => renderImage(values)}
+                                // onLoad={(values) => renderImage(values)}
                                 priority="high"
                             />
                         )}
                     </TouchableOpacity>
                 </View>
             )
-        } else {
-            return null
         }
     }
 

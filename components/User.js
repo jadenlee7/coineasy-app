@@ -8,7 +8,7 @@ import { useContext } from 'react';
 import { GlobalContext } from '../contexts/GlobalContext';
 import { FollowIcon, UnfollowIcon } from './Icons';
 
-import { Image } from 'expo-image';
+// import { Image } from 'expo-image';
 
 export default function User({height = 40, details, isFollow}) {
   const tailwind = useTailwind();
@@ -41,20 +41,20 @@ export function UserPfp({height = 40, details, style, badge_style, origin}) {
   if(details && details.profile && details.profile.pfp && details.profile.pfp != '') {
     return(
       <View>
-        <Image
+        {/* <Image
           style={[tailwind('rounded-full bg-slate-100'), { height: height, width: height }, style]}
           source={getProfilePicture()}
           placeholder={require("../assets/loader_001.gif")}
           transition={500}
           priority="high"
-        />
-        {/* <Image
+        /> */}
+        <RNImage
           style={[tailwind('rounded-full bg-slate-100'), { height: height, width: height }, style]}
           loadingIndicatorSource={require("../assets/loader_001.gif")}
           source={{
             uri: getProfilePicture(),
             cache: 'force-cache'
-          }} /> */}
+          }} />
         {/** Will display admin badge if available */}
         {isAdmin(details.did) &&
           <RNImage

@@ -165,8 +165,8 @@ export default function Postbox({isReply = false}) {
 
             /** Wait for new post to be indexed */
             if(res.status == 200) {
+                console.log(res);
 
-                //await sleep(1000);
                 setMessage("");
                 mentions = [];
 
