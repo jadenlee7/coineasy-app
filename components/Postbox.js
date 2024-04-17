@@ -198,7 +198,7 @@ export default function Postbox({isReply = false}) {
                 setLoading(false);
             } else {
                 console.log(res);
-                alert(res.result);
+                alert(res.result ?? 'An error occured, please try again later');
                 setLoading(false);
             }
         } catch(e) {
