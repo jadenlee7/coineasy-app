@@ -77,9 +77,8 @@ export default function SwitchAccountModal() {
         async function fetchUsername(){
             
             listAccount.map(async (e, index)=> {
-                if(e.user?.profile){
+                if(!e.user?.profile){
                     const { data, error } = await orbis.getProfile(e.user.did);
-                    console.log(data);
                     e.user.profile = data.details.profile
                 }
 
