@@ -16,7 +16,8 @@ import useGetUsername from "../../hooks/useGetUsername";
 import Post from "../Post";
 import TimeAgo from "../TimeAgo";
 
-export default function SettingsModal() {
+// export default function SettingsModal() {
+export default SettingsModal = () => {
     const { 
         user,
         setUser, 
@@ -517,14 +518,17 @@ export default function SettingsModal() {
             setUser(listAccount[checked.index].user);
         }
 
+        modalSwitchRef.current?.close()
+
         setSettingsVis(false);
     }
 
     return(
-        <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
+        // <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
+        <>
             <View style={{height: 65, zIndex: 2}}>
                 {showBack && !showConfirm ? (
-                    <TouchableOpacity onPress={() => onBackPress()} style={{padding: 20,marginBottom: 0,}}>
+                    <TouchableOpacity onPress={() => onBackPress()} style={{padding: 20,paddingTop: 0, marginBottom: 0,}}>
                         <Image
                             style={{width: 30,height: 30}}
                             resizeMode='contain'
@@ -533,7 +537,7 @@ export default function SettingsModal() {
                         />
                     </TouchableOpacity>
                 ) : showBackBlockedUsers && !showConfirm ? (
-                    <TouchableOpacity onPress={() => onBackBlockedUsersPress()} style={{position: 'absolute',top: 20, left: 20,}}>
+                    <TouchableOpacity onPress={() => onBackBlockedUsersPress()} style={{position: 'absolute',top: 0, left: 20,}}>
                         <Image
                             style={{width: 30,height: 30}}
                             resizeMode='contain'
@@ -542,7 +546,7 @@ export default function SettingsModal() {
                         />
                     </TouchableOpacity>
                 ) : showBackMutedUsers && !showConfirm ? (
-                    <TouchableOpacity onPress={() => onBackMutedUsersPress()} style={{position: 'absolute',top: 20, left: 20,}}>
+                    <TouchableOpacity onPress={() => onBackMutedUsersPress()} style={{position: 'absolute',top: 0, left: 20,}}>
                         <Image
                             style={{width: 30,height: 30}}
                             resizeMode='contain'
@@ -551,7 +555,7 @@ export default function SettingsModal() {
                         />
                     </TouchableOpacity>
                 ) : showBackHiddenPosts && !showConfirm ? (
-                    <TouchableOpacity onPress={() => onBackHiddenPostsPress()} style={{position: 'absolute',top: 20, left: 20,}}>
+                    <TouchableOpacity onPress={() => onBackHiddenPostsPress()} style={{position: 'absolute',top: 0, left: 20,}}>
                         <Image
                             style={{width: 30,height: 30}}
                             resizeMode='contain'
@@ -560,7 +564,7 @@ export default function SettingsModal() {
                         />
                     </TouchableOpacity>
                 ) : showSignOutSwitch && !showConfirm ? (
-                    <TouchableOpacity onPress={() => onBackSwitchAccountLogout()} style={{position: 'absolute',top: 20, left: 20,}}>
+                    <TouchableOpacity onPress={() => onBackSwitchAccountLogout()} style={{position: 'absolute',top: 0, left: 20,}}>
                         <Image
                             style={{width: 30,height: 30}}
                             resizeMode='contain'
@@ -569,13 +573,13 @@ export default function SettingsModal() {
                         />
                     </TouchableOpacity>
                 ) : !showConfirm && (
-                    <View style={{padding: 20,marginBottom: 0,}}>
+                    <View style={{padding: 20, paddingTop: 0, marginBottom: 0,}}>
                         <Text style={[tailwind('text-primary'), {fontSize: Platform.OS == 'ios' ? 18 : 15,}]}>Settings & Privacy</Text>
                     </View>
                 )}
             </View>
 
-            <Animated.View style={[tailwind('flex flex-col w-full p-5'), {transform: [{ translateX: moveAnimation1 }], marginTop: -20,marginBottom: 20,}]}>
+            <Animated.View style={[tailwind('flex flex-col w-full p-5'), {transform: [{ translateX: moveAnimation1 }], marginTop: -50,marginBottom: 20,}]}>
                 <Button color="rounded-gray" title="Notifications" style={{marginBottom: 10}} onPress={() => {hideSettings();setPushNotifsVis(true)}} />
                 <Button color="rounded-gray" title="Help" style={{marginBottom: 10}} onPress={() => openHelp()} />
                 <Button color="rounded-gray" title="Privacy Policy" style={{marginBottom: 10}} onPress={() => openPrivacyPolicy()} />
@@ -595,13 +599,13 @@ export default function SettingsModal() {
             </Animated.View>
 
             {showBack && (
-                <Animated.View style={{transform: [{ translateX: moveAnimation2 }],position: 'absolute',width: '90%',marginTop: 70,alignSelf: 'center',}}>
+                <Animated.View style={{transform: [{ translateX: moveAnimation2 }],position: 'absolute',width: '90%',marginTop: 50,alignSelf: 'center',}}>
                     <Button color="rounded-gray" title="Delete Account" onPress={() => showBoxConfirm()} />
                 </Animated.View>
             )}
 
             {showBackBlockedUsers && (
-                <Animated.View style={{transform: [{ translateX: moveAnimation3 }],position: 'absolute',width: '100%',marginTop: 30,alignSelf: 'center',}}>
+                <Animated.View style={{transform: [{ translateX: moveAnimation3 }],position: 'absolute',width: '100%',marginTop: 10,alignSelf: 'center',}}>
                     <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,}}>Blocked Users</Text>
 
                     <ScrollView style={{marginTop: 10,}}>
@@ -620,7 +624,7 @@ export default function SettingsModal() {
             )}
 
             {showBackMutedUsers && (
-                <Animated.View style={{transform: [{ translateX: moveAnimation4 }],position: 'absolute',width: '100%',marginTop: 30,alignSelf: 'center',}}>
+                <Animated.View style={{transform: [{ translateX: moveAnimation4 }],position: 'absolute',width: '100%',marginTop: 10,alignSelf: 'center',}}>
                     <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,}}>Muted Users</Text>
 
                     <ScrollView style={{marginTop: 10,}}>
@@ -639,7 +643,7 @@ export default function SettingsModal() {
             )}
 
             {showBackHiddenPosts && (
-                <Animated.View style={{transform: [{ translateX: moveAnimation5 }],position: 'absolute',width: '100%',marginTop: 30,alignSelf: 'center',}}>
+                <Animated.View style={{transform: [{ translateX: moveAnimation5 }],position: 'absolute',width: '100%',marginTop: 10,alignSelf: 'center',}}>
                     <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,}}>Hidden Posts</Text>
 
                     <ScrollView style={{marginTop: 10,}}>
@@ -658,7 +662,7 @@ export default function SettingsModal() {
             )}
 
             {showSignOutSwitch && (
-                <Animated.View style={{transform: [{ translateX: moveAnimation6 }],position: 'absolute',width: '100%',padding: 20,marginTop: 30,alignSelf: 'center',}}>
+                <Animated.View style={{transform: [{ translateX: moveAnimation6 }],position: 'absolute',width: '100%',padding: 20,marginTop: 10,alignSelf: 'center',}}>
                     <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 20,}}>Switch Account ?</Text>
 
                     <Text style={{textAlign:'center',marginVertical: 20,}}>Do you wish to switch to your other accounts after signing out ?</Text>
@@ -740,7 +744,8 @@ export default function SettingsModal() {
                     </View>
                 </Modal>
             )}
-        </Modal>
+        </>
+        // </Modal>
 
     )
 }

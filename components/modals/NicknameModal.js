@@ -1,5 +1,5 @@
 import React, { useState, useContext, useRef, useEffect } from "react";
-import { Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity, Animated, Dimensions, TextInput, StyleSheet, TouchableWithoutFeedback, Platform } from 'react-native';
+import { Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity, Animated, Dimensions, StyleSheet, TouchableWithoutFeedback, Platform } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -10,6 +10,9 @@ import Button from "../Button";
 import { CloseIcon, PenIcon, SuccessIcon } from "../Icons";
 import { GlobalContext } from "../../contexts/GlobalContext";
 import { FloatingLabelInput } from "react-native-floating-label-input";
+
+import TextInput from "react-native-text-input-interactive";
+
 
 export default function PostSettingsModal() {    
     const { user, orbis, setNicknameVis, setUser, setPushNotifsVis } = useContext(GlobalContext);
@@ -32,9 +35,9 @@ export default function PostSettingsModal() {
 
     const moveAnimationPen = useRef(new Animated.Value(windowSize.width *0.5)).current;
 
-    useEffect(() => {
-        inputRef.current.focus()
-    }, [])
+    // useEffect(() => {
+    //     inputRef.current.focus()
+    // }, [])
     
 
     useEffect(() => {
@@ -186,7 +189,7 @@ export default function PostSettingsModal() {
                     tailwind('flex flex-col w-full'), 
                     { height: windowSize.height - 250 }
                 ]}
-                onPress={() => {inputRef.current.blur();setIsFocused(false);}}
+                onPress={() => setIsFocused(false)}
             >
                 {/* First part -  ask for a nickname */}
                 <Animated.View style={[tailwind('flex flex-col'), {transform: [{ translateX: moveAnimation1 }],marginTop: 30,marginBottom: 50,}]}>
@@ -197,7 +200,18 @@ export default function PostSettingsModal() {
                     <Text style={{fontWeight: 'bold',textAlign:'center',fontSize: 20,}}>Give Us Your Nickname</Text>
                     <Text style={{textAlign:'center',fontSize: 14,marginTop: 5,}}>Let's Play with CoinEasyners!</Text>
 
-                    <View style={{width: '60%',alignSelf: 'center',margin: 40,}}>
+                    <View style={{alignSelf:'center',margin: 20}}>
+                        <TextInput
+                            value={nickname}
+                            placeholder='Your Nickname'
+                            onChangeText={(text) => setNickname(text)}
+                            autoFocus
+                            style={{alignSelf:'center',}}
+                        />
+                    </View>
+
+
+                    {/* <View style={{width: '60%',alignSelf: 'center',margin: 40,}}>
                         <FloatingLabelInput
                             ref={inputRef}
                             label={'Nickname'}
@@ -223,7 +237,7 @@ export default function PostSettingsModal() {
                             }}
                             animationDuration={0}
                         />
-                    </View>
+                    </View> */}
 
 
                     {user?.metadata?.address && (

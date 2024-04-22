@@ -19,7 +19,8 @@ import { WalletConnectModal, useWalletConnectModal } from "@walletconnect/modal-
 const windowSize = Dimensions.get('window')
 const projectId = '9fe6eef52f4985e5849a5c1e2c80fabb'
 
-export default function SwitchAccountModal() {
+// export default function SwitchAccountModal() {
+export default SwitchAccountModal = () => {
     const { user, setUser, orbis, setSwitchAccountVis, listAccount, setListAccount, callbackConnect, switchLoading, setSwitchLoading } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
@@ -223,8 +224,9 @@ export default function SwitchAccountModal() {
     }
     
     return(
-        <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
-            <Animated.View style={{transform: [{ translateX: moveAnimation1 }],paddingHorizontal: 20}}>
+        // <Modal hide={() => hideSettings()} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
+        <>
+            <Animated.View style={{transform: [{ translateX: moveAnimation1 }],paddingHorizontal: 20, marginTop: -20,}}>
                 <View style={{height: 65, zIndex: 2}}>
                     <View style={{padding: 20,marginBottom: 0,paddingLeft: 3}}>
                         <Text style={[tailwind('text-primary'), {fontSize: Platform.OS == 'ios' ? 16 : 15,}]}>Switch Account</Text>
@@ -285,7 +287,7 @@ export default function SwitchAccountModal() {
 
             {showAddAccountBack && (
                 <>
-                    <TouchableOpacity onPress={() => {Haptics.selectionAsync();onBackPress()}} style={{position: 'absolute',left: 15, top: 15}}>
+                    <TouchableOpacity onPress={() => {Haptics.selectionAsync();onBackPress()}} style={{position: 'absolute',left: 15, top: 0}}>
                         <Image
                             style={{width: 25,height: 25}}
                             resizeMode='contain'
@@ -294,7 +296,7 @@ export default function SwitchAccountModal() {
                         />
                     </TouchableOpacity>
                     
-                    <Animated.View style={{transform: [{ translateX: moveAnimation2 }],position: 'absolute',width: '90%',marginTop: 50,alignSelf: 'center',}}>
+                    <Animated.View style={{transform: [{ translateX: moveAnimation2 }],position: 'absolute',width: '90%',marginTop: 30,alignSelf: 'center',}}>
                         {connectLoading ?
                             <>
                                 <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Connecting to your account:</Text>
@@ -358,7 +360,8 @@ export default function SwitchAccountModal() {
                     </Animated.View>
                 </>
             )}
-        </Modal>
+        </>
+        // </Modal>
 
     )
 }

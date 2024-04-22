@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { useTailwind } from 'tailwind-rn';
 

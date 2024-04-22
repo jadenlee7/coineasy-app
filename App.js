@@ -108,6 +108,8 @@ export default function App() {
   const newsFeedRef = useRef();
   const translateY = useSharedValue(0);
 
+  const modalSwitchRef = useRef(null); 
+
   const [categoryPosts, setCategoryPosts] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [newsPosts, setNewsPosts] = useState(null)
@@ -196,6 +198,8 @@ export default function App() {
         setSwitchLoading(false)
         setSettingsVis(false);
         setSwitchAccountVis(false)
+
+        modalSwitchRef.current?.close()
       }else{
         let res = await orbis.logout();
         
@@ -205,6 +209,8 @@ export default function App() {
             console.log(e);
             setUser(null);
         })
+
+        modalSwitchRef.current?.close()
       }
     }
   }, [user]);
@@ -571,6 +577,8 @@ export default function App() {
     }else{
         setPushNotifsVis(true);
     }
+
+    modalSwitchRef.current?.close()
   }
 
   /** Show postbox while saving the callback function */
@@ -723,6 +731,7 @@ export default function App() {
                 setShowImageSender,
                 listMessages,
                 setListMessages,
+                modalSwitchRef,
             }}
         >
           <TailwindProvider utilities={utilities}>
@@ -768,14 +777,14 @@ export default function App() {
             }
 
             {/** Settings container */}
-            {settingsVis &&
+            {/* {settingsVis &&
               <SettingsModal />
-            }
+            } */}
 
             {/** Switch account container */}
-            {switchAccountVis &&
+            {/* {switchAccountVis &&
               <SwitchAccountModal />
-            }
+            } */}
 
             {/** Show post settings modal */}
             {editedPost != null &&

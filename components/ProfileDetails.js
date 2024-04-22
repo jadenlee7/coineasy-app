@@ -1,5 +1,5 @@
-import React, { useState, useContext, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Linking, Alert, Image, Dimensions, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useContext, useEffect, useRef, useMemo, useCallback } from "react";
+import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Linking, Alert, Image, Dimensions, StyleSheet } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -10,6 +10,9 @@ import { useNavigation } from "@react-navigation/core";
 import { TabBar, TabView } from "react-native-tab-view";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useScrollToTop } from "@react-navigation/native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+
 
 import Post from "./Post";
 import Button from "./Button";
@@ -18,33 +21,35 @@ import HeaderImage from "./HeaderImage";
 import { shortAddress } from "../utils";
 import { UserPfp, Username } from "./User";
 import { context } from '../utils/config.js';
+import SettingsModal from "./modals/SettingsModal";
 import useDidToAddress from "../hooks/useDidToAddress";
 import { GlobalContext } from "../contexts/GlobalContext";
+import SwitchAccountModal from "./modals/SwitchAccountModal";
 import useStatusBarHeight from "../hooks/useStatusBarHeight.js";
-import { 
-    CheckIcon,
-    CloseIcon,
-    CopyIconBadge,
-    FacebookIcon,
-    InstagramIcon,
-    LinkIcon,
-    NotificationsIcon,
-    PostMenuIcon,
-    RepostIcon,
-    SettingsIcon,
-    TelegramIcon,
-    TwitterIcon } from "./Icons";
-
 import ProfileFeed from '../screens/Navigation/Profile/ProfileFeed'
 import ProfileReplies from '../screens/Navigation/Profile/ProfileReplies'
 import ProfileReposts from '../screens/Navigation/Profile/ProfileReposts'
+import { CheckIcon,CloseIcon,CopyIconBadge,FacebookIcon,InstagramIcon,LinkIcon,NotificationsIcon,SettingsIcon,TelegramIcon,TwitterIcon } from "./Icons";
 
 const TabBarHeight = 50;
 const IndicatorWidth = 50
 
+const windowSize = Dimensions.get('window')
+
 export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
-    const { user, setUser, orbis, setUpdateProfileVis, setShareProfileVis, screen, setSettingsVis, setSwitchAccountVis ,tabViewHeight } = useContext(GlobalContext);
+    const { user, setUser, orbis, setUpdateProfileVis, setShareProfileVis, screen, modalSwitchRef, tabViewHeight } = useContext(GlobalContext);
     const tailwind = useTailwind();
+
+    const snapPoints = useMemo(() => ['75%','75%'], []);
+    const snapPointsSmall = useMemo(() => ['60%','60%'], []);
+    const snapPointsTop = useMemo(() => ['90%','90%'], []);
+
+    const modalLinkRef = useRef(null); 
+    const modalSettingsRef = useRef(null); 
+
+    const handleModalLinkPress = useCallback(() => modalLinkRef.current?.present(), []);
+    const handleModalSettingsPress = useCallback(() => modalSettingsRef.current?.present(), []);
+    const handleModalSwitchPress = useCallback(() => modalSwitchRef.current?.present(), []);
 
     const [isFollowing, setIsFollowing] = useState(false);
     const [countPosts, setCountPosts] = useState("-");
@@ -210,7 +215,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 {...props}
                 style={styles.tab}
                 renderLabel={renderLabel}
-                indicatorStyle={[styles.indicator, { width: IndicatorWidth, left: (Dimensions.get('window').width / 3 - IndicatorWidth) / 2 }]}
+                indicatorStyle={[styles.indicator, { width: IndicatorWidth, left: (windowSize.width / 3 - IndicatorWidth) / 2 }]}
             />
         );
     };
@@ -222,6 +227,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
           return details.profile.pfp
         }
     }
+
 
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
@@ -272,7 +278,9 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         <Button color="badge-gray" icon={<CopyIconBadge style={{marginLeft: 4}} />} title={userInfo?.metadata?.ensName ? userInfo.metadata.ensName : shortAddress(address, 4)} style={{marginLeft: 8}} onPress={() => copy(address)} />
                     </View>
                     {userInfo?.profile?.description &&
-                        <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>{userInfo.profile.description}</Text>
+                        <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>
+                            {userInfo.profile.description}
+                        </Text>
                     }
 
                     {userInfo?.profile?.data?.list_link && userInfo.profile.data.list_link.length > 1 && userInfo.profile.data.list_link.length < 4 ? (
@@ -324,7 +332,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         </View>
                     ) : userInfo?.profile?.data?.list_link && userInfo.profile.data.list_link.length >= 4 ? (
                         <TouchableOpacity
-                            onPress={() => {Haptics.selectionAsync();setShowLinkModal(true)}} 
+                            onPress={() => {Haptics.selectionAsync();handleModalLinkPress();}} 
                             style={{flexDirection:'row',alignItems: 'center',justifyContent: 'center',height: 35}}
                         >
                             <LinkIcon />
@@ -368,7 +376,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         <>
                             <TouchableOpacity 
                                 activeOpacity={0.7}
-                                onPress={() => {Haptics.selectionAsync();setSwitchAccountVis(true)}} 
+                                onPress={() => {Haptics.selectionAsync();handleModalSwitchPress()}} 
                                 style={{width: 60,height: 50,alignItems: 'center',justifyContent: 'center',position: 'absolute',top: 0,left:0}}
                                 hitSlop={{top: 20, bottom: 20, left: 50, right: 50}}
                             >
@@ -377,7 +385,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
                             <TouchableOpacity 
                                 activeOpacity={0.7}
-                                onPress={() => {Haptics.selectionAsync();setSettingsVis(true)}} 
+                                onPress={() => {Haptics.selectionAsync();handleModalSettingsPress()}} 
                                 style={{width: 60,height: 50,alignItems: 'center',justifyContent: 'center',position: 'absolute',top: 0,right:0}}
                                 hitSlop={{top: 20, bottom: 20, left: 50, right: 50}}
                             >
@@ -511,7 +519,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                             renderScene={renderScene}
                             renderTabBar={renderTabBar}
                             onIndexChange={setIndex}
-                            initialLayout={{width: Dimensions.get('window').width}}
+                            initialLayout={{width: windowSize.width}}
                             style={{height: tabViewHeight,}}
                         />
                     </View>
@@ -520,11 +528,19 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
             </Animated.ScrollView>
 
-            {showLinkModal && (
-                <Modal hide={() => {Haptics.selectionAsync();setShowLinkModal(false)}} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
+            <BottomSheetModalProvider>
+                <BottomSheetModal
+                    ref={modalLinkRef}
+                    index={1}
+                    snapPoints={snapPoints}
+                    // backgroundStyle={{backgroundColor: colors.modal,}}
+                    handleIndicatorStyle={{backgroundColor: 'black',}}
+                    handleStyle={{height: 40,justifyContent: 'center',}}
+                    backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
+                >
                     <View style={{zIndex: 2}}>
                         <View style={{justifyContent: 'center',alignItems: 'center',marginTop: 20,}}>
-                            {userInfo.profile.data.list_link.map((e, index) => {
+                            {userInfo.profile.data.list_link?.map((e, index) => {
                                 return (
                                     <TouchableOpacity 
                                         style={{backgroundColor: '#F6F6F6',borderRadius: 25,height: 50,marginTop: 10,flexDirection:'row', justifyContent: 'space-between',alignItems: 'center',width:'90%'}}
@@ -561,9 +577,37 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                             })}
                         </View>
                     </View>
+                </BottomSheetModal>
+            </BottomSheetModalProvider>
 
-                </Modal>
-            )}
+            <BottomSheetModalProvider>
+                <BottomSheetModal
+                    ref={modalSwitchRef}
+                    index={1}
+                    snapPoints={snapPointsSmall}
+                    // backgroundStyle={{backgroundColor: colors.modal,}}
+                    handleIndicatorStyle={{backgroundColor: 'black',}}
+                    handleStyle={{height: 40,justifyContent: 'center',}}
+                    backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
+                >
+                    <SwitchAccountModal />
+                </BottomSheetModal>
+            </BottomSheetModalProvider>
+
+            <BottomSheetModalProvider>
+                <BottomSheetModal
+                    ref={modalSettingsRef}
+                    index={1}
+                    snapPoints={snapPointsTop}
+                    // backgroundStyle={{backgroundColor: colors.modal,}}
+                    handleIndicatorStyle={{backgroundColor: 'black',}}
+                    handleStyle={{height: 10,marginTop: 5, justifyContent: 'center',}}
+                    backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
+                >
+                    <SettingsModal />
+                </BottomSheetModal>
+            </BottomSheetModalProvider>
+
 
             {showProfileImage &&
                 <Modal 
@@ -604,190 +648,10 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 </Modal>
             }
 
+
         </View>
     )
 }
-
-
-const Posts = ({type, profile}) => {
-  const [posts, setPosts] = useState([]);
-  const [refreshing, setRefreshing] = useState(true);
-  const { user, orbis, setEditedPost } = useContext(GlobalContext);
-  const tailwind = useTailwind();
-
-  useEffect(() => {
-    loadPosts();
-  }, [type, profile])
-
-  /** Will retrieve all posts shared in the global context */
-  async function loadPosts() {
-    setRefreshing(true);
-    setPosts([]);
-
-    let options;
-
-    switch (type) {
-      /** Render posts shared by user */
-      case "feed":
-        options = {
-          did: profile.did,
-          context,
-          include_child_contexts: true
-        };
-        break;
-
-      /** Render replies from user */
-      case "replies":
-        options = {
-          did: profile.did,
-          context,
-          is_reply: true,
-          include_child_contexts: true
-        };
-        break;
-
-      /** Render replies from user */
-      case "reposts":
-        options = {
-          did: profile.did,
-          context,
-          is_repost: true,
-          include_child_contexts: true
-        };
-        break;
-      default:
-        options = {
-          did: profile.did,
-          context,
-          include_child_contexts: true
-        };
-        break;
-    }
-
-    let { data } = await orbis.getPosts(options);
-    if(data) {
-
-        data.map(async (e, indexPost) => {
-            if(e.content.media?.length > 0){
-                if(options.is_reply && e.content.reply_to){
-                    const resultPost = await orbis.getPost(e.content.reply_to)
-        
-                    e.reply_to_details.count_likes = resultPost.data?.count_likes
-                    e.reply_to_details.count_replies = resultPost.data?.count_replies
-                    e.reply_to_details.count_repost = resultPost.data?.count_repost
-                    e.reply_to_details.timestamp = resultPost.data?.timestamp
-                }
-
-
-                e.content.media.map(async (elt, indexImage) => {
-                    if(elt.url){
-                        await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
-                    }else if(elt[0].url){
-                        await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
-                    }else{
-                        console.log('AUCUNNNN');
-                        console.log(elt);
-                    }
-
-                    if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
-                        setPosts(data);
-                    }
-                })
-            }else{
-                if(indexPost == data.length -1){
-                    setPosts(data);
-                }
-            }
-        })
-
-        // if(options.is_reply){
-        //     data.map(async (e, index) => {
-        //         if(e.content.reply_to){
-        //             const resultPost = await orbis.getPost(e.content.reply_to)
-        
-        //             e.reply_to_details.count_likes = resultPost.data?.count_likes
-        //             e.reply_to_details.count_replies = resultPost.data?.count_replies
-        //             e.reply_to_details.count_repost = resultPost.data?.count_repost
-        //             e.reply_to_details.timestamp = resultPost.data?.timestamp
-        //         }
-
-        //         if(index == data.length -1){
-        //             setPosts(data);
-        //         }
-
-        //         return e
-        //     })
-        // }else{
-        //     setPosts(data);
-        // }
-    }
-    setRefreshing(false);
-  }
-
-  if(refreshing) {
-    return(
-      <View style={{backgroundColor: 'white',height: 900}}>
-        <ActivityIndicator style={{marginTop: 25}} size="small" color="#020617" />
-      </View>
-    )
-  }
-
-  if(posts.length == 0) {
-    return(
-      <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md')} >
-        <Text style={tailwind('text-secondary items-center ml-1')}>There isn't any post shared here.</Text>
-      </View>
-    )
-  }
-
-  return posts.map((post, key) => {
-    if(post?.content?.repost != null && post.content.body == " ") {
-        return (
-            <View style={tailwind('flex flex-col')} key={key}>
-                <View style={[tailwind('flex flex-row justify-between px-5 mt-3'), { marginBottom: -2 }]}>
-                    <View style={[tailwind('flex flex-row items-center')]}>
-                        <RepostIcon color="#959595" />
-                        <Text style={tailwind('text-secondary items-center ml-1')}>
-                            <Username details={post.creator_details} style={tailwind('text-secondary font-normal')} /> reposted
-                        </Text>
-                    </View>
-
-                    <TouchableOpacity 
-                        onPress={() => 
-                            {user?.did == post.creator ? 
-                                setEditedPost({value: post,}) 
-                                : setEditedPost({type:'notCreatorReposted',value: post,})
-                            }
-                        } 
-                        style={[tailwind('flex flex-row items-center rounded-md py-2 px-1 -mr-1')]}
-                    >
-                        <PostMenuIcon />
-                    </TouchableOpacity>
-                </View>
-                <Post post={post.repost_details} showRepostDetails={false} />
-            </View>
-        );
-    } else {
-        return (
-            <Post key={key} post={post} />
-        );
-    }
-  });
-}
-
-const NavItem = ({title, selected, nav, setNav, slug}) => {
-  const tailwind = useTailwind();
-
-  return(
-    <TouchableOpacity style={tailwind('flex flex-1 items-center rounded-md')} onPress={() => setNav(slug)} activeOpacity={0.65}>
-        <View style={tailwind('flex flex-col')}>
-          <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15 }]}>{title}</Text>
-          <View style={[tailwind(`rounded-full h-1 mt-1`), { backgroundColor: nav == slug ? "#FF6B17" : "transparent" }]}></View>
-        </View>
-    </TouchableOpacity>
-  )
-}
-
 
 const styles = StyleSheet.create({
     label: {
