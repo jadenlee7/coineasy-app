@@ -228,7 +228,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         }
     }
 
-
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
             { type == 'selected' ? (
@@ -647,7 +646,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     </View>
                 </Modal>
             }
-
 
         </View>
     )
