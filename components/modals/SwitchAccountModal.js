@@ -180,7 +180,7 @@ export default SwitchAccountModal = () => {
                 setUser(resUser.details);
 
                 AsyncStorage.setItem("provider-type", "apple");
-                callbackConnect()
+                callbackConnect(resUser.details)
                 setConnectLoading(false);
             } else {
                 if(retryCount < 3) {

@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /** Import Context */
 import { GlobalContext } from "../../contexts/GlobalContext";
+import { context } from "../../utils/config";
 
 const projectId = '9fe6eef52f4985e5849a5c1e2c80fabb'
 
@@ -30,10 +31,9 @@ const web3auth = new Web3Auth(WebBrowser, {
 
 /** Modal explaining what connecting is on mobile */
 export default function ConnectModal({hide, type}) {
-    const { user, setUser, orbis, callbackConnect, setConnectType } = useContext(GlobalContext);
+    const { user, setUser, orbis, callbackConnect, connectType, setConnectType, loading, setLoading, setConnectModalVis } = useContext(GlobalContext);
     const tailwind = useTailwind();
     
-    const [loading, setLoading] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
 
     let link = Linking.createURL();
@@ -81,9 +81,48 @@ export default function ConnectModal({hide, type}) {
         });
 
         if(resUser.status == 200) {
-            setUser(resUser.details);
-            AsyncStorage.setItem("provider-type", "wallet-connect");
-            callbackConnect()
+            const { data, error } = await orbis.getProfile(resUser.details.did);
+            console.log(' ');
+            console.log('ALREADYLOGIN');
+            console.log(data.details.profile.data);
+            console.log(' ');
+            if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
+    
+                let options= {
+                    did: resUser.details.did,
+                    context,
+                    include_child_contexts: true
+                };
+          
+                let { data } = await orbis.getPosts(options);
+                console.log(' ');
+                console.log('POST USER');
+                console.log(data);
+                console.log(' ');
+                if(data.length == 0){
+                    provider?.disconnect().then(async res => {
+                        await AsyncStorage.removeItem("provider-type");       
+                        setUser(null);
+                        setLoading(false)
+                    }).catch(e => {
+                        setUser(null);
+                        setLoading(false)
+                    })
+        
+                    if(!provider){
+                        setUser(null);
+                    }
+        
+                    setLoading(false);
+                    setConnectModalVis(false)
+                    alert("You haven't signed up with this account before, do you want to sign up ?")
+                }
+            }else{
+                setUser(resUser.details);
+                AsyncStorage.setItem("provider-type", "wallet-connect");
+                setLoading(false);
+                callbackConnect(resUser.details)
+            }
         } else {
             alert("There was an error logging you in, please retry. Error: " + resUser.status);
             setLoading(false);
@@ -103,10 +142,52 @@ export default function ConnectModal({hide, type}) {
                     token: identityToken
                 }
             });
+
             if(resUser.status == 200) {
-                setUser(resUser.details);
-                AsyncStorage.setItem("provider-type", "apple");
-                callbackConnect()
+                const { data, error } = await orbis.getProfile(resUser.details.did);
+                console.log(' ');
+                console.log('ALREADYLOGIN');
+                console.log(data.details.profile?.data);
+                console.log(data.last_activity_timestamp);
+                console.log(' ');
+                if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
+        
+                    let options= {
+                        did: resUser.details.did,
+                        context,
+                        include_child_contexts: true
+                    };
+              
+                    let { data } = await orbis.getPosts(options);
+                    console.log(' ');
+                    console.log('POST USER');
+                    console.log(data);
+                    console.log(' ');
+                    if(data.length == 0){
+                        provider?.disconnect().then(async res => {
+                            await AsyncStorage.removeItem("provider-type");       
+                            setUser(null);
+                            setLoading(false)
+                        }).catch(e => {
+                            setUser(null);
+                            setLoading(false)
+                        })
+            
+                        if(!provider){
+                            setUser(null);
+                        }
+            
+                        setLoading(false)
+                        setConnectModalVis(false)
+                        alert("You haven't signed up with this account before, do you want to sign up ?")
+                    }
+        
+        
+                }else{
+                    setUser(resUser.details);
+                    AsyncStorage.setItem("provider-type", "apple");
+                    callbackConnect(resUser.details)
+                }
             } else {
                 if(retryCount < 3) {
                     /** Increment retry count */
@@ -123,6 +204,7 @@ export default function ConnectModal({hide, type}) {
             }
         } catch(e) {
             alert("There was an error logging you in, please retry.");
+            console.log(e);
             setLoading(false);
         }
     }
@@ -158,7 +240,9 @@ export default function ConnectModal({hide, type}) {
             <View style={[tailwind('flex flex-col w-full p-5 pb-12 ')]}>
                 {loading ?
                     <>
-                        <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Connecting to your account:</Text>
+                        <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>
+                            {type == 'signup' ? 'Creating your account:' : 'Connecting to your account:'}
+                        </Text>
                         <View style={[tailwind('flex w-full justify-center')]}>
                             <ActivityIndicator style={{marginTop: 15}} size="small" color="#020617" />
                         </View>

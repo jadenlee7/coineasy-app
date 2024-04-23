@@ -15,6 +15,7 @@ import useDidToAddress from "../../hooks/useDidToAddress";
 import useGetUsername from "../../hooks/useGetUsername";
 import Post from "../Post";
 import TimeAgo from "../TimeAgo";
+import { context } from "../../utils/config";
 
 // export default function SettingsModal() {
 export default SettingsModal = () => {
@@ -33,7 +34,8 @@ export default SettingsModal = () => {
         listAccount,
         switchLoading, 
         setSwitchLoading,
-        setListAccount
+        setListAccount,
+        setConnectModalVis
     } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
@@ -98,6 +100,7 @@ export default SettingsModal = () => {
             await AsyncStorage.removeItem("user-connected");
             let res = await orbis.logout();
             
+            setConnectModalVis(false)
             provider?.disconnect().then(async res => {
                 await AsyncStorage.removeItem("provider-type");       
                 setUser(null);
@@ -146,7 +149,7 @@ export default SettingsModal = () => {
             setLogOutLoading(false)
         })
 
-
+        setUser(null)
         setSettingsVis(false);
     }
 
@@ -226,6 +229,7 @@ export default SettingsModal = () => {
             cover: null,
             username: null,
             description: null,
+            data: null
         });
 
         logout()

@@ -282,7 +282,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         </Text>
                     }
 
-                    {userInfo?.profile?.data?.list_link && userInfo.profile.data.list_link.length > 1 && userInfo.profile.data.list_link.length < 4 ? (
+                    {userInfo?.profile?.data?.list_link && userInfo.profile.data?.list_link.length > 1 && userInfo.profile.data?.list_link.length < 4 ? (
                         <View 
                             horizontal={true} 
                             style={{
@@ -293,7 +293,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                                 flex: 1,
                             }}
                         >
-                            {userInfo.profile.data.list_link.map((e, index) => {
+                            {userInfo.profile.data?.list_link.map((e, index) => {
                                 return (
                                     <TouchableOpacity 
                                         style={{
@@ -329,7 +329,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                                 )
                             })}
                         </View>
-                    ) : userInfo?.profile?.data?.list_link && userInfo.profile.data.list_link.length >= 4 ? (
+                    ) : userInfo?.profile?.data?.list_link && userInfo.profile.data?.list_link.length >= 4 ? (
                         <TouchableOpacity
                             onPress={() => {Haptics.selectionAsync();handleModalLinkPress();}} 
                             style={{flexDirection:'row',alignItems: 'center',justifyContent: 'center',height: 35}}
@@ -339,7 +339,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                                 <Text style={[tailwind("text-slate-900"), { fontSize: 13,fontWeight: 'bold',}]}>My Social links</Text>
                             </View>
                         </TouchableOpacity>
-                    ) : userInfo?.profile?.data?.list_link && userInfo.profile.data.list_link.length == 1 && (
+                    ) : userInfo?.profile?.data?.list_link && userInfo.profile.data?.list_link.length == 1 && (
                         <TouchableOpacity 
                             style={{
                                 flexDirection: 'row',
@@ -347,16 +347,16 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                                 justifyContent: 'center',
                                 height: 50
                             }} 
-                            onPress={() => openLink(userInfo.profile.data.list_link[0].link)}
+                            onPress={() => openLink(userInfo.profile.data?.list_link[0].link)}
                             key={Math.random()}
                         >
-                            {userInfo.profile.data.list_link[0].link.toLowerCase().includes('twitter.com') ? (
+                            {userInfo.profile.data?.list_link[0].link.toLowerCase().includes('twitter.com') ? (
                                 <TwitterIcon />
-                            ) : userInfo.profile.data.list_link[0].link.toLowerCase().includes('t.me') ? (
+                            ) : userInfo.profile.data?.list_link[0].link.toLowerCase().includes('t.me') ? (
                                 <TelegramIcon />
-                            ) : userInfo.profile.data.list_link[0].link.toLowerCase().includes('facebook.com') ? (
+                            ) : userInfo.profile.data?.list_link[0].link.toLowerCase().includes('facebook.com') ? (
                                 <FacebookIcon />
-                            ) : userInfo.profile.data.list_link[0].link.toLowerCase().includes('instagram.com') ? (
+                            ) : userInfo.profile.data?.list_link[0].link.toLowerCase().includes('instagram.com') ? (
                                 <InstagramIcon />
                             ) : (
                                 <LinkIcon />
@@ -366,7 +366,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                                 style={[{marginLeft: 3,fontWeight: 'bold',fontSize: 13,}]} 
                                 numberOfLines={1}
                             >
-                                {userInfo.profile.data.list_link[0].title ? userInfo.profile.data.list_link[0].title : userInfo.profile.data.list_link[0].link.replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '').replace('Http://www.', '').replace('Https://www.', '').replace('Http://', '').replace('Https://', '')}
+                                {userInfo.profile.data?.list_link[0].title ? userInfo.profile.data?.list_link[0].title : userInfo.profile.data?.list_link[0].link.replace('http://www.', '').replace('https://www.', '').replace('http://', '').replace('https://', '').replace('Http://www.', '').replace('Https://www.', '').replace('Http://', '').replace('Https://', '')}
                             </Text>
                         </TouchableOpacity>
                     )}
@@ -539,7 +539,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 >
                     <View style={{zIndex: 2}}>
                         <View style={{justifyContent: 'center',alignItems: 'center',marginTop: 20,}}>
-                            {userInfo.profile.data.list_link?.map((e, index) => {
+                            {userInfo.profile.data?.list_link?.map((e, index) => {
                                 return (
                                     <TouchableOpacity 
                                         style={{backgroundColor: '#F6F6F6',borderRadius: 25,height: 50,marginTop: 10,flexDirection:'row', justifyContent: 'space-between',alignItems: 'center',width:'90%'}}

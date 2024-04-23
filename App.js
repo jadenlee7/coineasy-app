@@ -72,7 +72,10 @@ export default function App() {
   const [pushNotifsVis, setPushNotifsVis] = useState(false);
   const [settingsVis, setSettingsVis] = useState(false);
   const [switchAccountVis, setSwitchAccountVis] = useState(false);
+
   const [switchLoading, setSwitchLoading] = useState(false)
+  const [loading, setLoading] = useState(false);
+
 
   const [postSettingsModalVis, setPostSettingsModalVis] = useState(false);
   const [postboxVis, setPostboxVis] = useState(false);
@@ -85,6 +88,8 @@ export default function App() {
   const [notificationsVis, setNotificationsVis] = useState(false);
   const [nicknameVis, setNicknameVis] = useState(false)
   const [connectType, setConnectType] = useState('')
+  const [connectModalVis, setConnectModalVis] = useState(false);
+
 
   const [listBlockedUser, setListBlockedUser] = useState(null)
   const [listHiddenPost, setListHiddenPost] = useState(null)
@@ -150,11 +155,15 @@ export default function App() {
 
     async function saveUserInStorage() {
       if(user) {
-        // await AsyncStorage.removeItem("user-connected");
-
-        if(!user?.profile){
-            const { data, error } = await orbis.getProfile(user.did);
-            user.profile = data.details.profile
+          // await AsyncStorage.removeItem("user-connected");
+          
+          console.log('ici');
+          console.log(user.profile);
+          if(!user?.profile || !user?.profile?.username){
+              const { data, error } = await orbis.getProfile(user.did);
+              user.profile = data.details.profile
+              console.log('TEST USER DETAIL');
+              console.log(data.details);
         }
 
         const listDid = await AsyncStorage.getItem("user-connected")
@@ -431,17 +440,59 @@ export default function App() {
 
   async function googleConnect(token) {
     let resUser = await orbis.connect_v2({
-       provider: "oauth",
-       oauth: {
-         type: "google",
-         token: token
-       }
-     });
+        provider: "oauth",
+        oauth: {
+            type: "google",
+            token: token
+        }
+    });
 
-     if(resUser.status == 200) {
-       setUser(resUser.details);
-       AsyncStorage.setItem("provider-type", "google");
-       callbackConnect();
+    if(resUser.status == 200) {
+        const { data, error } = await orbis.getProfile(resUser.details.did);
+        console.log(' ');
+        console.log('ALREADYLOGIN');
+        console.log(data.details.profile.data);
+        console.log(' ');
+        if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
+
+            let options= {
+                did: resUser.details.did,
+                context,
+                include_child_contexts: true
+            };
+      
+            let { data } = await orbis.getPosts(options);
+            console.log(' ');
+            console.log('POST USER');
+            console.log(data);
+            console.log(' ');
+            if(data.length == 0){
+                provider?.disconnect().then(async res => {
+                    await AsyncStorage.removeItem("provider-type");       
+                    setUser(null);
+                    setLoading(false)
+                }).catch(e => {
+                    setUser(null);
+                    setLoading(false)
+                })
+    
+                if(!provider){
+                    setUser(null);
+                }
+    
+                setLoading(false)
+                setConnectModalVis(false)
+                alert("You haven't signed up with this account before, do you want to sign up ?")
+            }
+
+
+        }else{
+            setUser(resUser.details);
+            AsyncStorage.setItem("provider-type", "google");
+    
+            setLoading(false)
+            callbackConnect(resUser.details);
+        }
      } else {
        //setLoading(false);
      }
@@ -571,11 +622,29 @@ export default function App() {
     setRefreshing(false);
   }, [category]);
 
-  async function callbackConnect() {
+  async function callbackConnect(detailUser) {
     if(connectType == "signup"){
         setNicknameVis(true)
+
+        if(detailUser.profile.data){
+            detailUser.profile.data.alreadyLogin = true
+        }else{
+            detailUser.profile.data = {alreadyLogin: true}
+        }
+        console.log(' ');
+        console.log("DETAIL USER");
+        console.log(detailUser);
+        console.log(detailUser.profile.data);
+        console.log(' ');
+        const res = await orbis.updateProfile(detailUser.profile);
+        console.log(' ');
+        console.log('UPDATE ALREADYLOGIN');
+        console.log(res);
+        console.log(' ');
+        setLoading(false);
     }else{
         setPushNotifsVis(true);
+        setLoading(false);
     }
 
     modalSwitchRef.current?.close()
@@ -732,6 +801,10 @@ export default function App() {
                 listMessages,
                 setListMessages,
                 modalSwitchRef,
+                loading,
+                setLoading,
+                connectModalVis,
+                setConnectModalVis
             }}
         >
           <TailwindProvider utilities={utilities}>

@@ -9,9 +9,8 @@ import ConnectModal from "../components/modals/ConnectModal";
 import { GlobalContext } from "../contexts/GlobalContext";
 
 export default function Login() {
-    const { connectType, setConnectType } = useContext(GlobalContext);
+    const { connectType, setConnectType, connectModalVis, setConnectModalVis } = useContext(GlobalContext);
     const tailwind = useTailwind();
-    const [connectModalVis, setConnectModalVis] = useState(false);
 
     async function openTerms() {
         Haptics.selectionAsync();
