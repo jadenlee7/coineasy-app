@@ -22,7 +22,28 @@ let page = 0
 
 const News = ({ navigation, route }) => {
 
-    const { orbis, category, setCategory, selectedCategory, setSelectedCategory, currentRoute, setCurrentRoute, refreshing, setRefreshing, refreshingBottom, setRefreshingBottom, setScrollAnim, setOffsetAnim, newsFeedRef, selectedNews, setSelectedNews, newsPosts, setNewsPosts, showPostbox } = useContext(GlobalContext);
+    const { 
+        orbis, 
+        category, 
+        setCategory, 
+        selectedCategory, 
+        setSelectedCategory, 
+        currentRoute, 
+        setCurrentRoute, 
+        refreshing, 
+        setRefreshing, 
+        refreshingBottom, 
+        setRefreshingBottom, 
+        setScrollAnim, 
+        setOffsetAnim, 
+        newsFeedRef, 
+        selectedNews, 
+        setSelectedNews, 
+        newsPosts, 
+        setNewsPosts, 
+        showPostbox,
+        setEditedPost
+    } = useContext(GlobalContext);
 
     const tailwind = useTailwind();
 
@@ -399,7 +420,7 @@ const News = ({ navigation, route }) => {
                             <Feed posts={newsPosts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMoreNewsPosts} feedRef={newsFeedRef}/>
             
                             {/** Share button */}
-                            <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => showPostbox()}>
+                            <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => {setEditedPost(null);showPostbox()}}>
                                 <RNImage
                                     style={{ height: 70, width: 70 }}
                                     source={require('../assets/share_btn.png')} 

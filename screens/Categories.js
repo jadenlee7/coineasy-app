@@ -17,7 +17,28 @@ import HeaderImage from "../components/HeaderImage";
 let page = 0;
 
 const Categories = ({ navigation, route }) => {
-    const { orbis, currentRoute, selectedNews,setSelectedNews, categories, category, setCategory, loadContexts, refreshing, setRefreshing, refreshingBottom, setRefreshingBottom, showPostbox, setScrollAnim, setOffsetAnim, categoryFeedRef, categoryPosts, setCategoryPosts, selectedCategory, setSelectedCategory, setCurrentRoute} = useContext(GlobalContext);
+    const { orbis, 
+        currentRoute, 
+        selectedNews,setSelectedNews, 
+        categories, 
+        category, 
+        setCategory, 
+        loadContexts, 
+        refreshing, 
+        setRefreshing, 
+        refreshingBottom, 
+        setRefreshingBottom, 
+        showPostbox, 
+        setScrollAnim, 
+        setOffsetAnim, 
+        categoryFeedRef, 
+        categoryPosts, 
+        setCategoryPosts, 
+        selectedCategory, 
+        setSelectedCategory, 
+        setCurrentRoute,
+        setEditedPost
+    } = useContext(GlobalContext);
     const tailwind = useTailwind();
     const statusBarHeight = useStatusBarHeight();
 
@@ -312,7 +333,7 @@ const Categories = ({ navigation, route }) => {
                                 <Feed posts={categoryPosts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMoreCategoryPosts} feedRef={categoryFeedRef}/>
                 
                                 {/** Share button */}
-                                <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => showPostbox()}>
+                                <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => {setEditedPost(null);showPostbox()}}>
                                     <RNImage
                                         style={{ height: 70, width: 70 }}
                                         source={require('../assets/share_btn.png')} 

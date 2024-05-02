@@ -18,19 +18,37 @@ import { BackIcon, ImagePickerIcon, CaretDownIcon, CloseIcon, LockIcon, UnlockIc
 /** Init mentions object */
 let mentions = [];
 
+const { width, height } = Dimensions.get('window')
+
 export default function Postbox({isReply = false}) {
-    const { user, orbis, setShowConnectModal, hidePostbox, replyTo, repost, callbackPostShared, category, categories, editedPost, selectedCategory, selectedNews, currentRoute } = useContext(GlobalContext);
+    const { 
+        user, 
+        orbis, 
+        setShowConnectModal, 
+        hidePostbox, 
+        replyTo, 
+        repost, 
+        callbackPostShared, 
+        category, 
+        categories, 
+        editedPost, 
+        selectedCategory, 
+        selectedNews, 
+        currentRoute,
+        categoriesVis,
+        setCategoriesVis,
+        modalPostBoxRef
+    } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const textInputRef = useRef();
     const moveAnimation1 = useRef(new Animated.Value(0)).current;
-    const moveAnimation2 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
+    const moveAnimation2 = useRef(new Animated.Value(width)).current;
 
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
     const [imageLoading, setImageLoading] = useState(false);
     const [cameraLoading, setCameraLoading] = useState(false);
-    const [categoriesVis, setCategoriesVis] = useState(false);
     const [categorySelected, setCategorySelected] = useState(false);
     const [hasAccess, setHasAccess] = useState(false);
     const [mentionsBoxVis, setMentionsBoxVis] = useState(false);
@@ -38,6 +56,7 @@ export default function Postbox({isReply = false}) {
     const [listMedia, setListMedia] = useState([]);
     const [keepFocus, setKeepFocus] = useState(false)
     const [fullListFollow, setFullListFollow] = useState([])
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
 
     useEffect(() => {
         /** Make sure mentions is reset */
@@ -58,6 +77,16 @@ export default function Postbox({isReply = false}) {
         }
 
         getListFollow()
+
+        function onKeyboardDidShow(e) {setKeyboardHeight(e.endCoordinates.height);}
+        function onKeyboardDidHide(e) {setKeyboardHeight(0);}
+
+        const keyboardOpen = Keyboard.addListener('keyboardDidShow', onKeyboardDidShow);
+        const keyboardClose = Keyboard.addListener('keyboardDidHide', onKeyboardDidHide);
+        return () => {
+            keyboardOpen.remove();
+            keyboardClose.remove();
+        };
     }, [])
 
     async function getListFollow() {
@@ -123,6 +152,7 @@ export default function Postbox({isReply = false}) {
 
             /** Stop loading indicator */
             setLoading(false);
+            modalPostBoxRef.current?.close()
         } catch(e) {
             alert("Error editing post.");
             setLoading(false);
@@ -201,6 +231,8 @@ export default function Postbox({isReply = false}) {
                 alert(res.result ?? 'An error occured, please try again later');
                 setLoading(false);
             }
+
+            modalPostBoxRef.current?.close()
         } catch(e) {
             console.log("Error sharing post: ", e);
         }
@@ -328,7 +360,7 @@ export default function Postbox({isReply = false}) {
 
         Animated.parallel([
             Animated.timing(moveAnimation1, {
-                toValue: -Dimensions.get('window').width,
+                toValue: -width,
                 duration: 300,
                 useNativeDriver: true
             }),
@@ -352,7 +384,7 @@ export default function Postbox({isReply = false}) {
                 useNativeDriver: true
             }),
             Animated.timing(moveAnimation2, {
-                toValue: Dimensions.get('window').width,
+                toValue: width,
                 duration: 300,
                 useNativeDriver: true
             })
@@ -556,7 +588,7 @@ export default function Postbox({isReply = false}) {
                     useNativeDriver: true
                 }),
                 Animated.timing(moveAnimation2, {
-                    toValue: Dimensions.get('window').width,
+                    toValue: width,
                     duration: 300,
                     useNativeDriver: true
                 })
@@ -596,7 +628,7 @@ export default function Postbox({isReply = false}) {
                         style={[
                             tailwind('rounded-md'), 
                             { 
-                                width: Dimensions.get('window').width - 40,
+                                width: width - 40,
                                 height:ratioHeight,
                                 resizeMode: 'contain',
                             }
@@ -622,7 +654,7 @@ export default function Postbox({isReply = false}) {
     return (
         <>
             {/* {(repost != false && repost != null) ? ( */}
-            <ScrollView style={[tailwind('w-full'), {maxHeight: Dimensions.get('screen').height,}]} keyboardShouldPersistTaps='handled'>
+            <ScrollView style={[tailwind('w-full'), {maxHeight: Dimensions.get('screen').height,marginTop: categoriesVis ? -16 : -20}]} keyboardShouldPersistTaps='handled'>
 
                     <Animated.View style={[tailwind('flex flex-col items-start p-5'), {transform: [{ translateX: moveAnimation1 }]}]}>
                         {/** Top bar with user details and cancel button */}
@@ -681,7 +713,7 @@ export default function Postbox({isReply = false}) {
                                         minHeight: 55,
                                         lineHeight: 20,
                                         paddingBottom: 10,
-                                        width: Dimensions.get('window').width - 40,
+                                        width: width - 40,
                                         marginTop: replyTo ? -5 : 0,
                                         marginLeft: replyTo ? 25: 0,
                                     }
@@ -700,7 +732,7 @@ export default function Postbox({isReply = false}) {
                         ) : (
                             <ScrollView
                                 horizontal={true}
-                                style={{width: Dimensions.get('window').width, marginLeft: -20}}
+                                style={{width: width, marginLeft: -20}}
                                 showsHorizontalScrollIndicator={false}
                             >
                                 { listMedia.map((item, index) => {
@@ -756,15 +788,49 @@ export default function Postbox({isReply = false}) {
 
                 {/** Show mentions box if needed */}
                 {mentionsBoxVis == true && !categoriesVis &&
-                    <View style={[tailwind('flex flex-col pt-1 border-t border-secondary' ), { height: 120,width: Dimensions.get('window').width,}]}>
+                    <View style={[tailwind('flex flex-col pt-1 border-t border-secondary' ), { height: 120,width: width,}]}>
                         <UserLoop term={currentMention} mentionUser={mentionUser} />
                     </View>
                 }
 
+                <View style={{height: Platform.OS == 'ios' ? 400 : 50}}/>
             </ScrollView>
             
             {!categoriesVis && (
-                <KeyboardAvoidingView style={[tailwind('flex flex-row w-full p-3 px-5'), {position: 'absolute',bottom: 0, backgroundColor: 'white',}]} behavior='height'>
+                <KeyboardAvoidingView style={[tailwind('flex flex-row w-full p-3 px-5'), {position: 'absolute',bottom: Platform.OS == 'ios' ? 20 : 0, backgroundColor: 'white',}]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+
+                    {Keyboard.isVisible() && Platform.OS == 'ios' && (
+                        <View style={{position: 'absolute',bottom: keyboardHeight-20,width: width,flexDirection:'row',paddingHorizontal: 20, backgroundColor: 'white',height: 50,alignItems:'center',}}>
+                            <View style={tailwind('flex flex-1 flex-row items-start')}>
+                                {imageLoading ?
+                                    <ActivityIndicator size="small" color="#FF6B17" />
+                                :
+                                    <TouchableOpacity onPress={() => selectPhoto()} style={{marginTop: 5}}>
+                                        <ImagePickerIcon />
+                                    </TouchableOpacity>
+                                }
+        
+                                {cameraLoading ?
+                                    <ActivityIndicator size="small" color="#FF6B17" style={{marginLeft: 17,}}/>
+                                :
+                                    <TouchableOpacity onPress={() => {setKeepFocus(true);openCamera()}} style={{marginLeft: 15,}}>
+                                        <CameraIcon />
+                                    </TouchableOpacity>
+                                }
+                            </View>
+        
+                            {/** Post button */}
+                            <Button
+                                loading={loading}
+                                title={editedPost != null ? "Edit" : "Post"}
+                                color="orange"
+                                size="sm"
+                                style={{height: 30,justifyContent: 'center',}}
+                                onPress={editedPost ? () => edit() : () => send()}
+                            />
+                        </View>
+                    )}
+
                     {/** Image picker icon */}
                     <View style={tailwind('flex flex-1 flex-row items-start')}>
                         {imageLoading ?

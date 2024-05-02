@@ -37,6 +37,9 @@ export default function PostSettingsModal() {
         setListHiddenPost,
         listMutedUsers,
         setListMutedUsers,
+        modalPostSettingsRef,
+        showReportBack,
+        setShowReportBack
     } = useContext(GlobalContext);
 
     const windowSize = Dimensions.get('window')
@@ -46,7 +49,6 @@ export default function PostSettingsModal() {
     const [success, setSuccess] = useState(false);
     const [checked, setChecked] = useState();
 
-    const [showReportBack, setShowReportBack] = useState(false)
     const [showBlockBack, setShowBlockBack] = useState(false)
     const [showHideBack, setShowHideBack] = useState(false)
     const [showMuteBack, setShowMuteBack] = useState(false)
@@ -59,16 +61,18 @@ export default function PostSettingsModal() {
     const moveAnimation4 = useRef(new Animated.Value(windowSize.width)).current;
     const moveAnimation5 = useRef(new Animated.Value(windowSize.width)).current;
 
-    const { address, chain } = useDidToAddress(editedPost.value.creator_details.did);
-    const username = useGetUsername(editedPost.value.creator_details.profile, address, editedPost.value.creator_details);
+    const { address, chain } = useDidToAddress(editedPost?.value.creator_details.did);
+    const username = useGetUsername(editedPost?.value.creator_details.profile, address, editedPost?.value.creator_details);
 
     function hide() {
         setEditedPost(null);
         Keyboard.dismiss()
         Haptics.selectionAsync();
+        modalPostSettingsRef.current?.close()
     }
-
+    
     async function editPost() {
+        modalPostSettingsRef.current?.close()
         showPostbox();
     }
 
@@ -261,9 +265,10 @@ export default function PostSettingsModal() {
     /** We hide the repost modal if the postbox is also visible, (this means that the user is quote posting) */
     if(postboxVis) {
         return null;
-    } else if(editedPost.type == 'notCreator' || editedPost.type == 'notCreatorReposted'){
+    } else if(editedPost?.type == 'notCreator' || editedPost?.type == 'notCreatorReposted'){
         return(
-            <Modal hide={() => {hide();setSuccess(false);}} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
+            // <Modal hide={() => {hide();setSuccess(false);}} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
+            <>
                 <View 
                     style={[
                         tailwind('flex flex-col w-full'), 
@@ -283,7 +288,7 @@ export default function PostSettingsModal() {
                         }
                     ]}
                 >
-                    <Animated.View style={[tailwind('flex flex-col'), {transform: [{ translateX: moveAnimation1 }],marginTop: 30,marginBottom: 50,}]}>
+                    <Animated.View style={[tailwind('flex flex-col'), {transform: [{ translateX: moveAnimation1 }],marginTop: 5,marginBottom: 50,}]}>
                         <Button color="rounded-red-gray" title="Report Post" style={{marginBottom: 10, width: '90%', alignSelf: 'center',}} onPress={() => showReport()} />
                         <TouchableHighlight style={[tailwind('bg-slate-100 rounded-full py-4 px-8 flex-row items-center justify-center'), {marginBottom: 10, width: '90%', alignSelf: 'center'}]} onPress={() => showBlock()} underlayColor="#f8fafc">
                             <Text style={[tailwind('text-center'), { fontSize: 14, fontFamily: "GmarketBold", lineHeight: 18, color:'red' }]}>Block @{username}</Text>
@@ -294,7 +299,7 @@ export default function PostSettingsModal() {
 
                     {showReportBack && (
                         <>
-                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();onBackReportPress()}} style={{position: 'absolute',left: 15, top: 15}}>
+                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();onBackReportPress()}} style={{position: 'absolute',left: 15, top: 0}}>
                                 <Image
                                     style={{width: 25,height: 25}}
                                     resizeMode='contain'
@@ -303,9 +308,9 @@ export default function PostSettingsModal() {
                                 />
                             </TouchableOpacity>
                             
-                            <Animated.View style={{transform: [{ translateX: moveAnimation2 }],position: 'absolute',width: '90%',marginTop:60,alignSelf: 'center',}}>
+                            <Animated.View style={{transform: [{ translateX: moveAnimation2 }],position: 'absolute',width: '90%',marginTop:30,alignSelf: 'center',}}>
                                 <UserPfp 
-                                    details={editedPost.value.creator_details} 
+                                    details={editedPost?.value.creator_details} 
                                     style={{alignSelf: 'center',marginTop: -30,width: 60,height: 60}}
                                     badge_style={{right:Dimensions.get('window').width/2.7,top:-30}}
                                 />
@@ -350,7 +355,7 @@ export default function PostSettingsModal() {
 
                     {showBlockBack && (
                         <>
-                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();onBackBlockPress()}} style={{position: 'absolute',left: 15, top: 15}}>
+                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();onBackBlockPress()}} style={{position: 'absolute',left: 15, top: 0}}>
                                 <Image
                                     style={{width: 25,height: 25}}
                                     resizeMode='contain'
@@ -359,9 +364,9 @@ export default function PostSettingsModal() {
                                 />
                             </TouchableOpacity>
                             
-                            <Animated.View style={{transform: [{ translateX: moveAnimation3 }],position: 'absolute',width: '90%',marginTop: 50,alignSelf: 'center',}}>
+                            <Animated.View style={{transform: [{ translateX: moveAnimation3 }],position: 'absolute',width: '90%',marginTop: 30,alignSelf: 'center',}}>
                                 <UserPfp 
-                                    details={editedPost.value.creator_details} 
+                                    details={editedPost?.value.creator_details} 
                                     style={{alignSelf: 'center',marginTop: -30,}} 
                                     badge_style={{right:Dimensions.get('window').width/2.6,top:-30}}
                                 />
@@ -395,7 +400,7 @@ export default function PostSettingsModal() {
 
                     {showHideBack && (
                         <>
-                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();onBackHidePress()}} style={{position: 'absolute',left: 15, top: 15}}>
+                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();onBackHidePress()}} style={{position: 'absolute',left: 15, top: 0}}>
                                 <Image
                                     style={{width: 25,height: 25}}
                                     resizeMode='contain'
@@ -404,9 +409,9 @@ export default function PostSettingsModal() {
                                 />
                             </TouchableOpacity>
                             
-                            <Animated.View style={{transform: [{ translateX: moveAnimation4 }],position: 'absolute',width: '90%',marginTop: 50,alignSelf: 'center',}}>
+                            <Animated.View style={{transform: [{ translateX: moveAnimation4 }],position: 'absolute',width: '90%',marginTop: 30,alignSelf: 'center',}}>
                                 <UserPfp 
-                                    details={editedPost.value.creator_details} 
+                                    details={editedPost?.value.creator_details} 
                                     style={{alignSelf: 'center',marginTop: -30,}}
                                     badge_style={{right:Dimensions.get('window').width/2.6,top:-30}}
                                 />
@@ -440,7 +445,7 @@ export default function PostSettingsModal() {
 
                     {showMuteBack && (
                         <>
-                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();onBackMutePress()}} style={{position: 'absolute',left: 15, top: 15}}>
+                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();onBackMutePress()}} style={{position: 'absolute',left: 15, top: 0}}>
                                 <Image
                                     style={{width: 25,height: 25}}
                                     resizeMode='contain'
@@ -449,9 +454,9 @@ export default function PostSettingsModal() {
                                 />
                             </TouchableOpacity>
                             
-                            <Animated.View style={{transform: [{ translateX: moveAnimation5 }],position: 'absolute',width: '90%',marginTop: 50,alignSelf: 'center',}}>
+                            <Animated.View style={{transform: [{ translateX: moveAnimation5 }],position: 'absolute',width: '90%',marginTop: 30,alignSelf: 'center',}}>
                                 <UserPfp 
-                                    details={editedPost.value.creator_details} 
+                                    details={editedPost?.value.creator_details} 
                                     style={{alignSelf: 'center',marginTop: -30,}}
                                     badge_style={{right:Dimensions.get('window').width/2.6,top:-30}}
                                 />
@@ -483,12 +488,14 @@ export default function PostSettingsModal() {
                         </>
                     )}
                 </View>
-            </Modal>
+            </>
+            // </Modal>
         )
     }else{
         return(
-            <Modal hide={() => hide()} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
-                <View style={[tailwind('flex flex-col w-full p-5')]}>
+            // <Modal hide={() => hide()} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
+            <>
+                <View style={[tailwind('flex flex-col w-full p-5'), {marginTop: -10,}]}>
                     {loading ?
                         <>
                             <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Deleting post:</Text>
@@ -498,25 +505,26 @@ export default function PostSettingsModal() {
                         </>
                     :
                         <>
-                        {success ?
-                            <View style={[tailwind('flex w-full items-center')]}>
-                                <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25, marginBottom: 8 }]}>Success!</Text>
-                                <Image
-                                    style={{height: 50, width: 50, marginBottom: 40}}
-                                    source={require('../../assets/check-icon.png')} 
-                                />
-                            </View>
-                        :
-                            <>
-                                {/** Repost CTA */}
-                                <Button color="rounded-gray" onPress={() => editPost()} title="Edit" style={{marginBottom: 10}} />
-                                <Button color="rounded-red" onPress={() => deletePost()} title="Delete" style={{marginBottom: 20}} />
-                            </>
-                        }
+                            {success ?
+                                <View style={[tailwind('flex w-full items-center')]}>
+                                    <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25, marginBottom: 8 }]}>Success!</Text>
+                                    <Image
+                                        style={{height: 50, width: 50, marginBottom: 40}}
+                                        source={require('../../assets/check-icon.png')} 
+                                    />
+                                </View>
+                            :
+                                <>
+                                    {/** Repost CTA */}
+                                    <Button color="rounded-gray" onPress={() => editPost()} title="Edit" style={{marginBottom: 10}} />
+                                    <Button color="rounded-red" onPress={() => deletePost()} title="Delete" style={{marginBottom: 20}} />
+                                </>
+                            }
                         </>
                     }
                 </View>
-            </Modal>
+            </>
+            // </Modal>
         )
     }
 }

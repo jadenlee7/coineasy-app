@@ -82,10 +82,6 @@ export default function ConnectModal({hide, type}) {
 
         if(resUser.status == 200) {
             const { data, error } = await orbis.getProfile(resUser.details.did);
-            console.log(' ');
-            console.log('ALREADYLOGIN');
-            console.log(data.details.profile.data);
-            console.log(' ');
             if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
     
                 let options= {
@@ -95,16 +91,13 @@ export default function ConnectModal({hide, type}) {
                 };
           
                 let { data } = await orbis.getPosts(options);
-                console.log(' ');
-                console.log('POST USER');
-                console.log(data);
-                console.log(' ');
                 if(data.length == 0){
                     provider?.disconnect().then(async res => {
                         await AsyncStorage.removeItem("provider-type");       
                         setUser(null);
                         setLoading(false)
                     }).catch(e => {
+                        console.log(e);
                         setUser(null);
                         setLoading(false)
                     })
@@ -116,6 +109,11 @@ export default function ConnectModal({hide, type}) {
                     setLoading(false);
                     setConnectModalVis(false)
                     alert("You haven't signed up with this account before, do you want to sign up ?")
+                }else{
+                    setUser(resUser.details);
+                    AsyncStorage.setItem("provider-type", "wallet-connect");
+                    setLoading(false);
+                    callbackConnect(resUser.details)
                 }
             }else{
                 setUser(resUser.details);
@@ -145,11 +143,6 @@ export default function ConnectModal({hide, type}) {
 
             if(resUser.status == 200) {
                 const { data, error } = await orbis.getProfile(resUser.details.did);
-                console.log(' ');
-                console.log('ALREADYLOGIN');
-                console.log(data.details.profile?.data);
-                console.log(data.last_activity_timestamp);
-                console.log(' ');
                 if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
         
                     let options= {
@@ -159,10 +152,6 @@ export default function ConnectModal({hide, type}) {
                     };
               
                     let { data } = await orbis.getPosts(options);
-                    console.log(' ');
-                    console.log('POST USER');
-                    console.log(data);
-                    console.log(' ');
                     if(data.length == 0){
                         provider?.disconnect().then(async res => {
                             await AsyncStorage.removeItem("provider-type");       
@@ -180,9 +169,11 @@ export default function ConnectModal({hide, type}) {
                         setLoading(false)
                         setConnectModalVis(false)
                         alert("You haven't signed up with this account before, do you want to sign up ?")
+                    }else{
+                        setUser(resUser.details);
+                        AsyncStorage.setItem("provider-type", "apple");
+                        callbackConnect(resUser.details)
                     }
-        
-        
                 }else{
                     setUser(resUser.details);
                     AsyncStorage.setItem("provider-type", "apple");

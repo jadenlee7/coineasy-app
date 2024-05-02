@@ -1,7 +1,7 @@
 import './utils/polyfill';
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { StyleSheet, View, Keyboard, Platform, Animated, Image } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { StyleSheet, View, Keyboard, Platform, Animated, Image, Dimensions } from 'react-native';
 
 import { StatusBar } from 'expo-status-bar';
 import { TailwindProvider } from 'tailwind-rn';
@@ -42,6 +42,10 @@ import { Orbis } from "@orbisclub/orbis-sdk";
 import moment from 'moment';
 import SwitchAccountModal from './components/modals/SwitchAccountModal';
 import { useWalletConnectModal } from '@walletconnect/modal-react-native';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import Postbox from './components/Postbox';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import useStatusBarHeight from './hooks/useStatusBarHeight';
 
 /** Initialize the Orbis class object */
 let orbis = new Orbis({
@@ -80,7 +84,7 @@ export default function App() {
   const [postSettingsModalVis, setPostSettingsModalVis] = useState(false);
   const [postboxVis, setPostboxVis] = useState(false);
   const [replyTo, setReplyTo] = useState();
-  const [editedPost, setEditedPost] = useState();
+  const [editedPost, setEditedPost] = useState(null);
   const [quotedPost, setQuotedPost] = useState();
   const [shareProfileVis, setShareProfileVis] = useState(false);
   const [showImageSender, setShowImageSender] = useState(null);
@@ -114,6 +118,20 @@ export default function App() {
   const translateY = useSharedValue(0);
 
   const modalSwitchRef = useRef(null); 
+  const modalSettingsRef = useRef(null); 
+  const modalPostSettingsRef = useRef(null); 
+  const modalProfileRef = useRef(null); 
+
+  const [categoriesVis, setCategoriesVis] = useState(false);
+  const snapPoints = useMemo(() => ['50%', '50%'], []);
+  const snapPointsLarge = useMemo(() => [Platform.OS == 'ios' ? '87%' : '95%', Platform.OS == 'ios' ? '87%' : '95%'], []);
+//   const snapPoints = useMemo(() => ['87.4%', '87.4%'], []);
+//   const snapPointsAndroid = useMemo(() => ['79.4%', '79.4%'], []);
+  const modalPostBoxRef = useRef(null); 
+  const handleModalPostBoxPress = useCallback(() => modalPostBoxRef.current?.present(), []);
+  const [showReportBack, setShowReportBack] = useState(false)
+
+
 
   const [categoryPosts, setCategoryPosts] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState(null)
@@ -155,15 +173,9 @@ export default function App() {
 
     async function saveUserInStorage() {
       if(user) {
-          // await AsyncStorage.removeItem("user-connected");
-          
-          console.log('ici');
-          console.log(user.profile);
-          if(!user?.profile || !user?.profile?.username){
-              const { data, error } = await orbis.getProfile(user.did);
-              user.profile = data.details.profile
-              console.log('TEST USER DETAIL');
-              console.log(data.details);
+        if(!user?.profile || !user?.profile?.username){
+            const { data, error } = await orbis.getProfile(user.did);
+            user.profile = data.details.profile
         }
 
         const listDid = await AsyncStorage.getItem("user-connected")
@@ -449,10 +461,6 @@ export default function App() {
 
     if(resUser.status == 200) {
         const { data, error } = await orbis.getProfile(resUser.details.did);
-        console.log(' ');
-        console.log('ALREADYLOGIN');
-        console.log(data.details.profile.data);
-        console.log(' ');
         if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
 
             let options= {
@@ -462,10 +470,6 @@ export default function App() {
             };
       
             let { data } = await orbis.getPosts(options);
-            console.log(' ');
-            console.log('POST USER');
-            console.log(data);
-            console.log(' ');
             if(data.length == 0){
                 provider?.disconnect().then(async res => {
                     await AsyncStorage.removeItem("provider-type");       
@@ -483,13 +487,15 @@ export default function App() {
                 setLoading(false)
                 setConnectModalVis(false)
                 alert("You haven't signed up with this account before, do you want to sign up ?")
+            }else{
+                setUser(resUser.details);
+                AsyncStorage.setItem("provider-type", "google");
+                setLoading(false)
+                callbackConnect(resUser.details);
             }
-
-
         }else{
             setUser(resUser.details);
             AsyncStorage.setItem("provider-type", "google");
-    
             setLoading(false)
             callbackConnect(resUser.details);
         }
@@ -631,20 +637,12 @@ export default function App() {
         }else{
             detailUser.profile.data = {alreadyLogin: true}
         }
-        console.log(' ');
-        console.log("DETAIL USER");
-        console.log(detailUser);
-        console.log(detailUser.profile.data);
-        console.log(' ');
         const res = await orbis.updateProfile(detailUser.profile);
-        console.log(' ');
-        console.log('UPDATE ALREADYLOGIN');
-        console.log(res);
-        console.log(' ');
         setLoading(false);
     }else{
         setPushNotifsVis(true);
         setLoading(false);
+        setConnectModalVis(false)
     }
 
     modalSwitchRef.current?.close()
@@ -659,12 +657,14 @@ export default function App() {
       callbackPostShared = defaultCallbackPostShared;
     }
 
-    setPostboxVis(true);
+    // setPostboxVis(true);
+    handleModalPostBoxPress()
     Haptics.selectionAsync();
   }
 
   function hidePostbox() {
-    setPostboxVis(false);
+    // setPostboxVis(false);
+    modalPostBoxRef.current?.close()
     setRepost(false);
     setReplyTo(null);
     setEditedPost(null);
@@ -677,7 +677,8 @@ export default function App() {
     console.log("Enter defaultCallbackPostShared:", _post);
     let _posts = [_post, ...posts];
     setPosts(_posts);
-    setPostboxVis(false);
+    // setPostboxVis(false);
+    modalPostBoxRef.current?.close()
     setRepost(false);
     setReplyTo(null);
     Keyboard.dismiss();
@@ -707,7 +708,7 @@ export default function App() {
   return (
     <>
       <StatusBar translucent={true} backgroundColor="#00000000" style="black"/>
-      <View onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
+      <GestureHandlerRootView onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
         <GlobalContext.Provider value={{ 
                 user,
                 setUser,
@@ -804,7 +805,15 @@ export default function App() {
                 loading,
                 setLoading,
                 connectModalVis,
-                setConnectModalVis
+                setConnectModalVis,
+                modalSettingsRef,
+                modalPostBoxRef,
+                categoriesVis,
+                setCategoriesVis,
+                modalPostSettingsRef,
+                showReportBack,
+                setShowReportBack,
+                modalProfileRef
             }}
         >
           <TailwindProvider utilities={utilities}>
@@ -825,9 +834,10 @@ export default function App() {
             } */}
 
             {/** Display the edit profile details modal */}
-            {updateProfileVis &&
+            <UpdateProfileModal />
+            {/* {updateProfileVis &&
               <UpdateProfileModal />
-            }
+            } */}
 
             {/** Display push notifications pane */}
             {pushNotifsVis &&
@@ -845,9 +855,11 @@ export default function App() {
             }
 
             {/** Share post container */}
-            {postboxVis &&
+            <PostboxModal />
+
+            {/* {postboxVis &&
               <PostboxModal />
-            }
+            } */}
 
             {/** Settings container */}
             {/* {settingsVis &&
@@ -860,9 +872,22 @@ export default function App() {
             } */}
 
             {/** Show post settings modal */}
-            {editedPost != null &&
+            <BottomSheetModalProvider>
+                <BottomSheetModal
+                    ref={modalPostSettingsRef}
+                    index={1}
+                    snapPoints={showReportBack ? snapPointsLarge : snapPoints}
+                    handleIndicatorStyle={{backgroundColor: 'black',}}
+                    handleStyle={{height: 40,justifyContent: 'center',}}
+                    backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
+                >
+                    <PostSettingsModal />
+                </BottomSheetModal>
+            </BottomSheetModalProvider>
+
+            {/* {editedPost != null &&
               <PostSettingsModal />
-            }
+            } */}
 
             {/** QR modal container */}
             {shareProfileVis &&
@@ -886,7 +911,7 @@ export default function App() {
             <Confetti confetti={confetti}/>
           </TailwindProvider>
         </GlobalContext.Provider>
-      </View>
+      </GestureHandlerRootView>
     </>
   );
 }

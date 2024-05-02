@@ -1,5 +1,5 @@
 import React, { useState, useContext, useRef, useEffect } from "react";
-import { Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity, Animated, Dimensions, StyleSheet, TouchableWithoutFeedback, Platform } from 'react-native';
+import { Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity, Animated, Dimensions, StyleSheet, TouchableWithoutFeedback, Platform, TextInput } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -11,7 +11,7 @@ import { CloseIcon, PenIcon, SuccessIcon } from "../Icons";
 import { GlobalContext } from "../../contexts/GlobalContext";
 import { FloatingLabelInput } from "react-native-floating-label-input";
 
-import TextInput from "react-native-text-input-interactive";
+// import TextInput from "react-native-text-input-interactive";
 
 
 export default function PostSettingsModal() {    
@@ -22,7 +22,7 @@ export default function PostSettingsModal() {
     const [showBack, setShowBack] = useState(false)
     const [loading, setLoading] = useState(false)
     const [loadingLater, setLoadingLater] = useState(false)
-    const [isFocused, setIsFocused] = useState(false)
+    const [isFocused, setIsFocused] = useState(true)
     const [nickname, setNickname] = useState('');
 
     const [pfpLoading, setPfpLoading] = useState(false);
@@ -181,6 +181,8 @@ export default function PostSettingsModal() {
         setPushNotifsVis(true);
     }
 
+    const [isTextFocused, setIsTextFocused] = useState(false)
+
     return(
         <Modal hide={() => hide()} animateModal={true} bottomDuration={200} bottomStart={-100} type='post'>
             <TouchableOpacity 
@@ -197,16 +199,27 @@ export default function PostSettingsModal() {
                         <CloseIcon />
                     </TouchableOpacity>
 
-                    <Text style={{fontWeight: 'bold',textAlign:'center',fontSize: 20,}}>Give Us Your Nickname</Text>
-                    <Text style={{textAlign:'center',fontSize: 14,marginTop: 5,}}>Let's Play with CoinEasyners!</Text>
+                    <Text style={{fontWeight: 'bold',textAlign:'center',fontSize: Platform.OS == 'ios' ? 24 : 20,marginTop: Platform.OS == 'ios' ? 10 : 0,}}>Give Us Your Nickname</Text>
+                    <Text style={{textAlign:'center',fontSize: Platform.OS == 'ios' ? 16 : 14,marginTop: 5,}}>Let's Play with CoinEasyners!</Text>
 
-                    <View style={{alignSelf:'center',margin: 20}}>
+                    <View style={{alignSelf:'center',margin: Platform.OS == 'ios' ? 80 : 60}}>
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 10, position: 'absolute',alignSelf:'center',width: 200,height: 40}}>
+                            {nickname == "" ? (
+                                <>
+                                    <Text style={{color: '#959595',fontSize: Platform.OS == 'ios' ? 28 : 25,fontWeight: 'bold',}}>Nickname</Text>
+                                    <PenIcon style={{marginTop: 5,}} />
+                                </>
+                            ) : (
+                                <PenIcon style={{position: 'absolute',right: Platform.OS == 'ios' ? 25.5 : 21,top: Platform.OS == 'ios' ? 11.5 : 12}} />
+                            )}
+                        </View>
                         <TextInput
                             value={nickname}
-                            placeholder='Your Nickname'
                             onChangeText={(text) => setNickname(text)}
                             autoFocus
-                            style={{alignSelf:'center',}}
+                            style={{alignSelf:'center',width:170,height: 40,fontSize: 20,}}
+                            onFocus={() => setIsTextFocused(true)}
+                            onBlur={() => setIsTextFocused(false)}
                         />
                     </View>
 
@@ -244,13 +257,16 @@ export default function PostSettingsModal() {
                         <Text style={{textAlign:'center',color:'rgba(85,85,85,0.33)'}}>Your Wallet Address : {user.metadata.address.slice(0, 4)}...{user.metadata.address.slice(user.metadata.address.length - 4, user.metadata.address.length)}</Text>
                     )}
 
-                    <Button 
-                        title="Next" 
-                        color="white" 
-                        size="sm" 
-                        onPress={() => {Haptics.selectionAsync();showProfileImage()}} 
-                        style={{borderColor: 'black',height: 50, justifyContent: 'center',alignItems: 'center',width: windowSize.width - 40,alignSelf: 'center',marginTop: 20,}}
-                    />
+                    <TouchableOpacity 
+                        activeOpacity={0.6} 
+                        style={[
+                            tailwind(`px-5 rounded-full border flex-row items-center`), 
+                            {borderColor: 'black',height: Platform.OS == 'ios' ? 60 : 50, justifyContent: 'center',alignItems: 'center',width: windowSize.width - 40,alignSelf: 'center',marginTop: 20,}
+                        ]} 
+                        onPress={() => {Haptics.selectionAsync();showProfileImage()}}
+                    >
+                        <Text style={[tailwind('text-main font-semibold items-center'), {fontSize: Platform.OS == 'ios' ? 16 : 13, lineHeight: 16,}]}>Next</Text>
+                    </TouchableOpacity>
                 </Animated.View>
 
                 {/* Second Part - ask for a profile image */}
@@ -265,14 +281,14 @@ export default function PostSettingsModal() {
                             />
                         </TouchableOpacity>
 
-                        <Text style={{fontWeight: 'bold',textAlign:'center',fontSize: 20,}}>Choose Your Profile Image</Text>
-                        <Text style={{textAlign:'center',fontSize: 14,marginTop: 5,}}>Let's Play with CoinEasyners!</Text>
+                        <Text style={{fontWeight: 'bold',textAlign:'center',fontSize: Platform.OS == 'ios' ? 22 : 20,}}>Choose Your Profile Image</Text>
+                        <Text style={{textAlign:'center',fontSize: Platform.OS == 'ios' ? 16 : 14,marginTop: 5,}}>Let's Play with CoinEasyners!</Text>
 
                         {nickname && (
                             <Text style={{textAlign:'center',fontWeight: 'bold',fontSize: 18,marginTop: 10,marginBottom: -20,}}>{nickname}</Text>
                         )}
 
-                        <TouchableOpacity onPress={() => {Haptics.selectionAsync();onChooseProfilePicture()}} style={{margin: 40,}}>
+                        <TouchableOpacity onPress={() => {Haptics.selectionAsync();onChooseProfilePicture()}} style={{margin: 60,}}>
 
                             {pfpLoading ? (
                                 <View style={{width: 90,height: 90, borderWidth: 1}}>
@@ -309,7 +325,14 @@ export default function PostSettingsModal() {
                                 <ActivityIndicator size="small" color="#020617" />
                             </View>
                         ) : (
-                            <Button color="orange" size='centered' onPress={() => doConfirm('now')} title="Confirm" style={{marginBottom: 0, marginTop: 30,}} />
+
+                            <TouchableOpacity 
+                                activeOpacity={0.9}
+                                style={[tailwind('px-7 py-4 rounded-full items-center'), {backgroundColor: "#FF6B17", height: Platform.OS == 'ios' ? 60 : 50,justifyContent:'center', marginBottom: 0, marginTop: 20,}]} 
+                                onPress={() => doConfirm('now')}
+                            >
+                                <Text style={[tailwind('text-white font-semibold'), {fontSize: Platform.OS == 'ios' ? 16 : 13, lineHeight: 16,}]}>Confirm</Text>
+                            </TouchableOpacity>
                         )}
                         
                         {loadingLater ? (
@@ -317,13 +340,10 @@ export default function PostSettingsModal() {
                                 <ActivityIndicator size="small" color="#020617" />
                             </View>
                         ) : (
-                            <Button 
-                                color="white" 
-                                size='sm' 
-                                onPress={() => doConfirm('later')} 
-                                title="Later" 
-                                style={{borderColor: 'black',height: 50, justifyContent: 'center',alignItems: 'center',width: windowSize.width - 40,alignSelf: 'center',marginTop: 20,}}
-                            />
+
+                            <TouchableOpacity activeOpacity={0.6} style={[tailwind(`px-5 rounded-full border flex-row items-center`), {borderColor: 'black',height: Platform.OS == 'ios' ? 60 : 50, justifyContent: 'center',alignItems: 'center',width: windowSize.width - 40,alignSelf: 'center',marginTop: 20,}]} onPress={() => doConfirm('later')}>
+                                <Text style={[tailwind('text-main font-semibold items-center'), {fontSize: Platform.OS == 'ios' ? 16 : 13, lineHeight: 16,}]}>Later</Text>
+                            </TouchableOpacity>
                         )}
 
                     </Animated.View>

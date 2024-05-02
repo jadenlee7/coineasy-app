@@ -35,7 +35,8 @@ export default SettingsModal = () => {
         switchLoading, 
         setSwitchLoading,
         setListAccount,
-        setConnectModalVis
+        setConnectModalVis,
+        modalSettingsRef
     } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
@@ -99,6 +100,8 @@ export default SettingsModal = () => {
             
             await AsyncStorage.removeItem("user-connected");
             let res = await orbis.logout();
+
+            modalSettingsRef.current?.close()
             
             setConnectModalVis(false)
             provider?.disconnect().then(async res => {
@@ -118,7 +121,6 @@ export default SettingsModal = () => {
                 setLogOutLoading(false)
             }
         }
-
     }
 
     async function logoutAnyway() {
@@ -139,6 +141,8 @@ export default SettingsModal = () => {
         await AsyncStorage.setItem("user-connected", JSON.stringify(listConnected));
 
         let res = await orbis.logout();
+
+        modalSettingsRef.current?.close()
 
         provider?.disconnect().then(async res => {
             await AsyncStorage.removeItem("provider-type");       
@@ -522,7 +526,7 @@ export default SettingsModal = () => {
             setUser(listAccount[checked.index].user);
         }
 
-        modalSwitchRef.current?.close()
+        modalSettingsRef.current?.close()
 
         setSettingsVis(false);
     }
@@ -675,7 +679,7 @@ export default SettingsModal = () => {
                         if(e.user.did != user.did){
                             return(
                                 <TouchableOpacity 
-                                    style={{borderColor: '#F6F6F6',borderWidth:1, borderRadius: 25,height: 50, flexDirection:'row',alignItems: 'center',alignSelf: 'center',width: '100%'}} 
+                                    style={{borderColor: '#F6F6F6',borderWidth:1, borderRadius: 25,height: 50, flexDirection:'row',alignItems: 'center',alignSelf: 'center',width: '100%', marginTop: index == 0 ? 0 : 10,}} 
                                     key={Math.random()}
                                     onPress={() => setChecked({'user': e.user, 'index':index})}
                                 >

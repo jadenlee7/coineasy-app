@@ -1,5 +1,5 @@
-import React, { useContext, useState, useEffect } from "react";
-import { View, ActivityIndicator, ScrollView, Text, TouchableHighlight, Dimensions, Image, TouchableOpacity, RefreshControl } from 'react-native';
+import React, { useContext, useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { View, ActivityIndicator, ScrollView, Text, TouchableHighlight, Dimensions, Image, TouchableOpacity, RefreshControl, Platform } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -8,10 +8,9 @@ import { context } from "../../utils/config";
 import TimeAgo from "../../components/TimeAgo";
 import { UserPfp, Username } from "../../components/User";
 import { GlobalContext } from "../../contexts/GlobalContext";
-import useStatusBarHeight from "../../hooks/useStatusBarHeight";
-import { BackIcon, FilterIcon, InterpunctIcon, NotificationsIcon } from "../../components/Icons";
+import { FilterIcon, InterpunctIcon } from "../../components/Icons";
 import HeaderImage from "../../components/HeaderImage";
-import Modal from "../../components/Modal";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 
 
 const Notifications = ({navigation, route}) => {
@@ -21,11 +20,12 @@ const Notifications = ({navigation, route}) => {
     const [ notifications, setNotifications ] = useState([]);
     const [ notificationsLoading, setNotificationsLoading ] = useState(false);
     const [refreshing, setRefreshing] = useState(false)
-    const [showFilter, setShowFilter] = useState(false)
     const [checked, setChecked] = useState([]);
-    const [loading, setLoading] = useState(false);
 
-    const statusBarHeight = useStatusBarHeight();
+    const snapPoints = useMemo(() => [Platform.OS == 'ios' ? '60%' : '70%', Platform.OS == 'ios' ? '60%' : '70%'], []);
+    const modalRef = useRef(null); 
+    const handleModalPress = useCallback(() => modalRef.current?.present(), []);
+
 
 
     const list_filters = [
@@ -145,8 +145,6 @@ const Notifications = ({navigation, route}) => {
             checked.push(filter)
         }
 
-        console.log(checked);
-
         setChecked([...checked])
     }
 
@@ -164,7 +162,7 @@ const Notifications = ({navigation, route}) => {
                     />
                 </TouchableOpacity>
 
-                <TouchableOpacity activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();setShowFilter(true)}}>
+                <TouchableOpacity activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();handleModalPress()}}>
                     <FilterIcon />
                 </TouchableOpacity>
             </View>
@@ -195,7 +193,42 @@ const Notifications = ({navigation, route}) => {
                 </View>
             }
 
-            {showFilter && (
+
+            <BottomSheetModalProvider>
+                <BottomSheetModal
+                    ref={modalRef}
+                    index={1}
+                    snapPoints={snapPoints}
+                    handleIndicatorStyle={{backgroundColor: 'black',}}
+                    handleStyle={{height: 40,justifyContent: 'center',}}
+                    backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
+                >
+                    <View style={[tailwind('flex flex-col'), {paddingHorizontal: 20,marginBottom: 27}]}>
+                        <Text style={{fontWeight: 'bold',fontSize: 17,marginBottom: 5,}}>Notification Filters</Text>
+                        {list_filters.map(e => {
+                            return(
+                                <TouchableOpacity 
+                                    style={{backgroundColor: '#F6F6F6',borderRadius: 25,height: 50,marginTop: 10,flexDirection:'row', justifyContent: 'space-between',alignItems: 'center',}} 
+                                    key={Math.random()}
+                                    onPress={() => onFilterPress(e)}
+                                >
+                                    <Text style={{fontWeight: 'bold',fontSize: 17,paddingLeft: 20}}>{e.label}</Text>
+
+                                    <View style={{backgroundColor: 'white',width: 26,height: 26,borderWidth: 1,borderColor: '#999',borderRadius: 13,marginRight: 15, justifyContent: 'center',alignItems: 'center',}}>
+                                        {checked.findIndex(elt => elt.family == e.family) != -1 && (
+                                            <View style={{backgroundColor: '#FF6E31',width: 24,height: 24,borderRadius: 13,justifyContent: 'center',alignItems: 'center',}}>
+                                                <View style={{backgroundColor: 'white',width: 10,height: 10,borderRadius: 5,}} />
+                                            </View>
+                                        )}
+                                    </View>
+                                </TouchableOpacity>
+                            )
+                        })}
+                    </View>
+                </BottomSheetModal>
+            </BottomSheetModalProvider>
+
+            {/* {showFilter && (
                 <Modal 
                     hide={() => {Haptics.selectionAsync();setShowFilter(false)}} 
                     animateModal={true} 
@@ -226,7 +259,7 @@ const Notifications = ({navigation, route}) => {
                         })}
                     </View>
                 </Modal>
-            )}
+            )} */}
 
         </View>
     )

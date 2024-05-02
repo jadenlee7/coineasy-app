@@ -67,7 +67,7 @@ const Post = React.memo((props) => {
 const PostDisplay = (props) => {
 
 
-    const { user, setPostDetailsVis, setCategory, setEditedPost, hidePostbox, setScrollAnim, setOffsetAnim } = useContext(GlobalContext);
+    const { user, setPostDetailsVis, setCategory, setEditedPost, hidePostbox, setScrollAnim, setOffsetAnim, modalPostSettingsRef } = useContext(GlobalContext);
     const {
         post,
         isReply = false,
@@ -85,6 +85,8 @@ const PostDisplay = (props) => {
 
     let navigation;
     let route;
+    
+    const handleModalPostBoxPress = useCallback(() => modalPostSettingsRef.current?.present(), []);
 
     try {
         navigation = useNavigation();
@@ -434,7 +436,8 @@ const PostDisplay = (props) => {
                                 onPress={() => 
                                     {user?.did == post.creator ? 
                                         setEditedPost({value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost}) 
-                                        : setEditedPost({type:'notCreator',value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost})
+                                        : setEditedPost({type:'notCreator',value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost});
+                                        handleModalPostBoxPress()
                                     }
                                 } 
                                 style={[tailwind('flex flex-row items-center rounded-md py-2 px-1 -mr-1')]}

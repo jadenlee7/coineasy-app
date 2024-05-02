@@ -37,19 +37,20 @@ const IndicatorWidth = 50
 const windowSize = Dimensions.get('window')
 
 export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
-    const { user, setUser, orbis, setUpdateProfileVis, setShareProfileVis, screen, modalSwitchRef, tabViewHeight } = useContext(GlobalContext);
+    const { user, setUser, orbis, setUpdateProfileVis, setShareProfileVis, screen, modalSwitchRef, tabViewHeight, modalSettingsRef, modalProfileRef } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const snapPoints = useMemo(() => ['75%','75%'], []);
     const snapPointsSmall = useMemo(() => ['60%','60%'], []);
-    const snapPointsTop = useMemo(() => ['90%','90%'], []);
+    const snapPointsTop = useMemo(() => [Platform.OS == 'ios' ? '86.1%' : '90%',Platform.OS == 'ios' ? '86.1%' : '90%'], []);
 
     const modalLinkRef = useRef(null); 
-    const modalSettingsRef = useRef(null); 
 
     const handleModalLinkPress = useCallback(() => modalLinkRef.current?.present(), []);
     const handleModalSettingsPress = useCallback(() => modalSettingsRef.current?.present(), []);
     const handleModalSwitchPress = useCallback(() => modalSwitchRef.current?.present(), []);
+    const handleUpdateProfilePress = useCallback(() => modalProfileRef.current?.present(), []);
+
 
     const [isFollowing, setIsFollowing] = useState(false);
     const [countPosts, setCountPosts] = useState("-");
@@ -485,7 +486,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 {/** Edit CTA (only if user is connected) */}
                 {user.did == profile.did ?
                     <View style={[tailwind('flex flex-row px-4 pt-4 items-center justify-evenly'), {width: '95%',alignSelf: 'center',}]}>
-                        <Button title="Edit Profile" color="orange" size="sm" onPress={() => {Haptics.selectionAsync();setUpdateProfileVis(true)}} style={{height: 40,justifyContent: 'center',alignItems: 'center',flex: 1}}/>
+                        <Button title="Edit Profile" color="orange" size="sm" onPress={() => {Haptics.selectionAsync();handleUpdateProfilePress()}} style={{height: 40,justifyContent: 'center',alignItems: 'center',flex: 1}}/>
                         <View style={{width: 10}} />
                         <Button title="Share Profile" color="white" size="sm" onPress={() => {Haptics.selectionAsync();setShareProfileVis(true)}} style={{height: 40, justifyContent: 'center',flex: 1}}/>
                     </View>

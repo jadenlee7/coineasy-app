@@ -11,7 +11,23 @@ import { GlobalContext } from "../contexts/GlobalContext";
 
 
 const Home = ({ navigation, route }) => {
-    const { user, orbis, posts, currentRoute, selectedCategory, setSelectedCategory,selectedNews,setSelectedNews, refreshing, setRefreshing, refreshingBottom, onRefresh, showPostbox, loadMorePosts, category, setCategory, setScrollAnim, setOffsetAnim, setCurrentRoute, setListFollowers } = useContext(GlobalContext);
+    const { posts, 
+        currentRoute, 
+        selectedCategory, 
+        setSelectedCategory,selectedNews,setSelectedNews, 
+        refreshing, 
+        setRefreshing, 
+        refreshingBottom, 
+        onRefresh, 
+        showPostbox, 
+        loadMorePosts, 
+        category, 
+        setCategory, 
+        setScrollAnim, 
+        setOffsetAnim, 
+        setCurrentRoute, 
+        setEditedPost
+    } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     useFocusEffect(
@@ -73,7 +89,7 @@ const Home = ({ navigation, route }) => {
                     <Feed posts={posts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMorePosts} setRefreshing={setRefreshing}/>
 
                     {/** Share button */}
-                    <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => showPostbox()}>
+                    <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => {setEditedPost(null);showPostbox()}}>
                         <Image
                             style={{ height: 70, width: 70 }}
                             source={require('../assets/share_btn.png')} 
