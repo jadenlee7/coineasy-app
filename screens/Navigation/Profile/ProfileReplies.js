@@ -80,6 +80,8 @@ const ProfileReplies = (props) => {
         
                 return e
             })
+        }else{
+            setRefreshing(false);
         }
     }
   

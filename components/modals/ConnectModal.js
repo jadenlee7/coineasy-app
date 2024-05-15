@@ -171,11 +171,13 @@ export default function ConnectModal({hide, type}) {
                         alert("You haven't signed up with this account before, do you want to sign up ?")
                     }else{
                         setUser(resUser.details);
+                        setLoading(false)
                         AsyncStorage.setItem("provider-type", "apple");
                         callbackConnect(resUser.details)
                     }
                 }else{
                     setUser(resUser.details);
+                    setLoading(false)
                     AsyncStorage.setItem("provider-type", "apple");
                     callbackConnect(resUser.details)
                 }
