@@ -46,6 +46,7 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from 
 import Postbox from './components/Postbox';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import useStatusBarHeight from './hooks/useStatusBarHeight';
+import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
 
 /** Initialize the Orbis class object */
 let orbis = new Orbis({
@@ -74,6 +75,8 @@ export default function App() {
   const [postDetailsVis, setPostDetailsVis] = useState();
   const [updateProfileVis, setUpdateProfileVis] = useState(false);
   const [pushNotifsVis, setPushNotifsVis] = useState(false);
+  const [showClaimOranges, setShowClaimOranges] = useState(false)
+  const [todayOranges, setTodayOranges] = useState(Math.floor(Math.random() * (20 - 5) + 5))
   const [settingsVis, setSettingsVis] = useState(false);
   const [switchAccountVis, setSwitchAccountVis] = useState(false);
 
@@ -281,6 +284,12 @@ export default function App() {
         }
 
         setUser(listDid[0].user)
+        if(listDid[0].user.profile.data?.oranges?.updated && moment(listDid[0].user.profile.data?.oranges?.updated).subtract(2,'days') < moment()){
+            console.log('iciiiii');
+            console.log(listDid[0].user.profile.data?.oranges?.updated);
+            console.log(moment(listDid[0].user.profile.data?.oranges?.updated).subtract(2,'days') < moment());
+            setShowClaimOranges(true)
+        }
 
         setIsReady(true);
         
@@ -290,6 +299,12 @@ export default function App() {
 
           if(res.status == 200) {
             setUser(res.details);
+            if(res.details.profile.data?.oranges?.updated && moment(res.details.profile.data?.oranges?.updated).subtract(2,'days') < moment()){
+                console.log('oui');
+                console.log(res.details.profile.data?.oranges?.updated);
+                console.log(moment(res.details.profile.data?.oranges?.updated).subtract(2,'days') < moment());
+                setShowClaimOranges(true)
+            }
           }
         
         setIsReady(true);
@@ -640,11 +655,21 @@ export default function App() {
         const res = await orbis.updateProfile(detailUser.profile);
         setLoading(false);
     }else{
-        setPushNotifsVis(true);
+        if(detailUser.profile.data?.oranges?.updated && moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment()){
+            console.log('ici');
+            console.log(detailUser.profile.data?.oranges?.updated);
+            console.log(moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment());
+            setShowClaimOranges(true)
+        }else{
+            console.log('la');
+            console.log(detailUser.profile.data?.oranges?.updated);
+            console.log(moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment());
+            setPushNotifsVis(true);
+        }
         setLoading(false);
         setConnectModalVis(false)
     }
-
+    
     modalSwitchRef.current?.close()
   }
 
@@ -813,7 +838,11 @@ export default function App() {
                 modalPostSettingsRef,
                 showReportBack,
                 setShowReportBack,
-                modalProfileRef
+                modalProfileRef,
+                showClaimOranges,
+                setShowClaimOranges,
+                todayOranges,
+                setTodayOranges
             }}
         >
           <TailwindProvider utilities={utilities}>
@@ -842,6 +871,11 @@ export default function App() {
             {/** Display push notifications pane */}
             {pushNotifsVis &&
               <PushNotificationsModal />
+            }
+
+            {/** Display claim oranges pane */}
+            {showClaimOranges &&
+              <ClaimOrangesModal />
             }
 
             {/** Display nickname pane */}

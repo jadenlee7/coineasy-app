@@ -5,12 +5,13 @@ import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as Clipboard from 'expo-clipboard';
 import Animated from 'react-native-reanimated';
-import { MaterialIcons } from '@expo/vector-icons';
+import { AntDesign, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from "@react-navigation/core";
 import { TabBar, TabView } from "react-native-tab-view";
 import ImageViewer from "react-native-image-zoom-viewer";
 import { useScrollToTop } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { CountdownCircleTimer } from 'react-native-countdown-circle-timer'
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 
 
@@ -30,6 +31,7 @@ import ProfileFeed from '../screens/Navigation/Profile/ProfileFeed'
 import ProfileReplies from '../screens/Navigation/Profile/ProfileReplies'
 import ProfileReposts from '../screens/Navigation/Profile/ProfileReposts'
 import { CheckIcon,CloseIcon,CopyIconBadge,FacebookIcon,InstagramIcon,LinkIcon,NotificationsIcon,SettingsIcon,TelegramIcon,TwitterIcon } from "./Icons";
+import moment from "moment";
 
 const TabBarHeight = 50;
 const IndicatorWidth = 50
@@ -37,7 +39,22 @@ const IndicatorWidth = 50
 const windowSize = Dimensions.get('window')
 
 export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
-    const { user, setUser, orbis, setUpdateProfileVis, setShareProfileVis, screen, modalSwitchRef, tabViewHeight, modalSettingsRef, modalProfileRef } = useContext(GlobalContext);
+    const { 
+        user, 
+        setUser, 
+        orbis, 
+        setUpdateProfileVis, 
+        setShareProfileVis, 
+        screen, 
+        modalSwitchRef, 
+        tabViewHeight, 
+        modalSettingsRef, 
+        modalProfileRef,
+        showClaimOranges, 
+        setShowClaimOranges,
+        todayOranges,
+        setTodayOranges
+    } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const snapPoints = useMemo(() => ['75%','75%'], []);
@@ -147,11 +164,27 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
     const ProfileItem = ({title, count}) => {
         const tailwind = useTailwind();
-      
-        { return title != 'Posts' ? (
+
+        { return title != 'Posts' && title != 'Orange' ? (
             <TouchableOpacity style={tailwind('flex flex-col flex-1 items-center')} onPress={() => {Haptics.selectionAsync();navigation.navigate('FollowNavigation', {origin: title, profile, type, listCommonFollowers})}}>
                 <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
                 <Text style={[tailwind(`text-slate-400 mt-2 text-center`), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{title}</Text>
+            </TouchableOpacity>
+        ) : title == 'Orange' ? (
+            <TouchableOpacity 
+                style={tailwind('flex flex-col flex-1 items-center')}
+                onPress={() => {Haptics.selectionAsync();setTodayOranges(Math.floor(Math.random() * (20 - 5) + 5)); setShowClaimOranges(true)}}
+                disabled={type == 'selected'}
+            >
+                <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
+                <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
+                    <Image
+                        style={{width: 20,height: 20,marginTop: 5}}
+                        resizeMode="contain"
+                        source={require('../assets/orange.png')}
+                    />
+                    <Text style={[tailwind(`text-slate-400 mt-2 text-center`), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{title}</Text>
+                </View>
             </TouchableOpacity>
         ) : (
             <View style={tailwind('flex flex-col flex-1 items-center')}>
@@ -401,7 +434,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     <ProfileItem count={countPosts} title="Posts" />
                     <ProfileItem count={userInfo ? userInfo.count_followers : "-"} title="Followers" />
                     <ProfileItem count={userInfo ? userInfo.count_following : "-"} title="Following" />
-                    {/*<ProfileItem count="156" title="Oranges" />*/}
+                    <ProfileItem count={userInfo?.profile.data?.oranges?.count ?? 0} title="Orange" />
                 </View>
         
                 {!commonFollowLoading && type == "selected" && listCommonFollowers.length > 0 ? (
@@ -647,7 +680,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     </View>
                 </Modal>
             }
-
         </View>
     )
 }

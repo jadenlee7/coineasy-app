@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from "react";
 import { useTailwind } from 'tailwind-rn';
-import { Platform, Keyboard, View, TouchableOpacity, Dimensions, ImageBackground, KeyboardAvoidingView } from 'react-native';
+import { Platform, Keyboard, View, TouchableOpacity, Dimensions, ImageBackground, KeyboardAvoidingView, Linking, TouchableWithoutFeedback } from 'react-native';
 import Animated, {
   withTiming,
   useAnimatedStyle,
@@ -10,7 +10,7 @@ import useStatusBarHeight from "../hooks/useStatusBarHeight";
 import * as Haptics from 'expo-haptics';
 
 
-export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24, type = null}) {
+export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24, type = null, isAds = null}) {
     const tailwind = useTailwind();
     const opacity = useSharedValue(0.25);
     const bottom = useSharedValue(bottomStart);
@@ -36,11 +36,22 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
 
     const animatedModalStyle = useAnimatedStyle(() => {
         return {
-            bottom: (type == 'notifications' || type == 'deleteAccount') ? '25%' : animateModal ? bottom.value : 0,
+            bottom: (type == 'notifications' || type == 'oranges' || type == 'deleteAccount') ? '25%' : animateModal ? bottom.value : 0,
         };
     });
 
     const statusBarHeight = useStatusBarHeight();
+    
+    const openUrl = async () => {
+        let url = 'https://arkana.gg/mission/coineasy'
+        const supported = await Linking.canOpenURL(url);
+
+        if (supported) {
+          await Linking.openURL(url);
+        } else {
+          Alert.alert(`Don't know how to open this URL: ${url}`);
+        }
+    }
 
     return(
         <KeyboardAvoidingView style={[tailwind('absolute h-full w-full'), { elevation: 50 }]} behavior={'height'}>
@@ -52,7 +63,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     tailwind('h-full w-full bg-slate-950'), 
                     {
                         opacity: 0.63,
-                        height: type == 'notifications' ? '100%' : Dimensions.get('window').height,
+                        height: (type == 'notifications' || type == 'oranges') ? '100%' : Dimensions.get('window').height,
                     }
                 ]} 
             />
@@ -60,17 +71,19 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
             {/** Modal content */}
             <Animated.View 
                 style={[
-                    tailwind('absolute bg-white '+ ((type == 'notifications' || type == 'deleteAccount') ? 'rounded-xl' : 'rounded-t-xl')),
+                    tailwind('absolute bg-white '+ ((type == 'notifications' || type == 'oranges' || type == 'deleteAccount') ? 'rounded-xl' : 'rounded-t-xl')),
                     animatedModalStyle ,
                     {
                         paddingBottom: paddingBottom,
                         top: 
-                            statusBarHeight > 25 && type != 'notifications' && type != 'small' && type != 'deleteAccount' ? 65 + statusBarHeight 
-                            : type != 'notifications' && type != 'small' && type != 'deleteAccount' ? 80 + statusBarHeight 
+                            statusBarHeight > 25 && type != 'notifications' && type != 'oranges' && type != 'small' && type != 'deleteAccount' ? 65 + statusBarHeight 
+                            : type != 'notifications' && type != 'oranges' && type != 'small' && type != 'deleteAccount' ? 80 + statusBarHeight 
+                            : type == 'oranges' ? 150 + statusBarHeight 
                             : 'auto',
-                        width: (type == 'notifications' || type == 'deleteAccount')  ? '90%' : '100%',
+                        width: (type == 'notifications' || type == 'oranges' || type == 'deleteAccount')  ? '90%' : '100%',
                         height: 
                             type == 'notifications' ? 400 
+                            : type == 'oranges' ? 400 
                             : type == 'deleteAccount' && Platform.OS == 'ios' ? 470 
                             : type == 'deleteAccount' ? 500 
                             : 'auto',
@@ -86,6 +99,17 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     <ImageBackground source={require('../assets/deleteAccount_background.png')} resizeMode="stretch" style={{height: '103%',}} >
                         {children}
                     </ImageBackground>
+                ) : type && type == 'oranges' ? (
+                    <TouchableWithoutFeedback onPress={openUrl} disabled={!isAds}>
+                        <ImageBackground 
+                            source={isAds ? require('../assets/ads/ad_arkana.png') : require('../assets/background_claim_oranges.png')} 
+                            resizeMode="stretch" 
+                            style={isAds ? {height: '103.2%',width: '101.4%',} : {height: '103%',}} 
+                        >
+                                {children}
+                        </ImageBackground>
+                    </TouchableWithoutFeedback>
+
                 ) : (
                     <>
                         {children}
