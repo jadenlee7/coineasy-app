@@ -41,7 +41,7 @@ const ClaimOrangesModal = () => {
 
 
     const openUrl = async () => {
-        let url = 'https://arkana.gg/mission/coineasy'
+        let url = 'https://youtu.be/EPLZlxe07Eg'
         const supported = await Linking.canOpenURL(url);
 
         if (supported) {
@@ -86,7 +86,7 @@ const ClaimOrangesModal = () => {
                     onPress={openUrl}
                 >
 
-                    <Text style={{position: 'absolute',top: 20, left: 20, color: 'black', fontSize: 15,fontFamily: 'GmarketMedium'}}>Click!</Text>
+                    <Text style={{position: 'absolute',top: 25, left: 20, color: 'white', fontSize: 15,fontFamily: 'GmarketMedium'}}>Click!</Text>
                     <View style={{position: 'absolute',top: 10, right: 10}}>
 
                         {showClose ? (
@@ -94,7 +94,7 @@ const ClaimOrangesModal = () => {
                                 style={{position: 'absolute',top: 10, right: 5}}
                                 onPress={onAdCompleted}
                             >
-                                <AntDesign name="closecircle" size={24} color="black" />
+                                <AntDesign name="closecircle" size={24} color="white" />
                             </TouchableOpacity>
                         ) : (
                             <CountdownCircleTimer

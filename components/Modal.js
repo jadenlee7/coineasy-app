@@ -43,7 +43,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
     const statusBarHeight = useStatusBarHeight();
     
     const openUrl = async () => {
-        let url = 'https://arkana.gg/mission/coineasy'
+        let url = 'https://youtu.be/EPLZlxe07Eg'
         const supported = await Linking.canOpenURL(url);
 
         if (supported) {
@@ -102,9 +102,9 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                 ) : type && type == 'oranges' ? (
                     <TouchableWithoutFeedback onPress={openUrl} disabled={!isAds}>
                         <ImageBackground 
-                            source={isAds ? require('../assets/ads/ad_arkana.png') : require('../assets/background_claim_oranges.png')} 
+                            source={isAds ? require('../assets/ads/ad1_v2.png') : require('../assets/background_claim_oranges.png')} 
                             resizeMode="stretch" 
-                            style={isAds ? {height: '103.2%',width: '101.4%',} : {height: '103%',}} 
+                            style={isAds ? {height: '103.2%',width: '100%',} : {height: '103%',}} 
                         >
                                 {children}
                         </ImageBackground>
