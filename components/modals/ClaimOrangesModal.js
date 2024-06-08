@@ -23,12 +23,21 @@ const ClaimOrangesModal = () => {
 
     const onAdCompleted = async () => {
         Haptics.selectionAsync();
-        let tempOranges = user.profile.data?.oranges?.count ?? 0
+        let tempOranges = user?.profile?.data?.oranges?.count ?? 0
         tempOranges += todayOranges
 
-        user.profile.data.oranges = {
-            count: tempOranges,
-            updated: moment().format('YYYY-MM-DD')
+        if(user.profile.data){
+            user.profile.data.oranges = {
+                count: tempOranges,
+                updated: moment().format('YYYY-MM-DD')
+            }
+        }else{
+            user.profile.data = {
+                oranges: {
+                    count: tempOranges,
+                    updated: moment().format('YYYY-MM-DD')
+                }
+            }
         }
         setUser({...user})
 
@@ -51,9 +60,22 @@ const ClaimOrangesModal = () => {
         }
     }
 
+    const onHideModal = async () => {
+        Haptics.selectionAsync()
+
+        if(showAds && showClose){
+            onAdCompleted()
+        }
+
+        setShowAds(false)
+        setCompleteAds(false)
+        setShowClose(false)
+        setShowClaimOranges(false)
+    }
+
     return (
         <Modal 
-            hide={() => {Haptics.selectionAsync();setShowAds(false);setCompleteAds(false);setShowClose(false);setShowClaimOranges(false)}} 
+            hide={onHideModal} 
             type='oranges' 
             isAds={showAds}
         >
