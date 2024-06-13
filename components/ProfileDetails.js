@@ -261,7 +261,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
           return details.profile.pfp
         }
     }
-
+    
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
             { type == 'selected' ? (
@@ -434,7 +434,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     <ProfileItem count={countPosts} title="Posts" />
                     <ProfileItem count={userInfo ? userInfo.count_followers : "-"} title="Followers" />
                     <ProfileItem count={userInfo ? userInfo.count_following : "-"} title="Following" />
-                    <ProfileItem count={userInfo?.profile.data?.oranges?.count ?? 0} title="Orange" />
+                    <ProfileItem count={userInfo?.profile?.data?.oranges?.count ?? 0} title="Orange" />
                 </View>
         
                 {!commonFollowLoading && type == "selected" && listCommonFollowers.length > 0 ? (

@@ -87,7 +87,7 @@ const ProfileFeed = (props) => {
     return posts.map((post, key) => {
         if(post?.content?.repost != null && post.content.body == " ") {
             return (
-                <View style={tailwind('flex flex-col')} key={key}>
+                <View style={tailwind('flex flex-col')} key={Math.random()}>
                     <View style={[tailwind('flex flex-row justify-between px-5 mt-3'), { marginBottom: -2 }]}>
                         <View style={[tailwind('flex flex-row items-center')]}>
                             <RepostIcon color="#959595" />
@@ -113,7 +113,7 @@ const ProfileFeed = (props) => {
             );
         } else {
             return (
-                <Post key={key} post={post} />
+                <Post key={Math.random()} post={post} />
             );
         }
     });

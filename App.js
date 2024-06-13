@@ -132,6 +132,8 @@ export default function App() {
 //   const snapPointsAndroid = useMemo(() => ['79.4%', '79.4%'], []);
   const modalPostBoxRef = useRef(null); 
   const handleModalPostBoxPress = useCallback(() => modalPostBoxRef.current?.present(), []);
+  const modalNicknameRef = useRef(null); 
+  const handleModalNicknamePress = useCallback(() => modalNicknameRef.current?.present(), []);
   const [showReportBack, setShowReportBack] = useState(false)
 
 
@@ -285,9 +287,6 @@ export default function App() {
 
         setUser(listDid[0].user)
         if(listDid[0].user.profile.data?.oranges?.updated && moment(listDid[0].user.profile.data?.oranges?.updated).subtract(2,'days') < moment()){
-            console.log('iciiiii');
-            console.log(listDid[0].user.profile.data?.oranges?.updated);
-            console.log(moment(listDid[0].user.profile.data?.oranges?.updated).subtract(2,'days') < moment());
             setShowClaimOranges(true)
         }
 
@@ -645,25 +644,23 @@ export default function App() {
 
   async function callbackConnect(detailUser) {
     if(connectType == "signup"){
-        setNicknameVis(true)
+        // setNicknameVis(true)
+        handleModalNicknamePress()
 
-        if(detailUser.profile.data){
-            detailUser.profile.data.alreadyLogin = true
-        }else{
-            detailUser.profile.data = {alreadyLogin: true}
+        if(detailUser && detailUser?.profile){
+            if(detailUser?.profile?.data){
+                detailUser.profile.data.alreadyLogin = true
+            }else{
+                detailUser.profile.data = {alreadyLogin: true}
+            }
+
+            const res = await orbis.updateProfile(detailUser.profile);
         }
-        const res = await orbis.updateProfile(detailUser.profile);
         setLoading(false);
     }else{
         if(detailUser.profile.data?.oranges?.updated && moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment()){
-            console.log('ici');
-            console.log(detailUser.profile.data?.oranges?.updated);
-            console.log(moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment());
             setShowClaimOranges(true)
         }else{
-            console.log('la');
-            console.log(detailUser.profile.data?.oranges?.updated);
-            console.log(moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment());
             setPushNotifsVis(true);
         }
         setLoading(false);
@@ -842,7 +839,8 @@ export default function App() {
                 showClaimOranges,
                 setShowClaimOranges,
                 todayOranges,
-                setTodayOranges
+                setTodayOranges,
+                modalNicknameRef
             }}
         >
           <TailwindProvider utilities={utilities}>
@@ -879,9 +877,9 @@ export default function App() {
             }
 
             {/** Display nickname pane */}
-            {nicknameVis &&
+            {/* {nicknameVis && */}
               <NicknameModal />
-            }
+            {/* } */}
 
             {/** Render repost modal */}
             {repost !== false &&

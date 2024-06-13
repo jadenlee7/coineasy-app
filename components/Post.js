@@ -194,12 +194,12 @@ const PostDisplay = (props) => {
 
         // Match @-mentions
         replacedText = reactStringReplace(body, /@(\w+)/g, (match, i) => (
-            <InteractiveMention mentions={post.content.mentions} key={match + i} match={match} i={i} showProfileDetails={showProfileDetails} />
+            <InteractiveMention mentions={post.content.mentions} key={Math.random()} match={match} i={i} showProfileDetails={showProfileDetails} />
         ));
 
         // Match URLs
         replacedText = reactStringReplace(replacedText, /(https?:\/\/\S+)/g, (match, i) => (
-            <TouchableWithoutFeedback key={match + i} onPress={() => openNews(match)}>
+            <TouchableWithoutFeedback key={Math.random()} onPress={() => openNews(match)}>
                 <Text style={{ color: '#ff6b17', fontFamily: "GmarketMedium", backgroundColor: "#FFF" }}>{match}</Text>
             </TouchableWithoutFeedback>
         ));
