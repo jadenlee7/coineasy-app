@@ -285,8 +285,8 @@ export default function App() {
             listDid.sort((a, b) => (a.time < b.time) ? 1 : -1)
         }
 
-        setUser(listDid[0].user)
-        if(listDid[0].user.profile.data?.oranges?.updated && moment(listDid[0].user.profile.data?.oranges?.updated).subtract(2,'days') < moment()){
+        setUser({...listDid[0].user})
+        if(listDid[0].user.profile?.data?.oranges?.updated && moment(listDid[0].user.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
             setShowClaimOranges(true)
         }
 
@@ -298,10 +298,7 @@ export default function App() {
 
           if(res.status == 200) {
             setUser(res.details);
-            if(res.details.profile.data?.oranges?.updated && moment(res.details.profile.data?.oranges?.updated).subtract(2,'days') < moment()){
-                console.log('oui');
-                console.log(res.details.profile.data?.oranges?.updated);
-                console.log(moment(res.details.profile.data?.oranges?.updated).subtract(2,'days') < moment());
+            if(res.details.profile?.data?.oranges?.updated && moment(res.details.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
                 setShowClaimOranges(true)
             }
           }
@@ -544,15 +541,8 @@ export default function App() {
                     }else if(elt[0].url){
                         await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
                     }else{
-                        console.log('AUCUNNNN');
                         console.log(elt);
-                    }
-
-                    // if(e.content.body.includes('Duskbreakers')){
-                    //     console.log('ici');
-                    //     console.log(elt);
-                    // }
-        
+                    }        
 
                     if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
                         setPosts(data);
