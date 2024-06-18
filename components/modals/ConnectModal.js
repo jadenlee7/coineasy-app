@@ -143,7 +143,7 @@ export default function ConnectModal({hide, type}) {
 
             if(resUser.status == 200) {
                 const { data, error } = await orbis.getProfile(resUser.details.did);
-                if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
+                if(connectType == "signin" && (!data.details?.profile?.data?.alreadyLogin && (!data.details?.profile?.username || !data.details?.profile?.pfp || !data.details?.profile?.description))){
         
                     let options= {
                         did: resUser.details.did,

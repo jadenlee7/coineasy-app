@@ -46,7 +46,7 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from 
 import Postbox from './components/Postbox';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import useStatusBarHeight from './hooks/useStatusBarHeight';
-import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
+// import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
 
 /** Initialize the Orbis class object */
 let orbis = new Orbis({
@@ -75,8 +75,8 @@ export default function App() {
   const [postDetailsVis, setPostDetailsVis] = useState();
   const [updateProfileVis, setUpdateProfileVis] = useState(false);
   const [pushNotifsVis, setPushNotifsVis] = useState(false);
-  const [showClaimOranges, setShowClaimOranges] = useState(false)
-  const [todayOranges, setTodayOranges] = useState(Math.floor(Math.random() * (20 - 5) + 5))
+//   const [showClaimOranges, setShowClaimOranges] = useState(false)
+//   const [todayOranges, setTodayOranges] = useState(Math.floor(Math.random() * (20 - 5) + 5))
   const [settingsVis, setSettingsVis] = useState(false);
   const [switchAccountVis, setSwitchAccountVis] = useState(false);
 
@@ -286,9 +286,9 @@ export default function App() {
         }
 
         setUser({...listDid[0].user})
-        if(listDid[0].user.profile?.data?.oranges?.updated && moment(listDid[0].user.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
-            setShowClaimOranges(true)
-        }
+        // if(listDid[0].user.profile?.data?.oranges?.updated && moment(listDid[0].user.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
+        //     setShowClaimOranges(true)
+        // }
 
         setIsReady(true);
         
@@ -298,30 +298,15 @@ export default function App() {
 
           if(res.status == 200) {
             setUser(res.details);
-            if(res.details.profile?.data?.oranges?.updated && moment(res.details.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
-                setShowClaimOranges(true)
-            }
+            // if(res.details.profile?.data?.oranges?.updated && moment(res.details.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
+            //     setShowClaimOranges(true)
+            // }
           }
         
         setIsReady(true);
       }
 
     }
-
-    // async function connect() {
-    //     /** Check if user exists in local storage */
-    //     let _userDid = await AsyncStorage.getItem("user-connected");
-    //     if(_userDid) {
-    //       setUser({did: _userDid})
-    //     }
-    //     setIsReady(true);
-  
-    //     /** Retrieve user details */
-    //     let res = await orbis.isConnected();
-    //     if(res.status == 200) {
-    //       setUser(res.details);
-    //     }
-    // }
 
     // Will fetch all blocked user
     async function fecthBlockedUser() {
@@ -648,11 +633,11 @@ export default function App() {
         }
         setLoading(false);
     }else{
-        if(detailUser.profile.data?.oranges?.updated && moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment()){
-            setShowClaimOranges(true)
-        }else{
+        // if(detailUser.profile.data?.oranges?.updated && moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment()){
+        //     setShowClaimOranges(true)
+        // }else{
             setPushNotifsVis(true);
-        }
+        // }
         setLoading(false);
         setConnectModalVis(false)
     }
@@ -826,10 +811,10 @@ export default function App() {
                 showReportBack,
                 setShowReportBack,
                 modalProfileRef,
-                showClaimOranges,
-                setShowClaimOranges,
-                todayOranges,
-                setTodayOranges,
+                // showClaimOranges,
+                // setShowClaimOranges,
+                // todayOranges,
+                // setTodayOranges,
                 modalNicknameRef
             }}
         >
@@ -862,9 +847,9 @@ export default function App() {
             }
 
             {/** Display claim oranges pane */}
-            {showClaimOranges &&
+            {/* {showClaimOranges &&
               <ClaimOrangesModal />
-            }
+            } */}
 
             {/** Display nickname pane */}
             {/* {nicknameVis && */}

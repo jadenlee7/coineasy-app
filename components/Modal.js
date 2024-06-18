@@ -106,7 +106,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                             resizeMode="stretch" 
                             style={isAds ? {height: '103.2%',width: '100%',} : {height: '103%',}} 
                         >
-                                {children}
+                            {children}
                         </ImageBackground>
                     </TouchableWithoutFeedback>
 
