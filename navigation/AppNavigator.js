@@ -11,6 +11,8 @@ import FollowNavigation from '../screens/Navigation/Follow/FollowNavigation';
 import FlashMessage from 'react-native-flash-message';
 import ConversationScreen from '../screens/Navigation/Chat/ConversationScreen';
 import ConversationDetails from '../screens/Navigation/Chat/ConversationDetails';
+import OrangeReward from '../screens/Navigation/OrangeReward';
+import RewardHistory from '../screens/Navigation/RewardHistory';
 
 // const Stack = createNativeStackNavigator();
 
@@ -28,6 +30,8 @@ const AppNavigator = (props) => {
                     <Stack.Screen name="FollowNavigation" component={FollowNavigation} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="ConversationScreen" component={ConversationScreen} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="ConversationDetails" component={ConversationDetails} options={{ headerShown: false, gestureEnabled: true }} />
+                    <Stack.Screen name="OrangeReward" component={OrangeReward} options={{ headerShown: false, gestureEnabled: true }} />
+                    <Stack.Screen name="RewardHistory" component={RewardHistory} options={{ headerShown: false, gestureEnabled: true }} />
                 </Stack.Navigator>
             </NavigationContainer>
 

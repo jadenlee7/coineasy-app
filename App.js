@@ -14,14 +14,10 @@ import { sleep } from './utils';
 import Login from "./screens/Login";
 import utilities from './tailwind.json';
 import QR from "./components/modals/QR.js";
-import ImageSender from "./components/modals/ImageSender.js";
-import PostPane from "./components/panes/PostPane";
 import AppNavigator from './navigation/AppNavigator';
 import { GlobalContext } from "./contexts/GlobalContext";
 import RepostModal from "./components/modals/RepostModal";
-import ConnectModal from "./components/modals/ConnectModal";
 import PostboxModal from "./components/modals/PostboxModal";
-import SettingsModal from "./components/modals/SettingsModal";
 import NotificationsPane from "./components/panes/NotificationsPane";
 import PostSettingsModal from "./components/modals/PostSettingsModal";
 import UpdateProfileModal from "./components/modals/UpdateProfileModal";
@@ -40,13 +36,10 @@ import * as WebBrowser from 'expo-web-browser';
 /** Import Orbis SDK */
 import { Orbis } from "@orbisclub/orbis-sdk";
 import moment from 'moment';
-import SwitchAccountModal from './components/modals/SwitchAccountModal';
 import { useWalletConnectModal } from '@walletconnect/modal-react-native';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import Postbox from './components/Postbox';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import useStatusBarHeight from './hooks/useStatusBarHeight';
-// import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
+import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
 
 /** Initialize the Orbis class object */
 let orbis = new Orbis({
@@ -75,8 +68,8 @@ export default function App() {
   const [postDetailsVis, setPostDetailsVis] = useState();
   const [updateProfileVis, setUpdateProfileVis] = useState(false);
   const [pushNotifsVis, setPushNotifsVis] = useState(false);
-//   const [showClaimOranges, setShowClaimOranges] = useState(false)
-//   const [todayOranges, setTodayOranges] = useState(Math.floor(Math.random() * (20 - 5) + 5))
+  const [showClaimOranges, setShowClaimOranges] = useState(false)
+  const [todayOranges, setTodayOranges] = useState(Math.floor(Math.random() * (20 - 5) + 5))
   const [settingsVis, setSettingsVis] = useState(false);
   const [switchAccountVis, setSwitchAccountVis] = useState(false);
 
@@ -88,7 +81,6 @@ export default function App() {
   const [postboxVis, setPostboxVis] = useState(false);
   const [replyTo, setReplyTo] = useState();
   const [editedPost, setEditedPost] = useState(null);
-  const [quotedPost, setQuotedPost] = useState();
   const [shareProfileVis, setShareProfileVis] = useState(false);
   const [showImageSender, setShowImageSender] = useState(null);
   const [listMessages, setListMessages] = useState([])
@@ -101,7 +93,6 @@ export default function App() {
   const [listBlockedUser, setListBlockedUser] = useState(null)
   const [listHiddenPost, setListHiddenPost] = useState(null)
   const [listMutedUsers, setListMutedUsers] = useState(null)
-//   const [listFollowers, setListFollowers] = useState([])
 
   const [listAccount, setListAccount] = useState([])
 
@@ -128,13 +119,16 @@ export default function App() {
   const [categoriesVis, setCategoriesVis] = useState(false);
   const snapPoints = useMemo(() => ['50%', '50%'], []);
   const snapPointsLarge = useMemo(() => [Platform.OS == 'ios' ? '87%' : '95%', Platform.OS == 'ios' ? '87%' : '95%'], []);
-//   const snapPoints = useMemo(() => ['87.4%', '87.4%'], []);
-//   const snapPointsAndroid = useMemo(() => ['79.4%', '79.4%'], []);
   const modalPostBoxRef = useRef(null); 
   const handleModalPostBoxPress = useCallback(() => modalPostBoxRef.current?.present(), []);
   const modalNicknameRef = useRef(null); 
   const handleModalNicknamePress = useCallback(() => modalNicknameRef.current?.present(), []);
   const [showReportBack, setShowReportBack] = useState(false)
+
+  const [dailyClaim, setDailyClaim] = useState(false)
+  const [adClaim, setAdClaim] = useState(false)
+  const [activityClaim, setActivityClaim] = useState(false)
+  const [inviteClaim, setInviteClaim] = useState(false)
 
 
 
@@ -182,6 +176,51 @@ export default function App() {
             const { data, error } = await orbis.getProfile(user.did);
             user.profile = data.details.profile
         }
+
+        // numberOranges: 1000
+        // listClaimedOranges: [
+        //     {
+        //         date: moment().tz('Asia/Seoul').format('YYYY-MM-DD'),
+        //         listOranges: [
+                        // {
+                        //     numberOranges: 10,
+                        //     type: 'Comment'
+                        // },
+                        // {
+                        //     numberOranges: 5,
+                        //     type: 'Daily Check-in'
+                        // },
+                        // {
+                        //     numberOranges: 5,
+                        //     type: 'Ad Rewards'
+                        // },
+                        // {
+                        //     numberOranges: 5,
+                        //     type: '7-Day Streak Bonus'
+                        // },
+        //         ]
+        //     }
+        // ]
+        // claimStreak: {
+        //     number: 0,
+        //     lastClaim: moment().tz('Asia/Seoul').format('YYYY-MM-DD hh:mm:ss')
+        // }
+        // adReward: {
+        //     lastClaim: moment().tz('Asia/Seoul').format('YYYY-MM-DD hh:mm:ss')
+        // }
+        // postStreak: {
+        //     number: 0,
+        //     lastClaim: moment().tz('Asia/Seoul').format('YYYY-MM-DD hh:mm:ss')
+        // }
+        // commentStreak: {
+        //     number: 0,
+        //     lastClaim: moment().tz('Asia/Seoul').format('YYYY-MM-DD hh:mm:ss')
+        // }
+        // reactionStreak: {
+        //     number: 0,
+        //     lastClaim: moment().tz('Asia/Seoul').format('YYYY-MM-DD hh:mm:ss')
+        // }
+
 
         const listDid = await AsyncStorage.getItem("user-connected")
         
@@ -286,9 +325,9 @@ export default function App() {
         }
 
         setUser({...listDid[0].user})
-        // if(listDid[0].user.profile?.data?.oranges?.updated && moment(listDid[0].user.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
-        //     setShowClaimOranges(true)
-        // }
+        if(listDid[0].user.profile?.data?.oranges?.updated && moment(listDid[0].user.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
+            setShowClaimOranges(true)
+        }
 
         setIsReady(true);
         
@@ -298,9 +337,9 @@ export default function App() {
 
           if(res.status == 200) {
             setUser(res.details);
-            // if(res.details.profile?.data?.oranges?.updated && moment(res.details.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
-            //     setShowClaimOranges(true)
-            // }
+            if(res.details.profile?.data?.oranges?.updated && moment(res.details.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
+                setShowClaimOranges(true)
+            }
           }
         
         setIsReady(true);
@@ -633,11 +672,11 @@ export default function App() {
         }
         setLoading(false);
     }else{
-        // if(detailUser.profile.data?.oranges?.updated && moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment()){
-        //     setShowClaimOranges(true)
-        // }else{
+        if(detailUser.profile.data?.oranges?.updated && moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment()){
+            setShowClaimOranges(true)
+        }else{
             setPushNotifsVis(true);
-        // }
+        }
         setLoading(false);
         setConnectModalVis(false)
     }
@@ -811,11 +850,16 @@ export default function App() {
                 showReportBack,
                 setShowReportBack,
                 modalProfileRef,
-                // showClaimOranges,
-                // setShowClaimOranges,
-                // todayOranges,
-                // setTodayOranges,
-                modalNicknameRef
+                modalNicknameRef,
+                showClaimOranges,
+                setShowClaimOranges,
+                todayOranges,
+                setTodayOranges,
+                dailyClaim, 
+                setDailyClaim,
+                adClaim, setAdClaim,
+                activityClaim, setActivityClaim,
+                inviteClaim, setInviteClaim
             }}
         >
           <TailwindProvider utilities={utilities}>
@@ -825,21 +869,8 @@ export default function App() {
               <Login />
             }
 
-            {/** Show selected post details in a pane */}
-            {/* {postDetailsVis != null &&
-              <PostPane />
-            } */}
-
-            {/** Display connect modal if user clicked on connect button */}
-            {/* {showConnectModal &&
-              <ConnectModal />
-            } */}
-
             {/** Display the edit profile details modal */}
             <UpdateProfileModal />
-            {/* {updateProfileVis &&
-              <UpdateProfileModal />
-            } */}
 
             {/** Display push notifications pane */}
             {pushNotifsVis &&
@@ -847,14 +878,12 @@ export default function App() {
             }
 
             {/** Display claim oranges pane */}
-            {/* {showClaimOranges &&
+            {showClaimOranges &&
               <ClaimOrangesModal />
-            } */}
+            }
 
             {/** Display nickname pane */}
-            {/* {nicknameVis && */}
-              <NicknameModal />
-            {/* } */}
+            <NicknameModal />
 
             {/** Render repost modal */}
             {repost !== false &&
@@ -863,20 +892,6 @@ export default function App() {
 
             {/** Share post container */}
             <PostboxModal />
-
-            {/* {postboxVis &&
-              <PostboxModal />
-            } */}
-
-            {/** Settings container */}
-            {/* {settingsVis &&
-              <SettingsModal />
-            } */}
-
-            {/** Switch account container */}
-            {/* {switchAccountVis &&
-              <SwitchAccountModal />
-            } */}
 
             {/** Show post settings modal */}
             <BottomSheetModalProvider>

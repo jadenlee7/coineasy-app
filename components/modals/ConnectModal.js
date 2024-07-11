@@ -81,46 +81,50 @@ export default function ConnectModal({hide, type}) {
         });
 
         if(resUser.status == 200) {
-            const { data, error } = await orbis.getProfile(resUser.details.did);
-            if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
+            setUser(resUser.details);
+            AsyncStorage.setItem("provider-type", "wallet-connect");
+            callbackConnect(resUser.details)
+
+            // const { data, error } = await orbis.getProfile(resUser.details.did);
+            // if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
     
-                let options= {
-                    did: resUser.details.did,
-                    context,
-                    include_child_contexts: true
-                };
+            //     let options= {
+            //         did: resUser.details.did,
+            //         context,
+            //         include_child_contexts: true
+            //     };
           
-                let { data } = await orbis.getPosts(options);
-                if(data.length == 0){
-                    provider?.disconnect().then(async res => {
-                        await AsyncStorage.removeItem("provider-type");       
-                        setUser(null);
-                        setLoading(false)
-                    }).catch(e => {
-                        console.log(e);
-                        setUser(null);
-                        setLoading(false)
-                    })
+            //     let { data } = await orbis.getPosts(options);
+            //     if(data.length == 0){
+            //         provider?.disconnect().then(async res => {
+            //             await AsyncStorage.removeItem("provider-type");       
+            //             setUser(null);
+            //             setLoading(false)
+            //         }).catch(e => {
+            //             console.log(e);
+            //             setUser(null);
+            //             setLoading(false)
+            //         })
         
-                    if(!provider){
-                        setUser(null);
-                    }
+            //         if(!provider){
+            //             setUser(null);
+            //         }
         
-                    setLoading(false);
-                    setConnectModalVis(false)
-                    alert("You haven't signed up with this account before, do you want to sign up ?")
-                }else{
-                    setUser(resUser.details);
-                    AsyncStorage.setItem("provider-type", "wallet-connect");
-                    setLoading(false);
-                    callbackConnect(resUser.details)
-                }
-            }else{
-                setUser(resUser.details);
-                AsyncStorage.setItem("provider-type", "wallet-connect");
-                setLoading(false);
-                callbackConnect(resUser.details)
-            }
+            //         setLoading(false);
+            //         setConnectModalVis(false)
+            //         alert("You haven't signed up with this account before, do you want to sign up ?")
+            //     }else{
+            //         setUser(resUser.details);
+            //         AsyncStorage.setItem("provider-type", "wallet-connect");
+            //         setLoading(false);
+            //         callbackConnect(resUser.details)
+            //     }
+            // }else{
+            //     setUser(resUser.details);
+            //     AsyncStorage.setItem("provider-type", "wallet-connect");
+            //     setLoading(false);
+            //     callbackConnect(resUser.details)
+            // }
         } else {
             alert("There was an error logging you in, please retry. Error: " + resUser.status);
             setLoading(false);
@@ -142,45 +146,50 @@ export default function ConnectModal({hide, type}) {
             });
 
             if(resUser.status == 200) {
-                const { data, error } = await orbis.getProfile(resUser.details.did);
-                if(connectType == "signin" && (!data.details?.profile?.data?.alreadyLogin && (!data.details?.profile?.username || !data.details?.profile?.pfp || !data.details?.profile?.description))){
+
+                setUser(resUser.details);
+                AsyncStorage.setItem("provider-type", "apple");
+                callbackConnect(resUser.details)
+
+                // const { data, error } = await orbis.getProfile(resUser.details.did);
+                // if(connectType == "signin" && (!data.details?.profile?.data?.alreadyLogin && (!data.details?.profile?.username || !data.details?.profile?.pfp || !data.details?.profile?.description))){
         
-                    let options= {
-                        did: resUser.details.did,
-                        context,
-                        include_child_contexts: true
-                    };
+                //     let options= {
+                //         did: resUser.details.did,
+                //         context,
+                //         include_child_contexts: true
+                //     };
               
-                    let { data } = await orbis.getPosts(options);
-                    if(data.length == 0){
-                        provider?.disconnect().then(async res => {
-                            await AsyncStorage.removeItem("provider-type");       
-                            setUser(null);
-                            setLoading(false)
-                        }).catch(e => {
-                            setUser(null);
-                            setLoading(false)
-                        })
+                //     let { data } = await orbis.getPosts(options);
+                //     if(data.length == 0){
+                //         provider?.disconnect().then(async res => {
+                //             await AsyncStorage.removeItem("provider-type");       
+                //             setUser(null);
+                //             setLoading(false)
+                //         }).catch(e => {
+                //             setUser(null);
+                //             setLoading(false)
+                //         })
             
-                        if(!provider){
-                            setUser(null);
-                        }
+                //         if(!provider){
+                //             setUser(null);
+                //         }
             
-                        setLoading(false)
-                        setConnectModalVis(false)
-                        alert("You haven't signed up with this account before, do you want to sign up ?")
-                    }else{
-                        setUser(resUser.details);
-                        setLoading(false)
-                        AsyncStorage.setItem("provider-type", "apple");
-                        callbackConnect(resUser.details)
-                    }
-                }else{
-                    setUser(resUser.details);
-                    setLoading(false)
-                    AsyncStorage.setItem("provider-type", "apple");
-                    callbackConnect(resUser.details)
-                }
+                //         setLoading(false)
+                //         setConnectModalVis(false)
+                //         alert("You haven't signed up with this account before, do you want to sign up ?")
+                //     }else{
+                //         setUser(resUser.details);
+                //         setLoading(false)
+                //         AsyncStorage.setItem("provider-type", "apple");
+                //         callbackConnect(resUser.details)
+                //     }
+                // }else{
+                //     setUser(resUser.details);
+                //     setLoading(false)
+                //     AsyncStorage.setItem("provider-type", "apple");
+                //     callbackConnect(resUser.details)
+                // }
             } else {
                 if(retryCount < 3) {
                     /** Increment retry count */

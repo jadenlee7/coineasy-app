@@ -248,7 +248,6 @@ const PostDisplay = (props) => {
                                 ]}
                                 source={{uri: imgObj.url}}
                                 resizeMode="cover"
-                                // onLoad={(values) => renderImage(values)}
                             />
                         ) : (
                             <Image
@@ -264,7 +263,6 @@ const PostDisplay = (props) => {
                                 placeholder={require("../assets/loader_001.gif")}
                                 transition={1000}
                                 contentFit="cover"
-                                // onLoad={(values) => renderImage(values)}
                                 priority="high"
                             />
                         )}
@@ -275,17 +273,6 @@ const PostDisplay = (props) => {
             const [ratioHeight, setRatioHeight] = useState(screenWidth.width - 87)
             const [isHorizontal, setIsHorizontal] = useState(null)
 
-            const renderImage = (values) => {
-                const {width, height} = values.nativeEvent.source
-
-                if(width > height){
-                    const ratioWidth = (isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87)/width
-                    const newHeight = height*ratioWidth < screenWidth.width - 87 ? height*ratioWidth : screenWidth.width - 87
-                    setRatioHeight(newHeight)
-                    setIsHorizontal(true)
-                }
-            }
-
             return(
                 <View style={{marginLeft: index && index != 0 ? 8 : 0}} key={Math.random()}>
                     <TouchableOpacity 
@@ -295,18 +282,17 @@ const PostDisplay = (props) => {
                     >
                         {(listPostFailure.includes(post.timestamp) || post.content.context == 'kjzl6cwe1jw14aqybm3jlqo0aczxbogwehz8lrywu2r9ompi4pi0amaqjshapo6') ? (
                             <RNImage
-                            style={[
-                                tailwind('rounded-md'), 
-                                { 
-                                    height: isHorizontal ? ratioHeight : screenWidth.width - 87,
-                                    width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87,
-                                    marginLeft: isRepost && !quotedPost ? -20 : 0,
-                                }
-                            ]}
-                            source={{uri: imgObj.url}}
-                            resizeMode="cover"
-                            // onLoad={(values) => renderImage(values)}
-                        />
+                                style={[
+                                    tailwind('rounded-md'), 
+                                    { 
+                                        height: isHorizontal ? ratioHeight : screenWidth.width - 87,
+                                        width: isRepost && !quotedPost ? screenWidth.width - 135  : quotedPost ? screenWidth.width - 160 : screenWidth.width - 87,
+                                        marginLeft: isRepost && !quotedPost ? -20 : 0,
+                                    }
+                                ]}
+                                source={{uri: imgObj.url}}
+                                resizeMode="cover"
+                            />
                         ) : (
                             <Image
                                 style={[

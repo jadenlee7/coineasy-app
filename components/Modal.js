@@ -10,7 +10,7 @@ import useStatusBarHeight from "../hooks/useStatusBarHeight";
 import * as Haptics from 'expo-haptics';
 
 
-export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24, type = null, isAds = null}) {
+export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24, type = null, isAds = null, pendingAds = null}) {
     const tailwind = useTailwind();
     const opacity = useSharedValue(0.25);
     const bottom = useSharedValue(bottomStart);
@@ -26,13 +26,6 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
             duration: bottomDuration
         });
     };
-
-    // Animated style for the fading effect
-    const animatedBgStyle = useAnimatedStyle(() => {
-        return {
-            opacity: opacity.value,
-        };
-    });
 
     const animatedModalStyle = useAnimatedStyle(() => {
         return {
@@ -63,7 +56,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     tailwind('h-full w-full bg-slate-950'), 
                     {
                         opacity: 0.63,
-                        height: (type == 'notifications' || type == 'oranges') ? '100%' : Dimensions.get('window').height,
+                        height: (type == 'notifications' || type == 'oranges' || type == 'oranges-help') ? '100%' : Dimensions.get('window').height,
                     }
                 ]} 
             />
@@ -71,19 +64,21 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
             {/** Modal content */}
             <Animated.View 
                 style={[
-                    tailwind('absolute bg-white '+ ((type == 'notifications' || type == 'oranges' || type == 'deleteAccount') ? 'rounded-xl' : 'rounded-t-xl')),
+                    tailwind('absolute '+  (!pendingAds ? ' bg-white ' : '')+ ((type == 'notifications' || type == 'oranges' || type == 'oranges-help' || type == 'deleteAccount') ? 'rounded-xl' : 'rounded-t-xl')),
                     animatedModalStyle ,
                     {
                         paddingBottom: paddingBottom,
                         top: 
-                            statusBarHeight > 25 && type != 'notifications' && type != 'oranges' && type != 'small' && type != 'deleteAccount' ? 65 + statusBarHeight 
-                            : type != 'notifications' && type != 'oranges' && type != 'small' && type != 'deleteAccount' ? 80 + statusBarHeight 
+                            statusBarHeight > 25 && type != 'notifications' && type != 'oranges' && type != 'oranges-help' && type != 'small' && type != 'deleteAccount' ? 65 + statusBarHeight 
+                            : type != 'notifications' && type != 'oranges' && type != 'oranges-help' && type != 'small' && type != 'deleteAccount' ? 80 + statusBarHeight 
                             : type == 'oranges' ? 150 + statusBarHeight 
+                            : type == 'oranges-help' ? 100 + statusBarHeight 
                             : 'auto',
-                        width: (type == 'notifications' || type == 'oranges' || type == 'deleteAccount')  ? '90%' : '100%',
+                        width: (type == 'notifications' || type == 'oranges' || type == 'oranges-help' || type == 'deleteAccount')  ? '90%' : '100%',
                         height: 
                             type == 'notifications' ? 400 
                             : type == 'oranges' ? 400 
+                            : type == 'oranges-help' ? 450
                             : type == 'deleteAccount' && Platform.OS == 'ios' ? 470 
                             : type == 'deleteAccount' ? 500 
                             : 'auto',
@@ -99,16 +94,20 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     <ImageBackground source={require('../assets/deleteAccount_background.png')} resizeMode="stretch" style={{height: '103%',}} >
                         {children}
                     </ImageBackground>
-                ) : type && type == 'oranges' ? (
+                ) : type && (type == 'oranges' || type == 'oranges-help') && !pendingAds ? (
                     <TouchableWithoutFeedback onPress={openUrl} disabled={!isAds}>
                         <ImageBackground 
                             source={isAds ? require('../assets/ads/ad1_v2.png') : require('../assets/background_claim_oranges.png')} 
                             resizeMode="stretch" 
-                            style={isAds ? {height: '103.2%',width: '100%',} : {height: '103%',}} 
+                            style={[isAds ? {height: '103.2%',width: '100%',} : {height: '103%',}, type == 'oranges-help' && {justifyContent:'center'}]} 
                         >
                             {children}
                         </ImageBackground>
                     </TouchableWithoutFeedback>
+                ) : type && (type == 'oranges' || type == 'oranges-help') && pendingAds ? (
+                    <>
+                        {children}
+                    </>
 
                 ) : (
                     <>
