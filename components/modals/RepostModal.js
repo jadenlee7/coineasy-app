@@ -10,7 +10,7 @@ import { sleep } from '../../utils';
 import { QuoteIcon, RepostIcon, RepostIcon2 } from "../Icons.js";
 
 export default function RepostModal() {
-  const { user, orbis, repost, setRepost, showPostbox, postboxVis } = useContext(GlobalContext);
+  const { user,setUser,userData,setUserData, orbis, repost, setRepost, showPostbox, postboxVis } = useContext(GlobalContext);
   const tailwind = useTailwind();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -31,6 +31,27 @@ export default function RepostModal() {
       repost: repost.stream_id
     };
     let res = await orbis.createPost(content);
+
+    // Orange Reward
+    const tempData = userData
+
+    if(tempData.reaction){
+        tempData.reaction.number += 1
+        tempData.reaction.gained += 5
+    }else{
+        tempData.reaction = {
+            number: 1,
+            gained: 5,
+            lastReaction: moment().format('YYYY-MM-DD HH:mm')
+        }
+    }
+
+    setUserData({...tempData})
+
+    var tempProfile = user.profile
+    tempProfile.data = tempData
+    await orbis.updateProfile(tempProfile);
+
     setLoading(false);
     setSuccess(true);
     await sleep(1500);

@@ -7,7 +7,7 @@ import { Dimensions, Platform } from "react-native";
 import useStatusBarHeight from "../../hooks/useStatusBarHeight";
 
 export default function PostboxModal() {
-    const { hidePostbox, modalPostBoxRef, categoriesVis } = useContext(GlobalContext);
+    const { hidePostbox, modalPostBoxRef, categoriesVis, setRepost, setReplyTo } = useContext(GlobalContext);
 
     const snapPoints = useMemo(() => ['100%', '100%'], []);
     const snapPointsAndroid = useMemo(() => ['100%', '100%'], []);

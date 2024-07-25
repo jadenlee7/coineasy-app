@@ -8,6 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from "expo-linear-gradient";
 
 
 export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24, type = null, isAds = null, pendingAds = null}) {
@@ -94,7 +95,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     <ImageBackground source={require('../assets/deleteAccount_background.png')} resizeMode="stretch" style={{height: '103%',}} >
                         {children}
                     </ImageBackground>
-                ) : type && (type == 'oranges' || type == 'oranges-help') && !pendingAds ? (
+                ) : type && (type == 'oranges' || type == 'oranges-help') && isAds && !pendingAds ? (
                     <TouchableWithoutFeedback onPress={openUrl} disabled={!isAds}>
                         <ImageBackground 
                             source={isAds ? require('../assets/ads/ad1_v2.png') : require('../assets/background_claim_oranges.png')} 
@@ -103,6 +104,15 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                         >
                             {children}
                         </ImageBackground>
+                    </TouchableWithoutFeedback>
+                ) : type && (type == 'oranges' || type == 'oranges-help') && !isAds && !pendingAds ? (
+                    <TouchableWithoutFeedback onPress={openUrl} disabled={!isAds}>
+                        <LinearGradient
+                            colors={['#FFF7E8', '#FFEDEC']}
+                            style={[isAds ? {height: '103.2%',width: '100%',} : {height: '106%',}, type == 'oranges-help' && {justifyContent:'center'}, {borderRadius: 10,}]} 
+                        >
+                            {children}
+                        </LinearGradient>
                     </TouchableWithoutFeedback>
                 ) : type && (type == 'oranges' || type == 'oranges-help') && pendingAds ? (
                     <>

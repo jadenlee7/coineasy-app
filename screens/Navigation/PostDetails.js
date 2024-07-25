@@ -10,9 +10,10 @@ import { useTailwind } from 'tailwind-rn';
 import useStatusBarHeight from "../../hooks/useStatusBarHeight";
 import { BackIcon, NotificationsIcon } from "../../components/Icons";
 import HeaderImage from "../../components/HeaderImage";
+import moment from "moment";
 
 const PostDetails = ({navigation, route}) => {
-    const { user, orbis, postDetailsVis, showPostbox, hidePostbox, setReplyTo } = useContext(GlobalContext);
+    const { user, setUser,userData, setUserData, orbis, postDetailsVis, showPostbox, hidePostbox, setReplyTo } = useContext(GlobalContext);
     const tailwind = useTailwind();
     
     const [ post, setPost ] = useState();
@@ -93,7 +94,27 @@ const PostDetails = ({navigation, route}) => {
         setReplyTo(post);
     }
 
-    function callback(newPost) {
+    async function callback(newPost) {
+
+        // Orange Reward
+        const tempData = userData
+        if(tempData.comment){
+            tempData.comment.number += 1
+            tempData.comment.gained += 3
+        }else{
+            tempData.comment = {
+                number: 1,
+                gained: 3,
+                lastComment: moment().format('YYYY-MM-DD HH:mm')
+            }
+        }
+        tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 3 : tempData.activityUnclaimed = {number: 3}
+        setUserData({...tempData})
+
+        var tempProfile = user.profile
+        tempProfile.data = tempData
+        await orbis.updateProfile(tempProfile);
+
         hidePostbox();
         console.log("Adding new post as a reply:", newPost);
         let _replies = [...replies, newPost];

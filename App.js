@@ -59,6 +59,7 @@ let callbackPostShared;
 let page = 0;
 export default function App() {
   const [user, setUser] = useState();
+  const [userData, setUserData] = useState();
   const [userConnecting, setUserConnecting] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [screen, setScreen] = useState("home");
@@ -72,10 +73,12 @@ export default function App() {
   const [todayOranges, setTodayOranges] = useState(Math.floor(Math.random() * (20 - 5) + 5))
   const [settingsVis, setSettingsVis] = useState(false);
   const [switchAccountVis, setSwitchAccountVis] = useState(false);
+  const [adAlreadyClaimed, setAdAlreadyClaimed] = useState(false)
+  
+
 
   const [switchLoading, setSwitchLoading] = useState(false)
   const [loading, setLoading] = useState(false);
-
 
   const [postSettingsModalVis, setPostSettingsModalVis] = useState(false);
   const [postboxVis, setPostboxVis] = useState(false);
@@ -89,14 +92,12 @@ export default function App() {
   const [connectType, setConnectType] = useState('')
   const [connectModalVis, setConnectModalVis] = useState(false);
 
-
   const [listBlockedUser, setListBlockedUser] = useState(null)
   const [listHiddenPost, setListHiddenPost] = useState(null)
   const [listMutedUsers, setListMutedUsers] = useState(null)
 
   const [listAccount, setListAccount] = useState([])
 
-  const confetti = useRef();
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -104,33 +105,30 @@ export default function App() {
   const [profileSelected, setProfileSelected] = useState();
   const [isReady, setIsReady] = useState(false);
   const [scrolled, setScrolled] = useState(0);
+  const translateY = useSharedValue(0);
   const url = Linking.useURL();
+  
+  const confetti = useRef();
   const responseListener = useRef();
   const homeFeedRef = useRef();
   const categoryFeedRef = useRef();
   const newsFeedRef = useRef();
-  const translateY = useSharedValue(0);
-
   const modalSwitchRef = useRef(null); 
   const modalSettingsRef = useRef(null); 
   const modalPostSettingsRef = useRef(null); 
   const modalProfileRef = useRef(null); 
+  const modalPostBoxRef = useRef(null); 
+  const modalNicknameRef = useRef(null); 
 
-  const [categoriesVis, setCategoriesVis] = useState(false);
   const snapPoints = useMemo(() => ['50%', '50%'], []);
   const snapPointsLarge = useMemo(() => [Platform.OS == 'ios' ? '87%' : '95%', Platform.OS == 'ios' ? '87%' : '95%'], []);
-  const modalPostBoxRef = useRef(null); 
   const handleModalPostBoxPress = useCallback(() => modalPostBoxRef.current?.present(), []);
-  const modalNicknameRef = useRef(null); 
   const handleModalNicknamePress = useCallback(() => modalNicknameRef.current?.present(), []);
+  
+  const [categoriesVis, setCategoriesVis] = useState(false);
   const [showReportBack, setShowReportBack] = useState(false)
-
-  const [dailyClaim, setDailyClaim] = useState(false)
-  const [adClaim, setAdClaim] = useState(false)
   const [activityClaim, setActivityClaim] = useState(false)
   const [inviteClaim, setInviteClaim] = useState(false)
-
-
 
   const [categoryPosts, setCategoryPosts] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState(null)
@@ -180,7 +178,7 @@ export default function App() {
         // numberOranges: 1000
         // listClaimedOranges: [
         //     {
-        //         date: moment().tz('Asia/Seoul').format('YYYY-MM-DD'),
+        //         date: moment().format('YYYY-MM-DD'),
         //         listOranges: [
                         // {
                         //     numberOranges: 10,
@@ -203,31 +201,30 @@ export default function App() {
         // ]
         // claimStreak: {
         //     number: 0,
-        //     lastClaim: moment().tz('Asia/Seoul').format('YYYY-MM-DD hh:mm:ss')
+        //     lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
         // }
         // adReward: {
-        //     lastClaim: moment().tz('Asia/Seoul').format('YYYY-MM-DD hh:mm:ss')
+        //     lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
         // }
         // postStreak: {
         //     number: 0,
-        //     lastClaim: moment().tz('Asia/Seoul').format('YYYY-MM-DD hh:mm:ss')
         // }
         // commentStreak: {
         //     number: 0,
-        //     lastClaim: moment().tz('Asia/Seoul').format('YYYY-MM-DD hh:mm:ss')
         // }
         // reactionStreak: {
         //     number: 0,
-        //     lastClaim: moment().tz('Asia/Seoul').format('YYYY-MM-DD hh:mm:ss')
+        // }
+        // activityUnclaimed: {
+        //     number: 0,
+        // }
+        // activityClaimed: {
+        //     number: 0,
         // }
 
-
         const listDid = await AsyncStorage.getItem("user-connected")
-        
         const currentCeramicSession = await AsyncStorage.getItem("ceramic-session")
-
         var listConnected = JSON.parse(listDid)
-
         const indexUser = listConnected?.findIndex(e => e.user.did == user.did)
 
         if(listConnected && listConnected.length > 0){
@@ -270,9 +267,11 @@ export default function App() {
         
         provider?.disconnect().then(async res => {
             setUser(null);
+            setUserData(null);
         }).catch(e => {
             console.log(e);
             setUser(null);
+            setUserData(null);
         })
 
         modalSwitchRef.current?.close()
@@ -297,658 +296,789 @@ export default function App() {
  }, [isReady]);
 
   /** Will check if user is connected on load to automatically re-connect user */
-  useEffect(() => {
-    connect();
-    loadContexts();
-    fecthBlockedUser();
-    fecthHiddenPost();
-    fecthMuteUser();
+    useEffect(() => {
+        connect();
+        loadContexts();
+        fecthBlockedUser();
+        fecthHiddenPost();
+        fecthMuteUser();
 
-    /** Will re-connect automatically the user to the account found in local storage */
-    async function connect() {
-      /** Check if user exists in local storage */
-    //   await AsyncStorage.removeItem("user-connected");
+        /** Will re-connect automatically the user to the account found in local storage */
+        async function connect() {
+            /** Check if user exists in local storage */
+            //   await AsyncStorage.removeItem("user-connected");
 
-      let _userDid = await AsyncStorage.getItem("user-connected");
-      let listDid = []
-      if(_userDid){
-          if(_userDid.charAt(0) != '['){
-              await AsyncStorage.removeItem("user-connected");
-          }else{
-              listDid = JSON.parse(_userDid)
-          }
-      }
-      
-      if(listDid && listDid.length != 0) {
-        if(listDid.length > 1){
-            listDid.sort((a, b) => (a.time < b.time) ? 1 : -1)
-        }
-
-        setUser({...listDid[0].user})
-        if(listDid[0].user.profile?.data?.oranges?.updated && moment(listDid[0].user.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
-            setShowClaimOranges(true)
-        }
-
-        setIsReady(true);
-        
-      }else{
-          /** Retrieve user details */
-          let res = await orbis.isConnected();
-
-          if(res.status == 200) {
-            setUser(res.details);
-            if(res.details.profile?.data?.oranges?.updated && moment(res.details.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
-                setShowClaimOranges(true)
-            }
-          }
-        
-        setIsReady(true);
-      }
-
-    }
-
-    // Will fetch all blocked user
-    async function fecthBlockedUser() {
-      let temp_list = await AsyncStorage.getItem("list_blocked_user");
-      const list_blocked_user = JSON.parse(temp_list)
-
-
-      if(list_blocked_user) {
-        setListBlockedUser([...list_blocked_user])
-      }
-    }
-    // Will fetch Hidden post
-    async function fecthHiddenPost() {
-      let temp_list = await AsyncStorage.getItem("list_hidden_post");
-      const list_hidden_post = JSON.parse(temp_list)
-
-      if(list_hidden_post) {
-        setListHiddenPost([...list_hidden_post])
-      }
-    }
-    // Will fetch mute users
-    async function fecthMuteUser() {
-    //   await AsyncStorage.removeItem("list_muted_users");
-      let temp_list = await AsyncStorage.getItem("list_muted_users");
-      const list_muted_users = JSON.parse(temp_list)
-
-
-      if(list_muted_users) {
-        setListMutedUsers([...list_muted_users])
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    page = 0;
-    loadPosts();
-  }, [category]);
-
-  /** Will be triggered when a new deeplink is received */
-  useEffect(() => {
-    if (url) {
-      handleURL(url);
-    }
-  }, [url]);
-
-  /** Handle notifications received, will open right screen or pane based on the notification received */
-  useEffect(() => {
-   responseListener.current = Notifications.addNotificationResponseReceivedListener(async (response) => {
-     try {
-       let data = response.notification?.request?.content?.data;
-
-       switch (data?.type) {
-         /** Open post pane for reactions */
-         case "reaction":
-           hideModals();
-           setPostDetailsVis(data.post_id);
-           break;
-         /** Open post pane for replies */
-         case "reply":
-           hideModals();
-           setPostDetailsVis(data.master ? data.master : data.post_id);
-
-           await sleep(4000);
-           if(feedRef?.current && data.master) {
-             //setScrolled(0);
-             feedRef.current.scrollToItem({ animated: true, item: data.post_id });
-           }
-           break;
-
-         /** Open post pane for mentions */
-         case "mention":
-           hideModals();
-           setPostDetailsVis(data.post_id);
-
-           await sleep(4000);
-           if(feedRef?.current && data.master) {
-             //setScrolled(0);
-             feedRef.current.scrollToItem({ animated: true, item: data.post_id });
-           }
-           break;
-         default:
-          break;
-       }
-     } catch(e) {
-       console.log("Error addNotificationResponseReceivedListener:", e);
-     }
-   });
-
-   return () => {
-     Notifications.removeNotificationSubscription(responseListener.current);
-   };
- }, []);
-
- /** Will handle links opened with the coineasy:// sheme */
-  async function handleURL(url) {
-    const { path, queryParams } = Linking.parse(url);
-    let token;
-    switch (path) {
-      case "user":
-        setScreen("profile");
-        setProfileSelected(queryParams.did);
-        hideModals();
-        break;
-      case "google-auth":
-        token = queryParams.token;
-
-        /** Dismiss browser if on iOS */
-        if(Platform.OS === 'ios') {
-          WebBrowser.dismissBrowser();
-        }
-
-        //setLoading(true);
-        if(token) {
-          try {
-            googleConnect(token);
-          } catch(e) {
-            console.log("Error authenticating with Google:", e);
-            //setLoading(false);
-          }
-        }
-        break;
-      default:
-        try {
-          if(url.includes("google-auth")) {
-            console.log("URL contains google-auth")
-            token = queryParams.token;
-            googleConnect(token);
-          } else if(url.includes("profile")) {
-            setScreen("profile");
-            setProfileSelected(queryParams.did);
-            hideModals();
-          }
-        } catch(e) {
-          console.log("Error authenticating with Google:", e);
-        }
-        break;
-    }
-  }
-
-  async function googleConnect(token) {
-    let resUser = await orbis.connect_v2({
-        provider: "oauth",
-        oauth: {
-            type: "google",
-            token: token
-        }
-    });
-
-    if(resUser.status == 200) {
-        const { data, error } = await orbis.getProfile(resUser.details.did);
-        if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
-
-            let options= {
-                did: resUser.details.did,
-                context,
-                include_child_contexts: true
-            };
-      
-            let { data } = await orbis.getPosts(options);
-            if(data.length == 0){
-                provider?.disconnect().then(async res => {
-                    await AsyncStorage.removeItem("provider-type");       
-                    setUser(null);
-                    setLoading(false)
-                }).catch(e => {
-                    setUser(null);
-                    setLoading(false)
-                })
-    
-                if(!provider){
-                    setUser(null);
+            let _userDid = await AsyncStorage.getItem("user-connected");
+            let listDid = []
+            if(_userDid){
+                if(_userDid.charAt(0) != '['){
+                    await AsyncStorage.removeItem("user-connected");
+                }else{
+                    listDid = JSON.parse(_userDid)
                 }
-    
-                setLoading(false)
-                setConnectModalVis(false)
-                alert("You haven't signed up with this account before, do you want to sign up ?")
+            }
+            
+            if(listDid && listDid.length != 0) {
+                if(listDid.length > 1){
+                    listDid.sort((a, b) => (a.time < b.time) ? 1 : -1)
+                }
+
+                setUser({...listDid[0].user})
+                setUserData({...listDid[0].user.profile?.data})
+                console.log('USER DATA');
+                console.log(JSON.stringify(listDid[0].user.profile?.data));
+                // if(listDid[0].user.profile?.data?.oranges?.updated && moment(listDid[0].user.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
+                //     setShowClaimOranges(true)
+                // }
+
+                setIsReady(true);
+                
+            }else{
+                /** Retrieve user details */
+                let res = await orbis.isConnected();
+
+                if(res.status == 200) {
+                    setUser(res.details);
+                    setUserData(res.details.profile?.data);
+                    // if(res.details.profile?.data?.oranges?.updated && moment(res.details.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
+                    //     setShowClaimOranges(true)
+                    // }
+                }
+                
+                setIsReady(true);
+            }
+
+        }
+
+        // Will fetch all blocked user
+        async function fecthBlockedUser() {
+            let temp_list = await AsyncStorage.getItem("list_blocked_user");
+            const list_blocked_user = JSON.parse(temp_list)
+
+            if(list_blocked_user) {
+                setListBlockedUser([...list_blocked_user])
+            }
+        }
+        // Will fetch Hidden post
+        async function fecthHiddenPost() {
+            let temp_list = await AsyncStorage.getItem("list_hidden_post");
+            const list_hidden_post = JSON.parse(temp_list)
+
+            if(list_hidden_post) {
+                setListHiddenPost([...list_hidden_post])
+            }
+        }
+        // Will fetch mute users
+        async function fecthMuteUser() {
+            let temp_list = await AsyncStorage.getItem("list_muted_users");
+            const list_muted_users = JSON.parse(temp_list)
+
+            if(list_muted_users) {
+                setListMutedUsers([...list_muted_users])
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        page = 0;
+        loadPosts();
+    }, [category]);
+
+    /** Will be triggered when a new deeplink is received */
+    useEffect(() => {
+        url && handleURL(url)
+    }, [url]);
+
+    /** Handle notifications received, will open right screen or pane based on the notification received */
+    useEffect(() => {
+        responseListener.current = Notifications.addNotificationResponseReceivedListener(async (response) => {
+            try {
+                let data = response.notification?.request?.content?.data;
+
+                switch (data?.type) {
+                    /** Open post pane for reactions */
+                    case "reaction":
+                        hideModals();
+                        setPostDetailsVis(data.post_id);
+                        break;
+                    /** Open post pane for replies */
+                    case "reply":
+                        hideModals();
+                        setPostDetailsVis(data.master ? data.master : data.post_id);
+
+                        await sleep(4000);
+                        if(feedRef?.current && data.master) {
+                            //setScrolled(0);
+                            feedRef.current.scrollToItem({ animated: true, item: data.post_id });
+                        }
+                        break;
+
+                    /** Open post pane for mentions */
+                    case "mention":
+                        hideModals();
+                        setPostDetailsVis(data.post_id);
+
+                        await sleep(4000);
+                        if(feedRef?.current && data.master) {
+                            //setScrolled(0);
+                            feedRef.current.scrollToItem({ animated: true, item: data.post_id });
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            } catch(e) {
+                console.log("Error addNotificationResponseReceivedListener:", e);
+            }
+        });
+
+        return () => {
+            Notifications.removeNotificationSubscription(responseListener.current);
+        };
+    }, []);
+
+    /** Will handle links opened with the coineasy:// sheme */
+    async function handleURL(url) {
+        const { path, queryParams } = Linking.parse(url);
+        let token;
+        switch (path) {
+            case "user":
+                setScreen("profile");
+                setProfileSelected(queryParams.did);
+                hideModals();
+                break;
+            case "google-auth":
+                token = queryParams.token;
+
+                /** Dismiss browser if on iOS */
+                Platform.OS === 'ios' && WebBrowser.dismissBrowser()
+
+                if(token) {
+                    try {
+                        googleConnect(token);
+                    } catch(e) {
+                        console.log("Error authenticating with Google:", e);
+                        //setLoading(false);
+                    }
+                }
+                break;
+            default:
+                try {
+                    if(url.includes("google-auth")) {
+                        console.log("URL contains google-auth")
+                        token = queryParams.token;
+                        googleConnect(token);
+                    } else if(url.includes("profile")) {
+                        setScreen("profile");
+                        setProfileSelected(queryParams.did);
+                        hideModals();
+                    }
+                } catch(e) {
+                    console.log("Error authenticating with Google:", e);
+                }
+                break;
+        }
+    }
+
+    async function googleConnect(token) {
+        let resUser = await orbis.connect_v2({
+            provider: "oauth",
+            oauth: {
+                type: "google",
+                token: token
+            }
+        });
+
+        if(resUser.status == 200) {
+            const { data, error } = await orbis.getProfile(resUser.details.did);
+            if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
+
+                let options= {
+                    did: resUser.details.did,
+                    context,
+                    include_child_contexts: true
+                };
+        
+                let { data } = await orbis.getPosts(options);
+                if(data.length == 0){
+                    provider?.disconnect().then(async res => {
+                        await AsyncStorage.removeItem("provider-type");       
+                        setUser(null);
+                        setUserData(null);
+                        setLoading(false)
+                    }).catch(e => {
+                        setUser(null);
+                        setUserData(null);
+                        setLoading(false)
+                    })
+                    
+                    if(!provider){
+                        setUser(null);
+                        setUserData(null);
+                    }
+        
+                    setLoading(false)
+                    setConnectModalVis(false)
+                    alert("You haven't signed up with this account before, do you want to sign up ?")
+                }else{
+                    setUser(resUser.details);
+                    setUserData(resUser.details.profile?.data);
+                    AsyncStorage.setItem("provider-type", "google");
+                    setLoading(false)
+                    callbackConnect(resUser.details);
+                }
             }else{
                 setUser(resUser.details);
+                setUserData(resUser.details.profile?.data);
                 AsyncStorage.setItem("provider-type", "google");
                 setLoading(false)
                 callbackConnect(resUser.details);
             }
-        }else{
-            setUser(resUser.details);
-            AsyncStorage.setItem("provider-type", "google");
-            setLoading(false)
-            callbackConnect(resUser.details);
         }
-     } else {
-       //setLoading(false);
-     }
-  }
+    }
 
-  function hideModals() {
-    translateY.value = 0;
-    setShareProfileVis(false);
-    setPostDetailsVis(null);
-    setProfileSelected(null);
-  }
+    function hideModals() {
+        translateY.value = 0;
+        setShareProfileVis(false);
+        setPostDetailsVis(null);
+        setProfileSelected(null);
+    }
 
-  /** Will retrieve all posts shared in the global context */
-  async function loadPosts() {
-    setPosts([]);
-    setRefreshing(true);
-    let _contexts = [context, onboard_context, edu_context];
-    let { data } = await orbis.getPosts({
-      contexts: category ? [category.stream_id] : _contexts,
-      include_child_contexts: true
-    });
+    /** Will retrieve all posts shared in the global context */
+    async function loadPosts() {
+        setPosts([]);
+        setRefreshing(true);
+        let _contexts = [context, onboard_context, edu_context];
+        let { data } = await orbis.getPosts({
+            contexts: category ? [category.stream_id] : _contexts,
+            include_child_contexts: true
+        });
 
-    if(data) {
-        data.map(async (e, indexPost) => {
-            if(e.content.media?.length > 0){
-                e.content.media.map(async (elt, indexImage) => {
-                    if(elt.url){
-                        await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
-                    }else if(elt[0].url){
-                        await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
-                    }else{
-                        console.log(elt);
-                    }        
+        if(data) {
+            data.map(async (e, indexPost) => {
+                if(e.content.media?.length > 0){
+                    e.content.media.map(async (elt, indexImage) => {
+                        if(elt.url){
+                            await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                        }else if(elt[0].url){
+                            await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                        }else{
+                            console.log(elt);
+                        }        
 
-                    if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                        if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                            setPosts(data);
+                            setRefreshing(false);
+                        }
+                    })
+                }else{
+                    if(indexPost == data.length -1){
                         setPosts(data);
+                        setRefreshing(false);
                     }
-                })
-            }else{
-                if(indexPost == data.length -1){
-                    setPosts(data);
                 }
-            }
-        })
-    }
-    setRefreshing(false);
-  }
-
-  /** This will load more posts and add those to the current list */
-  async function loadMorePosts() {
-    if(refreshingBottom) {
-      return;
-    }
-    if (posts.length % 50 === 0) {
-      setRefreshingBottom(true);
-      page++;
-      let { data } = await orbis.getPosts(
-        {
-          contexts: category ? [category.stream_id] : [context, onboard_context, edu_context],
-          include_child_contexts: true
-        },
-        page
-      );
-
-      if(data){
-        data.map(async (e, indexPost) => {
-            if(e.content.media?.length > 0){
-                e.content.media.map(async (elt, indexImage) => {
-                    if(elt.url){
-                        await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
-                    }else if(elt[0].url){
-                        await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
-                    }
-    
-                    if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
-                        let _posts = [...posts, ...data];
-                        setRefreshingBottom(false);
-                        setPosts(_posts);
-                    }
-                })
-            }else{
-                if(indexPost == data.length -1){
-                    let _posts = [...posts, ...data];
-                    setRefreshingBottom(false);
-                    setPosts(_posts);
-                }
-            }
-        })
-      }
-
-
-    //   let _posts = [...posts, ...data];
-    //   setRefreshingBottom(false);
-    //   setPosts(_posts);
-    } else {
-      console.log("Reached the end.");
-    }
-  }
-
-  /** Load all categories / contexts under the global context */
-  async function loadContexts() {
-    let { data, error } = await orbis.api.from("orbis_contexts").select().eq('context', context).order('created_at', { ascending: false });
-    setCategories(data);
-  }
-
-  const onRefresh = useCallback(async () => {
-    page = 0;
-    setRefreshing(true);
-    let { data, error } = await orbis.getPosts({
-      contexts: category ? [category.stream_id] : [context, onboard_context, edu_context],
-      include_child_contexts: true
-    });
-
-    if(error) {
-      console.log("Error getPosts:", error);
-    }
-    if(data) {
-      setPosts(data);
-    }
-    setRefreshing(false);
-  }, [category]);
-
-  async function callbackConnect(detailUser) {
-    if(connectType == "signup"){
-        // setNicknameVis(true)
-        handleModalNicknamePress()
-
-        if(detailUser && detailUser?.profile){
-            if(detailUser?.profile?.data){
-                detailUser.profile.data.alreadyLogin = true
-            }else{
-                detailUser.profile.data = {alreadyLogin: true}
-            }
-
-            const res = await orbis.updateProfile(detailUser.profile);
-        }
-        setLoading(false);
-    }else{
-        if(detailUser.profile.data?.oranges?.updated && moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment()){
-            setShowClaimOranges(true)
+            })
         }else{
-            setPushNotifsVis(true);
+            setRefreshing(false);
         }
-        setLoading(false);
-        setConnectModalVis(false)
     }
+
+    /** This will load more posts and add those to the current list */
+    async function loadMorePosts() {
+        if(refreshingBottom) {
+            return;
+        }
+        if (posts.length % 50 === 0) {
+            setRefreshingBottom(true);
+            page++;
+            let { data } = await orbis.getPosts({
+                contexts: category ? [category.stream_id] : [context, onboard_context, edu_context],
+                include_child_contexts: true
+            }, page);
+
+            if(data){
+                data.map(async (e, indexPost) => {
+                    if(e.content.media?.length > 0){
+                        e.content.media.map(async (elt, indexImage) => {
+                            if(elt.url){
+                                await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
+                            }else if(elt[0].url){
+                                await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
+                            }
+            
+                            if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
+                                let _posts = [...posts, ...data];
+                                setRefreshingBottom(false);
+                                setPosts(_posts);
+                            }
+                        })
+                    }else{
+                        if(indexPost == data.length -1){
+                            let _posts = [...posts, ...data];
+                            setRefreshingBottom(false);
+                            setPosts(_posts);
+                        }
+                    }
+                })
+            }
+        } else {
+            console.log("Reached the end.");
+        }
+    }
+
+    /** Load all categories / contexts under the global context */
+    async function loadContexts() {
+        let { data, error } = await orbis.api.from("orbis_contexts").select().eq('context', context).order('created_at', { ascending: false });
+        setCategories(data);
+    }
+
+    const onRefresh = useCallback(async () => {
+        page = 0;
+        setRefreshing(true);
+        let { data, error } = await orbis.getPosts({
+            contexts: category ? [category.stream_id] : [context, onboard_context, edu_context],
+            include_child_contexts: true
+        });
+
+        error && console.log("Error getPosts:", error);
+        data && setPosts(data)
+
+        setRefreshing(false);
+    }, [category]);
+
+    async function callbackConnect(detailUser) {
+        if(connectType == "signup"){
+            handleModalNicknamePress()
+
+            if(detailUser && detailUser?.profile){
+                if(detailUser?.profile?.data){
+                    detailUser.profile.data.alreadyLogin = true
+                }else{
+                    detailUser.profile.data = {alreadyLogin: true}
+                }
+
+                const res = await orbis.updateProfile(detailUser.profile);
+            }
+            setLoading(false);
+        }else{
+            // if(detailUser.profile.data?.oranges?.updated && moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment()){
+            //     setShowClaimOranges(true)
+            // }else{
+                setPushNotifsVis(true);
+            // }
+            setLoading(false);
+            setConnectModalVis(false)
+        }
+        
+        modalSwitchRef.current?.close()
+    }
+
+    /** Show postbox while saving the callback function */
+    function showPostbox(callback) {
+        console.log("Enter showPostbox with:", callback);
+        callbackPostShared = callback ?? defaultCallbackPostShared;
+
+        console.log('la');
+        console.log(callbackPostShared);
+
+        handleModalPostBoxPress()
+        Haptics.selectionAsync();
+    }
+
+    function hidePostbox() {
+        modalPostBoxRef.current?.close()
+
+        setRepost(false);
+        setReplyTo(null);
+        setEditedPost(null);
+
+        Keyboard.dismiss()
+        Haptics.selectionAsync();
+    }
+
+    /** Will be called when a new post is being shared */
+    async function defaultCallbackPostShared(_post) {
+        console.log("Enter defaultCallbackPostShared:", _post);
+        let _posts = [_post, ...posts];
+        setPosts(_posts);
+
+        // Orange Reward
+        const tempData = userData
+
+        console.log('REPLY TO');
+        console.log(JSON.stringify(replyTo));
+        console.log(' ');
+        console.log('REPOST');
+        console.log(JSON.stringify(repost));
+        console.log(' ');
+
+        if(replyTo){
+
+            if(tempData.listClaimedOranges){
+                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+                if(index != -1){
+                    tempData.listClaimedOranges[index].listOranges.push({
+                        numberOranges: 3,
+                        type: 'Comment'
+                    })
+                    if(tempData.comment?.number == 19){
+                        tempData.listClaimedOranges[index].listOranges.push({
+                            numberOranges: 50,
+                            type: 'Comments Milestone achieved'
+                        })
+                    }
+                }else{
+                    const listReward = [{
+                        numberOranges: 3,
+                        type: 'Comment'
+                    }]
+                    tempData.comment?.number == 19 && listReward.push({
+                        numberOranges: 50,
+                        type: 'Comments Milestone achieved'
+                    })
+                    tempData.listClaimedOranges.push({
+                        date: moment().format('YYYY-MM-DD'),
+                        listOranges: listReward
+                    })
+                }
+            }else{
+                tempData.listClaimedOranges = [{
+                    date: moment().format('YYYY-MM-DD'),
+                    listOranges: [
+                        {
+                            numberOranges: 3,
+                            type: 'Comment'
+                        },
+                    ]
+                }]
+            }
+
+
+
+            if(tempData.comment){
+                tempData.comment.number += 1
+                tempData.comment.gained += 3
+            }else{
+                tempData.comment = {
+                    number: 1,
+                    gained: 3,
+                    lastComment: moment().format('YYYY-MM-DD HH:mm')
+                }
+            }
+            tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 3 : tempData.activityUnclaimed = {number: 3}
+            tempData.comment.number == 20 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.activityUnclaimed = {number: 53}
+            tempData.comment.number == 20 ? tempData.comment.number = 0 : null
+
+
+        }else if(repost){
+
+            if(tempData.listClaimedOranges){
+                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+                if(index != -1){
+                    tempData.listClaimedOranges[index].listOranges.push({
+                        numberOranges: 5,
+                        type: 'Repost'
+                    })
+                    if(tempData.reaction?.number == 29){
+                        tempData.listClaimedOranges[index].listOranges.push({
+                            numberOranges: 50,
+                            type: 'Reactions Milestone achieved'
+                        })
+                    }
+                }else{
+                    const listReward = [{
+                        numberOranges: 5,
+                        type: 'Repost'
+                    }]
+                    tempData.reaction?.number == 29 && listReward.push({
+                        numberOranges: 50,
+                        type: 'Reactions Milestone achieved'
+                    })
+                    tempData.listClaimedOranges.push({
+                        date: moment().format('YYYY-MM-DD'),
+                        listOranges: listReward
+                    })
+                }
+            }else{
+                tempData.listClaimedOranges = [{
+                    date: moment().format('YYYY-MM-DD'),
+                    listOranges: [
+                        {
+                            numberOranges: 5,
+                            type: 'Repost'
+                        },
+                    ]
+                }]
+            }
+
+
+            if(tempData.reaction){
+                tempData.reaction.number += 1
+                tempData.reaction.gained += 5
+            }else{
+                tempData.reaction = {
+                    number: 1,
+                    gained: 5,
+                    lastReaction: moment().format('YYYY-MM-DD HH:mm')
+                }
+            }
+            tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 5 : tempData.activityUnclaimed = {number: 5}
+            tempData.reaction.number == 30 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.activityUnclaimed = {number: 55}
+            tempData.reaction.number == 30 ? tempData.reaction.number = 0 : null
     
-    modalSwitchRef.current?.close()
-  }
+        }else{
 
-  /** Show postbox while saving the callback function */
-  function showPostbox(callback) {
-    console.log("Enter showPostbox with:", callback);
-    if(callback) {
-      callbackPostShared = callback;
-    } else {
-      callbackPostShared = defaultCallbackPostShared;
+            if(tempData.listClaimedOranges){
+                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+                if(index != -1){
+                    tempData.listClaimedOranges[index].listOranges.push({
+                        numberOranges: 15,
+                        type: 'Post'
+                    })
+                    if(tempData.post?.number == 9){
+                        tempData.listClaimedOranges[index].listOranges.push({
+                            numberOranges: 50,
+                            type: 'Posting Milestone achieved'
+                        })
+                    }
+                }else{
+                    const listReward = [{
+                        numberOranges: 15,
+                        type: 'Post'
+                    }]
+                    tempData.post?.number == 9 && listReward.push({
+                        numberOranges: 50,
+                        type: 'Posting Milestone achieved'
+                    })
+                    tempData.listClaimedOranges.push({
+                        date: moment().format('YYYY-MM-DD'),
+                        listOranges: listReward
+                    })
+                }
+            }else{
+                tempData.listClaimedOranges = [{
+                    date: moment().format('YYYY-MM-DD'),
+                    listOranges: [
+                        {
+                            numberOranges: 15,
+                            type: 'Post'
+                        },
+                    ]
+                }]
+            }
+
+            if(tempData.post){
+                tempData.post.number += 1
+                tempData.post.gained += 15
+            }else{
+                tempData.post = {
+                    number: 1,
+                    gained: 15,
+                    lastPost: moment().format('YYYY-MM-DD HH:mm')
+                }
+            }
+            tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 15 : tempData.activityUnclaimed = {number: 15}
+            tempData.post.number == 10 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.activityUnclaimed = {number: 65}
+            tempData.post.number == 10 ? tempData.post.number = 0 : null
+        }
+
+        console.log('END TEMP DATA');
+        console.log(JSON.stringify(tempData));
+        console.log(' ');
+        
+        setUserData({...tempData})
+        
+        var tempProfile = user.profile
+        tempProfile.data = tempData
+        const res = await orbis.updateProfile(tempProfile);
+
+
+        modalPostBoxRef.current?.close()
+        setRepost(false);
+        setReplyTo(null);
+        Keyboard.dismiss();
+        Haptics.selectionAsync();
     }
 
-    // setPostboxVis(true);
-    handleModalPostBoxPress()
-    Haptics.selectionAsync();
-  }
-
-  function hidePostbox() {
-    // setPostboxVis(false);
-    modalPostBoxRef.current?.close()
-    setRepost(false);
-    setReplyTo(null);
-    setEditedPost(null);
-    Keyboard.dismiss()
-    Haptics.selectionAsync();
-  }
-
-  /** Will be called when a new post is being shared */
-  function defaultCallbackPostShared(_post) {
-    console.log("Enter defaultCallbackPostShared:", _post);
-    let _posts = [_post, ...posts];
-    setPosts(_posts);
-    // setPostboxVis(false);
-    modalPostBoxRef.current?.close()
-    setRepost(false);
-    setReplyTo(null);
-    Keyboard.dismiss();
-    Haptics.selectionAsync();
-  }
-
-  function scrollToTop() {
-    if(homeFeedRef?.current) {
-      homeFeedRef.current.scrollToOffset({ animated: true, offset: 0 });
-    } else if(categoryFeedRef?.current){
-        categoryFeedRef.current.scrollToOffset({ animated: true, offset: 0 });
-    } else if(newsFeedRef?.current){
-        newsFeedRef.current.scrollToOffset({ animated: true, offset: 0 });
+    function scrollToTop() {
+        if(homeFeedRef?.current) {
+            homeFeedRef.current.scrollToOffset({ animated: true, offset: 0 });
+        } else if(categoryFeedRef?.current){
+            categoryFeedRef.current.scrollToOffset({ animated: true, offset: 0 });
+        } else if(newsFeedRef?.current){
+            newsFeedRef.current.scrollToOffset({ animated: true, offset: 0 });
+        }
     }
-  }
 
-  /** Wait for fonts to be loaded before rendering the app */
-  if(!fontsLoaded) {
-    return null
-  }
+    /** Wait for fonts to be loaded before rendering the app */
+    if(!fontsLoaded) {
+        return null
+    }
 
-  /** Wait for app to be ready before rendering it */
-  if (!isReady) {
-    return null;
-  }
+    /** Wait for app to be ready before rendering it */
+    if (!isReady) {
+        return null;
+    }
 
-  return (
-    <>
-      <StatusBar translucent={true} backgroundColor="#00000000" style="black"/>
-      <GestureHandlerRootView onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
-        <GlobalContext.Provider value={{ 
-                user,
-                setUser,
-                updateProfileVis,
-                setUpdateProfileVis,
-                screen,
-                setScreen,
-                profileSelected,
-                setProfileSelected,
-                userConnecting,
-                setUserConnecting,
-                orbis,
-                showConnectModal,
-                setShowConnectModal,
-                confetti,
-                repost,
-                setRepost,
-                postDetailsVis,
-                setPostDetailsVis,
-                posts,
-                setPosts,
-                refreshing,
-                refreshingBottom,
-                onRefresh,
-                loadPosts,
-                loadMorePosts,
-                categories,
-                loadContexts,
-                callbackConnect,
-                pushNotifsVis,
-                setPushNotifsVis,
-                postboxVis,
-                showPostbox,
-                hidePostbox,
-                callbackPostShared,
-                replyTo,
-                setReplyTo,
-                setSettingsVis,
-                setSwitchAccountVis,
-                setShareProfileVis,
-                category,
-                setCategory,
-                setNotificationsVis,
-                scrolled,
-                setScrolled,
-                homeFeedRef,
-                categoryFeedRef,
-                newsFeedRef,
-                scrollToTop,
-                translateY,
-                setPostSettingsModalVis,
-                editedPost,
-                setEditedPost,
-                previousScreen,
-                setPreviousScreen,
-                scrollAnim,
-                offsetAnim,
-                setClampedScroll,
-                navbarTranslate,
-                setOffsetAnim,
-                setScrollAnim,
-                setRefreshing,
-                categoryPosts, 
-                setCategoryPosts,
-                selectedCategory, 
-                setSelectedCategory,
-                newsPosts, 
-                setNewsPosts,
-                selectedNews, 
-                setSelectedNews,
-                currentRoute,
-                setCurrentRoute,
-                listBlockedUser,
-                setListBlockedUser,
-                listHiddenPost,
-                setListHiddenPost,
-                listMutedUsers,
-                setListMutedUsers,
-                nicknameVis,
-                setNicknameVis,
-                connectType,
-                setConnectType,
-                tabViewHeight,
-                setTabViewHeight,
-                listAccount,
-                setListAccount,
-                switchLoading,
-                setSwitchLoading,
-                showImageSender,
-                setShowImageSender,
-                listMessages,
-                setListMessages,
-                modalSwitchRef,
-                loading,
-                setLoading,
-                connectModalVis,
-                setConnectModalVis,
-                modalSettingsRef,
-                modalPostBoxRef,
-                categoriesVis,
-                setCategoriesVis,
-                modalPostSettingsRef,
-                showReportBack,
-                setShowReportBack,
-                modalProfileRef,
-                modalNicknameRef,
-                showClaimOranges,
-                setShowClaimOranges,
-                todayOranges,
-                setTodayOranges,
-                dailyClaim, 
-                setDailyClaim,
-                adClaim, setAdClaim,
-                activityClaim, setActivityClaim,
-                inviteClaim, setInviteClaim
-            }}
-        >
-          <TailwindProvider utilities={utilities}>
-            {user ?
-              <AppNavigator />
-            :
-              <Login />
-            }
+    return (
+        <>
+            <StatusBar translucent={true} backgroundColor="#00000000" style="black"/>
+            <GestureHandlerRootView onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
+                <GlobalContext.Provider value={{ 
+                        orbis,
+                        confetti,
+                        refreshing,
+                        categories,
+                        postboxVis,
+                        refreshingBottom,
+                        callbackPostShared,
+                        
+                        onRefresh,
+                        loadPosts,
+                        showPostbox,
+                        hidePostbox,
+                        loadContexts,
+                        loadMorePosts,
+                        callbackConnect,
+                        defaultCallbackPostShared,
 
-            {/** Display the edit profile details modal */}
-            <UpdateProfileModal />
+                        homeFeedRef,
+                        newsFeedRef,
+                        categoryFeedRef,
+                        modalSwitchRef,
+                        modalProfileRef,
+                        modalPostBoxRef,
+                        modalNicknameRef,
+                        modalSettingsRef,
+                        modalPostSettingsRef,
 
-            {/** Display push notifications pane */}
-            {pushNotifsVis &&
-              <PushNotificationsModal />
-            }
+                        user, setUser,
+                        userData, setUserData,
+                        posts, setPosts,
+                        screen, setScreen,
+                        repost, setRepost,
+                        replyTo, setReplyTo,
 
-            {/** Display claim oranges pane */}
-            {showClaimOranges &&
-              <ClaimOrangesModal />
-            }
+                        setSettingsVis,
+                        setShareProfileVis,
+                        setSwitchAccountVis,
+                        setNotificationsVis,
+                        setPostSettingsModalVis,
 
-            {/** Display nickname pane */}
-            <NicknameModal />
+                        category, setCategory,
+                        scrolled, setScrolled,
+                        editedPost, setEditedPost,
+                        pushNotifsVis, setPushNotifsVis,
+                        previousScreen, setPreviousScreen,
+                        postDetailsVis, setPostDetailsVis,
+                        userConnecting, setUserConnecting,
+                        profileSelected, setProfileSelected,
+                        updateProfileVis, setUpdateProfileVis,
+                        showConnectModal, setShowConnectModal,
 
-            {/** Render repost modal */}
-            {repost !== false &&
-              <RepostModal />
-            }
+                        scrollToTop,
+                        translateY,
+                        scrollAnim,
+                        offsetAnim,
+                        navbarTranslate,
+                        setClampedScroll,
+                        setOffsetAnim,
+                        setScrollAnim,
+                        setRefreshing,
 
-            {/** Share post container */}
-            <PostboxModal />
-
-            {/** Show post settings modal */}
-            <BottomSheetModalProvider>
-                <BottomSheetModal
-                    ref={modalPostSettingsRef}
-                    index={1}
-                    snapPoints={showReportBack ? snapPointsLarge : snapPoints}
-                    handleIndicatorStyle={{backgroundColor: 'black',}}
-                    handleStyle={{height: 40,justifyContent: 'center',}}
-                    backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
+                        loading, setLoading,
+                        newsPosts, setNewsPosts,
+                        connectType, setConnectType,
+                        listAccount, setListAccount,
+                        nicknameVis, setNicknameVis,
+                        inviteClaim, setInviteClaim,
+                        listMessages, setListMessages,
+                        currentRoute, setCurrentRoute,
+                        selectedNews, setSelectedNews,
+                        todayOranges, setTodayOranges,
+                        switchLoading, setSwitchLoading,
+                        tabViewHeight, setTabViewHeight,
+                        categoryPosts, setCategoryPosts,
+                        categoriesVis, setCategoriesVis,
+                        activityClaim, setActivityClaim,
+                        listHiddenPost, setListHiddenPost,
+                        listMutedUsers, setListMutedUsers,
+                        showReportBack, setShowReportBack,
+                        showImageSender, setShowImageSender,
+                        listBlockedUser, setListBlockedUser,
+                        connectModalVis, setConnectModalVis,
+                        selectedCategory, setSelectedCategory,
+                        showClaimOranges, setShowClaimOranges,
+                        adAlreadyClaimed, setAdAlreadyClaimed,
+                    }}
                 >
-                    <PostSettingsModal />
-                </BottomSheetModal>
-            </BottomSheetModalProvider>
+                <TailwindProvider utilities={utilities}>
+                    {user ?
+                        <AppNavigator />
+                    :
+                        <Login />
+                    }
 
-            {/* {editedPost != null &&
-              <PostSettingsModal />
-            } */}
+                    {/** Display the edit profile details modal */}
+                    <UpdateProfileModal />
 
-            {/** QR modal container */}
-            {shareProfileVis &&
-              <QR hide={() => setShareProfileVis(false)} />
-            }
+                    {/** Display push notifications pane */}
+                    {pushNotifsVis &&
+                        <PushNotificationsModal />
+                    }
 
-            {/** Image sender for DM */}
-            {/* {showImageSender &&
-                <ImageSender 
-                    hide={() => setShowImageSender(null)} 
-                    media={showImageSender} 
-                    updateListeMessages={(listMessage) => {console.log('ICIIIIII');console.log(listMessage); setListMessages(listMessage)}}
-                />
-            } */}
+                    {/** Display claim oranges pane */}
+                    {showClaimOranges &&
+                        <ClaimOrangesModal />
+                    }
 
-            {/** Show notifications pane */}
-            {notificationsVis &&
-              <NotificationsPane />
-            }
+                    {/** Display nickname pane */}
+                    <NicknameModal />
 
-            <Confetti confetti={confetti}/>
-          </TailwindProvider>
-        </GlobalContext.Provider>
-      </GestureHandlerRootView>
-    </>
-  );
+                    {/** Render repost modal */}
+                    {repost !== false &&
+                        <RepostModal />
+                    }
+
+                    {/** Share post container */}
+                    <PostboxModal />
+
+                    {/** Show post settings modal */}
+                    <BottomSheetModalProvider>
+                        <BottomSheetModal
+                            ref={modalPostSettingsRef}
+                            index={1}
+                            snapPoints={showReportBack ? snapPointsLarge : snapPoints}
+                            handleIndicatorStyle={{backgroundColor: 'black',}}
+                            handleStyle={{height: 40,justifyContent: 'center',}}
+                            backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
+                        >
+                            <PostSettingsModal />
+                        </BottomSheetModal>
+                    </BottomSheetModalProvider>
+
+                    {/** QR modal container */}
+                    {shareProfileVis &&
+                        <QR hide={() => setShareProfileVis(false)} />
+                    }
+
+                    {/** Show notifications pane */}
+                    {notificationsVis &&
+                        <NotificationsPane />
+                    }
+
+                    <Confetti confetti={confetti}/>
+                </TailwindProvider>
+                </GlobalContext.Provider>
+            </GestureHandlerRootView>
+        </>
+    );
 }
 
 const Confetti = ({confetti}) => {
-  return(
-      <ConfettiCannon fadeOut={true} fallSpeed={2500} count={150} origin={{x: -400, y: 0}} autoStart={false} ref={confetti} />
-  )
+    return(
+        <ConfettiCannon fadeOut={true} fallSpeed={2500} count={150} origin={{x: -400, y: 0}} autoStart={false} ref={confetti} />
+    )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+const styles = StyleSheet.create();

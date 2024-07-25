@@ -12,11 +12,12 @@ const {width, height} = Dimensions.get('window')
 
 
 const RewardHistory = ({navigation, route}) => {
-    const { orbis, user } = useContext(GlobalContext);
+    const { orbis, user, userData } = useContext(GlobalContext);
 
     const tailwind = useTailwind();
 
-    const tempList = user?.profile?.data?.listClaimedOranges
+    const tempList = userData?.listClaimedOranges
+    tempList.sort((a, b) => (moment(a.date).format('YYYY-MM-DD') < moment(b.date).format('YYYY-MM-DD')) ? 1 : -1)
     // const tempList = user?.profile?.data?.listClaimedOranges ?? [
     // {
     //         date: '2024-06-01',

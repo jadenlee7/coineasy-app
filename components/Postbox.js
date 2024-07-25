@@ -14,6 +14,7 @@ import User, { UserPfp, Username } from "./User";
 import { checkContextAccess, isOwner } from "../utils";
 import { GlobalContext } from "../contexts/GlobalContext";
 import { BackIcon, ImagePickerIcon, CaretDownIcon, CloseIcon, LockIcon, UnlockIcon, CameraIcon } from "./Icons";
+import moment from "moment";
 
 /** Init mentions object */
 let mentions = [];
@@ -28,7 +29,8 @@ export default function Postbox({isReply = false}) {
         hidePostbox, 
         replyTo, 
         repost, 
-        callbackPostShared, 
+        callbackPostShared,
+        defaultCallbackPostShared,
         category, 
         categories, 
         editedPost, 
@@ -221,8 +223,13 @@ export default function Postbox({isReply = false}) {
                 }
 
                 /** If any trigger callback after the post is shared */
+                console.log('ici');
+                console.log(callbackPostShared);
                 if(callbackPostShared) {
                     callbackPostShared(_callbackContent);
+                }else{
+                    console.log('la');
+                    defaultCallbackPostShared(_callbackContent)
                 }
 
                 setLoading(false);

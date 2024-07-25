@@ -1,8 +1,12 @@
-import React, { useContext } from "react";
-import { Text, View, ActivityIndicator, Animated, RefreshControl, Platform } from 'react-native';
+import React, { useContext, useState } from "react";
+import { Text, View, ActivityIndicator, Animated, RefreshControl, Platform, Image, ImageBackground, TouchableOpacity } from 'react-native';
 
+import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
+import PagerView from 'react-native-pager-view';
 import { useTailwind } from 'tailwind-rn';
 import { useScrollToTop } from "@react-navigation/native";
+
 
 import Post from "./Post";
 import { Username } from "./User";
@@ -11,10 +15,12 @@ import { GlobalContext } from "../contexts/GlobalContext";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
 export default function Feed({posts, refreshing, refreshingBottom, onRefresh, loadMore, header, feedRef }) {
-    const { orbis, homeFeedRef, scrollAnim, listBlockedUser, listHiddenPost, listMutedUsers } = useContext(GlobalContext);
+    const { orbis, userData, homeFeedRef, scrollAnim, listBlockedUser, listHiddenPost, listMutedUsers, setShowClaimOranges, setTodayOranges, setAdAlreadyClaimed} = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const statusBarHeight = useStatusBarHeight();
+
+    const [indexSwiper, setIndexSwiper] = useState(0)
 
     const onEndReached = async () => {
         if(loadMore) {
@@ -41,6 +47,10 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
 
     useScrollToTop(feedRef ? feedRef : homeFeedRef);
 
+    const onBannerPress = () => {
+        userData?.adReward?.lastClaim ? setAdAlreadyClaimed(true) : setTodayOranges(200)
+    }
+
     return(
         <>
             {(refreshing && posts.length == 0) ?
@@ -59,6 +69,53 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                                 return (
                                     <>
                                         <View style={{height: Platform.OS == 'ios' ? 0 : 115 + statusBarHeight, width: '100%', backgroundColor: 'white',}} />
+
+                                        <PagerView 
+                                            style={{height: 100, width: '100%',marginVertical: 10,}} 
+                                            initialPage={0}
+                                            orientation='horizontal'
+                                            onPageSelected={(props) => setIndexSwiper(props.nativeEvent.position)}
+                                        >
+                                            <TouchableOpacity 
+                                                key="1"
+                                                onPress={onBannerPress}
+                                            >
+                                                <Image
+                                                    resizeMode="contain"
+                                                    style={{height:'100%', width:'100%'}}
+                                                    source={require('../assets/ads/home_ad_1.png')}
+                                                />
+                                            </TouchableOpacity>
+                                            <View key="2">
+                                                <Text>Second page</Text>
+                                            </View>
+                                        </PagerView>
+
+                                        <View 
+                                            style={{
+                                                borderRadius: 10,
+                                                overflow:'hidden',                                                    
+                                                position: 'absolute',
+                                                top: Platform.OS == 'ios' ? 0 : 190 + statusBarHeight,
+                                                right: 10,
+                                            }}
+                                        >
+                                            <BlurView
+                                                tint="dark"
+                                                intensity={25}
+                                                style={{
+                                                    borderRadius: 10,
+                                                    width: 55,
+                                                    height: 22,
+
+                                                    justifyContent:'center',alignItems:'center',
+                                                }}
+                                            >
+                                                <Text style={{color:'white', textAlign: 'center',fontSize: 13,}}>{indexSwiper+1}/2</Text>
+                                            </BlurView>
+                                            
+                                        </View>
+
                                         <PostInFeed post={item} key={item.stream_id} />
                                     </>
                                 )

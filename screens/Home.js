@@ -1,5 +1,5 @@
 import React, { useContext, useEffect } from "react";
-import { View, TouchableOpacity, Image, BackHandler, Animated } from 'react-native';
+import { View, TouchableOpacity, Image, BackHandler, Animated, Text } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -8,6 +8,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import Feed from "../components/Feed";
 import Header from "../components/Header";
 import { GlobalContext } from "../contexts/GlobalContext";
+import Modal from "../components/Modal";
+import { AntDesign } from "@expo/vector-icons";
+import Button from "../components/Button";
 
 
 const Home = ({ navigation, route }) => {
@@ -26,7 +29,9 @@ const Home = ({ navigation, route }) => {
         setScrollAnim, 
         setOffsetAnim, 
         setCurrentRoute, 
-        setEditedPost
+        setEditedPost,
+        adAlreadyClaimed,
+        setAdAlreadyClaimed
     } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
@@ -86,7 +91,14 @@ const Home = ({ navigation, route }) => {
             <Header />
             <View style={tailwind('flex flex-col flex-1')}>
                 <View style={tailwind('flex flex-1 bg-white')}>
-                    <Feed posts={posts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMorePosts} setRefreshing={setRefreshing}/>
+                    <Feed 
+                        posts={posts} 
+                        refreshing={refreshing} 
+                        refreshingBottom={refreshingBottom} 
+                        onRefresh={onRefresh} 
+                        loadMore={loadMorePosts} 
+                        setRefreshing={setRefreshing}
+                    />
 
                     {/** Share button */}
                     <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => {setEditedPost(null);showPostbox()}}>
@@ -97,6 +109,51 @@ const Home = ({ navigation, route }) => {
                     </TouchableOpacity>
                 </View>
             </View>
+
+            {adAlreadyClaimed && (
+                <View style={{
+                    zIndex: 9999,
+                    position: 'absolute',
+                    flex: 1,
+                    width: '100%',
+                    height:'100%',
+                }}>
+                    <Modal 
+                        hide={() => setAdAlreadyClaimed(false)} 
+                        type='oranges' 
+                    >         
+                        <TouchableOpacity
+                            style={{position: 'absolute',top: 15, right: 15}}
+                            onPress={() => {Haptics.selectionAsync();setAdAlreadyClaimed(false)}}
+                        >
+                            <AntDesign name="closecircle" size={24} color="black" />
+                        </TouchableOpacity>
+
+                        <View style={[tailwind('flex flex-col items-center justify-center px-3')]}>
+                            <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 16,fontFamily: "GmarketBold",lineHeight: 24,marginTop: 20,}]}>
+                                Oops, this basket is empty!
+                            </Text>
+
+                            <Text style={{textAlign: 'center',}}>You've already claimed :)</Text>
+
+                            <Image 
+                                source={require('../assets/orange_box.png')} 
+                                style={{height: '60%',alignSelf: 'center',marginTop: 20,}} 
+                                resizeMode="contain"
+                            />
+                        </View>
+
+                        <Button 
+                            size="md" 
+                            color="white" 
+                            title="Go to Reward Page" 
+                            onPress={() => {Haptics.selectionAsync();setAdAlreadyClaimed(false);navigation.navigate('RewardHistory')}} 
+                            style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 20}}
+                        />                           
+                    </Modal>
+                </View>
+
+            )}
         </>
     )
 }

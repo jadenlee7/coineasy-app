@@ -22,7 +22,7 @@ const {width, height} = Dimensions.get('window')
 
 
 const OrangeReward = ({navigation, route}) => {
-    const { orbis, user, setUser, dailyClaim, setDailyClaim, adClaim, setAdClaim, activityClaim, setActivityClaim, inviteClaim, setInviteClaim, setShowClaimOranges, setTodayOranges } = useContext(GlobalContext);
+    const { orbis, user, setUser, userData, setUserData, activityClaim, setActivityClaim, inviteClaim, setInviteClaim, setShowClaimOranges, setTodayOranges } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const [openHelp, setOpenHelp] = useState(false)
@@ -48,15 +48,32 @@ const OrangeReward = ({navigation, route}) => {
     
 
     const onResetData = async () => {
-        user.profile.data = {alreadyLogin: true}
-        setUser({...user})
+        // user.profile.data = {alreadyLogin: true}
 
-        const res = await orbis.updateProfile(user.profile);
+        tempData = {
+            "alreadyLogin":true,
+            "post":{
+                "number":1,
+                "gained":15,
+                "lastPost":"2024-07-16 16:13",
+            },
+            "activityUnclaimed":{"number":29},
+            "reaction":{"number":4,"gained":8,"lastReaction":"2024-07-16 16:13"},
+            "comment":{"number":2,"gained":6,"lastComment":"2024-07-16 16:16"},
+            "numberOranges":0,
+        }
+
+
+        setUserData({...tempData})
+
+        var tempProfile = user.profile
+        tempProfile.data = tempData
+        const res = await orbis.updateProfile(tempProfile);
     }
 
     const onDailyClaim = async () => {
         Haptics.selectionAsync()
-        const tempData = user?.profile?.data
+        const tempData = userData
 
         if(tempData){
             let addNumber = 5
@@ -152,10 +169,11 @@ const OrangeReward = ({navigation, route}) => {
 
             setLaunchAnimation(true)
             
-            user.profile.data = tempData
-            setUser({...user})
+            setUserData({...tempData})
 
-            const res = await orbis.updateProfile(user.profile);
+            var tempProfile = user.profile
+            tempProfile.data = tempData
+            const res = await orbis.updateProfile(tempProfile);
         }
 
 
@@ -190,17 +208,31 @@ const OrangeReward = ({navigation, route}) => {
         // adReward: {
         //     lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
         // }
-        // postStreak: {
+        // post: {
         //     number: 0,
-        //     lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
+        //     gained: 0,
+        //     lastPost: moment().format('YYYY-MM-DD HH:mm')
+            // listPostLiked: [
+            //     {
+            //         stream_id: "liujblmiuhboimiohnomihn",
+            //         milestone: 50
+            //     }
+            // ]
         // }
-        // commentStreak: {
+        // comment: {
         //     number: 0,
-        //     lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
+        //     gained: 0        
         // }
-        // reactionStreak: {
+        // reaction: {
         //     number: 0,
-        //     lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
+        //     gained: 0,
+        //     lastReaction: moment().format('YYYY-MM-DD HH:mm')    
+        // }
+        // activityUnclaimed: {
+        //     number: 0,
+        // }
+        // activityClaimed: {
+        //     number: 0,
         // }
     }
 
@@ -209,7 +241,7 @@ const OrangeReward = ({navigation, route}) => {
 
     const OrangeDayCards =  () => {
 
-        const claimStreak = user?.profile?.data?.claimStreak?.number ?? 0
+        const claimStreak = userData?.claimStreak?.number ?? 0
 
         return [...Array(30).keys()].map(e => {
             return(
@@ -262,10 +294,10 @@ const OrangeReward = ({navigation, route}) => {
 
         let diffSeconds = null
 
-        if(user?.profile?.data?.claimStreak?.lastClaim){
-            checkDiff = momentOne.diff(moment(user.profile.data.claimStreak.lastClaim), 'seconds')
-            checkDiff2 = momentOne.add(1, 'days').diff(moment(user.profile.data.claimStreak.lastClaim), 'seconds')
-            diffSeconds = momentOne.diff(moment(user.profile.data.claimStreak.lastClaim), 'seconds')
+        if(userData?.claimStreak?.lastClaim){
+            checkDiff = momentOne.diff(moment(userData.claimStreak.lastClaim), 'seconds')
+            checkDiff2 = momentOne.add(1, 'days').diff(moment(userData.claimStreak.lastClaim), 'seconds')
+            diffSeconds = momentOne.diff(moment(userData.claimStreak.lastClaim), 'seconds')
 
             if(checkDiff < 0 && checkDiff2 >= 0){
                 isAlreadyClaimed = true
@@ -522,13 +554,13 @@ const OrangeReward = ({navigation, route}) => {
 
 
 
-                <View style={{borderRadius: 30,borderWidth:1,borderColor:'black', backgroundColor: '#FFF2E2',flexDirection:'row',gap: 10,padding: 10,alignSelf:'flex-end',marginTop: 15,marginRight: 20}}>
+                <View style={{borderRadius: 30,borderWidth:1,borderColor:'black', backgroundColor: '#FFF2E2',flexDirection:'row',gap: 6,alignSelf:'flex-end',marginRight: 5,paddingVertical: 5, paddingHorizontal:10,marginTop: 15,marginRight: 20}}>
                     <Image
                         style={{width: 20, height: 20}}
                         resizeMode='contain'
                         source={require('../../assets/orange_icon.png')}
                     />
-                    <Text style={{fontWeight: 'bold',marginRight: 10}}>{user?.profile?.data?.numberOranges ?? 0}</Text>
+                    <Text style={{fontWeight: 'bold',}}>{userData?.numberOranges ?? 0}</Text>
                 </View>
 
 
@@ -604,7 +636,7 @@ const OrangeReward = ({navigation, route}) => {
                                 </View>
                             </View>
 
-                            {user.profile.data.adReward.lastClaim ? (
+                            {userData?.adReward?.lastClaim ? (
                                 <View style={{backgroundColor: '#D0D0D0',paddingHorizontal: 10, borderRadius: 20,height: 40,width: 100,justifyContent:'center',alignItems:'center',}}>
                                     <Text style={{color: 'white',fontSize: 16,fontWeight: 'bold',}}>Claimed</Text>
                                 </View>
@@ -643,7 +675,7 @@ const OrangeReward = ({navigation, route}) => {
                                 color={activityClaim ? 'gray-100' : 'orange'}
                                 disabled={activityClaim}
                                 size="sm"
-                                onPress={() => onActivityClaim()} 
+                                onPress={() => navigation.navigate('ActivityReward')} 
                                 style={{height: 40, justifyContent: 'center',alignItems: 'center'}}
                             />
                         </View>

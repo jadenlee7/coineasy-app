@@ -13,6 +13,7 @@ import ConversationScreen from '../screens/Navigation/Chat/ConversationScreen';
 import ConversationDetails from '../screens/Navigation/Chat/ConversationDetails';
 import OrangeReward from '../screens/Navigation/OrangeReward';
 import RewardHistory from '../screens/Navigation/RewardHistory';
+import ActivityReward from '../screens/Navigation/ActivityReward';
 
 // const Stack = createNativeStackNavigator();
 
@@ -32,6 +33,7 @@ const AppNavigator = (props) => {
                     <Stack.Screen name="ConversationDetails" component={ConversationDetails} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="OrangeReward" component={OrangeReward} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="RewardHistory" component={RewardHistory} options={{ headerShown: false, gestureEnabled: true }} />
+                    <Stack.Screen name="ActivityReward" component={ActivityReward} options={{ headerShown: false, gestureEnabled: true }} />
                 </Stack.Navigator>
             </NavigationContainer>
 

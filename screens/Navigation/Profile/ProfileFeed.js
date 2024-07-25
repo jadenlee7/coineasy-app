@@ -8,9 +8,10 @@ import { context } from '../../../utils/config.js';
 import { GlobalContext } from '../../../contexts/GlobalContext.js';
 import { PostMenuIcon, RepostIcon } from '../../../components/Icons.js';
 import { Username } from '../../../components/User.js';
+import moment from 'moment';
 
 const ProfileFeed = (props) => {
-    const { user, orbis, tabViewHeight, setTabViewHeight, setEditedPost } = useContext(GlobalContext);
+    const { user, setUser, userData, setUserData, orbis, tabViewHeight, setTabViewHeight, setEditedPost } = useContext(GlobalContext);
     const tailwind = useTailwind();
     const { profile, type } = props
 
@@ -21,6 +22,113 @@ const ProfileFeed = (props) => {
         loadPosts();
     }, [type == 'selected' ? profile : user])
   
+    async function checkLikes(post, number){
+        var userHasChanged = false
+        var tempData = userData
+
+        const indexLikedPost = tempData.post?.listLikedPost?.findIndex(elt => elt.stream_id == post.stream_id)
+        
+        console.log(' ');
+        console.log('ici');
+
+        if(indexLikedPost >= 0){
+            console.log('la');
+            console.log(tempData.post.listLikedPost[indexLikedPost].milestone);
+        }else{
+            console.log((indexLikedPost == -1 || !tempData.post?.listLikedPost));
+        }
+        console.log(post.count_likes >= number 
+            && (
+                (indexLikedPost == -1 || !tempData.post?.listLikedPost) || (
+                    indexLikedPost >= 0 
+                    && number == 100 
+                    && tempData.post.listLikedPost[indexLikedPost].milestone == 50
+                )
+            )
+        );
+
+
+        if(
+            post.count_likes >= number 
+            && (
+                (indexLikedPost == -1 || !tempData.post?.listLikedPost) || (
+                    indexLikedPost >= 0 
+                    && number == 100 
+                    && tempData.post.listLikedPost[indexLikedPost].milestone == 50
+                )
+            )
+        ){
+
+            console.log(' ');
+            console.log('ici pour '+number);
+            console.log(post.stream_id);
+            console.log(' ');
+
+            userHasChanged = true
+
+            tempData.numberOranges ? tempData.numberOranges += number : tempData.numberOranges = number
+            if(tempData.post?.listLikedPost){
+                tempData.post.listLikedPost.push({
+                    stream_id: post.stream_id,
+                    milestone: number
+                })
+            }else if(tempData.post){
+                tempData.post.listLikedPost = [{
+                    stream_id: post.stream_id,
+                    milestone: number
+                }]
+            }else{
+                tempData.post = {
+                    listLikedPost: [{
+                        stream_id: post.stream_id,
+                        milestone: number
+                    }]
+                }
+            }
+
+            if(tempData.listClaimedOranges){
+                const dayIndex = tempData.listClaimedOranges.findIndex(elt => elt.date == moment().format('YYYY-MM-DD'))
+                if(dayIndex >= 0){
+                    tempData.listClaimedOranges[dayIndex].listOranges.push({
+                        numberOranges: number,
+                        type: 'Post reaches '+number+' likes'
+                    })
+                }else{
+                    tempData.listClaimedOranges.push({
+                        date: moment().format('YYYY-MM-DD'),
+                        listOranges: [
+                            {
+                                numberOranges: number,
+                                type: 'Post reaches '+number+' likes'
+                            },
+                        ]
+                    })
+                }
+            }else{
+                tempData.listClaimedOranges = [{
+                    date: moment().format('YYYY-MM-DD'),
+                    listOranges: [
+                        {
+                            numberOranges: number,
+                            type: 'Post reaches '+number+' likes'
+                        },
+                    ]
+                }]
+            }
+        }
+
+
+
+                
+        if(userHasChanged){
+            setUserData({...tempData})
+            
+            var tempProfile = user.profile            
+            tempProfile.data = tempData
+            await orbis.updateProfile(tempProfile);
+        }
+    }
+
     /** Will retrieve all posts shared in the global context */
     async function loadPosts() {
         setRefreshing(true);
@@ -34,7 +142,12 @@ const ProfileFeed = (props) => {
   
         let { data } = await orbis.getPosts(options);
         if(data) {
-            data.map((e, indexPost) => {
+            data.map(async (e, indexPost) => {
+
+                // await checkLikes(e, 5)
+                // await checkLikes(e, 100)
+
+
                 if(e.content.media?.length > 0){
                     e.content.media.map(async (elt, indexImage) => {
                         if(elt.url){
@@ -56,7 +169,7 @@ const ProfileFeed = (props) => {
                     }
                 }
             })
-            // setPosts(data);
+            
 
             if(data.length == 50){
                 setTabViewHeight(20000)

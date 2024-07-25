@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef, useMemo, useCallback } from "react";
-import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Linking, Alert, Image, Dimensions, StyleSheet } from 'react-native';
+import { Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Linking, Alert, Image, Dimensions, StyleSheet, ScrollView } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -40,20 +40,15 @@ const windowSize = Dimensions.get('window')
 
 export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const { 
-        user, 
-        setUser, 
-        orbis, 
-        setUpdateProfileVis, 
-        setShareProfileVis, 
+        user, setUser, 
+        userData, setUserData, 
         screen, 
-        modalSwitchRef, 
+        orbis, 
+        setShareProfileVis, 
         tabViewHeight, 
+        modalSwitchRef, 
         modalSettingsRef, 
         modalProfileRef,
-        showClaimOranges, 
-        setShowClaimOranges,
-        todayOranges,
-        setTodayOranges
     } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
@@ -237,7 +232,12 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         if(followLoading){
             return <ActivityIndicator style={{marginTop: 50}} size="small" color="#020617" />
         }else{
-            if(route.key == 0 ) return <ProfileFeed profile={userInfo} type={type} />
+            if(route.key == 0 ) return (
+                <ScrollView>
+                    <ProfileFeed profile={userInfo} type={type} />
+                    
+                </ScrollView>
+            )
             if(route.key == 1 ) return <ProfileReplies profile={userInfo} type={type} />
             if(route.key == 2 ) return <ProfileReposts profile={userInfo} type={type} />
         }
@@ -434,7 +434,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     <ProfileItem count={countPosts} title="Posts" />
                     <ProfileItem count={userInfo ? userInfo.count_followers : "-"} title="Followers" />
                     <ProfileItem count={userInfo ? userInfo.count_following : "-"} title="Following" />
-                    <ProfileItem count={userInfo?.profile?.data?.numberOranges ?? 0} title="Orange" />
+                    <ProfileItem count={userData?.numberOranges ?? 0} title="Orange" />
                 </View>
         
                 {!commonFollowLoading && type == "selected" && listCommonFollowers.length > 0 ? (

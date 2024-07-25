@@ -27,6 +27,7 @@ import { InterpunctIcon, PostMenuIcon, RepostIcon2, CommentIcon2, LikeIcon2, Suc
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import moment from "moment";
 
 // const listPost = [
 //     1712122694, 
@@ -85,7 +86,7 @@ const PostDisplay = (props) => {
 
     let navigation;
     let route;
-    
+
     const handleModalPostBoxPress = useCallback(() => modalPostSettingsRef.current?.present(), []);
 
     try {
@@ -674,8 +675,8 @@ export const LikeCTA = ({post, isReply}) => {
     : isReply && (post.content.count_likes || post.content.count_likes == 0) ? 
         post.content.count_likes 
     : post.count_likes
-  const [countLikes, setCountLikes] = useState(numLikes ? numLikes : 0);
-  const { user, orbis, showConnectModal, setShowConnectModal } = useContext(GlobalContext);
+  const [countLikes, setCountLikes] = useState(numLikes ?? 0);
+  const { user,setUser,userData,setUserData, orbis, showConnectModal, setShowConnectModal } = useContext(GlobalContext);
   const tailwind = useTailwind();
 
   /** Check if user liked this post */
@@ -701,18 +702,75 @@ export const LikeCTA = ({post, isReply}) => {
       return;
     }
     if(user) {
-      setHasLiked(true);
-      Haptics.selectionAsync();
-    //   if(Number.isInteger(post.count_likes)){
-    //       setCountLikes(post.count_likes + 1);
-    //   }
+        Haptics.selectionAsync();
+        setHasLiked(true);
+        setCountLikes(countLikes ? countLikes+1 : numLikes+1)
 
-      setCountLikes(countLikes ? countLikes+1 : numLikes+1)
+        // Orange Reward
+        const tempData = userData
 
-      let res = await orbis.react(
-        post.stream_id,
-        "like"
-      );
+        if(tempData.listClaimedOranges){
+            const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+            if(index != -1){
+                tempData.listClaimedOranges[index].listOranges.push({
+                    numberOranges: 2,
+                    type: 'Like'
+                })
+                if(tempData.reaction?.number == 29){
+                    tempData.listClaimedOranges[index].listOranges.push({
+                        numberOranges: 50,
+                        type: 'Reactions Milestone achieved'
+                    })
+                }
+            }else{
+                const listReward = [{
+                    numberOranges: 2,
+                    type: 'Like'
+                }]
+                tempData.reaction?.number == 29 && listReward.push({
+                    numberOranges: 50,
+                    type: 'Reactions Milestone achieved'
+                })
+                tempData.listClaimedOranges.push({
+                    date: moment().format('YYYY-MM-DD'),
+                    listOranges: listReward
+                })
+            }
+        }else{
+            tempData.listClaimedOranges = [{
+                date: moment().format('YYYY-MM-DD'),
+                listOranges: [
+                    {
+                        numberOranges: 2,
+                        type: 'Like'
+                    },
+                ]
+            }]
+        }
+
+        if(tempData.reaction){
+            tempData.reaction.number += 1
+            tempData.reaction.gained += 2
+        }else{
+            tempData.reaction = {
+                number: 1,
+                gained: 2,
+                lastReaction: moment().format('YYYY-MM-DD HH:mm')
+            }
+        }
+
+        tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 2 : tempData.activityUnclaimed = {number: 2}
+        tempData.reaction.number == 30 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.activityUnclaimed = {number: 52}
+        tempData.reaction.number == 30 ? tempData.reaction.number = 0 : null
+
+        setUserData({...tempData})
+
+        var tempProfile = user.profile
+        tempProfile.data = tempData
+
+        await orbis.react(post.stream_id, "like");
+        await orbis.updateProfile(tempProfile);
+
     } else {
       alert("You must be connected to react to posts.");
     }
@@ -728,7 +786,7 @@ export const LikeCTA = ({post, isReply}) => {
         }
 
         <Text style={[tailwind('text-sm font-normal ml-1'), { fontFamily: "GmarketMedium", color: hasLiked ? "#FF6B17" : "#0F172A" }]}>
-          {countLikes ? countLikes : numLikes}
+          {countLikes ?? numLikes}
         </Text>
       </>
     </TouchableOpacity>

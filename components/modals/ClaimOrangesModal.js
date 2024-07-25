@@ -10,48 +10,27 @@ import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import { AntDesign } from '@expo/vector-icons';
 import { CountdownCircleTimer } from 'react-native-countdown-circle-timer';
+import { useNavigation } from '@react-navigation/core';
 
 const {width, height} = Dimensions.get('window')
 
-
 const ClaimOrangesModal = () => {
 
-    const { user, setUser, orbis, setShowClaimOranges, todayOranges } = useContext(GlobalContext);
+    const { user, setUser,userData, setUserData, orbis, setShowClaimOranges, todayOranges, adAlreadyClaimed } = useContext(GlobalContext);
     const tailwind = useTailwind();
-
-    const [showAds, setShowAds] = useState(true)
-    const [completeAds, setCompleteAds] = useState(false)
-    const [pendingAds, setPendingAds] = useState(false)
-    const [claimedAds, setClaimedAds] = useState(false)
-    const [showClose, setShowClose] = useState(false)
-
-    const onAdCompleted = async () => {
-        Haptics.selectionAsync();
-        let tempOranges = user?.profile?.data?.oranges?.count ?? 0
-        tempOranges += todayOranges
-
-        if(user.profile.data){
-            user.profile.data.oranges = {
-                count: tempOranges,
-                updated: moment().format('YYYY-MM-DD')
-            }
-        }else{
-            user.profile.data = {
-                oranges: {
-                    count: tempOranges,
-                    updated: moment().format('YYYY-MM-DD')
-                }
-            }
-        }
-        setUser({...user})
-
-        const res = await orbis.updateProfile(user.profile);
-
-        setCompleteAds(true)
-        setShowAds(false)
-        setShowClose(false)
+    let navigation;
+    try {
+        navigation = useNavigation()
+    } catch (error) {
+        console.log('ici');
+        console.log(error);
     }
 
+    const [showAds, setShowAds] = useState(!adAlreadyClaimed)
+    const [pendingAds, setPendingAds] = useState(false)
+    const [completeAds, setCompleteAds] = useState(false)
+    const [claimedAds, setClaimedAds] = useState(false)
+    const [showClose, setShowClose] = useState(false)
 
     const openUrl = async () => {
         let url = 'https://youtu.be/EPLZlxe07Eg'
@@ -67,10 +46,6 @@ const ClaimOrangesModal = () => {
     const onHideModal = async () => {
         Haptics.selectionAsync()
 
-        if(showAds && showClose){
-            onAdCompleted()
-        }
-
         setShowAds(false)
         setCompleteAds(false)
         setShowClose(false)
@@ -78,7 +53,7 @@ const ClaimOrangesModal = () => {
     }
 
     const claimAds = async () => {
-        const tempData = user?.profile?.data
+        const tempData = userData
 
         if(tempData){
             tempData.numberOranges += 200
@@ -120,15 +95,15 @@ const ClaimOrangesModal = () => {
                 }]
             }
 
-            setShowAds(false)
-            setCompleteAds(false)
-            setShowClose(false)
-            setShowClaimOranges(false)
+            setUserData({...tempData})
 
-            user.profile.data = tempData
-            setUser({...user})
-    
-            const res = await orbis.updateProfile(user.profile);
+            var tempProfile = user.profile
+            tempProfile.data = tempData
+            console.log('ICIIII');
+            console.log(JSON.stringify(tempProfile));
+            console.log(' ');
+            const res = await orbis.updateProfile(tempProfile);
+            console.log(res);
         }
 
     }
@@ -184,7 +159,38 @@ const ClaimOrangesModal = () => {
             isAds={showAds}
             pendingAds={pendingAds}
         >
-            { !pendingAds && showAds ? (
+            { adAlreadyClaimed ? (
+                <>
+                    <TouchableOpacity
+                        style={{position: 'absolute',top: 15, right: 15}}
+                        onPress={() => {Haptics.selectionAsync();setShowClaimOranges(false)}}
+                    >
+                        <AntDesign name="closecircle" size={24} color="black" />
+                    </TouchableOpacity>
+
+                    <View style={[tailwind('flex flex-col items-center justify-center px-3')]}>
+                        <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 16,fontFamily: "GmarketBold",lineHeight: 24,marginTop: 20,}]}>
+                            Oops, this basket is empty!
+                        </Text>
+
+                        <Text style={{textAlign: 'center',}}>You've already claimed :)</Text>
+
+                        <Image 
+                            source={require('../../assets/orange_box.png')} 
+                            style={{height: '60%',alignSelf: 'center',marginTop: 20,}} 
+                            resizeMode="contain"
+                        />
+                    </View>
+
+                    <Button 
+                        size="md" 
+                        color="white" 
+                        title="Go to Reward Page" 
+                        onPress={() => {Haptics.selectionAsync();setShowClaimOranges(false);navigation.navigate('RewardHistory')}} 
+                        style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 20}}
+                    />
+                </>
+            ) : !pendingAds && showAds ? (
                 <TouchableOpacity 
                     style={[tailwind('flex flex-col items-center justify-center px-3')]}
                     onPress={openUrl}
@@ -202,7 +208,7 @@ const ClaimOrangesModal = () => {
                         ) : (
                             <CountdownCircleTimer
                                 isPlaying
-                                duration={1}
+                                duration={10}
                                 colors={['#fff',]}
                                 onComplete={() => setShowClose(true)}
                                 size={35}
@@ -216,6 +222,13 @@ const ClaimOrangesModal = () => {
                 </TouchableOpacity>
             ) : !showAds && !pendingAds && completeAds && !claimedAds? (
                 <>
+                    <TouchableOpacity
+                        style={{position: 'absolute',top: 15, right: 15}}
+                        onPress={() => {Haptics.selectionAsync();onHideModal()}}
+                    >
+                        <AntDesign name="closecircle" size={24} color="black" />
+                    </TouchableOpacity>
+
                     <View style={[tailwind('flex flex-col items-center justify-center px-3')]}>
                         <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,marginTop: 20,}]}>
                             You've got 200 Oranges!
@@ -223,7 +236,7 @@ const ClaimOrangesModal = () => {
 
                         <Image 
                             source={require('../../assets/orange_box.png')} 
-                            style={{height: '55%',alignSelf: 'center',marginTop: 40,}} 
+                            style={{height: '60%',alignSelf: 'center',marginTop: 40,}} 
                             resizeMode="contain"
                         />
 
@@ -239,14 +252,22 @@ const ClaimOrangesModal = () => {
                 </>
             ) : claimedAds && !pendingAds && (
                 <>
+
+                    <TouchableOpacity
+                        style={{position: 'absolute',top: 15, right: 15}}
+                        onPress={() => {Haptics.selectionAsync();onHideModal()}}
+                    >
+                        <AntDesign name="closecircle" size={24} color="black" />
+                    </TouchableOpacity>
+
                     <View style={[tailwind('flex flex-col items-center justify-center px-3')]}>
-                        <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,marginTop: 20,}]}>
+                        <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 16,fontFamily: "GmarketBold",lineHeight: 24,marginTop: 20,}]}>
                             Now you have Oranges!
                         </Text>
 
                         <Image 
                             source={require('../../assets/orange_box.png')} 
-                            style={{height: '55%',alignSelf: 'center',marginTop: 40,}} 
+                            style={{height: '60%',alignSelf: 'center',marginTop: 20,}} 
                             resizeMode="contain"
                         />
                     </View>
@@ -254,8 +275,8 @@ const ClaimOrangesModal = () => {
                     <Button 
                         size="md" 
                         color="white" 
-                        title="Go to profile" 
-                        onPress={() => {Haptics.selectionAsync();claimAds()}} 
+                        title="Go to Reward Page" 
+                        onPress={() => {Haptics.selectionAsync();setShowAds(false);setCompleteAds(false);setShowClose(false);setShowClaimOranges(false);navigation.navigate('RewardHistory')}} 
                         style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 20}}
                     />
                 </>

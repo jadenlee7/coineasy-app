@@ -78,7 +78,7 @@ export default function PostSettingsModal() {
 
     async function deletePost() {
         setLoading(true);
-        let res = await orbis.deletePost(editedPost.value.stream_id);
+        let res = await orbis.deletePost(editedPost?.value.stream_id);
         setLoading(false);
         setSuccess(true);
         if(editPost.type != 'notCreatorReposted'){
