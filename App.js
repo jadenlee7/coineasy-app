@@ -69,12 +69,15 @@ export default function App() {
   const [postDetailsVis, setPostDetailsVis] = useState();
   const [updateProfileVis, setUpdateProfileVis] = useState(false);
   const [pushNotifsVis, setPushNotifsVis] = useState(false);
+  const [newFeatureVis, setNewFeatureVis] = useState(false);
+  const [newFeatureAlertVis, setNewFeatureAlertVis] = useState(false);
   const [showClaimOranges, setShowClaimOranges] = useState(false)
   const [todayOranges, setTodayOranges] = useState(Math.floor(Math.random() * (20 - 5) + 5))
   const [settingsVis, setSettingsVis] = useState(false);
   const [switchAccountVis, setSwitchAccountVis] = useState(false);
   const [adAlreadyClaimed, setAdAlreadyClaimed] = useState(false)
-  
+  const [addressCopied, setAddressCopied] = useState(false)
+
 
 
   const [switchLoading, setSwitchLoading] = useState(false)
@@ -289,11 +292,11 @@ export default function App() {
 //     }
 //   }, [user]);
 
-  const onLayoutRootView = useCallback(async () => {
-   if (isReady) {
-     await SplashScreen.hideAsync();
-   }
- }, [isReady]);
+    const onLayoutRootView = useCallback(async () => {
+        if (isReady) {
+            await SplashScreen.hideAsync();
+        }
+    }, [isReady]);
 
   /** Will check if user is connected on load to automatically re-connect user */
     useEffect(() => {
@@ -323,10 +326,18 @@ export default function App() {
                     listDid.sort((a, b) => (a.time < b.time) ? 1 : -1)
                 }
 
+                const { data, error } = await orbis.getProfile(listDid[0]?.user?.did);                
+
                 setUser({...listDid[0].user})
-                setUserData({...listDid[0].user.profile?.data})
-                console.log('USER DATA');
-                console.log(JSON.stringify(listDid[0].user.profile?.data));
+                if(data.details?.profile?.data){
+                    setUserData({...data.details.profile.data})
+                    console.log('USER DATA 1');
+                    console.log(JSON.stringify(data.details.profile.data));
+                }else{
+                    setUserData({...listDid[0].user.profile?.data})
+                    console.log('USER DATA 2');
+                    console.log(JSON.stringify(listDid[0].user.profile?.data));
+                }
                 // if(listDid[0].user.profile?.data?.oranges?.updated && moment(listDid[0].user.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
                 //     setShowClaimOranges(true)
                 // }
@@ -661,11 +672,24 @@ export default function App() {
             }
             setLoading(false);
         }else{
+
+            // await AsyncStorage.removeItem("showNotificationDate");
+            // await AsyncStorage.removeItem("showNewFeatureDate");
+
+            const showNotificationDate = await AsyncStorage.getItem("showNotificationDate")
+            const showNewFeatureDate = await AsyncStorage.getItem("showNewFeatureDate")
             // if(detailUser.profile.data?.oranges?.updated && moment(detailUser.profile.data?.oranges?.updated).add(2,'days') < moment()){
             //     setShowClaimOranges(true)
             // }else{
-                setPushNotifsVis(true);
+            //     setPushNotifsVis(true);
             // }
+
+            if(moment().format('YYYY-MM-DD') >= showNotificationDate || !showNotificationDate){
+                setPushNotifsVis(true);
+            }else if(moment().format('YYYY-MM-DD') >= showNewFeatureDate || !showNewFeatureDate){
+                setNewFeatureVis(true);
+            }
+
             setLoading(false);
             setConnectModalVis(false)
         }
@@ -969,12 +993,14 @@ export default function App() {
                         scrolled, setScrolled,
                         editedPost, setEditedPost,
                         pushNotifsVis, setPushNotifsVis,
+                        newFeatureVis, setNewFeatureVis,
                         previousScreen, setPreviousScreen,
                         postDetailsVis, setPostDetailsVis,
                         userConnecting, setUserConnecting,
                         profileSelected, setProfileSelected,
                         updateProfileVis, setUpdateProfileVis,
                         showConnectModal, setShowConnectModal,
+                        newFeatureAlertVis, setNewFeatureAlertVis,
 
                         scrollToTop,
                         translateY,
@@ -996,6 +1022,7 @@ export default function App() {
                         currentRoute, setCurrentRoute,
                         selectedNews, setSelectedNews,
                         todayOranges, setTodayOranges,
+                        addressCopied, setAddressCopied,
                         switchLoading, setSwitchLoading,
                         tabViewHeight, setTabViewHeight,
                         categoryPosts, setCategoryPosts,
@@ -1066,6 +1093,16 @@ export default function App() {
                     {notificationsVis &&
                         <NotificationsPane />
                     }
+
+                    {addressCopied && (
+                        <View style={{backgroundColor: 'rgba(0,0,0,0.5)',width: '100%', height: '100%',position: 'absolute',justifyContent:'center',alignItems:'center',}}>
+                            <Image
+                                style={{width: 150, height: 150,alignSelf:'center',}}
+                                resizeMode='contain'
+                                source={require('./assets/link_copied.png')}
+                            />
+                        </View>
+                    )}
 
                     <Confetti confetti={confetti}/>
                 </TailwindProvider>

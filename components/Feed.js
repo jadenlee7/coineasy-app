@@ -48,7 +48,12 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
     useScrollToTop(feedRef ? feedRef : homeFeedRef);
 
     const onBannerPress = () => {
-        userData?.adReward?.lastClaim ? setAdAlreadyClaimed(true) : setTodayOranges(200)
+        if(userData?.adReward?.lastClaim){
+            setAdAlreadyClaimed(true)
+        }else{
+            setTodayOranges(200)
+            setShowClaimOranges(false)
+        }
     }
 
     return(
@@ -87,7 +92,11 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                                                 />
                                             </TouchableOpacity>
                                             <View key="2">
-                                                <Text>Second page</Text>
+                                                <Image
+                                                    resizeMode="contain"
+                                                    style={{height:'100%', width:'100%'}}
+                                                    source={require('../assets/ads/home_ad_2.png')}
+                                                />
                                             </View>
                                         </PagerView>
 

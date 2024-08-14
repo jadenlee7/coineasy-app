@@ -1,56 +1,77 @@
-import React, { useState, useRef, useEffect, useContext } from "react";
-import { ActivityIndicator, StyleSheet, Text, View, ScrollView, Image, SafeAreaView, TouchableOpacity, Dimensions, TextInput } from 'react-native';
-import { BarCodeScanner } from 'expo-barcode-scanner';
-import { context } from "../../utils/config"
-import Button from "../Button";
-import { useTailwind } from 'tailwind-rn';
-import * as Linking from 'expo-linking';
-import * as Haptics from 'expo-haptics';
+import React, { useContext, useState } from "react";
+import { Text, View, Image } from 'react-native';
+
 import Modal from "../Modal";
+import Button from "../Button";
+import { context } from "../../utils/config"
+import { GlobalContext } from "../../contexts/GlobalContext";
 import { registerForPushNotificationsAsync } from "../../utils/push";
 
-/** Replaces localStorage in React Native */
+import moment from "moment";
+import Checkbox from 'expo-checkbox';
+import * as Haptics from 'expo-haptics';
+import { useTailwind } from 'tailwind-rn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-/** Import Context */
-import { GlobalContext } from "../../contexts/GlobalContext";
 
 export default function PushNotificationsModal() {
-  const { user, setUser, orbis, setPushNotifsVis } = useContext(GlobalContext);
-  const tailwind = useTailwind();
+    const { user, setUser, orbis, setPushNotifsVis, setNewFeatureVis } = useContext(GlobalContext);
+    const tailwind = useTailwind();
 
-  /** Will enable push notifications and save the token with Orbis */
-  async function enablePushNotifications() {
-    Haptics.selectionAsync();
+    const [toggleCheckBox, setToggleCheckBox] = useState(false)
 
-    let res;
-    try {
-        res = await registerForPushNotificationsAsync();
-    } catch (error) {
-        console.log(error);
+    /** Will enable push notifications and save the token with Orbis */
+    async function enablePushNotifications() {
+        Haptics.selectionAsync();
+
+        let res;
+        try {
+            res = await registerForPushNotificationsAsync();
+        } catch (error) {
+            console.log(error);
+        }
+
+        if(res) {
+            try {
+                let result = await orbis.addNotificationsSubscription({
+                    type: "push",
+                    value: res.data,
+                    scopes: ["follow", "replies", "messages", "reposts", "reactions"],
+                    context: context
+                });
+            } catch (error) {
+                console.log(error);
+            }
+
+            if(toggleCheckBox){
+                await AsyncStorage.setItem("showNotificationDate", moment().add(7, 'days').format('YYYY-MM-DD'))
+            }
+            const showNewFeatureDate = await AsyncStorage.getItem('showNewFeatureDate')
+            if(moment().format('YYYY-MM-DD') >= showNewFeatureDate || !showNewFeatureDate){
+                setNewFeatureVis(true);
+            }
+            
+            setPushNotifsVis(false);
+        } else {
+            alert("Error retrieving push notifications token.");
+        }
     }
 
-    if(res) {
-      console.log("Retrieved push token:", res);
-      setPushNotifsVis(false);
-      let result = await orbis.addNotificationsSubscription({
-        type: "push",
-        value: res.data,
-        scopes: ["follow", "replies", "messages", "reposts", "reactions"],
-        context: context
-      });
-      console.log("result:", result);
-    } else {
-      alert("Error retrieving push notifications token.");
+    /** Won't ask for the push notifications token and will close modal */
+    async function skipNotifications() {
+        Haptics.selectionAsync();
+        const showNewFeatureDate = await AsyncStorage.getItem('showNewFeatureDate')
+        console.log('ICIII : '+showNewFeatureDate);
+        
+        if(moment().format('YYYY-MM-DD') >= showNewFeatureDate || !showNewFeatureDate){
+            setNewFeatureVis(true);
+        }
+
+        setPushNotifsVis(false);
+        if(toggleCheckBox){
+            await AsyncStorage.setItem("showNotificationDate", moment().add(7, 'days').format('YYYY-MM-DD'))
+        }
     }
-  }
-
-  /** Won't ask for the push notifications token and will close modal */
-  async function skipNotifications() {
-    Haptics.selectionAsync();
-
-    setPushNotifsVis(false);
-  }
 
     return(
         <Modal hide={() => {Haptics.selectionAsync();setPushNotifsVis(false)}} type='notifications'>
@@ -61,9 +82,19 @@ export default function PushNotificationsModal() {
 
                 <Text style={[tailwind(`text-secondary text-center text-slate-900`), {lineHeight: 20}]}>Stay in the loop with the latest news, content, videos, and rewards.</Text>
 
-                <View style={[tailwind('flex items-center mt-5 flex-col w-full')]}>
-                    <Button size="md" color="black" title="Notify me" onPress={enablePushNotifications} style={{width: '90%',alignItems: 'center',height:50,justifyContent: 'center',}}/>
-                    <Button size="md" color="white" title="Not now" onPress={skipNotifications} style={{width: '90%',alignItems: 'center',marginTop: 10,height: 50,justifyContent: 'center',}}/>
+                <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 5,marginTop: 25,}}>
+                    <Checkbox 
+                        style={{width: 17,height: 17}}
+                        value={toggleCheckBox} 
+                        onValueChange={setToggleCheckBox} 
+                        color={'#000'}
+                    />
+                    <Text style={{fontFamily: 'GmarketMedium',fontSize: 12,}}>Don't show me for 7 days</Text>
+                </View>
+
+                <View style={[tailwind('flex flex-row justify-between mt-5 w-full')]}>
+                    <Button size="md" color="black" title="Notify me" onPress={enablePushNotifications} style={{width: '47%',alignItems: 'center',height: 50,justifyContent: 'center',}}/>
+                    <Button size="md" color="white" title="Not now" onPress={skipNotifications} style={{width: '47%',alignItems: 'center',height: 50,justifyContent: 'center',}}/>
                 </View>
             </View>
         </Modal>

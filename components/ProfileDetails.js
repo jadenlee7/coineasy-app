@@ -49,6 +49,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         modalSwitchRef, 
         modalSettingsRef, 
         modalProfileRef,
+        addressCopied, setAddressCopied
     } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
@@ -138,10 +139,15 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         }
     }
 
+    const delay = ms => new Promise(res => setTimeout(res, ms));
+
     /** Will copy link in Clipboard */
     async function copy(val) {
+        setAddressCopied(true)
+        await delay(1000);
+        setAddressCopied(false)
         await Clipboard.setStringAsync(val);
-        alert("Address copied!");
+        // alert("Address copied!");
     }
 
     if(!profile) {
@@ -308,7 +314,13 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     
                     <View style={tailwind('mt-2 flex flex-row items-center')}>
                         <Username details={userInfo} fontSize={15} />
-                        <Button color="badge-gray" icon={<CopyIconBadge style={{marginLeft: 4}} />} title={userInfo?.metadata?.ensName ? userInfo.metadata.ensName : shortAddress(address, 4)} style={{marginLeft: 8}} onPress={() => copy(address)} />
+                        <Button 
+                            color="badge-gray" 
+                            icon={<CopyIconBadge style={{marginLeft: 4}} />} 
+                            title={userInfo?.metadata?.ensName ? userInfo.metadata.ensName : shortAddress(address, 4)} 
+                            style={{marginLeft: 8}} 
+                            onPress={() => copy(address)} 
+                        />
                     </View>
                     {userInfo?.profile?.description &&
                         <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>

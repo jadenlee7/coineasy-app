@@ -17,28 +17,54 @@ import { useTailwind } from 'tailwind-rn';
 import { AntDesign } from '@expo/vector-icons';
 import CountDownTimer from "react-native-countdown-timer-hooks";
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NewFeatureModal from '../../components/modals/NewFeatureModal';
 
 const {width, height} = Dimensions.get('window')
 
 
 const OrangeReward = ({navigation, route}) => {
-    const { orbis, user, setUser, userData, setUserData, activityClaim, setActivityClaim, inviteClaim, setInviteClaim, setShowClaimOranges, setTodayOranges } = useContext(GlobalContext);
-    const tailwind = useTailwind();
+    const { 
+        orbis,
+        user,
+        userData,
+        setUserData,
+        activityClaim,
+        inviteClaim,
+        setShowClaimOranges,
+        setTodayOranges,
+        setNewFeatureVis,
+        setNewFeatureAlertVis,
+        newFeatureVis,
+        newFeatureAlertVis,
+    } = useContext(GlobalContext);
+    const tailwind = useTailwind();    
 
     const [openHelp, setOpenHelp] = useState(false)
     const [bottomOpen, setBottomOpen] = useState(false)
     const [launchAnimation, setLaunchAnimation] = useState(false)
-    
+    const [firstTimeReward, setFirstTimeReward] = useState(false)
 
     const [firstCelebrationTitle, setFirstCelebrationTitle] = useState('+5 Oranges!')
     const [secondCelebrationTitle, setSecondCelebrationTitle] = useState(listConstants[0].title)
     const [thirdCelebrationTitle, setThirdCelebrationTitle] = useState(null)
 
-    
-
     const modalRef = useRef(null); 
     const snapPoints = useMemo(() => ['40%','40%'], []);
     const handleModalPress = useCallback(() => modalRef.current?.present(), []);
+
+    useEffect(() => {
+        checkFirstTimeReward()
+        
+        async function checkFirstTimeReward(){
+            // await AsyncStorage.removeItem('FirstTimeReward')
+            // userData.firstTime = false       
+            // setUserData({...userData})
+
+            const isFirstTime = await AsyncStorage.getItem('FirstTimeReward')
+            setFirstTimeReward(isFirstTime ?? 'true')
+        }
+    }, [])    
 
     useEffect(() => {
         if(launchAnimation){
@@ -535,7 +561,7 @@ const OrangeReward = ({navigation, route}) => {
     //             </ImageBackground>
     //         </View>
     //     )
-    // }
+    // }    
 
     return (
         <View style={[tailwind('flex-1 flex-col')]}>
@@ -576,17 +602,31 @@ const OrangeReward = ({navigation, route}) => {
                 </View>
 
 
-                <Button 
+                {/* <Button 
                     title='Reset Data'
                     color='orange'
                     size="md"
                     onPress={() => onResetData()} 
                     style={{height: 50,width: width-30, alignSelf:'center', justifyContent: 'center',alignItems: 'center', marginTop: 30,}}
-                />
+                /> */}
+
+                {firstTimeReward == 'true' && userData.firstTime != 'done' && (
+                    <TouchableOpacity 
+                        style={{height: 60,marginVertical: 10,}}
+                        onPress={() => {Haptics.selectionAsync();setNewFeatureAlertVis(true);setNewFeatureVis(true)}}
+                    >
+                        <Image
+                            style={{width: width-20,height: 65,alignSelf:'center',}}
+                            resizeMode='contain'
+                            source={require('../../assets/new_feature_alert.png')}
+                        />
+                    </TouchableOpacity>
+                )}
+
 
                 {/* DAILY CHECK-IN */}
-                <View style={[styles.elevate, {width: width-20, height: 100, alignSelf:'center',borderRadius: 10,marginTop: 20,  overflow:'hidden'}]}>
-                    <ImageBackground source={require('../../assets/bg_card_reward.png')} resizeMode="stretch" style={{flex: 1,justifyContent:'center',padding: 20}}>
+                <View style={[styles.elevate, {width: width-20, height: 100, alignSelf:'center',borderRadius: 10, marginTop: firstTimeReward == 'true' && userData.firstTime != 'done' ? 0 : 20, overflow:'hidden'}]}>
+                    <ImageBackground source={require('../../assets/bg_card_reward.png')} resizeMode="contain" style={{flex: 1,justifyContent:'center',padding: 20}}>
                         <View style={{position: 'absolute',top: -5,left: 2}}>
                             <Image
                                 style={{width: 80, height: 80, }}
@@ -760,7 +800,6 @@ const OrangeReward = ({navigation, route}) => {
                     ref={modalRef}
                     index={1}
                     snapPoints={snapPoints}
-                    // backgroundStyle={{backgroundColor: colors.modal,}}
                     handleIndicatorStyle={{backgroundColor: 'black',}}
                     handleStyle={{height: 40,justifyContent: 'center',}}
                     backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
@@ -770,14 +809,6 @@ const OrangeReward = ({navigation, route}) => {
                         <Text style={{textAlign: 'center',fontSize: 18,fontWeight: 'bold',}}>Daily Check-in</Text>
                         <Text style={{textAlign: 'center',}}>Start Your Day with Orange Rewards!</Text>
                     </View>
-
-                    {/* <Button 
-                        title='Test Animate'
-                        color='orange'
-                        size="md"
-                        onPress={() => launchAnimation()} 
-                        style={{height: 50,width: width-30, alignSelf:'center', justifyContent: 'center',alignItems: 'center', marginTop: 30,}}
-                    /> */}
 
                     <View style={{height: 75, marginTop: 20,}}>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -860,7 +891,17 @@ const OrangeReward = ({navigation, route}) => {
                 </Modal>
             )}
 
-
+            {newFeatureVis && newFeatureAlertVis && (
+                <View style={{
+                    zIndex: 9999,
+                    position: 'absolute',
+                    flex: 1,
+                    width: '100%',
+                    height:'100%',
+                }}>
+                    <NewFeatureModal />
+                </View>
+            )}
 
         </View>
     )
@@ -870,7 +911,7 @@ export default OrangeReward
 
 const styles = StyleSheet.create({
     elevate: {
-        elevation: 2,
+        elevation: 4,
         shadowRadius: 4,
         shadowOpacity: 0.1,
         shadowColor: '#000',

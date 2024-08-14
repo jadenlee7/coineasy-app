@@ -108,7 +108,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                 ) : type && (type == 'oranges' || type == 'oranges-help') && !isAds && !pendingAds ? (
                     <TouchableWithoutFeedback onPress={openUrl} disabled={!isAds}>
                         <LinearGradient
-                            colors={['#FFF7E8', '#FFEDEC']}
+                            colors={['#FFF7E8', '#FFD4D1']}
                             style={[isAds ? {height: '103.2%',width: '100%',} : {height: '106%',}, type == 'oranges-help' && {justifyContent:'center'}, {borderRadius: 10,}]} 
                         >
                             {children}
@@ -118,7 +118,6 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     <>
                         {children}
                     </>
-
                 ) : (
                     <>
                         {children}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { View } from 'react-native';
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -10,10 +10,13 @@ import * as Haptics from 'expo-haptics';
 
 import { NavHomeIcon, NavCategoriesIcon, NavChartIcon, NavProfileIcon, NavSearchIcon } from "../components/Icons";
 import Search from '../screens/Search';
+import { GlobalContext } from '../contexts/GlobalContext';
+import NewFeatureModal from '../components/modals/NewFeatureModal';
 
 const Tab = createBottomTabNavigator();
 
 const BottomTabsNavigator = ({ navigation, route }) => {
+    const { newFeatureVis } = useContext(GlobalContext);
 
     const showIcons = (title) => {
         return (
@@ -57,43 +60,58 @@ const BottomTabsNavigator = ({ navigation, route }) => {
     
 
     return (
-        <Tab.Navigator screenOptions={{ headerShown: false, tabBarHideOnKeyboard: true }} style={{minHeight: 150}}>
-            <Tab.Screen name="Home" component={Home} options={showIcons('home')}
-                listeners={{
-                    tabPress: (e) => {
-                        Haptics.selectionAsync();
-                    },
-                }}
-            />
-            <Tab.Screen name="Categories" component={Categories} options={showIcons('cat')}
-                listeners={{
-                    tabPress: (e) => {
-                        Haptics.selectionAsync();
-                    },
-                }}                
-            />
-            <Tab.Screen name="News" component={News} options={showIcons('news')}
-                listeners={{
-                    tabPress: (e) => {
-                        Haptics.selectionAsync();
-                    },
-                }}                
-            />
-            <Tab.Screen name="Search" component={Search} options={showIcons('search')}
-                listeners={{
-                    tabPress: (e) => {
-                        Haptics.selectionAsync();
-                    },
-                }}                
-            />
-            <Tab.Screen name="Profile" component={Profile} options={showIcons('profile')}
-                listeners={{
-                    tabPress: (e) => {
-                        Haptics.selectionAsync();
-                    },
-                }}                
-            />
-        </Tab.Navigator>
+        <>
+            <Tab.Navigator screenOptions={{ headerShown: false, tabBarHideOnKeyboard: true }} style={{minHeight: 150}}>
+                <Tab.Screen name="Home" component={Home} options={showIcons('home')}
+                    listeners={{
+                        tabPress: (e) => {
+                            Haptics.selectionAsync();
+                        },
+                    }}
+                />
+                <Tab.Screen name="Categories" component={Categories} options={showIcons('cat')}
+                    listeners={{
+                        tabPress: (e) => {
+                            Haptics.selectionAsync();
+                        },
+                    }}                
+                />
+                <Tab.Screen name="News" component={News} options={showIcons('news')}
+                    listeners={{
+                        tabPress: (e) => {
+                            Haptics.selectionAsync();
+                        },
+                    }}                
+                />
+                <Tab.Screen name="Search" component={Search} options={showIcons('search')}
+                    listeners={{
+                        tabPress: (e) => {
+                            Haptics.selectionAsync();
+                        },
+                    }}                
+                />
+                <Tab.Screen name="Profile" component={Profile} options={showIcons('profile')}
+                    listeners={{
+                        tabPress: (e) => {
+                            Haptics.selectionAsync();
+                        },
+                    }}                
+                />
+            </Tab.Navigator>
+
+
+            {newFeatureVis && (
+                <View style={{
+                    zIndex: 9999,
+                    position: 'absolute',
+                    flex: 1,
+                    width: '100%',
+                    height:'100%',
+                }}>
+                    <NewFeatureModal />
+                </View>
+            )}
+        </>
     )
 };
 

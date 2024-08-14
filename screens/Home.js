@@ -152,7 +152,6 @@ const Home = ({ navigation, route }) => {
                         />                           
                     </Modal>
                 </View>
-
             )}
         </>
     )

@@ -36,6 +36,7 @@
     "expo-barcode-scanner": "~12.5.3",
     "expo-blur": "~12.4.1",
     "expo-camera": "~13.4.4",
+    "expo-checkbox": "~2.4.0",
     "expo-clipboard": "~4.3.1",
     "expo-constants": "~14.4.2",
     "expo-crypto": "~12.4.1",
