@@ -145,6 +145,14 @@ export const CopyIcon = () => {
   )
 }
 
+export const CopyIcon2 = ({style}) => {
+  return(
+    <Svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" style={style}>
+        <Path d="M12.1465 17.8757H4.12565V9.85482H6.41732V7.56315H4.12565C2.86165 7.56315 1.83398 8.59082 1.83398 9.85482V17.8757C1.83398 19.1396 2.86165 20.1673 4.12565 20.1673H12.1465C13.4105 20.1673 14.4382 19.1396 14.4382 17.8757V15.584H12.1465V17.8757ZM9.85482 14.4382H17.8757C19.1396 14.4382 20.1673 13.4105 20.1673 12.1465V4.12565C20.1673 2.86165 19.1396 1.83398 17.8757 1.83398H9.85482C8.59082 1.83398 7.56315 2.86165 7.56315 4.12565V12.1465C7.56315 13.4105 8.59082 14.4382 9.85482 14.4382Z" fill="black"/>
+    </Svg>
+  )
+}
+
 export const PlusIcon = () => {
   return(
     <Svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" style={[{position: "absolute", bottom: 0, right: -5}]}>

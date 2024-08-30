@@ -14,6 +14,7 @@ import { SuccessIcon } from "../Icons";
 import { UserPfp } from "../User";
 import useDidToAddress from "../../hooks/useDidToAddress";
 import useGetUsername from "../../hooks/useGetUsername";
+import moment from "moment";
 
 const list_report = [
     {label: 'It\'s spam'},
@@ -26,7 +27,9 @@ const list_report = [
 ];
 
 export default function PostSettingsModal() {    
-    const { orbis,
+    const { 
+        orbis,
+        user,
         showPostbox,
         postboxVis,
         editedPost,
@@ -39,7 +42,9 @@ export default function PostSettingsModal() {
         setListMutedUsers,
         modalPostSettingsRef,
         showReportBack,
-        setShowReportBack
+        setShowReportBack,
+        userData,
+        setUserData
     } = useContext(GlobalContext);
 
     const windowSize = Dimensions.get('window')
@@ -77,6 +82,53 @@ export default function PostSettingsModal() {
     }
 
     async function deletePost() {
+
+        // if post newer than 06/09/2024 16:36:01
+        // remove 15 oranges awarded during creation
+        if(editedPost?.value.timestamp > 1725633361){
+            const tempData = userData ?? {}
+
+            if(tempData.listClaimedOranges){
+                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+                if(index != -1){
+                    tempData.listClaimedOranges[index].listOranges.push({
+                        numberOranges: -15,
+                        type: 'Post Deletion'
+                    })
+                }else{
+                    tempData.listClaimedOranges.push({
+                        date: moment().format('YYYY-MM-DD'),
+                        listOranges: [
+                            {
+                                numberOranges: -15,
+                                type: 'Post Deletion'
+                            },
+                        ]
+                    })
+                }
+            }else{
+                tempData.listClaimedOranges = [{
+                    date: moment().format('YYYY-MM-DD'),
+                    listOranges: [
+                        {
+                            numberOranges: -15,
+                            type: 'Post Deletion'
+                        },
+                    ]
+                }]
+            }
+
+            tempData.numberOranges ? tempData.numberOranges -= 15 : tempData.numberOranges = 0
+
+            setUserData({...tempData})
+            console.log(JSON.stringify(tempData));
+            
+
+            var tempProfile = user.profile
+            tempProfile.data = tempData
+            const res = await orbis.updateProfile(tempProfile);
+        }
+        
         setLoading(true);
         let res = await orbis.deletePost(editedPost?.value.stream_id);
         setLoading(false);

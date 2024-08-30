@@ -331,12 +331,8 @@ export default function App() {
                 setUser({...listDid[0].user})
                 if(data.details?.profile?.data){
                     setUserData({...data.details.profile.data})
-                    console.log('USER DATA 1');
-                    console.log(JSON.stringify(data.details.profile.data));
                 }else{
                     setUserData({...listDid[0].user.profile?.data})
-                    console.log('USER DATA 2');
-                    console.log(JSON.stringify(listDid[0].user.profile?.data));
                 }
                 // if(listDid[0].user.profile?.data?.oranges?.updated && moment(listDid[0].user.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
                 //     setShowClaimOranges(true)

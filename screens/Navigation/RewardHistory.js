@@ -118,6 +118,16 @@ const RewardHistory = ({navigation, route}) => {
                                                     <Text style={{color: '#FF6B17', fontSize: 15,}}>+ {elt.numberOranges} Oranges</Text>
                                                     <Text style={{color:'#FF6B17', fontSize: 15,}}>{elt.type}</Text>
                                                 </View>
+                                            ) : elt.type.includes('Account Creation') ? (
+                                                <View style={{}}>
+                                                    <Text style={{color: '#FF6B17', fontSize: 15,}}>+ {elt.numberOranges} Oranges</Text>
+                                                    <Text style={{color:'#FF6B17', fontSize: 15,}}>{elt.type}</Text>
+                                                </View>
+                                            ) : elt.type.includes('Milestone') ? (
+                                                <View style={{}}>
+                                                    <Text style={{color: '#FF6B17', fontSize: 15,}}>+ {elt.numberOranges} Oranges</Text>
+                                                    <Text style={{color:'#FF6B17', fontSize: 15,}}>{elt.type}</Text>
+                                                </View>
                                             ) : (
                                                 <View style={{}}>
                                                     <Text style={{}}>{elt.numberOranges} Oranges</Text>

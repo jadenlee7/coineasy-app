@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Dimensions, Easing, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Animated, Dimensions, Easing, Image, ImageBackground, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -19,6 +19,7 @@ import CountDownTimer from "react-native-countdown-timer-hooks";
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NewFeatureModal from '../../components/modals/NewFeatureModal';
+import { CopyIcon, CopyIcon2, CopyIconBadge } from '../../components/Icons';
 
 const {width, height} = Dimensions.get('window')
 
@@ -37,10 +38,12 @@ const OrangeReward = ({navigation, route}) => {
         setNewFeatureAlertVis,
         newFeatureVis,
         newFeatureAlertVis,
+        setAddressCopied
     } = useContext(GlobalContext);
     const tailwind = useTailwind();    
 
     const [openHelp, setOpenHelp] = useState(false)
+    const [openInviteHelp, setOpenInviteHelp] = useState(false)
     const [bottomOpen, setBottomOpen] = useState(false)
     const [launchAnimation, setLaunchAnimation] = useState(false)
     const [firstTimeReward, setFirstTimeReward] = useState(false)
@@ -52,6 +55,10 @@ const OrangeReward = ({navigation, route}) => {
     const modalRef = useRef(null); 
     const snapPoints = useMemo(() => ['40%','40%'], []);
     const handleModalPress = useCallback(() => modalRef.current?.present(), []);
+    
+    const modalInviteRef = useRef(null); 
+    const snapInvitePoints = useMemo(() => ['50%','50%'], []);
+    const handleModalInvitePress = useCallback(() => modalInviteRef.current?.present(), []);
 
     useEffect(() => {
         checkFirstTimeReward()
@@ -74,26 +81,26 @@ const OrangeReward = ({navigation, route}) => {
     
 
     const onResetData = async () => {
-        // user.profile.data = {alreadyLogin: true}
+        user.profile.data = {alreadyLogin: true}
 
-        tempData = {
-            "alreadyLogin":true,
-            "post":{
-                "number":1,
-                "gained":15,
-                "lastPost":"2024-07-16 16:13",
-            },
-            "activityUnclaimed":{"number":29},
-            "reaction":{"number":4,"gained":8,"lastReaction":"2024-07-16 16:13"},
-            "comment":{"number":2,"gained":6,"lastComment":"2024-07-16 16:16"},
-            "numberOranges":0,
-        }
+        // tempData = {
+        //     "alreadyLogin":true,
+        //     "post":{
+        //         "number":1,
+        //         "gained":15,
+        //         "lastPost":"2024-07-16 16:13",
+        //     },
+        //     "activityUnclaimed":{"number":29},
+        //     "reaction":{"number":4,"gained":8,"lastReaction":"2024-07-16 16:13"},
+        //     "comment":{"number":2,"gained":6,"lastComment":"2024-07-16 16:16"},
+        //     "numberOranges":0,
+        // }
 
 
-        setUserData({...tempData})
+        // setUserData({...tempData})
 
         var tempProfile = user.profile
-        tempProfile.data = tempData
+        // tempProfile.data = tempData
         const res = await orbis.updateProfile(tempProfile);
     }
 
@@ -260,6 +267,7 @@ const OrangeReward = ({navigation, route}) => {
         // activityClaimed: {
         //     number: 0,
         // }
+        // friendsInvited: 0
     }
 
     // Timer References
@@ -486,6 +494,7 @@ const OrangeReward = ({navigation, route}) => {
     }
 
     const onAdClaim = async () => {
+        Haptics.selectionAsync();
         setTodayOranges(200);
         setShowClaimOranges(true)
     }
@@ -562,6 +571,67 @@ const OrangeReward = ({navigation, route}) => {
     //         </View>
     //     )
     // }    
+
+
+    const delay = ms => new Promise(res => setTimeout(res, ms));
+
+    const onCopyPress = async () => {
+        setAddressCopied(true)
+        await delay(1000);
+        setAddressCopied(false)
+    }
+
+    const onInvitePress = () => {
+        Share.share({
+            message: "Join CoinEasy and empower your Web3 journey ! \n\nUse code ORANGE50 to receive your first reward ! \n\nhttps://www.coineasy.xyz",
+            url: "https://www.coineasy.xyz",
+            title: "Download CoinEasy"
+        }).then(({ action, activityType }) => {
+            console.log("ok");
+            if (action === Share.sharedAction) {
+                const tempData = userData ?? {}
+
+                if(tempData.listClaimedOranges){
+                    const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+                    if(index != -1){
+                        tempData.listClaimedOranges[index].listOranges.push({
+                            numberOranges: 10,
+                            type: 'Invite Sent'
+                        })
+                    }else{
+                        tempData.listClaimedOranges.push({
+                            date: moment().format('YYYY-MM-DD'),
+                            listOranges: [
+                                {
+                                    numberOranges: 10,
+                                    type: 'Invite Sent'
+                                },
+                            ]
+                        })
+                    }
+                }else{
+                    tempData.listClaimedOranges = [{
+                        date: moment().format('YYYY-MM-DD'),
+                        listOranges: [
+                            {
+                                numberOranges: 10,
+                                type: 'Invite Sent'
+                            },
+                        ]
+                    }]
+                }
+
+                tempData.numberOranges ? tempData.numberOranges += 10 : tempData.numberOranges = 10
+                tempData.friendsInvited ? tempData.friendsInvited += 1 : tempData.friendsInvited = 1
+
+                setUserData({...tempData})
+
+                var tempProfile = user.profile
+                tempProfile.data = tempData
+                orbis.updateProfile(tempProfile);
+            }
+        }).catch((e) => console.warn('error', e));
+    };
 
     return (
         <View style={[tailwind('flex-1 flex-col')]}>
@@ -715,7 +785,7 @@ const OrangeReward = ({navigation, route}) => {
                                 color={activityClaim ? 'gray-100' : 'orange'}
                                 disabled={activityClaim}
                                 size="sm"
-                                onPress={() => navigation.navigate('ActivityReward')} 
+                                onPress={() => {Haptics.selectionAsync();navigation.navigate('ActivityReward')}} 
                                 style={{height: 40, justifyContent: 'center',alignItems: 'center'}}
                             />
                         </View>
@@ -734,17 +804,16 @@ const OrangeReward = ({navigation, route}) => {
                                 />
                                 <View style={{}}>
                                     <Text style={{fontWeight: 'bold',fontSize: 18,}}>Invite Friends</Text>
-                                    <Text style={{}}>0</Text>
+                                    <Text style={{}}>{userData.friendsInvited ?? 0}</Text>
                                 </View>
                             </View>
 
                             <Button 
                                 // loading={listFollowLoader[index]} 
-                                title={inviteClaim ? 'Claimed' : 'Claim'} 
-                                color={inviteClaim ? 'gray-100' : 'orange'}
-                                disabled={inviteClaim}
+                                title="Invite"
+                                color='orange'
                                 size="sm"
-                                onPress={() => onInviteClaim()} 
+                                onPress={handleModalInvitePress} 
                                 style={{height: 40, justifyContent: 'center',alignItems: 'center'}}
                             />
                         </View>
@@ -822,6 +891,68 @@ const OrangeReward = ({navigation, route}) => {
                 </BottomSheetModal>
             </BottomSheetModalProvider>
 
+            <BottomSheetModalProvider>
+                <BottomSheetModal
+                    ref={modalInviteRef}
+                    index={1}
+                    snapPoints={snapInvitePoints}
+                    handleIndicatorStyle={{backgroundColor: 'black',}}
+                    handleStyle={{height: 40,justifyContent: 'center',}}
+                    backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
+                    onDismiss={() => {setBottomOpen(false)}}
+                >
+                    <View style={{}}>
+                        <Text style={{textAlign: 'center',fontSize: 18,fontWeight: 'bold',}}>Invite Friends</Text>
+                        <Text style={{textAlign: 'center',paddingHorizontal: 20}}>Invite friends with code <Text style={{color: '#FF6E31',fontWeight: 'bold',}}>ORANGE50</Text> and earn together!</Text>
+                    </View>
+
+                    <View style={{marginTop: 20,}}>
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap:20}}>
+                            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 5}}>
+                                <Image
+                                    style={{width: 35, height: 35}}
+                                    resizeMode='contain'
+                                    source={require('../../assets/orange_icon.png')}
+                                />
+                                <Text style={{textAlign: 'center',fontSize: 18,fontWeight: 'bold',}}>+50</Text>                                
+                            </View>
+
+                            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 5}}>
+                                <Image
+                                    style={{width: 35, height: 35, alignSelf:'center',}}
+                                    resizeMode='contain'
+                                    source={require('../../assets/orange2_icon.png')}
+                                />
+                                <Text style={{textAlign: 'center',fontSize: 18,fontWeight: 'bold',}}>+10</Text>                                
+                                <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenInviteHelp(true)}}>
+                                    <Image
+                                        style={{width: 20, height: 20}}
+                                        resizeMode='contain'
+                                        source={require('../../assets/question_icon.png')}
+                                    />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+
+                    <TouchableOpacity 
+                        style={{height: 50,width: width-30, alignSelf:'center', justifyContent: 'center',alignItems: 'center', marginTop: 30,borderWidth: 1,borderRadius: 25,flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}
+                        onPress={onCopyPress}
+                    >
+                        <Text style={{fontWeight: 'bold',fontSize: 16,paddingLeft: 20}}>https://coineasy.xyz</Text>
+                        <CopyIcon2 style={{marginRight: 15}}/>
+                    </TouchableOpacity>
+
+                    <Button 
+                        title='Invite'
+                        color='orange'
+                        size="md"
+                        onPress={() => onInvitePress()} 
+                        style={{height: 50,width: width-30, alignSelf:'center', justifyContent: 'center',alignItems: 'center',marginTop: 20,}}
+                    />
+                </BottomSheetModal>
+            </BottomSheetModalProvider>
+
             {openHelp && (
                 <Modal 
                     hide={() => {Haptics.selectionAsync();setOpenHelp(false)}} 
@@ -887,6 +1018,44 @@ const OrangeReward = ({navigation, route}) => {
                             <Text style={{textAlign: 'center',}}>Earn rewards by creating posts.</Text>
                             <Text style={{}}>The more you post, the more you earn!</Text>
                         </View>
+                    </View>
+                </Modal>
+            )}
+
+            {openInviteHelp && (
+                <Modal 
+                    hide={() => {Haptics.selectionAsync();setOpenInviteHelp(false)}} 
+                    type='oranges-help-invite' 
+                >
+
+                    <TouchableOpacity
+                        style={{position: 'absolute',top: 15, right: 15}}
+                        onPress={() => {Haptics.selectionAsync();setOpenInviteHelp(false)}}
+                    >
+                        <AntDesign name="closecircle" size={24} color="black" />
+                    </TouchableOpacity>
+
+                    <View style={{alignSelf:'center',marginTop: 40,}}>
+                        <Image
+                            style={{width: 50, height: 50, alignSelf:'center',}}
+                            resizeMode='contain'
+                            source={require('../../assets/orange2_icon.png')}
+                        />
+
+                        <Text style={{fontWeight: 'bold',fontSize: 18,textAlign: 'center',marginVertical: 20,}}>Invite & Friend Bonus</Text>
+
+                        <Text style={{textAlign: 'center',}}>Tell your friends to start posting to earn</Text>
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
+                            <Text style={{}}>bonus Oranges! </Text>
+                            <Image
+                                style={{width: 20, height: 20}}
+                                resizeMode='contain'
+                                source={require('../../assets/nice_orange.png')}
+                            />
+                        </View>
+
+                        <Text style={{textAlign: 'center',marginTop: 10,}}>Receive 10 oranges per invitation !</Text>
+
                     </View>
                 </Modal>
             )}

@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, TouchableHighlight, TextInput, ActivityIndicator, Platform, Image, ScrollView, BackHandler, Dimensions, KeyboardAvoidingView, Animated, Keyboard } from 'react-native';
+import { Text, View, TouchableOpacity, TouchableHighlight, TextInput, ActivityIndicator, Platform, Image, ScrollView, BackHandler, Dimensions, KeyboardAvoidingView, Animated, Keyboard, ImageBackground } from 'react-native';
 
 import mime from 'mime'
 import * as Haptics from 'expo-haptics';
@@ -39,7 +39,9 @@ export default function Postbox({isReply = false}) {
         currentRoute,
         categoriesVis,
         setCategoriesVis,
-        modalPostBoxRef
+        modalPostBoxRef,
+        userData,
+        setUserData
     } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
@@ -230,6 +232,45 @@ export default function Postbox({isReply = false}) {
                 }else{
                     console.log('la');
                     defaultCallbackPostShared(_callbackContent)
+                }
+
+                if(!replyTo && userData.rewardFirstPost == 'reward pending'){
+                    const tempData = user.profile?.data ?? {}
+                    if(tempData.listClaimedOranges){
+                        const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+                        if(index != -1){
+                            tempData.listClaimedOranges[index].listOranges.push({
+                                numberOranges: 50,
+                                type: 'First Post'
+                            })
+                        }else{
+                            tempData.listClaimedOranges.push({
+                                date: moment().format('YYYY-MM-DD'),
+                                listOranges: [
+                                    {
+                                        numberOranges: 50,
+                                        type: 'First Post'
+                                    },
+                                ]
+                            })
+                        }
+                    }else{
+                        tempData.listClaimedOranges = [{
+                            date: moment().format('YYYY-MM-DD'),
+                            listOranges: [
+                                {
+                                    numberOranges: 50,
+                                    type: 'First Post'
+                                },
+                            ]
+                        }]
+                    }
+        
+                    tempData.numberOranges ? tempData.numberOranges += 50 : tempData.numberOranges = 50
+                    tempData.rewardFirstPost = 'claimed'
+                    setUserData({...tempData})
+
+                    // A TESTER !!!!!
                 }
 
                 setLoading(false);
@@ -703,6 +744,12 @@ export default function Postbox({isReply = false}) {
                         }
 
                         {replyTo && <View style={[tailwind('bg-slate-200 flex-1'), {width: 1, height:50,position: 'absolute',top: 45,left: 30}]} />}
+
+                        {!replyTo && userData.rewardFirstPost == 'reward pending' && (
+                            <View style={{backgroundColor: '#FFE9E3',width:'100%', alignSelf:'center',borderRadius: 10,paddingVertical: 10}}>
+                                <Text style={{color:'#FF6E31',fontWeight: 'bold',textAlign: 'center',}}>Receive 50 Oranges Reward for your first post!</Text>
+                            </View>
+                        )}
 
                         {hasAccess && !categoriesVis &&
                             <TextInput

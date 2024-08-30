@@ -1,5 +1,5 @@
 import React, { useState, useContext, useRef, useEffect, useMemo } from "react";
-import { Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity, Animated, Dimensions, StyleSheet, TouchableWithoutFeedback, Platform, TextInput } from 'react-native';
+import { Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity, Animated, Dimensions, StyleSheet, TouchableWithoutFeedback, Platform, TextInput, Easing } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -7,15 +7,16 @@ import * as ImagePicker from 'expo-image-picker';
 
 import Modal from "../Modal";
 import Button from "../Button";
-import { CloseIcon, PenIcon, SuccessIcon } from "../Icons";
+import { ArrowAccordionIcon, CloseIcon, PenIcon, SuccessIcon } from "../Icons";
 import { GlobalContext } from "../../contexts/GlobalContext";
 import { FloatingLabelInput } from "react-native-floating-label-input";
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import useStatusBarHeight from "../../hooks/useStatusBarHeight";
+import moment from "moment";
 
 
 export default function PostSettingsModal() {    
-    const { user, orbis, setUser, setPushNotifsVis, modalNicknameRef } = useContext(GlobalContext);
+    const { user, orbis, setUser, setUserData, setPushNotifsVis, modalNicknameRef } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const [showBack, setShowBack] = useState(false)
@@ -25,6 +26,8 @@ export default function PostSettingsModal() {
 
     const [pfpLoading, setPfpLoading] = useState(false);
     const [pfp, setPfp] = useState("")
+
+    const [inviteCode, setInviteCode] = useState('')
 
     const windowSize = Dimensions.get('window')
 
@@ -142,10 +145,51 @@ export default function PostSettingsModal() {
         Haptics.selectionAsync();
         when == 'now' ? setLoading(true) : setLoadingLater(true);
 
+        const tempData = user.profile?.data ?? {}
+
+        if(inviteCode == 'ORANGE50' && !tempData.claimedOrangeFifty){
+            if(tempData.listClaimedOranges){
+                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+                if(index != -1){
+                    tempData.listClaimedOranges[index].listOranges.push({
+                        numberOranges: 50,
+                        type: 'Account Creation Reward'
+                    })
+                }else{
+                    tempData.listClaimedOranges.push({
+                        date: moment().format('YYYY-MM-DD'),
+                        listOranges: [
+                            {
+                                numberOranges: 50,
+                                type: 'Account Creation Reward'
+                            },
+                        ]
+                    })
+                }
+            }else{
+                tempData.listClaimedOranges = [{
+                    date: moment().format('YYYY-MM-DD'),
+                    listOranges: [
+                        {
+                            numberOranges: 50,
+                            type: 'Account Creation Reward'
+                        },
+                    ]
+                }]
+            }
+
+            tempData.numberOranges ? tempData.numberOranges += 50 : tempData.numberOranges = 50
+            tempData.claimedOrangeFifty = true
+            tempData.rewardFirstPost = 'reward pending'
+
+            setUserData({...tempData})
+        }
+
         let content = {
             username: nickname,
             description: '',
             pfp: pfp,
+            data: tempData
         };
         const res = await orbis.updateProfile(content);
         
@@ -158,6 +202,53 @@ export default function PostSettingsModal() {
         modalNicknameRef.current?.close()
         setPushNotifsVis(true);
     }
+
+
+      
+    const [collapsed, setCollapsed] = useState(true);
+    const [animationCollapse] = useState(new Animated.Value(0));
+
+    const heightInterpolate = animationCollapse.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 100]
+    });
+
+    const spinValue = new Animated.Value(0);
+    const spin = spinValue.interpolate({
+        inputRange: [0, 1],
+        outputRange: ["180deg", "0deg"]
+    })
+
+    const toggleCollapse = () => {
+        if (collapsed) {
+            Animated.parallel([
+                Animated.timing(spinValue,{
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: false 
+                }),
+                Animated.timing(animationCollapse, {
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: false
+                }),
+            ]).start(() => setCollapsed(!collapsed))
+        } else {
+            Animated.parallel([
+                Animated.timing(spinValue,{
+                    toValue: 0,
+                    duration: 300,
+                    easing: Easing.linear,
+                    useNativeDriver: false 
+                }),
+                Animated.timing(animationCollapse, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: false
+                }),
+            ]).start(() => setCollapsed(!collapsed))
+        }
+    };
 
     return(
         <BottomSheetModalProvider>
@@ -187,7 +278,7 @@ export default function PostSettingsModal() {
                         <Text style={{fontWeight: 'bold',textAlign:'center',fontSize: Platform.OS == 'ios' ? 24 : 20,marginTop: Platform.OS == 'ios' ? 10 : 0,}}>Give Us Your Nickname</Text>
                         <Text style={{textAlign:'center',fontSize: Platform.OS == 'ios' ? 16 : 14,marginTop: 5,}}>Let's Play with CoinEasyners!</Text>
 
-                        <View style={{alignSelf:'center',margin: Platform.OS == 'ios' ? 80 : 60}}>
+                        <View style={{alignSelf:'center',marginTop: Platform.OS == 'ios' ? 80 : 60, marginBottom: Platform.OS == 'ios' ? 40 : 30}}>
                             <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 10, position: 'absolute',alignSelf:'center',width: 200,height: 40}}>
                                 {nickname == "" ? (
                                     <>
@@ -205,6 +296,32 @@ export default function PostSettingsModal() {
                                 style={{alignSelf:'center',width:170,height: 40,fontSize: 20,}}
                             />
                         </View>
+
+                        <View style={{marginVertical: 30,}}>
+                            <TouchableWithoutFeedback onPress={toggleCollapse}>
+                                <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
+                                    <Text style={{}}>Do you have an invitation code ?</Text>
+                                    <Animated.View style={{height: 40, justifyContent:'center',alignItems:'center', transform: [{ rotate: spin}]}}>
+                                        <ArrowAccordionIcon />
+                                    </Animated.View>
+                                </View>
+                            </TouchableWithoutFeedback>
+                            <Animated.View style={{ height: heightInterpolate, overflow: 'hidden', paddingHorizontal: 10}}>
+                                <View style={{height: 100}}>
+                                    <Text style={{width:'90%',alignSelf:'center',marginTop: 10,}}>Invite code</Text>
+                                    <TextInput
+                                        value={inviteCode}
+                                        onChangeText={(text) => setInviteCode(text)}
+                                        style={{alignSelf:'center',width:170,height: 40,fontSize: 15,borderRadius: 10,borderWidth: 1, borderColor: '#000',width:'90%',textAlign: 'center',}}
+                                    />
+                                </View>
+                            </Animated.View>
+                        </View>
+                        
+
+
+
+
 
                         {user?.metadata?.address && (
                             <Text style={{textAlign:'center',color:'rgba(85,85,85,0.33)'}}>Your Wallet Address : {user.metadata.address.slice(0, 4)}...{user.metadata.address.slice(user.metadata.address.length - 4, user.metadata.address.length)}</Text>
@@ -301,6 +418,8 @@ export default function PostSettingsModal() {
 
                         </Animated.View>
                     )}
+
+
                 </TouchableOpacity>
             </BottomSheetModal>
         </BottomSheetModalProvider>
