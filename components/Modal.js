@@ -79,7 +79,8 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                         width: (type == 'notifications' || type == 'oranges' || type == 'oranges-help' || type == 'oranges-help-invite' || type == 'deleteAccount')  ? '90%' : '100%',
                         height: 
                             type == 'notifications' ? 400 
-                            : type == 'oranges' ? 400 
+                            : type == 'oranges' && Platform.OS == 'ios' ? 450 
+                            : type == 'oranges' && Platform.OS !== 'ios' ? 400 
                             : type == 'oranges-help' ? 450
                             : type == 'oranges-help-invite' ? 260
                             : type == 'deleteAccount' && Platform.OS == 'ios' ? 470 
@@ -94,7 +95,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                         {children}
                     </ImageBackground>
                 ) : type && type == 'deleteAccount' ? (
-                    <ImageBackground source={require('../assets/deleteAccount_background.png')} resizeMode="stretch" style={{height: '103%',}} >
+                    <ImageBackground source={require('../assets/delete_account_background.png')} resizeMode="stretch" style={{height: '103%',}} >
                         {children}
                     </ImageBackground>
                 ) : type && (type == 'oranges' || type == 'oranges-help' || type == 'oranges-help-invite') && isAds && !pendingAds ? (

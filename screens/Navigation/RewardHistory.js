@@ -1,5 +1,5 @@
 import React, { useContext } from 'react'
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -115,23 +115,23 @@ const RewardHistory = ({navigation, route}) => {
 
                                             {elt.type.includes('Streak Bonus') ? (
                                                 <View style={{}}>
-                                                    <Text style={{color: '#FF6B17', fontSize: 15,}}>+ {elt.numberOranges} Oranges</Text>
-                                                    <Text style={{color:'#FF6B17', fontSize: 15,}}>{elt.type}</Text>
+                                                    <Text style={{color: '#FF6B17', fontSize: Platform.OS == 'ios' ? 16 : 14,}}>+ {elt.numberOranges} Oranges</Text>
+                                                    <Text style={{color:'#FF6B17', marginTop: 2,fontSize: Platform.OS == 'ios' ? 16 : 14,}}>{elt.type}</Text>
                                                 </View>
                                             ) : elt.type.includes('Account Creation') ? (
                                                 <View style={{}}>
-                                                    <Text style={{color: '#FF6B17', fontSize: 15,}}>+ {elt.numberOranges} Oranges</Text>
-                                                    <Text style={{color:'#FF6B17', fontSize: 15,}}>{elt.type}</Text>
+                                                    <Text style={{color: '#FF6B17', fontSize: Platform.OS == 'ios' ? 16 : 14,}}>+ {elt.numberOranges} Oranges</Text>
+                                                    <Text style={{color:'#FF6B17', marginTop: 2,fontSize: Platform.OS == 'ios' ? 16 : 14,}}>{elt.type}</Text>
                                                 </View>
                                             ) : elt.type.includes('Milestone') ? (
                                                 <View style={{}}>
-                                                    <Text style={{color: '#FF6B17', fontSize: 15,}}>+ {elt.numberOranges} Oranges</Text>
-                                                    <Text style={{color:'#FF6B17', fontSize: 15,}}>{elt.type}</Text>
+                                                    <Text style={{color: '#FF6B17', fontSize: Platform.OS == 'ios' ? 16 : 14,}}>+ {elt.numberOranges} Oranges</Text>
+                                                    <Text style={{color:'#FF6B17', marginTop: 2,fontSize: Platform.OS == 'ios' ? 16 : 14,}}>{elt.type}</Text>
                                                 </View>
                                             ) : (
                                                 <View style={{}}>
-                                                    <Text style={{}}>{elt.numberOranges} Oranges</Text>
-                                                    <Text style={{color:'#959595'}}>{elt.type}</Text>
+                                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>{elt.numberOranges} Oranges</Text>
+                                                    <Text style={{color:'#959595',marginTop: 2,fontSize: Platform.OS == 'ios' ? 16 : 14,}}>{elt.type}</Text>
                                                 </View>
 
                                             )}

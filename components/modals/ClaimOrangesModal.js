@@ -16,16 +16,15 @@ const {width, height} = Dimensions.get('window')
 
 const ClaimOrangesModal = () => {
 
-    const { user, setUser,userData, setUserData, orbis, setShowClaimOranges, todayOranges, adAlreadyClaimed } = useContext(GlobalContext);
+    const { user, userData, setUserData, orbis, setShowClaimOranges, adAlreadyClaimed } = useContext(GlobalContext);
     const tailwind = useTailwind();
     let navigation;
     try {
         navigation = useNavigation()
     } catch (error) {
-        console.log('ici');
         console.log(error);
     }
-
+    
     const [showAds, setShowAds] = useState(!adAlreadyClaimed)
     const [pendingAds, setPendingAds] = useState(false)
     const [completeAds, setCompleteAds] = useState(false)
@@ -53,10 +52,14 @@ const ClaimOrangesModal = () => {
     }
 
     const claimAds = async () => {
-        const tempData = userData
+        const tempData = userData ?? {}
 
         if(tempData){
-            tempData.numberOranges += 200
+            if(tempData.numberOranges){
+                tempData.numberOranges += 200
+            }else{
+                tempData.numberOranges = 200
+            }
             if(tempData.adReward){
                 tempData.adReward.lastClaim = moment().format('YYYY-MM-DD HH:mm:ss')
             }else{
@@ -94,16 +97,12 @@ const ClaimOrangesModal = () => {
                     ]
                 }]
             }
-
+            
             setUserData({...tempData})
 
             var tempProfile = user.profile
             tempProfile.data = tempData
-            console.log('ICIIII');
-            console.log(JSON.stringify(tempProfile));
-            console.log(' ');
             const res = await orbis.updateProfile(tempProfile);
-            console.log(res);
         }
 
     }
@@ -223,8 +222,8 @@ const ClaimOrangesModal = () => {
             ) : !showAds && !pendingAds && completeAds && !claimedAds? (
                 <>
                     <TouchableOpacity
-                        style={{position: 'absolute',top: 15, right: 15}}
-                        onPress={() => {Haptics.selectionAsync();onHideModal()}}
+                        style={{position: 'absolute',top: 15, right: 15, zIndex: 2}}
+                        onPress={onHideModal}
                     >
                         <AntDesign name="closecircle" size={24} color="black" />
                     </TouchableOpacity>
@@ -254,20 +253,20 @@ const ClaimOrangesModal = () => {
                 <>
 
                     <TouchableOpacity
-                        style={{position: 'absolute',top: 15, right: 15}}
-                        onPress={() => {Haptics.selectionAsync();onHideModal()}}
+                        style={{position: 'absolute',top: 15, right: 15, zIndex: 2}}
+                        onPress={onHideModal}
                     >
                         <AntDesign name="closecircle" size={24} color="black" />
                     </TouchableOpacity>
 
                     <View style={[tailwind('flex flex-col items-center justify-center px-3')]}>
-                        <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 16,fontFamily: "GmarketBold",lineHeight: 24,marginTop: 20,}]}>
+                        <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,marginTop: 20,}]}>
                             Now you have Oranges!
                         </Text>
 
                         <Image 
                             source={require('../../assets/orange_box.png')} 
-                            style={{height: '60%',alignSelf: 'center',marginTop: 20,}} 
+                            style={{height: '60%',alignSelf: 'center',marginTop: 40,}} 
                             resizeMode="contain"
                         />
                     </View>
@@ -277,7 +276,7 @@ const ClaimOrangesModal = () => {
                         color="white" 
                         title="Go to Reward Page" 
                         onPress={() => {Haptics.selectionAsync();setShowAds(false);setCompleteAds(false);setShowClose(false);setShowClaimOranges(false);navigation.navigate('RewardHistory')}} 
-                        style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 20}}
+                        style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 30}}
                     />
                 </>
             )}

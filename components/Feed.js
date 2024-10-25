@@ -1,5 +1,5 @@
 import React, { useContext, useState } from "react";
-import { Text, View, ActivityIndicator, Animated, RefreshControl, Platform, Image, ImageBackground, TouchableOpacity } from 'react-native';
+import { Text, View, ActivityIndicator, Animated, RefreshControl, Platform, Image, ImageBackground, TouchableOpacity, Dimensions } from 'react-native';
 
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
@@ -48,13 +48,15 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
     useScrollToTop(feedRef ? feedRef : homeFeedRef);
 
     const onBannerPress = () => {
+        Haptics.selectionAsync()
+                
         if(userData?.adReward?.lastClaim){
             setAdAlreadyClaimed(true)
         }else{
             setTodayOranges(200)
-            setShowClaimOranges(false)
+            setShowClaimOranges(true)
         }
-    }
+    }    
 
     return(
         <>
@@ -76,7 +78,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                                         <View style={{height: Platform.OS == 'ios' ? 0 : 115 + statusBarHeight, width: '100%', backgroundColor: 'white',}} />
 
                                         <PagerView 
-                                            style={{height: 100, width: '100%',marginVertical: 10,}} 
+                                            style={{height: 100, width: '100%', marginVertical: 10,}} 
                                             initialPage={0}
                                             orientation='horizontal'
                                             onPageSelected={(props) => setIndexSwiper(props.nativeEvent.position)}
@@ -86,14 +88,14 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                                                 onPress={onBannerPress}
                                             >
                                                 <Image
-                                                    resizeMode="contain"
-                                                    style={{height:'100%', width:'100%'}}
+                                                    resizeMode="stretch"
+                                                    style={{height:'100%', width: '100%'}}
                                                     source={require('../assets/ads/home_ad_1.png')}
                                                 />
                                             </TouchableOpacity>
                                             <View key="2">
                                                 <Image
-                                                    resizeMode="contain"
+                                                    resizeMode="stretch"
                                                     style={{height:'100%', width:'100%'}}
                                                     source={require('../assets/ads/home_ad_2.png')}
                                                 />
@@ -105,7 +107,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                                                 borderRadius: 10,
                                                 overflow:'hidden',                                                    
                                                 position: 'absolute',
-                                                top: Platform.OS == 'ios' ? 0 : 190 + statusBarHeight,
+                                                top: Platform.OS == 'ios' ? 82 : 190 + statusBarHeight,
                                                 right: 10,
                                             }}
                                         >

@@ -1,5 +1,5 @@
 import React, { useContext, useEffect } from "react";
-import { View, TouchableOpacity, Image, BackHandler, Animated, Text } from 'react-native';
+import { View, TouchableOpacity, Image, BackHandler, Animated, Text, Platform } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -130,15 +130,17 @@ const Home = ({ navigation, route }) => {
                         </TouchableOpacity>
 
                         <View style={[tailwind('flex flex-col items-center justify-center px-3')]}>
-                            <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 16,fontFamily: "GmarketBold",lineHeight: 24,marginTop: 20,}]}>
+                            <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: Platform.OS == 'ios' ? 19 : 16,fontFamily: "GmarketBold",lineHeight: 24,marginTop: Platform.OS == 'ios' ? 10 : 20,}]}>
                                 Oops, this basket is empty!
                             </Text>
 
-                            <Text style={{textAlign: 'center',}}>You've already claimed :)</Text>
+                            <Text style={{textAlign: 'center',fontFamily: "GmarketMedium",fontSize: Platform.OS == 'ios' ? 16 : 13,marginTop: Platform.OS == 'ios' ? 20 : 10,}}>
+                                You've already claimed :)
+                            </Text>
 
                             <Image 
-                                source={require('../assets/orange_box.png')} 
-                                style={{height: '60%',alignSelf: 'center',marginTop: 20,}} 
+                                source={require('../assets/orange_box_empty.png')} 
+                                style={{height: '58%',alignSelf: 'center',marginTop: Platform.OS == 'ios' ? 30 : 20,}} 
                                 resizeMode="contain"
                             />
                         </View>
@@ -148,7 +150,7 @@ const Home = ({ navigation, route }) => {
                             color="white" 
                             title="Go to Reward Page" 
                             onPress={() => {Haptics.selectionAsync();setAdAlreadyClaimed(false);navigation.navigate('RewardHistory')}} 
-                            style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 20}}
+                            style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 30,zIndex: 2}}
                         />                           
                     </Modal>
                 </View>

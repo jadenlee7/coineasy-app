@@ -24,6 +24,7 @@ const { width, height } = Dimensions.get('window')
 export default function Postbox({isReply = false}) {
     const { 
         user, 
+        userData,
         orbis, 
         setShowConnectModal, 
         hidePostbox, 
@@ -40,7 +41,6 @@ export default function Postbox({isReply = false}) {
         categoriesVis,
         setCategoriesVis,
         modalPostBoxRef,
-        userData,
         setUserData
     } = useContext(GlobalContext);
     const tailwind = useTailwind();
@@ -165,6 +165,7 @@ export default function Postbox({isReply = false}) {
 
     /** Will share message with Orbis */
     async function send() {
+
         try {
             Haptics.selectionAsync();
             let _context = context;
@@ -225,17 +226,21 @@ export default function Postbox({isReply = false}) {
                 }
 
                 /** If any trigger callback after the post is shared */
-                console.log('ici');
-                console.log(callbackPostShared);
                 if(callbackPostShared) {
                     callbackPostShared(_callbackContent);
                 }else{
-                    console.log('la');
                     defaultCallbackPostShared(_callbackContent)
                 }
 
+                const tempData = userData ?? {}
+
+
+                console.log('temp data');
+                console.log(tempData);
+                console.log(' ');
+                
+
                 if(!replyTo && userData.rewardFirstPost == 'reward pending'){
-                    const tempData = user.profile?.data ?? {}
                     if(tempData.listClaimedOranges){
                         const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
                         if(index != -1){
@@ -265,13 +270,215 @@ export default function Postbox({isReply = false}) {
                             ]
                         }]
                     }
-        
-                    tempData.numberOranges ? tempData.numberOranges += 50 : tempData.numberOranges = 50
+
+                    if(tempData.post){
+                        tempData.post.number += 1
+                        tempData.post.gained += 50
+                    }else{
+                        tempData.post = {
+                            number: 1,
+                            gained: 50,
+                            lastPost: moment().format('YYYY-MM-DD HH:mm')
+                        }
+                    }
+
+                    tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.activityUnclaimed = {number: 50}        
                     tempData.rewardFirstPost = 'claimed'
                     setUserData({...tempData})
+                }else if(!replyTo){
+                    if(tempData.listClaimedOranges){
+                        const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+                        if(index != -1){
+                            tempData.listClaimedOranges[index].listOranges.push({
+                                numberOranges: 15,
+                                type: 'Post'
+                            })
 
-                    // A TESTER !!!!!
+                            if(tempData.post?.number == 9){
+                                tempData.listClaimedOranges[index].listOranges.push({
+                                    numberOranges: 50,
+                                    type: 'Posting Milestone achieved'
+                                })
+                            }
+                        }else{
+                            if(tempData.post?.number == 9){
+                                tempData.listClaimedOranges.push({
+                                    date: moment().format('YYYY-MM-DD'),
+                                    listOranges: [
+                                        {
+                                            numberOranges: 15,
+                                            type: 'Post'
+                                        },
+                                        {
+                                            numberOranges: 50,
+                                            type: 'Posting Milestone achieved'
+                                        }
+                                    ]
+                                })
+                            }else{
+                                tempData.listClaimedOranges.push({
+                                    date: moment().format('YYYY-MM-DD'),
+                                    listOranges: [
+                                        {
+                                            numberOranges: 15,
+                                            type: 'Post'
+                                        },
+                                    ]
+                                })
+                            }
+                        }
+                    }else{
+                        tempData.listClaimedOranges = [{
+                            date: moment().format('YYYY-MM-DD'),
+                            listOranges: [
+                                {
+                                    numberOranges: 15,
+                                    type: 'Post'
+                                },
+                            ]
+                        }]
+                    }
+                    if(tempData.post.number == 9){
+                        tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 65 : tempData.activityUnclaimed = {number: 65}
+                    }else{
+                        tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 15 : tempData.activityUnclaimed = {number: 15}
+                    }
+                    
+                    if(tempData.post){
+                        if(tempData.post.number == 9){
+                            tempData.post.number = 0
+                            tempData.post.gained += 65
+                        }else{
+                            tempData.post.number += 1
+                            tempData.post.gained += 15
+                        }
+                    }else{
+                        tempData.post = {
+                            number: 1,
+                            gained: 15,
+                            lastPost: moment().format('YYYY-MM-DD HH:mm')
+                        }
+                    }
+
+                    setUserData({...tempData})
+                }else if(replyTo){
+                    if(tempData.listClaimedOranges){
+                        console.log('ici');
+                        
+                        const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+                        if(index != -1){
+
+                            console.log('index: '+index);
+                            
+                            tempData.listClaimedOranges[index].listOranges.push({
+                                numberOranges: 3,
+                                type: 'Comment'
+                            })
+                            if(tempData.comment?.number == 19){
+                                tempData.listClaimedOranges[index].listOranges.push({
+                                    numberOranges: 50,
+                                    type: 'Comments Milestone achieved'
+                                })
+                            }
+
+                            console.log(tempData.listClaimedOranges);
+                            
+                        }else{
+                            console.log('pas dindex');
+                            
+                            if(tempData.comment?.number == 19){
+                                tempData.listClaimedOranges.push({
+                                    date: moment().format('YYYY-MM-DD'),
+                                    listOranges: [
+                                        {
+                                            numberOranges: 3,
+                                            type: 'Comment'
+                                        },
+                                        {
+                                            numberOranges: 50,
+                                            type: 'Comments Milestone achieved'
+                                        },
+                                    ]
+                                })
+                            }else{
+                                tempData.listClaimedOranges.push({
+                                    date: moment().format('YYYY-MM-DD'),
+                                    listOranges: [
+                                        {
+                                            numberOranges: 3,
+                                            type: 'Comment'
+                                        },
+                                    ]
+                                })
+
+                            }
+
+                            console.log('listClaimedOranges');
+                            
+                            console.log(tempData.listClaimedOranges);
+                            console.log(' ');
+
+
+                        }
+                    }else{
+                        tempData.listClaimedOranges = [{
+                            date: moment().format('YYYY-MM-DD'),
+                            listOranges: [
+                                {
+                                    numberOranges: 3,
+                                    type: 'Comment'
+                                },
+                            ]
+                        }]
+                    }
+
+                    console.log('activity unclaimed');
+                    console.log(tempData.activityUnclaimed );
+                    console.log(' ');
+
+                    
+                    if(tempData.comment.number == 19){
+                        tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 53 : tempData.activityUnclaimed = {number: 53}
+                    }else{
+                        tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 3 : tempData.activityUnclaimed = {number: 3}
+                    }
+                    console.log(tempData.activityUnclaimed );
+
+                    console.log('comment');
+                    console.log(tempData.comment);
+                    console.log(' ');
+
+                    
+                    if(tempData.comment){
+                        if(tempData.comment.number == 19){
+                            tempData.comment.number = 0
+                            tempData.comment.gained += 50
+                        }else{
+                            tempData.comment.number += 1
+                            tempData.comment.gained += 3
+                        }
+                    }else{
+                        tempData.comment = {
+                            number: 1,
+                            gained: 3,
+                            lastComment: moment().format('YYYY-MM-DD HH:mm')
+                        }
+                    }
+                    console.log(tempData.comment);
+                    console.log(' ');
+
+                    console.log('temp data');
+                    console.log(tempData);
+                    console.log(' ');
+
+                    
+
+                    setUserData({...tempData})
                 }
+
+                var tempProfile = user.profile
+                tempProfile.data = tempData
+                await orbis.updateProfile(tempProfile);
 
                 setLoading(false);
             } else {
@@ -591,7 +798,7 @@ export default function Postbox({isReply = false}) {
                         <View style={tailwind('flex flex-row items-center')}>
                             <Image
                                 style={[tailwind('rounded-full'), { height: 40, width: 40 }]}
-                                source={require('../assets/pfp-everyone.png')}
+                                source={require('../assets/pfp_everyone.png')}
                             />
                             <Text style={[tailwind('ml-2 text-main'), { fontFamily: "GmarketBold", fontSize: 13, lineHeight: 19, color: "#FF6B17" }]} >everyone</Text>
                         </View>

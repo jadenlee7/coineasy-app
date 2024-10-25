@@ -40,7 +40,7 @@ export default function Login() {
             <Image
                 resizeMode="cover"
                 style={[tailwind('w-full h-full')]}
-                source={require('../assets/LoginBG.png')} 
+                source={require('../assets/loginbg.png')} 
             />
 
             {/* <Animated.View style={{ transform: [{ translateX }], paddingTop: 300 }}>

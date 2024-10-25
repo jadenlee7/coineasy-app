@@ -348,8 +348,8 @@ const ConversationDetail = ({navigation, route}) => {
                     <Image
                         style={{width: 28,height: 28}}
                         resizeMode='contain'
-                        source={require('../../../assets/addUser_icon.png')}
-                        defaultSource={require('../../../assets/addUser_icon.png')}
+                        source={require('../../../assets/add_user_icon.png')}
+                        defaultSource={require('../../../assets/add_user_icon.png')}
                     />
                     {/* <AddIcon style={{width: 60}}/> */}
                 </TouchableOpacity>

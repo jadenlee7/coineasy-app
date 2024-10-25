@@ -59,7 +59,7 @@ export function UserPfp({height = 40, details, style, badge_style, origin}) {
         {isAdmin(details.did) &&
           <RNImage
             style={[{width: height / 2, height: height / 2, position: "absolute", right: -4, top: 0}, badge_style]}
-            source={require('../assets/AdminBadge.png')} />
+            source={require('../assets/admin_badge.png')} />
         }
 
         {/* {origin == 'feed' && details.did != user.did && listFollowers.findIndex(e => e.details.did == details.did) != -1 ? (
@@ -74,7 +74,7 @@ export function UserPfp({height = 40, details, style, badge_style, origin}) {
         <>
             <RNImage
                 style={[tailwind('rounded-full'), { height: height, width: height }, style]}
-                source={require('../assets/empty-state-user.png')} 
+                source={require('../assets/empty_state_user.png')} 
             />
             {/* {origin == 'feed' && details.did != user.did && <UnfollowIcon style={{position: 'absolute',bottom: -10, right: -6, width: height / 2, height: height / 2,}}/>} */}
         </>

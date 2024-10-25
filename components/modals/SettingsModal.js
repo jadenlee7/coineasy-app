@@ -731,7 +731,7 @@ export default SettingsModal = () => {
 
                         <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,}]}>Deleting Your{'\n'}EASY App Account?</Text>
 
-                        <Image source={require('../../assets/deleteAccount_icon.png')} style={{height: 115,marginTop: 20,marginBottom: 20,alignSelf: 'center',}} resizeMode="contain"/>
+                        <Image source={require('../../assets/delete_account_icon.png')} style={{height: 115,marginTop: 20,marginBottom: 20,alignSelf: 'center',}} resizeMode="contain"/>
 
                         <Text style={[tailwind(`text-secondary text-center text-slate-900`), {lineHeight: 20}]}>
                             By deleting your account, you will no longer have access to EASY App and will lose all your data, including points, activity history, and profile information.

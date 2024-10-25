@@ -194,7 +194,7 @@ const ConversationScreen = ({navigation, route}) => {
             <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 20, right: 20} ]} onPress={() => {Haptics.selectionAsync();setShowSearchUser(true)}}>
                 <Image
                     style={{ height: 50, width: 50 }}
-                    source={require('../../../assets/addUser_icon.png')} 
+                    source={require('../../../assets/add_user_icon.png')} 
                 />
             </TouchableOpacity>
 

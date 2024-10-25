@@ -60,7 +60,7 @@ export default function QR({hide}) {
         });
     }
 
-    let logo = require('../../assets/qr-code-logo.png');
+    let logo = require('../../assets/qr_code_logo.png');
 
     const { address, chain } = useDidToAddress(user.did);
     const username = useGetUsername(user.profile, address, user.did);

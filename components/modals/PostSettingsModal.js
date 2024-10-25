@@ -562,7 +562,7 @@ export default function PostSettingsModal() {
                                     <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25, marginBottom: 8 }]}>Success!</Text>
                                     <Image
                                         style={{height: 50, width: 50, marginBottom: 40}}
-                                        source={require('../../assets/check-icon.png')} 
+                                        source={require('../../assets/check_icon.png')} 
                                     />
                                 </View>
                             :

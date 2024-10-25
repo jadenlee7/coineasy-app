@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Dimensions, Easing, Image, ImageBackground, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Animated, Dimensions, Easing, Image, ImageBackground, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -31,7 +31,6 @@ const OrangeReward = ({navigation, route}) => {
         userData,
         setUserData,
         activityClaim,
-        inviteClaim,
         setShowClaimOranges,
         setTodayOranges,
         setNewFeatureVis,
@@ -40,7 +39,10 @@ const OrangeReward = ({navigation, route}) => {
         newFeatureAlertVis,
         setAddressCopied
     } = useContext(GlobalContext);
-    const tailwind = useTailwind();    
+    const tailwind = useTailwind();  
+    
+    console.log(userData.activityUnclaimed.number);
+    
 
     const [openHelp, setOpenHelp] = useState(false)
     const [openInviteHelp, setOpenInviteHelp] = useState(false)
@@ -58,6 +60,7 @@ const OrangeReward = ({navigation, route}) => {
     
     const modalInviteRef = useRef(null); 
     const snapInvitePoints = useMemo(() => ['50%','50%'], []);
+    const snapInvitePointsIOS = useMemo(() => ['43%','43%'], []);
     const handleModalInvitePress = useCallback(() => modalInviteRef.current?.present(), []);
 
     useEffect(() => {
@@ -111,17 +114,29 @@ const OrangeReward = ({navigation, route}) => {
         if(tempData){
             let addNumber = 5
             if(tempData.claimStreak){
+                if(tempData.claimStreak.lastClaim && tempData.claimStreak.lastClaim.slice(0,10) == moment().format('YYYY-MM-DD')){
 
-                if(tempData.claimStreak.number == 6 || tempData.claimStreak.number == 13 || tempData.claimStreak.number == 29){
-                    if(tempData.listClaimedOranges){
-                        const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                        if(index != -1){
-                            tempData.listClaimedOranges[index].listOranges.push({
-                                numberOranges: tempData.claimStreak.number == 6 ? 20 : tempData.claimStreak.number == 13 ? 40 : 100,
-                                type: tempData.claimStreak.number+1+'-Day Streak Bonus'
-                            })
+                    if(tempData.claimStreak.number == 6 || tempData.claimStreak.number == 13 || tempData.claimStreak.number == 29){
+                        if(tempData.listClaimedOranges){
+                            const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+                            if(index != -1){
+                                tempData.listClaimedOranges[index].listOranges.push({
+                                    numberOranges: tempData.claimStreak.number == 6 ? 20 : tempData.claimStreak.number == 13 ? 40 : 100,
+                                    type: tempData.claimStreak.number+1+'-Day Streak Bonus'
+                                })
+                            }else{
+                                tempData.listClaimedOranges.push({
+                                    date: moment().format('YYYY-MM-DD'),
+                                    listOranges: [
+                                        {
+                                            numberOranges: tempData.claimStreak.number == 6 ? 20 : tempData.claimStreak.number == 13 ? 40 : 100,
+                                            type: tempData.claimStreak.number+1+'-Day Streak Bonus'
+                                        },
+                                    ]
+                                })
+                            }
                         }else{
-                            tempData.listClaimedOranges.push({
+                            tempData.listClaimedOranges = [{
                                 date: moment().format('YYYY-MM-DD'),
                                 listOranges: [
                                     {
@@ -129,24 +144,17 @@ const OrangeReward = ({navigation, route}) => {
                                         type: tempData.claimStreak.number+1+'-Day Streak Bonus'
                                     },
                                 ]
-                            })
+                            }]
                         }
-                    }else{
-                        tempData.listClaimedOranges = [{
-                            date: moment().format('YYYY-MM-DD'),
-                            listOranges: [
-                                {
-                                    numberOranges: tempData.claimStreak.number == 6 ? 20 : tempData.claimStreak.number == 13 ? 40 : 100,
-                                    type: tempData.claimStreak.number+1+'-Day Streak Bonus'
-                                },
-                            ]
-                        }]
                     }
+
+                    addNumber = (tempData.claimStreak.number+1)*5
+                    tempData.claimStreak.number += 1
+                }else{
+                    tempData.claimStreak.number = 1
                 }
 
-                addNumber = (tempData.claimStreak.number+1)*5
                 tempData.numberOranges += addNumber
-                tempData.claimStreak.number += 1
                 tempData.claimStreak.lastClaim = moment().format('YYYY-MM-DD HH:mm:ss')
             }else{
                 tempData.numberOranges ? tempData.numberOranges += 5 : tempData.numberOranges = 5
@@ -275,7 +283,19 @@ const OrangeReward = ({navigation, route}) => {
 
     const OrangeDayCards =  () => {
 
-        const claimStreak = userData?.claimStreak?.number ?? 0
+        
+        
+        
+        const dayStreak = userData?.claimStreak?.lastClaim ? userData?.claimStreak?.lastClaim.slice(0,10) : ''
+        const claimStreak = userData?.claimStreak?.number && dayStreak == moment().format('YYYY-MM-DD') ? userData?.claimStreak?.number : 0        
+
+        if(Platform.OS == 'android'){
+            console.log(userData?.claimStreak);
+            
+            console.log(dayStreak);
+            console.log(claimStreak);
+        }
+        
 
         return [...Array(30).keys()].map(e => {
             return(
@@ -284,8 +304,8 @@ const OrangeReward = ({navigation, route}) => {
                         styles.orangeDayCard, 
                         {
                             marginLeft: e == 0 ? 20 : 10, 
-                            backgroundColor: (e > claimStreak || e < claimStreak) ? '#949494' : '#FFF2E2', 
-                            borderColor: (e > claimStreak || e < claimStreak) ? 'black' : "#FF6E31"
+                            backgroundColor: e != claimStreak ? '#949494' : '#FFF2E2', 
+                            borderColor: e != claimStreak ? 'black' : "#FF6E31"
                         }
                     ]} 
                     key={Math.random()}
@@ -293,20 +313,20 @@ const OrangeReward = ({navigation, route}) => {
                     <View style={[
                         styles.claimCard,
                         {
-                            backgroundColor: (e > claimStreak || e < claimStreak) ? '#CECECE' : '#FF6E31'
+                            backgroundColor: e != claimStreak ? '#CECECE' : '#FF6E31'
                         }
                     ]}>
-                        <Text style={{fontWeight: 'bold',color: 'white',fontSize: 9,textAlign: 'center',}}>Day {e+1}</Text>
+                        <Text style={{fontWeight: 'bold',color: 'white',fontSize: 9,textAlign: 'center',marginTop: Platform.OS == 'ios' ? 1.5 : 0,}}>Day {e+1}</Text>
                     </View>
                     
                     <Image
                         style={{width: 35, height: 35, alignSelf:'center',marginTop: -10}}
                         resizeMode='contain'
-                        source={(e > claimStreak || e < claimStreak) ? require('../../assets/orangeDayPast.png') : require('../../assets/orangeDay.png')}
+                        source={e != claimStreak ? require('../../assets/orange_day_past.png') : require('../../assets/orange_day.png')}
                     />
 
                     <Text style={{textAlign: 'center',fontSize: 13,fontWeight: 'bold',color: e < claimStreak ? '#4A4A4A' : 'black'}}>
-                        {e < claimStreak ? 'Claimed' : '+'+(e+1)*5}
+                        {(e < claimStreak && dayStreak == moment().format('YYYY-MM-DD')) ? 'Claimed' : '+'+(e+1)*5}
                     </Text>
                 </View>
             )
@@ -326,24 +346,21 @@ const OrangeReward = ({navigation, route}) => {
         momentOne.set('second', 0); 
         momentOne.set('millisecond', 0); 
 
-        let diffSeconds = null
-
         if(userData?.claimStreak?.lastClaim){
             checkDiff = momentOne.diff(moment(userData.claimStreak.lastClaim), 'seconds')
             checkDiff2 = momentOne.add(1, 'days').diff(moment(userData.claimStreak.lastClaim), 'seconds')
-            diffSeconds = momentOne.diff(moment(userData.claimStreak.lastClaim), 'seconds')
 
             if(checkDiff < 0 && checkDiff2 >= 0){
                 isAlreadyClaimed = true
             }
         }
 
-        return isAlreadyClaimed && diffSeconds ? (
-            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',alignSelf:'center',width: width - 30, borderRadius: 30,backgroundColor: '#FF6E31',gap: 5,height: 50,marginTop: 30,}}>
+        return isAlreadyClaimed && checkDiff ? (
+            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',alignSelf:'center',width: width - 30, borderRadius: 30,backgroundColor: '#FF6E31',gap: 5,height: 50,marginTop: Platform.OS == 'ios' ? 40 : 30,}}>
                 <Text style={{color:'white',fontSize: 18,fontWeight: 'bold',}}>Next Reward in</Text>
                 <CountDownTimer
                     ref={refTimer}
-                    timestamp={diffSeconds}
+                    timestamp={checkDiff}
                     textStyle={{color: "#FFFFFF",fontSize: 18,fontWeight: 'bold',}}
                 />
             </View>
@@ -353,7 +370,7 @@ const OrangeReward = ({navigation, route}) => {
                 color='orange'
                 size="md"
                 onPress={() => onDailyClaim()} 
-                style={{height: 50,width: width-30, alignSelf:'center', justifyContent: 'center',alignItems: 'center', marginTop: 30,}}
+                style={{height: 50,width: width-30, alignSelf:'center', justifyContent: 'center',alignItems: 'center', marginTop: Platform.OS == 'ios' ? 40 : 30,}}
             />
         )
     }
@@ -399,7 +416,7 @@ const OrangeReward = ({navigation, route}) => {
                     easing: Easing.linear,
                     useNativeDriver: false,
                 }),
-                Animated.delay(2000),
+                Animated.delay(3000),
                 Animated.parallel([
                     Animated.timing(opacityText, {
                         toValue: 0,
@@ -414,7 +431,7 @@ const OrangeReward = ({navigation, route}) => {
                         useNativeDriver: false,
                     }),
                 ]),
-                Animated.delay(2000),
+                Animated.delay(3000),
                 Animated.parallel([
                     Animated.timing(opacitySecondText, {
                         toValue: 0,
@@ -429,7 +446,7 @@ const OrangeReward = ({navigation, route}) => {
                         useNativeDriver: false,
                     }),
                 ]),
-                Animated.delay(2000),
+                Animated.delay(3000),
                 Animated.parallel([
                     Animated.timing(opacity, {
                         toValue: 0,
@@ -459,7 +476,7 @@ const OrangeReward = ({navigation, route}) => {
                     easing: Easing.linear,
                     useNativeDriver: false,
                 }),
-                Animated.delay(1000),
+                Animated.delay(2000),
                 Animated.parallel([
                     Animated.timing(opacityText, {
                         toValue: 0,
@@ -499,86 +516,21 @@ const OrangeReward = ({navigation, route}) => {
         setShowClaimOranges(true)
     }
 
-    // const RewardCard = (props) => {
-
-    //     let isClaimed = false
-
-    //     let momentOne = moment().tz('Asia/Seoul');
-    //     momentOne.set('year', moment().tz('Asia/Seoul').year()); 
-    //     momentOne.set('month', moment().tz('Asia/Seoul').month()); 
-    //     momentOne.set('day', moment().tz('Asia/Seoul').day()); 
-    //     momentOne.set('hour', 9); 
-    //     momentOne.set('minute', 0);
-    //     momentOne.set('second', 0); 
-    //     momentOne.set('millisecond', 0); 
-
-    //     let diffSeconds = null
-
-    //     if(user?.profile?.data?.adReward?.lastClaim){
-    //         checkDiff = momentOne.diff(moment(user.profile.data.adReward.lastClaim), 'seconds')
-    //         checkDiff2 = momentOne.add(1, 'days').diff(moment(user.profile.data.adReward.lastClaim), 'seconds')
-    //         diffSeconds = momentOne.diff(moment(user.profile.data.adReward.lastClaim), 'seconds')
-
-    //         if(checkDiff > 0 && checkDiff2 >= 0){
-    //             isClaimed = true
-    //         }
-    //     }
-
-    //     return(
-    //         <View style={[styles.elevate, {width: width-20, height: 100, alignSelf:'center',borderRadius: 10,marginTop: 10,  overflow:'hidden'}]}>
-    //             <ImageBackground source={require('../../assets/bg_card_reward.png')} resizeMode="stretch" style={{flex: 1,justifyContent:'center',padding: 20}}>
-    //                 <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginLeft: 10}}>
-    //                     <View style={{flexDirection:'row',alignItems:'center',gap: 10}}>
-    //                         <Image
-    //                             style={{width: 35, height: 35}}
-    //                             resizeMode='contain'
-    //                             source={
-    //                                 props.title == 'Ad Rewards' ? require('../../assets/fire_icon.png')
-    //                                 : props.title == 'Daily Check-in' ? require('../../assets/daily_icon.png')
-    //                                 : props.title == 'Activity Rewards' ? require('../../assets/pen_icon.png')
-    //                                 : require('../../assets/invite_icon.png')
-    //                             }
-    //                         />
-    //                         {props.title != 'Daily Check-in' && (
-    //                             <View style={{}}>
-    //                                 <Text style={{fontWeight: 'bold',fontSize: 18,}}>{props.title}</Text>
-    //                                 <Text style={{}}>
-    //                                     {
-    //                                         props.title == 'Ad Rewards' ? '+200'
-    //                                         : props.title == 'Activity Rewards' ? '+1000'
-    //                                         : '0'
-    //                                     }
-    //                                 </Text>
-    //                             </View>
-    //                         )}
-    //                     </View>
-
-    //                     {isClaimed ? (
-    //                         <View style={{backgroundColor: '#D0D0D0',paddingHorizontal: 10, borderRadius: 20,height: 40,width: 100,justifyContent:'center',alignItems:'center',}}>
-    //                             <Text style={{color: 'white',fontSize: 16,fontWeight: 'bold',}}>Claimed</Text>
-    //                         </View>
-    //                     ) : (
-    //                         <Button 
-    //                             title='Claim'
-    //                             color='orange'
-    //                             size="sm"
-    //                             onPress={() => {props.title == 'Daily Check-in' ? onAdClaim() : onRewardClaim()}} 
-    //                             style={{height: 40, justifyContent: 'center',alignItems: 'center'}}
-    //                         />
-    //                     )}
-    //                 </View>
-    //             </ImageBackground>
-    //         </View>
-    //     )
-    // }    
-
-
     const delay = ms => new Promise(res => setTimeout(res, ms));
 
     const onCopyPress = async () => {
         setAddressCopied(true)
         await delay(1000);
         setAddressCopied(false)
+    }
+
+    const navigateNext = () => {
+        Haptics.selectionAsync();
+        if(navigation){
+            navigation.navigate('ActivityReward')
+        }else{
+            setNewFeatureVis(false)
+        }
     }
 
     const onInvitePress = () => {
@@ -595,7 +547,7 @@ const OrangeReward = ({navigation, route}) => {
                     const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
                     if(index != -1){
                         tempData.listClaimedOranges[index].listOranges.push({
-                            numberOranges: 10,
+                            numberOranges: 30,
                             type: 'Invite Sent'
                         })
                     }else{
@@ -603,7 +555,7 @@ const OrangeReward = ({navigation, route}) => {
                             date: moment().format('YYYY-MM-DD'),
                             listOranges: [
                                 {
-                                    numberOranges: 10,
+                                    numberOranges: 30,
                                     type: 'Invite Sent'
                                 },
                             ]
@@ -614,14 +566,14 @@ const OrangeReward = ({navigation, route}) => {
                         date: moment().format('YYYY-MM-DD'),
                         listOranges: [
                             {
-                                numberOranges: 10,
+                                numberOranges: 30,
                                 type: 'Invite Sent'
                             },
                         ]
                     }]
                 }
 
-                tempData.numberOranges ? tempData.numberOranges += 10 : tempData.numberOranges = 10
+                tempData.numberOranges ? tempData.numberOranges += 30 : tempData.numberOranges = 30
                 tempData.friendsInvited ? tempData.friendsInvited += 1 : tempData.friendsInvited = 1
 
                 setUserData({...tempData})
@@ -661,7 +613,7 @@ const OrangeReward = ({navigation, route}) => {
 
 
                 <View style={{flexDirection:'row',alignItems:'center',gap: 10,marginLeft: 20}}>
-                    <Text style={{fontWeight: 'bold',fontSize: 18,fontFamily: 'GmarketMedium'}}>Orange Rewards</Text>
+                    <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 21 : 18}}>Orange Rewards</Text>
                     <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenHelp(true)}}>
                         <Image
                             style={{width: 20, height: 20}}
@@ -680,14 +632,14 @@ const OrangeReward = ({navigation, route}) => {
                     style={{height: 50,width: width-30, alignSelf:'center', justifyContent: 'center',alignItems: 'center', marginTop: 30,}}
                 /> */}
 
-                {firstTimeReward == 'true' && userData.firstTime != 'done' && (
+                {firstTimeReward == 'true' && userData?.firstTime != 'done' && (
                     <TouchableOpacity 
-                        style={{height: 60,marginVertical: 10,}}
+                        style={{height: 60,width:'100%', marginVertical: 10,}}
                         onPress={() => {Haptics.selectionAsync();setNewFeatureAlertVis(true);setNewFeatureVis(true)}}
                     >
                         <Image
                             style={{width: width-20,height: 65,alignSelf:'center',}}
-                            resizeMode='contain'
+                            resizeMode='stretch'
                             source={require('../../assets/new_feature_alert.png')}
                         />
                     </TouchableOpacity>
@@ -695,8 +647,22 @@ const OrangeReward = ({navigation, route}) => {
 
 
                 {/* DAILY CHECK-IN */}
-                <View style={[styles.elevate, {width: width-20, height: 100, alignSelf:'center',borderRadius: 10, marginTop: firstTimeReward == 'true' && userData.firstTime != 'done' ? 0 : 20, overflow:'hidden'}]}>
-                    <ImageBackground source={require('../../assets/bg_card_reward.png')} resizeMode="contain" style={{flex: 1,justifyContent:'center',padding: 20}}>
+                <View style={[
+                    styles.elevate, 
+                    {
+                        width: width-20,
+                        height: 100,
+                        alignSelf:'center',
+                        borderRadius: 10,
+                        marginTop: firstTimeReward == 'true' && userData?.firstTime != 'done' ? 0 : 20,
+                        overflow:'hidden',
+                    }]}
+                >
+                    <ImageBackground 
+                        source={require('../../assets/bg_card_reward.png')} 
+                        resizeMode="stretch" 
+                        style={{flex: 1,justifyContent:'center',padding: 20}}
+                    >
                         <View style={{position: 'absolute',top: -5,left: 2}}>
                             <Image
                                 style={{width: 80, height: 80, }}
@@ -712,16 +678,15 @@ const OrangeReward = ({navigation, route}) => {
                                     resizeMode='contain'
                                     source={require('../../assets/daily_icon.png')}
                                 />
-                                <Text style={{fontWeight: 'bold',fontSize: 18,}}>Daily Check-in</Text>
+                                <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 20 : 18,}}>Daily Check-in</Text>
                             </View>
 
                             <Button 
-                                // loading={listFollowLoader[index]} 
                                 title='Claim'
                                 color='orange'
                                 size="sm"
                                 onPress={() => {Haptics.selectionAsync();setBottomOpen(true);handleModalPress()}} 
-                                style={{height: 40, justifyContent: 'center',alignItems: 'center'}}
+                                style={{height: 40, justifyContent: 'center',alignItems: 'center', width: '30%'}}
                             />
                         </View>
                     </ImageBackground>
@@ -741,13 +706,13 @@ const OrangeReward = ({navigation, route}) => {
                                     source={require('../../assets/fire_icon.png')}
                                 />
                                 <View style={{}}>
-                                    <Text style={{fontWeight: 'bold',fontSize: 18,}}>Ad Rewards</Text>
-                                    <Text style={{}}>+200</Text>
+                                    <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 20 : 18,}}>Ad Rewards</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>+200</Text>
                                 </View>
                             </View>
 
                             {userData?.adReward?.lastClaim ? (
-                                <View style={{backgroundColor: '#D0D0D0',paddingHorizontal: 10, borderRadius: 20,height: 40,width: 100,justifyContent:'center',alignItems:'center',}}>
+                                <View style={{backgroundColor: '#D0D0D0',paddingHorizontal: 10, borderRadius: 20,height: 40,width: 100,justifyContent:'center',alignItems:'center',width: '30%'}}>
                                     <Text style={{color: 'white',fontSize: 16,fontWeight: 'bold',}}>Claimed</Text>
                                 </View>
                             ) : (
@@ -756,7 +721,7 @@ const OrangeReward = ({navigation, route}) => {
                                     color='orange'
                                     size="sm"
                                     onPress={() => onAdClaim()} 
-                                    style={{height: 40, justifyContent: 'center',alignItems: 'center'}}
+                                    style={{height: 40, justifyContent: 'center',alignItems: 'center',width:'30%'}}
                                 />
                             )}
                         </View>
@@ -774,8 +739,8 @@ const OrangeReward = ({navigation, route}) => {
                                     source={require('../../assets/pen_icon.png')}
                                 />
                                 <View style={{}}>
-                                    <Text style={{fontWeight: 'bold',fontSize: 18,}}>Activity Rewards</Text>
-                                    <Text style={{}}>+1000</Text>
+                                    <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 20 : 18,}}>Activity Rewards</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>+1000</Text>
                                 </View>
                             </View>
 
@@ -785,8 +750,8 @@ const OrangeReward = ({navigation, route}) => {
                                 color={activityClaim ? 'gray-100' : 'orange'}
                                 disabled={activityClaim}
                                 size="sm"
-                                onPress={() => {Haptics.selectionAsync();navigation.navigate('ActivityReward')}} 
-                                style={{height: 40, justifyContent: 'center',alignItems: 'center'}}
+                                onPress={navigateNext}
+                                style={{height: 40, justifyContent: 'center',alignItems: 'center',width:'30%'}}
                             />
                         </View>
                     </ImageBackground>
@@ -803,8 +768,8 @@ const OrangeReward = ({navigation, route}) => {
                                     source={require('../../assets/invite_icon.png')}
                                 />
                                 <View style={{}}>
-                                    <Text style={{fontWeight: 'bold',fontSize: 18,}}>Invite Friends</Text>
-                                    <Text style={{}}>{userData.friendsInvited ?? 0}</Text>
+                                    <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 20 : 18,}}>Invite Friends</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>{userData?.friendsInvited ?? 0}</Text>
                                 </View>
                             </View>
 
@@ -814,7 +779,7 @@ const OrangeReward = ({navigation, route}) => {
                                 color='orange'
                                 size="sm"
                                 onPress={handleModalInvitePress} 
-                                style={{height: 40, justifyContent: 'center',alignItems: 'center'}}
+                                style={{height: 40, justifyContent: 'center',alignItems: 'center',width:'30%'}}
                             />
                         </View>
                     </ImageBackground>
@@ -862,8 +827,6 @@ const OrangeReward = ({navigation, route}) => {
                 </View>
             )}
 
-
-
             <BottomSheetModalProvider>
                 <BottomSheetModal
                     ref={modalRef}
@@ -875,11 +838,11 @@ const OrangeReward = ({navigation, route}) => {
                     onDismiss={() => {setBottomOpen(false)}}
                 >
                     <View style={{}}>
-                        <Text style={{textAlign: 'center',fontSize: 18,fontWeight: 'bold',}}>Daily Check-in</Text>
-                        <Text style={{textAlign: 'center',}}>Start Your Day with Orange Rewards!</Text>
+                        <Text style={{textAlign: 'center',fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',}}>Daily Check-in</Text>
+                        <Text style={{textAlign: 'center',fontSize: Platform.OS == 'ios' ? 17 : 14,marginTop: Platform.OS == 'ios' ? 10 : 0,}}>Start Your Day with Orange Rewards!</Text>
                     </View>
 
-                    <View style={{height: 75, marginTop: 20,}}>
+                    <View style={{height: 75, marginTop: Platform.OS == 'ios' ? 30 : 20,}}>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                             <OrangeDayCards />
 
@@ -895,15 +858,17 @@ const OrangeReward = ({navigation, route}) => {
                 <BottomSheetModal
                     ref={modalInviteRef}
                     index={1}
-                    snapPoints={snapInvitePoints}
+                    snapPoints={Platform.OS == 'ios' ? snapInvitePointsIOS : snapInvitePoints}
                     handleIndicatorStyle={{backgroundColor: 'black',}}
                     handleStyle={{height: 40,justifyContent: 'center',}}
                     backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
                     onDismiss={() => {setBottomOpen(false)}}
                 >
                     <View style={{}}>
-                        <Text style={{textAlign: 'center',fontSize: 18,fontWeight: 'bold',}}>Invite Friends</Text>
-                        <Text style={{textAlign: 'center',paddingHorizontal: 20}}>Invite friends with code <Text style={{color: '#FF6E31',fontWeight: 'bold',}}>ORANGE50</Text> and earn together!</Text>
+                        <Text style={{textAlign: 'center',fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',}}>Invite Friends</Text>
+                        <Text style={{textAlign: 'center',paddingHorizontal: 10,marginTop: Platform.OS == 'ios' ? 10 : 0,fontSize: Platform.OS == 'ios' ? 16 : 14,}}>
+                            Invite friends with code <Text style={{color: '#FF6E31',fontWeight: 'bold',}}>ORANGE50</Text> and earn together!
+                        </Text>
                     </View>
 
                     <View style={{marginTop: 20,}}>
@@ -914,17 +879,17 @@ const OrangeReward = ({navigation, route}) => {
                                     resizeMode='contain'
                                     source={require('../../assets/orange_icon.png')}
                                 />
-                                <Text style={{textAlign: 'center',fontSize: 18,fontWeight: 'bold',}}>+50</Text>                                
+                                <Text style={{textAlign: 'center',fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',}}>+50</Text>                                
                             </View>
 
                             <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 5}}>
                                 <Image
-                                    style={{width: 35, height: 35, alignSelf:'center',}}
+                                    style={{width: 45, height: 45, alignSelf:'center',}}
                                     resizeMode='contain'
-                                    source={require('../../assets/orange2_icon.png')}
+                                    source={require('../../assets/orange_gray.png')}
                                 />
-                                <Text style={{textAlign: 'center',fontSize: 18,fontWeight: 'bold',}}>+10</Text>                                
-                                <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenInviteHelp(true)}}>
+                                <Text style={{textAlign: 'center',fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',marginLeft: -5}}>+30</Text>                                
+                                <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenInviteHelp(true)}} style={{marginLeft: 5}}>
                                     <Image
                                         style={{width: 20, height: 20}}
                                         resizeMode='contain'
@@ -960,24 +925,24 @@ const OrangeReward = ({navigation, route}) => {
                 >
 
                     <TouchableOpacity
-                        style={{position: 'absolute',top: 15, right: 15}}
+                        style={{position: 'absolute',top: 15, right: 15,zIndex: 2}}
                         onPress={() => {Haptics.selectionAsync();setOpenHelp(false)}}
                     >
                         <AntDesign name="closecircle" size={24} color="black" />
                     </TouchableOpacity>
 
-                    <View style={{alignSelf:'center',}}>
-                        <View style={[tailwind('flex flex-col items-center justify-center px-1')]}>
+                    <View style={{alignSelf:'center',height:'100%'}}>
+                        <View style={[tailwind('flex flex-col items-center px-1'), {marginTop: 50,}]}>
                             <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
                                 <Image
                                     style={{width: 20, height: 20}}
                                     resizeMode='contain'
                                     source={require('../../assets/nice_orange.png')}
                                 />
-                                <Text style={{fontWeight: 'bold',fontSize: 18,}}>What is Orange Rewards?</Text>
+                                <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 23 : 18,}}>What is Orange Rewards?</Text>
                             </View>
-                            <Text style={{textAlign: 'center',}}>Earn oranges for being active and engaged.</Text>
-                            <Text style={{}}>Redeem them for exciting rewards!</Text>
+                            <Text style={{textAlign: 'center',marginTop: 10,fontSize: Platform.OS == 'ios' ? 17 : 14,}}>Earn oranges for being active and engaged.</Text>
+                            <Text style={{fontSize: Platform.OS == 'ios' ? 17 : 14,}}>Redeem them for exciting rewards!</Text>
                         </View>
 
                         <View style={[tailwind('flex flex-col items-center justify-center')]}>
@@ -987,10 +952,10 @@ const OrangeReward = ({navigation, route}) => {
                                     resizeMode='contain'
                                     source={require('../../assets/nice_orange.png')}
                                 />
-                                <Text style={{fontWeight: 'bold',fontSize: 18,}}>What is Daily Check-in?</Text>
+                                <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 23 : 18,}}>What is Daily Check-in?</Text>
                             </View>
-                            <Text style={{textAlign: 'center',}}>Log in daily to earn increasing rewards.</Text>
-                            <Text style={{}}>Check in every day for the best rewards!</Text>
+                            <Text style={{textAlign: 'center',marginTop: 10,fontSize: Platform.OS == 'ios' ? 17 : 14,}}>Log in daily to earn increasing rewards.</Text>
+                            <Text style={{fontSize: Platform.OS == 'ios' ? 17 : 14,}}>Check in every day for the best rewards!</Text>
                         </View>
 
                         <View style={[tailwind('flex flex-col items-center justify-center')]}>
@@ -1000,10 +965,10 @@ const OrangeReward = ({navigation, route}) => {
                                     resizeMode='contain'
                                     source={require('../../assets/nice_orange.png')}
                                 />
-                                <Text style={{fontWeight: 'bold',fontSize: 18,}}>What is Ad Rewards?</Text>
+                                <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 23 : 18,}}>What is Ad Rewards?</Text>
                             </View>
-                            <Text style={{textAlign: 'center',}}>Watch short ads to earn extra oranges.</Text>
-                            <Text style={{}}>Quick and easy bonus!</Text>
+                            <Text style={{textAlign: 'center',marginTop: 10,fontSize: Platform.OS == 'ios' ? 17 : 14,}}>Watch short ads to earn extra oranges.</Text>
+                            <Text style={{fontSize: Platform.OS == 'ios' ? 17 : 14,}}>Quick and easy bonus!</Text>
                         </View>
 
                         <View style={[tailwind('flex flex-col items-center justify-center')]}>
@@ -1013,10 +978,10 @@ const OrangeReward = ({navigation, route}) => {
                                     resizeMode='contain'
                                     source={require('../../assets/nice_orange.png')}
                                 />
-                                <Text style={{fontWeight: 'bold',fontSize: 18,}}>What is Posting Rewards?</Text>
+                                <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 23 : 18,}}>What is Posting Rewards?</Text>
                             </View>
-                            <Text style={{textAlign: 'center',}}>Earn rewards by creating posts.</Text>
-                            <Text style={{}}>The more you post, the more you earn!</Text>
+                            <Text style={{textAlign: 'center',marginTop: 10,fontSize: Platform.OS == 'ios' ? 17 : 14}}>Earn rewards by creating posts.</Text>
+                            <Text style={{fontSize: Platform.OS == 'ios' ? 17 : 14,}}>The more you post, the more you earn!</Text>
                         </View>
                     </View>
                 </Modal>
@@ -1042,20 +1007,17 @@ const OrangeReward = ({navigation, route}) => {
                             source={require('../../assets/orange2_icon.png')}
                         />
 
-                        <Text style={{fontWeight: 'bold',fontSize: 18,textAlign: 'center',marginVertical: 20,}}>Invite & Friend Bonus</Text>
+                        <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 22 : 18,textAlign: 'center',marginVertical: 20,}}>Friend Post Bonus</Text>
 
-                        <Text style={{textAlign: 'center',}}>Tell your friends to start posting to earn</Text>
+                        <Text style={{textAlign: 'center',fontSize: Platform.OS == 'ios' ? 16 : 14}}>Tell your friends to start posting to earn</Text>
                         <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
-                            <Text style={{}}>bonus Oranges! </Text>
+                            <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14}}>bonus Oranges! </Text>
                             <Image
-                                style={{width: 20, height: 20}}
+                                style={{width: 25, height: 25}}
                                 resizeMode='contain'
                                 source={require('../../assets/nice_orange.png')}
                             />
                         </View>
-
-                        <Text style={{textAlign: 'center',marginTop: 10,}}>Receive 10 oranges per invitation !</Text>
-
                     </View>
                 </Modal>
             )}

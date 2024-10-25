@@ -1,5 +1,5 @@
 import React, { useContext, useState } from "react";
-import { Text, View, Image } from 'react-native';
+import { Text, View, Image, Platform } from 'react-native';
 
 import Modal from "../Modal";
 import Button from "../Button";
@@ -76,11 +76,13 @@ export default function PushNotificationsModal() {
     return(
         <Modal hide={() => {Haptics.selectionAsync();setPushNotifsVis(false)}} type='notifications'>
             <View style={[tailwind('flex flex-col items-center justify-center px-3'), {paddingTop: 30,}]}>
-                <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,}]}>Push Notifications</Text>
+                <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 20,fontFamily: "GmarketBold",lineHeight: 24,}]}>Push Notifications</Text>
 
                 <Image source={require('../../assets/notification_icon.png')} style={{height: 115,marginTop: 15,marginBottom: 25,alignSelf: 'center',}} resizeMode="contain"/>
 
-                <Text style={[tailwind(`text-secondary text-center text-slate-900`), {lineHeight: 20}]}>Stay in the loop with the latest news, content, videos, and rewards.</Text>
+                <Text style={[tailwind(`text-secondary text-center text-slate-900`), {lineHeight: 20, fontFamily: "GmarketMedium",fontSize: 14,}]}>
+                    Stay in the loop with the latest news, content, videos, and rewards.
+                </Text>
 
                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 5,marginTop: 25,}}>
                     <Checkbox 
@@ -92,7 +94,7 @@ export default function PushNotificationsModal() {
                     <Text style={{fontFamily: 'GmarketMedium',fontSize: 12,}}>Don't show me for 7 days</Text>
                 </View>
 
-                <View style={[tailwind('flex flex-row justify-between mt-5 w-full')]}>
+                <View style={[tailwind('flex flex-row justify-between w-full'), {marginTop: Platform.OS == 'ios' ? 32 : 20}]}>
                     <Button size="md" color="black" title="Notify me" onPress={enablePushNotifications} style={{width: '47%',alignItems: 'center',height: 50,justifyContent: 'center',}}/>
                     <Button size="md" color="white" title="Not now" onPress={skipNotifications} style={{width: '47%',alignItems: 'center',height: 50,justifyContent: 'center',}}/>
                 </View>

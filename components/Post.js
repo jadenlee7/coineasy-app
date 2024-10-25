@@ -17,11 +17,9 @@ import Button from "./Button";
 import TimeAgo from "./TimeAgo";
 import { NewsItem } from "../screens/News";
 import { UserPfp, Username } from "./User";
-import { context } from '../utils/config.js';
 import { GlobalContext } from "../contexts/GlobalContext";
 import { getDomainName, getShorterString } from '../utils';
 import useGetMentionedDid from "../hooks/useGetMentionedDid";
-import useStatusBarHeight from "../hooks/useStatusBarHeight";
 import { AntDesign, Entypo, Feather } from "@expo/vector-icons";
 import { InterpunctIcon, PostMenuIcon, RepostIcon2, CommentIcon2, LikeIcon2, SuccessIcon } from "./Icons";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -124,8 +122,6 @@ const PostDisplay = (props) => {
     },[]);
 
     const tailwind = useTailwind();
-
-    const statusBarHeight = useStatusBarHeight();
 
     let list_images = [];
     if(listMedia?.length > 1){
@@ -760,7 +756,9 @@ export const LikeCTA = ({post, isReply}) => {
         }
 
         tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 2 : tempData.activityUnclaimed = {number: 2}
-        tempData.reaction.number == 30 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.activityUnclaimed = {number: 52}
+        if(tempData.reaction.number == 30 && tempData.activityUnclaimed){
+            tempData.activityUnclaimed.number += 50
+        }
         tempData.reaction.number == 30 ? tempData.reaction.number = 0 : null
 
         setUserData({...tempData})

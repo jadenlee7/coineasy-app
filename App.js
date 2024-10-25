@@ -27,6 +27,7 @@ import NicknameModal from "./components/modals/NicknameModal";
 
 /** Expo */
 import { useFonts } from 'expo-font';
+// import * as Font from 'expo-font';
 import * as Linking from 'expo-linking';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
@@ -40,6 +41,7 @@ import { useWalletConnectModal } from '@walletconnect/modal-react-native';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
+import { Asset } from 'expo-asset';
 
 /** Initialize the Orbis class object */
 let orbis = new Orbis({
@@ -165,7 +167,7 @@ export default function App() {
   const [fontsLoaded] = useFonts({
     'GmarketMedium': require('./assets/fonts/GmarketSansMedium.ttf'),
     'GmarketMedium_ios': require('./assets/fonts/GmarketSansMedium_ios.ttf'),
-    'GmarketBold': require('./assets/fonts/GmarketSansBold.otf'),
+    'GmarketBold': require('./assets/fonts/GmarketSansBold.ttf'),
   });
 
   useEffect(() => {
@@ -337,7 +339,6 @@ export default function App() {
                 // if(listDid[0].user.profile?.data?.oranges?.updated && moment(listDid[0].user.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
                 //     setShowClaimOranges(true)
                 // }
-
                 setIsReady(true);
                 
             }else{
@@ -347,9 +348,6 @@ export default function App() {
                 if(res.status == 200) {
                     setUser(res.details);
                     setUserData(res.details.profile?.data);
-                    // if(res.details.profile?.data?.oranges?.updated && moment(res.details.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
-                    //     setShowClaimOranges(true)
-                    // }
                 }
                 
                 setIsReady(true);
@@ -678,7 +676,7 @@ export default function App() {
             //     setShowClaimOranges(true)
             // }else{
             //     setPushNotifsVis(true);
-            // }
+            // }            
 
             if(moment().format('YYYY-MM-DD') >= showNotificationDate || !showNotificationDate){
                 setPushNotifsVis(true);
@@ -723,17 +721,8 @@ export default function App() {
         setPosts(_posts);
 
         // Orange Reward
-        const tempData = userData
-
-        console.log('REPLY TO');
-        console.log(JSON.stringify(replyTo));
-        console.log(' ');
-        console.log('REPOST');
-        console.log(JSON.stringify(repost));
-        console.log(' ');
-
+        const tempData = userData ?? {}
         if(replyTo){
-
             if(tempData.listClaimedOranges){
                 const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
                 if(index != -1){
@@ -901,10 +890,6 @@ export default function App() {
             tempData.post.number == 10 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.activityUnclaimed = {number: 65}
             tempData.post.number == 10 ? tempData.post.number = 0 : null
         }
-
-        console.log('END TEMP DATA');
-        console.log(JSON.stringify(tempData));
-        console.log(' ');
         
         setUserData({...tempData})
         
@@ -931,9 +916,22 @@ export default function App() {
     }
 
     /** Wait for fonts to be loaded before rendering the app */
+    // const loadFonts = async () => {
+    //     await Font.loadAsync({
+    //         'GmarketMedium': require('./assets/fonts/GmarketSansMedium.ttf'),
+    //         'GmarketMedium_ios': require('./assets/fonts/GmarketSansMedium.ttf'),
+    //         'GmarketBold': require('./assets/fonts/GmarketSansBold.ttf'),
+    //     });
+    // };
+
+    // if(!loadFonts) {
+    //     return null
+    // }
+
     if(!fontsLoaded) {
         return null
     }
+
 
     /** Wait for app to be ready before rendering it */
     if (!isReady) {
@@ -1100,7 +1098,7 @@ export default function App() {
                         </View>
                     )}
 
-                    <Confetti confetti={confetti}/>
+                    {/* <Confetti confetti={confetti}/> */}
                 </TailwindProvider>
                 </GlobalContext.Provider>
             </GestureHandlerRootView>

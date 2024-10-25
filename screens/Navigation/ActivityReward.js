@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useMemo, useRef, useState } from 'react'
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, Animated, Easing } from 'react-native'
+import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, Animated, Easing, Platform } from 'react-native'
 
 import Button from '../../components/Button';
 import HeaderImage from '../../components/HeaderImage';
@@ -12,6 +12,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ScrollView as RNScrollView } from 'react-native-gesture-handler';
 import { showMessage } from 'react-native-flash-message';
+import Modal from '../../components/Modal';
+import { AntDesign } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window')
 
@@ -51,12 +53,14 @@ const ActivityReward = ({navigation, route}) => {
                 }
             }
 
+            tempData.numberOranges ? tempData.numberOranges += tempData.activityUnclaimed.number : tempData.numberOranges = tempData.activityUnclaimed.number
             tempData.activityUnclaimed.number = 0
+
             setUserData({...tempData})
             
             var tempProfile = user.profile
             tempProfile.data = tempData
-            const res = await orbis.updateProfile(tempProfile);
+            await orbis.updateProfile(tempProfile);
 
             showMessage({
                 message: "Your oranges have been claimed !",
@@ -104,7 +108,7 @@ const ActivityReward = ({navigation, route}) => {
   
     const heightInterpolate = animation.interpolate({
         inputRange: [0, 1],
-        outputRange: [0, 400]
+        outputRange: [0, 380]
     });
 
     const spinValue = new Animated.Value(0);
@@ -128,10 +132,10 @@ const ActivityReward = ({navigation, route}) => {
                 </TouchableOpacity>
 
                 <View style={{flexDirection:'row',justifyContent: 'center', alignItems:'center',gap: 10,marginVertical: 10,marginLeft: 20}}>
-                    <Text style={{fontWeight: 'bold',fontSize: 18,fontFamily: 'GmarketMedium'}}>Activity Rewards</Text>
+                    <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 20 : 18,fontFamily: 'GmarketBold'}}>Activity Rewards</Text>
                     <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenHelp(true);handleModalPress()}}>
                         <Image
-                            style={{width: 20, height: 20}}
+                            style={{width: Platform.OS == 'ios' ? 25 : 20, height: Platform.OS == 'ios' ? 25 : 20}}
                             resizeMode='contain'
                             source={require('../../assets/question_icon.png')}
                         />
@@ -139,23 +143,22 @@ const ActivityReward = ({navigation, route}) => {
                 </View>
             </View>
 
-
             <ScrollView style={{flex: 1,}}>
 
                 <View style={[styles.elevate, {backgroundColor: 'white', width: width - 30, height: 160,  borderRadius: 10,alignSelf:'center',marginTop: 20}]}>
-                    <Text style={{marginTop: 17,marginLeft: 15,fontSize: 12, fontFamily: 'GmarketMedium'}}>Earn Oranges for your daily activities!</Text>
+                    <Text style={{marginTop: 17,marginLeft: 20,fontSize: Platform.OS == 'ios' ? 16 : 13}}>Earn Oranges for your daily activities!</Text>
 
                     {/* UNCLAIMED REWARD */}
-                    <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginHorizontal: 10,marginTop: 20,}}>
+                    <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginHorizontal: 10,marginTop: Platform.OS == 'ios' ? 10 : 20,marginLeft: 20}}>
                         <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 7}}>
                             <Image
-                                style={{width: 40, height: 40, alignSelf:'center',}}
+                                style={{width: Platform.OS == 'ios' ? 45 : 40, height: Platform.OS == 'ios' ? 45 : 40, alignSelf:'center',}}
                                 resizeMode='contain'
                                 source={require('../../assets/orange2_icon.png')}
                             />
-                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenHelpUnclaimed(true);handleModalPress()}}>
+                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenHelpUnclaimed(true);}}>
                                 <Image
-                                    style={{width: 20, height: 20}}
+                                    style={{width: Platform.OS == 'ios' ? 23 : 20, height: Platform.OS == 'ios' ? 23 : 20,marginLeft: 5}}
                                     resizeMode='contain'
                                     source={require('../../assets/question_icon.png')}
                                 />
@@ -176,16 +179,16 @@ const ActivityReward = ({navigation, route}) => {
 
 
                     {/* CLAIMED REWARD */}
-                    <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginHorizontal: 10,marginTop: 10,}}>
+                    <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginHorizontal: 10,marginTop: 10,marginLeft: 20}}>
                         <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 7}}>
                             <Image
-                                style={{width: 40, height: 40, alignSelf:'center',}}
+                                style={{width: Platform.OS == 'ios' ? 45 : 40, height: Platform.OS == 'ios' ? 45 : 40, alignSelf:'center',}}
                                 resizeMode='contain'
                                 source={require('../../assets/orange_icon.png')}
                             />
-                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenHelpClaimed(true);handleModalPress()}}>
+                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenHelpClaimed(true);}}>
                                 <Image
-                                    style={{width: 20, height: 20}}
+                                    style={{width: Platform.OS == 'ios' ? 23 : 20, height: Platform.OS == 'ios' ? 23 : 20, marginLeft: 5}}
                                     resizeMode='contain'
                                     source={require('../../assets/question_icon.png')}
                                 />
@@ -214,12 +217,12 @@ const ActivityReward = ({navigation, route}) => {
                         </TouchableWithoutFeedback>
                         <Animated.View style={{ height: heightInterpolate, overflow: 'hidden', paddingHorizontal: 10}}>
                             <View style={{}}>
-                                <Text style={{fontFamily: 'GmarketMedium'}}>Hit milestones, earn bonuses!</Text>
+                                <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>Hit milestones, earn bonuses!</Text>
 
                                 {/* POSTING */}
                                 <View style={{marginTop: 20,}}>
                                     <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',}}>
-                                        <Text style={{fontSize: 17,fontWeight: 'bold',fontFamily: 'GmarketMedium'}}>Posting</Text>
+                                        <Text style={{fontSize: Platform.OS == 'ios' ? 21 : 17,fontWeight: 'bold'}}>Posting</Text>
                                         <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 8}}>
                                             <Image
                                                 style={{width: 30, height: 30, alignSelf:'center',}}
@@ -229,7 +232,7 @@ const ActivityReward = ({navigation, route}) => {
                                             <Text style={{color:'#FF6E31',fontWeight: 'bold',fontFamily: 'GmarketMedium',fontSize: 16,}}>+50</Text>
                                         </View>
                                     </View>
-                                    <Text style={{marginTop: 7,fontSize: 13,fontFamily: 'GmarketMedium'}}>Express yourself!</Text>
+                                    <Text style={{marginTop: 3,fontSize: Platform.OS == 'ios' ? 16 : 13,marginLeft: 2}}>Express yourself!</Text>
 
                                     <Text style={{textAlign: 'right',fontFamily: 'GmarketMedium'}}>{userData.post?.number ?? 0}/10</Text>
                                     <View style={{backgroundColor: '#F6F6F6',height: 15, borderRadius: 6,marginTop: 3,}}>
@@ -245,7 +248,7 @@ const ActivityReward = ({navigation, route}) => {
                                 {/* COMMENTS */}
                                 <View style={{marginTop: 20,}}>
                                     <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',}}>
-                                        <Text style={{fontSize: 17,fontWeight: 'bold',fontFamily: 'GmarketMedium'}}>Comments</Text>
+                                        <Text style={{fontSize: Platform.OS == 'ios' ? 21 : 17,fontWeight: 'bold'}}>Comments</Text>
                                         <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 8}}>
                                             <Image
                                                 style={{width: 30, height: 30, alignSelf:'center',}}
@@ -255,7 +258,7 @@ const ActivityReward = ({navigation, route}) => {
                                             <Text style={{color:'#FF6E31',fontWeight: 'bold',fontFamily: 'GmarketMedium',fontSize: 16,}}>+50</Text>
                                         </View>
                                     </View>
-                                    <Text style={{marginTop: 7,fontSize: 13,fontFamily: 'GmarketMedium'}}>Interact with others!</Text>
+                                    <Text style={{marginTop: 3,fontSize: Platform.OS == 'ios' ? 16 : 13,marginLeft: 2}}>Interact with others!</Text>
 
                                     <Text style={{textAlign: 'right',fontFamily: 'GmarketMedium'}}>{userData.comment?.number ?? 0}/20</Text>
                                     <View style={{backgroundColor: '#F6F6F6',height: 15, borderRadius: 6,marginTop: 3,}}>
@@ -278,7 +281,7 @@ const ActivityReward = ({navigation, route}) => {
                                 {/* REACTIONS */}
                                 <View style={{marginTop: 20,}}>
                                     <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',}}>
-                                        <Text style={{fontSize: 17,fontWeight: 'bold',fontFamily: 'GmarketMedium'}}>Reactions</Text>
+                                        <Text style={{fontSize: Platform.OS == 'ios' ? 21 : 17,fontWeight: 'bold'}}>Reactions</Text>
                                         <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 8}}>
                                             <Image
                                                 style={{width: 30, height: 30, alignSelf:'center',}}
@@ -288,7 +291,7 @@ const ActivityReward = ({navigation, route}) => {
                                             <Text style={{color:'#FF6E31',fontWeight: 'bold',fontFamily: 'GmarketMedium',fontSize: 16,}}>+50</Text>
                                         </View>
                                     </View>
-                                    <Text style={{marginTop: 7,fontSize: 13,fontFamily: 'GmarketMedium'}}>Spread the love!</Text>
+                                    <Text style={{marginTop: 3,fontSize: Platform.OS == 'ios' ? 16 : 13,marginLeft: 2}}>Spread the love!</Text>
 
                                     <Text style={{textAlign: 'right',fontFamily: 'GmarketMedium'}}>{userData.reaction?.number ?? 0}/30</Text>
                                     <View style={{backgroundColor: '#F6F6F6',height: 15, borderRadius: 6,marginTop: 3,}}>
@@ -318,6 +321,60 @@ const ActivityReward = ({navigation, route}) => {
                 <View style={{height: 100}}/>
             </ScrollView>
 
+
+            {openHelpUnclaimed && (
+                <Modal 
+                    hide={() => {Haptics.selectionAsync();setOpenHelpUnclaimed(false)}} 
+                    type='oranges-help-invite' 
+                >
+                    <TouchableOpacity
+                        style={{position: 'absolute',top: 15, right: 15}}
+                        onPress={() => {Haptics.selectionAsync();setOpenHelpUnclaimed(false)}}
+                    >
+                        <AntDesign name="closecircle" size={24} color="black" />
+                    </TouchableOpacity>
+
+                    <View style={{marginTop: 50,}}>
+                        <Image
+                            style={{width: 50, height: 50, alignSelf:'center',}}
+                            resizeMode='contain'
+                            source={require('../../assets/orange2_icon.png')}
+                        />
+
+                        <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 22 : 18,marginVertical: 10,}}>Unclaimed Oranges</Text>
+
+                        <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,textAlign: 'center',paddingHorizontal: 5}}>The user hasn't claimed their Orange rewards yet.</Text>
+                    </View>
+                </Modal>
+            )}
+
+            {openHelpClaimed && (
+                <Modal 
+                    hide={() => {Haptics.selectionAsync();setOpenHelpClaimed(false)}} 
+                    type='oranges-help-invite' 
+                >
+
+                    <TouchableOpacity
+                        style={{position: 'absolute',top: 15, right: 15}}
+                        onPress={() => {Haptics.selectionAsync();setOpenHelpClaimed(false)}}
+                    >
+                        <AntDesign name="closecircle" size={24} color="black" />
+                    </TouchableOpacity>
+
+                    <View style={{marginTop: 50,}}>
+                        <Image
+                            style={{width: 50, height: 50, alignSelf:'center',}}
+                            resizeMode='contain'
+                            source={require('../../assets/orange_icon.png')}
+                        />
+
+                        <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 22 : 18,marginVertical: 10,}}>Claimed Rewards</Text>
+
+                        <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,textAlign: 'center',paddingHorizontal: 5}}>The user has already claimed their Orange rewards.</Text>
+                    </View>
+                </Modal>
+            )}
+
             <BottomSheetModalProvider>
                 <BottomSheetModal
                     ref={modalRef}
@@ -332,7 +389,7 @@ const ActivityReward = ({navigation, route}) => {
                         colors={['#FFF7E8', '#FFEDEC']}
                         style={[{height: '100%',}]} 
                     >
-                        {openHelp ? (
+                        {openHelp && (
                             <RNScrollView>
                                 <View style={[tailwind('flex flex-col items-center justify-center px-1')]}>
                                     <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 5}}>
@@ -341,11 +398,11 @@ const ActivityReward = ({navigation, route}) => {
                                             resizeMode='contain'
                                             source={require('../../assets/nice_orange.png')}
                                         />
-                                        <Text style={{fontWeight: 'bold',fontSize: 18,}}>Activity Rewards System</Text>
+                                        <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 22 : 18,marginTop: 10,}}>Activity Rewards System</Text>
                                     </View>
-                                    <Text style={{textAlign: 'center',marginTop: 10,}}>"Your engagement counts!</Text>
-                                    <Text style={{textAlign: 'center',}}>Earn Oranges for every interaction and</Text>
-                                    <Text style={{textAlign: 'center',}}>redeem them for exciting rewards."</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14, textAlign: 'center',marginTop: 10,}}>"Your engagement counts!</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14, textAlign: 'center',}}>Earn Oranges for every interaction and</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14, textAlign: 'center',}}>redeem them for exciting rewards."</Text>
                                 </View>
 
                                 <View style={{height: StyleSheet.hairlineWidth, width: 225, marginTop: 15,alignSelf:'center',backgroundColor: '#333',}}/>
@@ -357,19 +414,19 @@ const ActivityReward = ({navigation, route}) => {
                                         resizeMode='contain'
                                         source={require('../../assets/nice_orange.png')}
                                     />
-                                    <Text style={{fontSize: 18,fontWeight: 'bold',}}>Posting</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',marginTop: 10,}}>Posting</Text>
                                 </View>
 
                                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,marginVertical: 5,}}>
-                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: 15,fontWeight: 'bold',}}>15 Oranges</Text>
-                                    <Text style={{}}>per post</Text>
+                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline',fontSize: Platform.OS == 'ios' ? 16 : 14,fontWeight: 'bold',}}>15 Oranges</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>per post</Text>
                                 </View>
 
-                                <Text style={{textAlign: 'center',marginTop: 5, fontSize: 15,fontWeight: 'bold',color:'#555'}}>*Post "Like" Milestones</Text>
+                                <Text style={{textAlign: 'center',marginTop: 10, fontSize: 15,fontWeight: 'bold',color:'#555'}}>*Post "Like" Milestones</Text>
 
                                 <View style={{marginTop: 8,alignSelf:'center',}}>
-                                    <Text style={{color:'#555',}}>· Extra <Text style={{color:'#FF6B17',fontWeight: 'bold',textDecorationLine:'underline'}}>30 Oranges</Text> when post reaches 50 likes.</Text>
-                                    <Text style={{color:'#555',}}>· Extra <Text style={{color:'#FF6B17',fontWeight: 'bold',textDecorationLine:'underline'}}>70 Oranges</Text> when post reaches 100 likes.</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,color:'#555',}}>· Extra <Text style={{color:'#FF6B17',fontWeight: 'bold',textDecorationLine:'underline'}}>30 Oranges</Text> when post reaches 50 likes.</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,color:'#555',}}>· Extra <Text style={{color:'#FF6B17',fontWeight: 'bold',textDecorationLine:'underline'}}>70 Oranges</Text> when post reaches 100 likes.</Text>
                                 </View>
 
                                 {/* COMMENTS */}
@@ -379,16 +436,16 @@ const ActivityReward = ({navigation, route}) => {
                                         resizeMode='contain'
                                         source={require('../../assets/nice_orange.png')}
                                     />
-                                    <Text style={{fontSize: 18,fontWeight: 'bold',}}>Comments</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',}}>Comments</Text>
                                 </View>
 
                                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,marginTop: 5,}}>
-                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: 15,fontWeight: 'bold',}}>3 Oranges</Text>
-                                    <Text style={{}}>per comment</Text>
+                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: Platform.OS == 'ios' ? 16 : 14,fontWeight: 'bold',}}>3 Oranges</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>per comment</Text>
                                 </View>
                                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,}}>
-                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: 15,fontWeight: 'bold',}}>4 Oranges</Text>
-                                    <Text style={{}}>per reply to Another User's Comment</Text>
+                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: Platform.OS == 'ios' ? 16 : 14,fontWeight: 'bold',}}>4 Oranges</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>per reply to Another User's Comment</Text>
                                 </View>
 
                                 {/* REACTIONS */}
@@ -398,16 +455,16 @@ const ActivityReward = ({navigation, route}) => {
                                         resizeMode='contain'
                                         source={require('../../assets/nice_orange.png')}
                                     />
-                                    <Text style={{fontSize: 18,fontWeight: 'bold',}}>Reactions (Like&Repost)</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',}}>Reactions (Like&Repost)</Text>
                                 </View>
 
                                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,marginTop: 5,}}>
-                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: 15,fontWeight: 'bold',}}>2 Oranges</Text>
-                                    <Text style={{}}>per like</Text>
+                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: Platform.OS == 'ios' ? 16 : 14,fontWeight: 'bold',}}>2 Oranges</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>per like</Text>
                                 </View>
                                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,}}>
-                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: 15,fontWeight: 'bold',}}>5 Oranges</Text>
-                                    <Text style={{}}>per repost</Text>
+                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: Platform.OS == 'ios' ? 16 : 14,fontWeight: 'bold',}}>5 Oranges</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>per repost</Text>
                                 </View>
 
                                 {/* MILESTONES BONUSES */}
@@ -417,41 +474,17 @@ const ActivityReward = ({navigation, route}) => {
                                         resizeMode='contain'
                                         source={require('../../assets/nice_orange.png')}
                                     />
-                                    <Text style={{fontSize: 18,fontWeight: 'bold',}}>Milestones Bonuses</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',}}>Milestones Bonuses</Text>
                                 </View>
 
-                                <Text style={{textAlign: 'center',marginTop: 5,}}>Achieve a milestone and receive</Text>
+                                <Text style={{textAlign: 'center',marginTop: 5,fontSize: Platform.OS == 'ios' ? 16 : 14,}}>Achieve a milestone and receive</Text>
                                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3}}>
-                                    <Text style={{color: '#FF6B17',fontWeight: 'bold',}}>additional Oranges</Text>
-                                    <Text style={{}}>for each activity</Text>
+                                    <Text style={{color: '#FF6B17',fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 16 : 14,}}>additional Oranges</Text>
+                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>for each activity</Text>
                                 </View>
 
                                 <View style={{height: 50}}/>
                             </RNScrollView>
-                        ) : openHelpClaimed ? (
-                            <View style={{}}>
-                                <Image
-                                    style={{width: 50, height: 50, alignSelf:'center',}}
-                                    resizeMode='contain'
-                                    source={require('../../assets/orange_icon.png')}
-                                />
-
-                                <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 18,marginVertical: 10,}}>Claimed Rewards</Text>
-
-                                <Text style={{textAlign: 'center',paddingHorizontal: 5}}>The user has already claimed their Orange rewards.</Text>
-                            </View>
-                        ) : (
-                            <View style={{}}>
-                                <Image
-                                    style={{width: 50, height: 50, alignSelf:'center',}}
-                                    resizeMode='contain'
-                                    source={require('../../assets/orange2_icon.png')}
-                                />
-
-                                <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: 18,marginVertical: 10,}}>Unclaimed Oranges</Text>
-
-                                <Text style={{textAlign: 'center',paddingHorizontal: 5}}>The user hasn't claimed their Orange rewards yet.</Text>
-                            </View>
                         )}
 
                     </LinearGradient>

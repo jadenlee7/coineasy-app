@@ -377,8 +377,8 @@ export default function PostSettingsModal() {
                                     <Image
                                         style={{alignSelf: 'center',width: 90,height: 90}}
                                         resizeMode='contain'
-                                        source={require('../../assets/addProfilePicture.png')}
-                                        defaultSource={require('../../assets/addProfilePicture.png')}
+                                        source={require('../../assets/add_profile_picture.png')}
+                                        defaultSource={require('../../assets/add_profile_picture.png')}
                                     />
                                 )}
 

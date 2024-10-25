@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { Text, View, TouchableOpacity, Image } from 'react-native';
+import { Text, View, TouchableOpacity, Image, Platform } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -10,7 +10,7 @@ import { useNavigation } from "@react-navigation/core";
 
 const SecondHeader = (props) => {
 
-    const { setSettingsVis, screen, profileSelected, category, userData } = useContext(GlobalContext);
+    const { setSettingsVis, screen, profileSelected, category, userData, feedRef } = useContext(GlobalContext);
     const {label, showBack = true, cta = "notifications", back} = props
     const tailwind = useTailwind();
 
@@ -95,14 +95,26 @@ const SecondHeader = (props) => {
                     <>
                         <TouchableOpacity 
                             onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeReward')}}
-                            style={{borderRadius: 30,borderWidth:1,borderColor:'black', backgroundColor: '#FFF2E2',flexDirection:'row',gap: 6,alignSelf:'flex-end',marginRight: 5,paddingVertical: 5, paddingHorizontal:10}}
+                            style={{
+                                borderRadius: 30,
+                                borderWidth:1,
+                                borderColor:'black',
+                                backgroundColor: '#FFF2E2',
+                                flexDirection:'row',
+                                gap: 6,
+                                alignSelf:'flex-end',
+                                marginRight: 5,
+                                paddingVertical: 5,
+                                paddingHorizontal:10,
+                                marginBottom: back ? 7 : 0,
+                            }}
                         >
                             <Image
                                 style={{width: 20, height: 20}}
                                 resizeMode='contain'
                                 source={require('../assets/orange_icon.png')}
                             />
-                            <Text style={{fontWeight: 'bold',}}>
+                            <Text style={{fontWeight: 'bold',textAlign: 'center',marginTop: Platform.OS == 'ios' ? 2 : 0,}}>
                                 {userData?.numberOranges && userData?.numberOranges.toString().length <= 3 ? userData?.numberOranges
                                     : userData?.numberOranges && userData?.numberOranges.toString().length == 4 ? userData?.numberOranges.toString().slice(0,1)+','+userData?.numberOranges.toString().slice(1,4)
                                     : userData?.numberOranges && userData?.numberOranges.toString().length == 5 ? userData?.numberOranges.toString().slice(0,2)+','+userData?.numberOranges.toString().slice(2,5)
@@ -114,7 +126,7 @@ const SecondHeader = (props) => {
                                 }
                             </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2'),{marginTop: category ? -4 : 1,}]} activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
+                        <TouchableOpacity style={[tailwind('flex flex-row items-center rounded-md py-2 px-2'),{marginTop: category ? -4 : back ? -6 : 1,}]} activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
                             <NotificationsIcon />
                         </TouchableOpacity>
                     </>
