@@ -762,8 +762,6 @@ export default function App() {
                 }]
             }
 
-
-
             if(tempData.comment){
                 tempData.comment.number += 1
                 tempData.comment.gained += 3
@@ -775,7 +773,7 @@ export default function App() {
                 }
             }
             tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 3 : tempData.activityUnclaimed = {number: 3}
-            tempData.comment.number == 20 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.activityUnclaimed = {number: 53}
+            tempData.comment.number == 20 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.comment.number == 20 ? tempData.activityUnclaimed = {number: 53} : null
             tempData.comment.number == 20 ? tempData.comment.number = 0 : null
 
 
@@ -820,7 +818,6 @@ export default function App() {
                 }]
             }
 
-
             if(tempData.reaction){
                 tempData.reaction.number += 1
                 tempData.reaction.gained += 5
@@ -832,7 +829,7 @@ export default function App() {
                 }
             }
             tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 5 : tempData.activityUnclaimed = {number: 5}
-            tempData.reaction.number == 30 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.activityUnclaimed = {number: 55}
+            tempData.reaction.number == 30 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.reaction.number == 30 ? tempData.activityUnclaimed = {number: 55} : null
             tempData.reaction.number == 30 ? tempData.reaction.number = 0 : null
     
         }else{
@@ -855,10 +852,12 @@ export default function App() {
                         numberOranges: 15,
                         type: 'Post'
                     }]
-                    tempData.post?.number == 9 && listReward.push({
-                        numberOranges: 50,
-                        type: 'Posting Milestone achieved'
-                    })
+                    if(tempData.post?.number == 9){
+                        listReward.push({
+                            numberOranges: 50,
+                            type: 'Posting Milestone achieved'
+                        })
+                    }
                     tempData.listClaimedOranges.push({
                         date: moment().format('YYYY-MM-DD'),
                         listOranges: listReward
@@ -887,7 +886,7 @@ export default function App() {
                 }
             }
             tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 15 : tempData.activityUnclaimed = {number: 15}
-            tempData.post.number == 10 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.activityUnclaimed = {number: 65}
+            tempData.post.number == 10 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.post.number == 10 ? tempData.activityUnclaimed = {number: 65} : null
             tempData.post.number == 10 ? tempData.post.number = 0 : null
         }
         
@@ -897,12 +896,7 @@ export default function App() {
         tempProfile.data = tempData
         const res = await orbis.updateProfile(tempProfile);
 
-
-        modalPostBoxRef.current?.close()
-        setRepost(false);
-        setReplyTo(null);
-        Keyboard.dismiss();
-        Haptics.selectionAsync();
+        hidePostbox()
     }
 
     function scrollToTop() {

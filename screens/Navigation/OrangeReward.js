@@ -41,9 +41,6 @@ const OrangeReward = ({navigation, route}) => {
     } = useContext(GlobalContext);
     const tailwind = useTailwind();  
     
-    console.log(userData.activityUnclaimed.number);
-    
-
     const [openHelp, setOpenHelp] = useState(false)
     const [openInviteHelp, setOpenInviteHelp] = useState(false)
     const [bottomOpen, setBottomOpen] = useState(false)
@@ -282,20 +279,8 @@ const OrangeReward = ({navigation, route}) => {
     const refTimer = useRef();
 
     const OrangeDayCards =  () => {
-
-        
-        
-        
         const dayStreak = userData?.claimStreak?.lastClaim ? userData?.claimStreak?.lastClaim.slice(0,10) : ''
         const claimStreak = userData?.claimStreak?.number && dayStreak == moment().format('YYYY-MM-DD') ? userData?.claimStreak?.number : 0        
-
-        if(Platform.OS == 'android'){
-            console.log(userData?.claimStreak);
-            
-            console.log(dayStreak);
-            console.log(claimStreak);
-        }
-        
 
         return [...Array(30).keys()].map(e => {
             return(
@@ -346,7 +331,7 @@ const OrangeReward = ({navigation, route}) => {
         momentOne.set('second', 0); 
         momentOne.set('millisecond', 0); 
 
-        if(userData?.claimStreak?.lastClaim){
+        if(userData?.claimStreak?.lastClaim){            
             checkDiff = momentOne.diff(moment(userData.claimStreak.lastClaim), 'seconds')
             checkDiff2 = momentOne.add(1, 'days').diff(moment(userData.claimStreak.lastClaim), 'seconds')
 
@@ -360,7 +345,7 @@ const OrangeReward = ({navigation, route}) => {
                 <Text style={{color:'white',fontSize: 18,fontWeight: 'bold',}}>Next Reward in</Text>
                 <CountDownTimer
                     ref={refTimer}
-                    timestamp={checkDiff}
+                    timestamp={checkDiff2}
                     textStyle={{color: "#FFFFFF",fontSize: 18,fontWeight: 'bold',}}
                 />
             </View>
@@ -539,7 +524,6 @@ const OrangeReward = ({navigation, route}) => {
             url: "https://www.coineasy.xyz",
             title: "Download CoinEasy"
         }).then(({ action, activityType }) => {
-            console.log("ok");
             if (action === Share.sharedAction) {
                 const tempData = userData ?? {}
 

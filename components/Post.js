@@ -723,10 +723,12 @@ export const LikeCTA = ({post, isReply}) => {
                     numberOranges: 2,
                     type: 'Like'
                 }]
-                tempData.reaction?.number == 29 && listReward.push({
-                    numberOranges: 50,
-                    type: 'Reactions Milestone achieved'
-                })
+                if(tempData.reaction?.number == 29){
+                    listReward.push({
+                        numberOranges: 50,
+                        type: 'Reactions Milestone achieved'
+                    })
+                }
                 tempData.listClaimedOranges.push({
                     date: moment().format('YYYY-MM-DD'),
                     listOranges: listReward
