@@ -317,7 +317,7 @@ export default function PostSettingsModal() {
     /** We hide the repost modal if the postbox is also visible, (this means that the user is quote posting) */
     if(postboxVis) {
         return null;
-    } else if(editedPost?.type == 'notCreator' || editedPost?.type == 'notCreatorReposted'){
+    } else if((editedPost?.type == 'notCreator' && user?.did !== editedPost?.value?.creator_details?.did) || editedPost?.type == 'notCreatorReposted'){
         return(
             // <Modal hide={() => {hide();setSuccess(false);}} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
             <>

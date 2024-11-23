@@ -417,7 +417,7 @@ const PostDisplay = (props) => {
                             {/** Show post menu */}
                             <TouchableOpacity 
                                 onPress={() => 
-                                    {user?.did == post.creator ? 
+                                    {(user?.did == post.creator || user?.did == post.content?.repost_details?.creator_details?.did) ? 
                                         setEditedPost({value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost}) 
                                         : setEditedPost({type:'notCreator',value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost});
                                         handleModalPostBoxPress()
