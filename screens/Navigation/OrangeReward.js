@@ -586,7 +586,7 @@ const OrangeReward = ({navigation, route}) => {
 
 
 
-                <View style={{borderRadius: 30,borderWidth:1,borderColor:'black', backgroundColor: '#FFF2E2',flexDirection:'row',gap: 6,alignSelf:'flex-end',marginRight: 5,paddingVertical: 5, paddingHorizontal:10,marginTop: 15,marginRight: 20}}>
+                <View style={{borderRadius: 30,borderWidth:1,borderColor:'black', backgroundColor: '#FFF2E2',flexDirection:'row',gap: 6,alignSelf:'flex-end',marginRight: 5,paddingVertical: 5, paddingHorizontal:10,marginTop: 15,marginRight: 20, justifyContent:'center',alignItems:'center',}}>
                     <Image
                         style={{width: 20, height: 20}}
                         resizeMode='contain'
