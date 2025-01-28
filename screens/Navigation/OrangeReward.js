@@ -575,16 +575,14 @@ const OrangeReward = ({navigation, route}) => {
 
             <ImageBackground source={require('../../assets/bg_orange_reward.png')} resizeMode="stretch" style={{flex: 1,}}>
 
-                    <TouchableOpacity style={{position: 'absolute',left: 10, top: 10}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
-                        <Image
-                            style={{width: 24,height: 24}}
-                            resizeMode='contain'
-                            source={require('../../assets/back_button.png')}
-                            defaultSource={require('../../assets/back_button.png')}
-                        />
-                    </TouchableOpacity>
-
-
+                <TouchableOpacity style={{position: 'absolute',left: 10, top: 10}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
+                    <Image
+                        style={{width: 24,height: 24}}
+                        resizeMode='contain'
+                        source={require('../../assets/back_button.png')}
+                        defaultSource={require('../../assets/back_button.png')}
+                    />
+                </TouchableOpacity>
 
                 <View style={{borderRadius: 30,borderWidth:1,borderColor:'black', backgroundColor: '#FFF2E2',flexDirection:'row',gap: 6,alignSelf:'flex-end',marginRight: 5,paddingVertical: 5, paddingHorizontal:10,marginTop: 15,marginRight: 20, justifyContent:'center',alignItems:'center',}}>
                     <Image
@@ -595,9 +593,8 @@ const OrangeReward = ({navigation, route}) => {
                     <Text style={{fontWeight: 'bold',}}>{userData?.numberOranges ?? 0}</Text>
                 </View>
 
-
                 <View style={{flexDirection:'row',alignItems:'center',gap: 10,marginLeft: 20}}>
-                    <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 21 : 18}}>Orange Rewards</Text>
+                    <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 19 : 16}}>Orange Rewards</Text>
                     <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenHelp(true)}}>
                         <Image
                             style={{width: 20, height: 20}}
@@ -606,15 +603,6 @@ const OrangeReward = ({navigation, route}) => {
                         />
                     </TouchableOpacity>
                 </View>
-
-
-                {/* <Button 
-                    title='Reset Data'
-                    color='orange'
-                    size="md"
-                    onPress={() => onResetData()} 
-                    style={{height: 50,width: width-30, alignSelf:'center', justifyContent: 'center',alignItems: 'center', marginTop: 30,}}
-                /> */}
 
                 {firstTimeReward == 'true' && userData?.firstTime != 'done' && (
                     <TouchableOpacity 
@@ -655,14 +643,14 @@ const OrangeReward = ({navigation, route}) => {
                             />
                         </View>
 
-                        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginLeft: 10}}>
-                            <View style={{flexDirection:'row',alignItems:'center',gap: 10}}>
+                        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginLeft: 5}}>
+                            <View style={{flexDirection:'row',alignItems:'center',gap: 7}}>
                                 <Image
                                     style={{width: 35, height: 35}}
                                     resizeMode='contain'
                                     source={require('../../assets/daily_icon.png')}
                                 />
-                                <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 20 : 18,}}>Daily Check-in</Text>
+                                <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 16 : 14}}>Daily Check-in</Text>
                             </View>
 
                             <Button 
@@ -682,7 +670,7 @@ const OrangeReward = ({navigation, route}) => {
                 {/* AD REWARD */}
                 <View style={[styles.elevate, {width: width-20, height: 100, alignSelf:'center',borderRadius: 10,marginTop: 10,  overflow:'hidden'}]}>
                     <ImageBackground source={require('../../assets/bg_card_reward.png')} resizeMode="stretch" style={{flex: 1,justifyContent:'center',padding: 20}}>
-                        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginLeft: 10}}>
+                        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginLeft: 5}}>
                             <View style={{flexDirection:'row',alignItems:'center',gap: 10}}>
                                 <Image
                                     style={{width: 35, height: 35}}
@@ -690,7 +678,7 @@ const OrangeReward = ({navigation, route}) => {
                                     source={require('../../assets/fire_icon.png')}
                                 />
                                 <View style={{}}>
-                                    <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 20 : 18,}}>Ad Rewards</Text>
+                                    <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 16 : 14}}>Ad Rewards</Text>
                                     <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>+200</Text>
                                 </View>
                             </View>
@@ -715,7 +703,7 @@ const OrangeReward = ({navigation, route}) => {
                 {/* ACTIVITY REWARD */}
                 <View style={[styles.elevate, {width: width-20, height: 100, alignSelf:'center',borderRadius: 10,marginTop: 10,  overflow:'hidden'}]}>
                     <ImageBackground source={require('../../assets/bg_card_reward.png')} resizeMode="stretch" style={{flex: 1,justifyContent:'center',padding: 20}}>
-                        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginLeft: 10}}>
+                        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginLeft: 5}}>
                             <View style={{flexDirection:'row',alignItems:'center',gap: 10}}>
                                 <Image
                                     style={{width: 35, height: 35}}
@@ -723,7 +711,7 @@ const OrangeReward = ({navigation, route}) => {
                                     source={require('../../assets/pen_icon.png')}
                                 />
                                 <View style={{}}>
-                                    <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 20 : 18,}}>Activity Rewards</Text>
+                                    <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 16 : 14}}>Activity Rewards</Text>
                                     <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>+1000</Text>
                                 </View>
                             </View>
@@ -744,7 +732,7 @@ const OrangeReward = ({navigation, route}) => {
                 {/* INVITE FRIENDS */}
                 <View style={[styles.elevate, {width: width-20, height: 100, alignSelf:'center',borderRadius: 10,marginTop: 10,  overflow:'hidden'}]}>
                     <ImageBackground source={require('../../assets/bg_card_reward.png')} resizeMode="stretch" style={{flex: 1,justifyContent:'center',padding: 20}}>
-                        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginLeft: 10}}>
+                        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginLeft: 5}}>
                             <View style={{flexDirection:'row',alignItems:'center',gap: 10}}>
                                 <Image
                                     style={{width: 35, height: 35}}
@@ -752,7 +740,7 @@ const OrangeReward = ({navigation, route}) => {
                                     source={require('../../assets/invite_icon.png')}
                                 />
                                 <View style={{}}>
-                                    <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 20 : 18,}}>Invite Friends</Text>
+                                    <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 16 : 14}}>Invite Friends</Text>
                                     <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>{userData?.friendsInvited ?? 0}</Text>
                                 </View>
                             </View>
@@ -822,8 +810,8 @@ const OrangeReward = ({navigation, route}) => {
                     onDismiss={() => {setBottomOpen(false)}}
                 >
                     <View style={{}}>
-                        <Text style={{textAlign: 'center',fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',}}>Daily Check-in</Text>
-                        <Text style={{textAlign: 'center',fontSize: Platform.OS == 'ios' ? 17 : 14,marginTop: Platform.OS == 'ios' ? 10 : 0,}}>Start Your Day with Orange Rewards!</Text>
+                        <Text style={{textAlign: 'center',fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16}}>Daily Check-in</Text>
+                        <Text style={{textAlign: 'center',fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 11,marginTop: Platform.OS == 'ios' ? 10 : 5,}}>Start Your Day with Orange Rewards!</Text>
                     </View>
 
                     <View style={{height: 75, marginTop: Platform.OS == 'ios' ? 30 : 20,}}>
@@ -907,62 +895,61 @@ const OrangeReward = ({navigation, route}) => {
                     hide={() => {Haptics.selectionAsync();setOpenHelp(false)}} 
                     type='oranges-help' 
                 >
-
                     <TouchableOpacity
-                        style={{position: 'absolute',top: 15, right: 15,zIndex: 2}}
+                        style={{position: 'absolute',top: 10, right: 10,zIndex: 2}}
                         onPress={() => {Haptics.selectionAsync();setOpenHelp(false)}}
                     >
                         <AntDesign name="closecircle" size={24} color="black" />
                     </TouchableOpacity>
 
-                    <View style={{alignSelf:'center',height:'100%'}}>
-                        <View style={[tailwind('flex flex-col items-center px-1'), {marginTop: 50,}]}>
+                    <View style={{flexDirection: 'column', alignItems: 'center', justifyContent:'space-between',paddingBottom: 30, paddingTop: 30, height:'100%'}}>
+                        <View style={[tailwind('flex flex-col items-center px-1')]}>
                             <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
                                 <Image
                                     style={{width: 20, height: 20}}
                                     resizeMode='contain'
                                     source={require('../../assets/nice_orange.png')}
                                 />
-                                <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 23 : 18,}}>What is Orange Rewards?</Text>
+                                <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 17 : 14}}>What is Orange Rewards?</Text>
                             </View>
                             <Text style={{textAlign: 'center',marginTop: 10,fontSize: Platform.OS == 'ios' ? 17 : 14,}}>Earn oranges for being active and engaged.</Text>
                             <Text style={{fontSize: Platform.OS == 'ios' ? 17 : 14,}}>Redeem them for exciting rewards!</Text>
                         </View>
 
                         <View style={[tailwind('flex flex-col items-center justify-center')]}>
-                            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',marginTop: 20,}}>
+                            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
                                 <Image
                                     style={{width: 20, height: 20}}
                                     resizeMode='contain'
                                     source={require('../../assets/nice_orange.png')}
                                 />
-                                <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 23 : 18,}}>What is Daily Check-in?</Text>
+                                <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 17 : 14}}>What is Daily Check-in?</Text>
                             </View>
                             <Text style={{textAlign: 'center',marginTop: 10,fontSize: Platform.OS == 'ios' ? 17 : 14,}}>Log in daily to earn increasing rewards.</Text>
                             <Text style={{fontSize: Platform.OS == 'ios' ? 17 : 14,}}>Check in every day for the best rewards!</Text>
                         </View>
 
                         <View style={[tailwind('flex flex-col items-center justify-center')]}>
-                            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',marginTop: 20,}}>
+                            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
                                 <Image
                                     style={{width: 20, height: 20}}
                                     resizeMode='contain'
                                     source={require('../../assets/nice_orange.png')}
                                 />
-                                <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 23 : 18,}}>What is Ad Rewards?</Text>
+                                <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 17 : 14}}>What is Ad Rewards?</Text>
                             </View>
                             <Text style={{textAlign: 'center',marginTop: 10,fontSize: Platform.OS == 'ios' ? 17 : 14,}}>Watch short ads to earn extra oranges.</Text>
                             <Text style={{fontSize: Platform.OS == 'ios' ? 17 : 14,}}>Quick and easy bonus!</Text>
                         </View>
 
                         <View style={[tailwind('flex flex-col items-center justify-center')]}>
-                            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',marginTop: 20,}}>
+                            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
                                 <Image
                                     style={{width: 20, height: 20}}
                                     resizeMode='contain'
                                     source={require('../../assets/nice_orange.png')}
                                 />
-                                <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 23 : 18,}}>What is Posting Rewards?</Text>
+                                <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 17 : 14}}>What is Posting Rewards?</Text>
                             </View>
                             <Text style={{textAlign: 'center',marginTop: 10,fontSize: Platform.OS == 'ios' ? 17 : 14}}>Earn rewards by creating posts.</Text>
                             <Text style={{fontSize: Platform.OS == 'ios' ? 17 : 14,}}>The more you post, the more you earn!</Text>
@@ -991,11 +978,13 @@ const OrangeReward = ({navigation, route}) => {
                             source={require('../../assets/orange2_icon.png')}
                         />
 
-                        <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 22 : 18,textAlign: 'center',marginVertical: 20,}}>Friend Post Bonus</Text>
+                        <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16,textAlign: 'center',marginVertical: 20,}}>
+                            Friend Post Bonus
+                        </Text>
 
-                        <Text style={{textAlign: 'center',fontSize: Platform.OS == 'ios' ? 16 : 14}}>Tell your friends to start posting to earn</Text>
+                        <Text style={{fontFamily: 'GmarketMedium',textAlign: 'center',fontSize: Platform.OS == 'ios' ? 14 : 12}}>Tell your friends to start posting to earn</Text>
                         <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
-                            <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14}}>bonus Oranges! </Text>
+                            <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12}}>bonus Oranges! </Text>
                             <Image
                                 style={{width: 25, height: 25}}
                                 resizeMode='contain'

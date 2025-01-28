@@ -161,7 +161,7 @@ const ClaimOrangesModal = () => {
             { adAlreadyClaimed ? (
                 <>
                     <TouchableOpacity
-                        style={{position: 'absolute',top: 15, right: 15}}
+                        style={{position: 'absolute',top: 15, right: 15, zIndex: 999999999}}
                         onPress={() => {Haptics.selectionAsync();setShowClaimOranges(false)}}
                     >
                         <AntDesign name="closecircle" size={24} color="black" />

@@ -102,7 +102,7 @@ const RewardHistory = ({navigation, route}) => {
                     return(
                         <View key={Math.random()}>
                             <View style={{paddingHorizontal: 20,marginBottom: 20,marginTop: ind == 0 ? 0 : 10,}} key={Math.random()}>
-                                <Text style={{color:'#959595',fontSize: 15,}}>{moment(e.date).format('MMMM Do')}</Text>
+                                <Text style={{color:'#959595',fontFamily: 'GmarketMedium',fontSize: 13,}}>{moment(e.date).format('MMMM Do')}</Text>
 
                                 {e.listOranges.map((elt, index) => {
                                     return(
@@ -115,23 +115,23 @@ const RewardHistory = ({navigation, route}) => {
 
                                             {elt.type.includes('Streak Bonus') ? (
                                                 <View style={{}}>
-                                                    <Text style={{color: '#FF6B17', fontSize: Platform.OS == 'ios' ? 16 : 14,}}>+ {elt.numberOranges} Oranges</Text>
-                                                    <Text style={{color:'#FF6B17', marginTop: 2,fontSize: Platform.OS == 'ios' ? 16 : 14,}}>{elt.type}</Text>
+                                                    <Text style={{color: '#FF6B17', fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,}}>+ {elt.numberOranges} Oranges</Text>
+                                                    <Text style={{color:'#FF6B17', fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,marginTop: 5}}>{elt.type}</Text>
                                                 </View>
                                             ) : elt.type.includes('Account Creation') ? (
                                                 <View style={{}}>
-                                                    <Text style={{color: '#FF6B17', fontSize: Platform.OS == 'ios' ? 16 : 14,}}>+ {elt.numberOranges} Oranges</Text>
-                                                    <Text style={{color:'#FF6B17', marginTop: 2,fontSize: Platform.OS == 'ios' ? 16 : 14,}}>{elt.type}</Text>
+                                                    <Text style={{color: '#FF6B17', fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,}}>+ {elt.numberOranges} Oranges</Text>
+                                                    <Text style={{color:'#FF6B17', fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,marginTop: 5}}>{elt.type}</Text>
                                                 </View>
                                             ) : elt.type.includes('Milestone') ? (
                                                 <View style={{}}>
-                                                    <Text style={{color: '#FF6B17', fontSize: Platform.OS == 'ios' ? 16 : 14,}}>+ {elt.numberOranges} Oranges</Text>
-                                                    <Text style={{color:'#FF6B17', marginTop: 2,fontSize: Platform.OS == 'ios' ? 16 : 14,}}>{elt.type}</Text>
+                                                    <Text style={{color: '#FF6B17', fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,}}>+ {elt.numberOranges} Oranges</Text>
+                                                    <Text style={{color:'#FF6B17', fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,marginTop: 5}}>{elt.type}</Text>
                                                 </View>
                                             ) : (
                                                 <View style={{}}>
-                                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>{elt.numberOranges} Oranges</Text>
-                                                    <Text style={{color:'#959595',marginTop: 2,fontSize: Platform.OS == 'ios' ? 16 : 14,}}>{elt.type}</Text>
+                                                    <Text style={{fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,}}>{elt.numberOranges} Oranges</Text>
+                                                    <Text style={{color:'#959595',fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12,marginTop: 5,}}>{elt.type}</Text>
                                                 </View>
 
                                             )}

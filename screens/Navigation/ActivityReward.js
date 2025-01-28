@@ -14,6 +14,8 @@ import { ScrollView as RNScrollView } from 'react-native-gesture-handler';
 import { showMessage } from 'react-native-flash-message';
 import Modal from '../../components/Modal';
 import { AntDesign } from '@expo/vector-icons';
+import ModalAugmented from '../../components/ModalAugmented';
+import ModalSmall from '../../components/ModalSmall';
 
 const { width, height } = Dimensions.get('window')
 
@@ -24,6 +26,7 @@ const ActivityReward = ({navigation, route}) => {
     const [openHelp, setOpenHelp] = useState(false)
     const [openHelpUnclaimed, setOpenHelpUnclaimed] = useState(false)
     const [openHelpClaimed, setOpenHelpClaimed] = useState(false)
+    const [openHelpActivity, setOpenHelpActivity] = useState(false)
 
     const tailwind = useTailwind();
 
@@ -133,7 +136,7 @@ const ActivityReward = ({navigation, route}) => {
 
                 <View style={{flexDirection:'row',justifyContent: 'center', alignItems:'center',gap: 10,marginVertical: 10,marginLeft: 20}}>
                     <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 20 : 18,fontFamily: 'GmarketBold'}}>Activity Rewards</Text>
-                    <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenHelp(true);handleModalPress()}}>
+                    <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenHelpActivity(true);}}>
                         <Image
                             style={{width: Platform.OS == 'ios' ? 25 : 20, height: Platform.OS == 'ios' ? 25 : 20}}
                             resizeMode='contain'
@@ -146,7 +149,7 @@ const ActivityReward = ({navigation, route}) => {
             <ScrollView style={{flex: 1,}}>
 
                 <View style={[styles.elevate, {backgroundColor: 'white', width: width - 30, height: 160,  borderRadius: 10,alignSelf:'center',marginTop: 20}]}>
-                    <Text style={{marginTop: 17,marginLeft: 20,fontSize: Platform.OS == 'ios' ? 16 : 13}}>Earn Oranges for your daily activities!</Text>
+                    <Text style={{marginTop: 17,marginLeft: 20,fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12}}>Earn Oranges for your daily activities!</Text>
 
                     {/* UNCLAIMED REWARD */}
                     <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginHorizontal: 10,marginTop: Platform.OS == 'ios' ? 10 : 20,marginLeft: 20}}>
@@ -217,12 +220,12 @@ const ActivityReward = ({navigation, route}) => {
                         </TouchableWithoutFeedback>
                         <Animated.View style={{ height: heightInterpolate, overflow: 'hidden', paddingHorizontal: 10}}>
                             <View style={{}}>
-                                <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>Hit milestones, earn bonuses!</Text>
+                                <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>Hit milestones, earn bonuses!</Text>
 
                                 {/* POSTING */}
                                 <View style={{marginTop: 20,}}>
                                     <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',}}>
-                                        <Text style={{fontSize: Platform.OS == 'ios' ? 21 : 17,fontWeight: 'bold'}}>Posting</Text>
+                                        <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 19 : 15,}}>Posting</Text>
                                         <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 8}}>
                                             <Image
                                                 style={{width: 30, height: 30, alignSelf:'center',}}
@@ -232,7 +235,7 @@ const ActivityReward = ({navigation, route}) => {
                                             <Text style={{color:'#FF6E31',fontWeight: 'bold',fontFamily: 'GmarketMedium',fontSize: 16,}}>+50</Text>
                                         </View>
                                     </View>
-                                    <Text style={{marginTop: 3,fontSize: Platform.OS == 'ios' ? 16 : 13,marginLeft: 2}}>Express yourself!</Text>
+                                    <Text style={{marginTop: 3,fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 11,marginLeft: 2}}>Express yourself!</Text>
 
                                     <Text style={{textAlign: 'right',fontFamily: 'GmarketMedium'}}>{userData.post?.number ?? 0}/10</Text>
                                     <View style={{backgroundColor: '#F6F6F6',height: 15, borderRadius: 6,marginTop: 3,}}>
@@ -248,7 +251,7 @@ const ActivityReward = ({navigation, route}) => {
                                 {/* COMMENTS */}
                                 <View style={{marginTop: 20,}}>
                                     <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',}}>
-                                        <Text style={{fontSize: Platform.OS == 'ios' ? 21 : 17,fontWeight: 'bold'}}>Comments</Text>
+                                        <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 21 : 17,fontWeight: 'bold'}}>Comments</Text>
                                         <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 8}}>
                                             <Image
                                                 style={{width: 30, height: 30, alignSelf:'center',}}
@@ -258,7 +261,7 @@ const ActivityReward = ({navigation, route}) => {
                                             <Text style={{color:'#FF6E31',fontWeight: 'bold',fontFamily: 'GmarketMedium',fontSize: 16,}}>+50</Text>
                                         </View>
                                     </View>
-                                    <Text style={{marginTop: 3,fontSize: Platform.OS == 'ios' ? 16 : 13,marginLeft: 2}}>Interact with others!</Text>
+                                    <Text style={{marginTop: 3,fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 11,marginLeft: 2}}>Interact with others!</Text>
 
                                     <Text style={{textAlign: 'right',fontFamily: 'GmarketMedium'}}>{userData.comment?.number ?? 0}/20</Text>
                                     <View style={{backgroundColor: '#F6F6F6',height: 15, borderRadius: 6,marginTop: 3,}}>
@@ -281,7 +284,7 @@ const ActivityReward = ({navigation, route}) => {
                                 {/* REACTIONS */}
                                 <View style={{marginTop: 20,}}>
                                     <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',}}>
-                                        <Text style={{fontSize: Platform.OS == 'ios' ? 21 : 17,fontWeight: 'bold'}}>Reactions</Text>
+                                        <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 19 : 15,}}>Reactions</Text>
                                         <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 8}}>
                                             <Image
                                                 style={{width: 30, height: 30, alignSelf:'center',}}
@@ -291,7 +294,7 @@ const ActivityReward = ({navigation, route}) => {
                                             <Text style={{color:'#FF6E31',fontWeight: 'bold',fontFamily: 'GmarketMedium',fontSize: 16,}}>+50</Text>
                                         </View>
                                     </View>
-                                    <Text style={{marginTop: 3,fontSize: Platform.OS == 'ios' ? 16 : 13,marginLeft: 2}}>Spread the love!</Text>
+                                    <Text style={{marginTop: 3,fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 11,marginLeft: 2}}>Spread the love!</Text>
 
                                     <Text style={{textAlign: 'right',fontFamily: 'GmarketMedium'}}>{userData.reaction?.number ?? 0}/30</Text>
                                     <View style={{backgroundColor: '#F6F6F6',height: 15, borderRadius: 6,marginTop: 3,}}>
@@ -323,9 +326,8 @@ const ActivityReward = ({navigation, route}) => {
 
 
             {openHelpUnclaimed && (
-                <Modal 
+                <ModalSmall 
                     hide={() => {Haptics.selectionAsync();setOpenHelpUnclaimed(false)}} 
-                    type='oranges-help-invite' 
                 >
                     <TouchableOpacity
                         style={{position: 'absolute',top: 15, right: 15}}
@@ -334,24 +336,23 @@ const ActivityReward = ({navigation, route}) => {
                         <AntDesign name="closecircle" size={24} color="black" />
                     </TouchableOpacity>
 
-                    <View style={{marginTop: 50,}}>
+                    <View style={{paddingVertical: 40}}>
                         <Image
                             style={{width: 50, height: 50, alignSelf:'center',}}
                             resizeMode='contain'
                             source={require('../../assets/orange2_icon.png')}
                         />
 
-                        <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 22 : 18,marginVertical: 10,}}>Unclaimed Oranges</Text>
+                        <Text style={{textAlign: 'center',fontFamily: 'GmarketBold', fontSize: Platform.OS == 'ios' ? 20 : 16,marginVertical: 10,}}>Unclaimed Oranges</Text>
 
-                        <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,textAlign: 'center',paddingHorizontal: 5}}>The user hasn't claimed their Orange rewards yet.</Text>
+                        <Text style={{fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,textAlign: 'center',paddingHorizontal: 5}}>The user hasn't claimed their Orange rewards yet.</Text>
                     </View>
-                </Modal>
+                </ModalSmall>
             )}
 
             {openHelpClaimed && (
-                <Modal 
+                <ModalSmall 
                     hide={() => {Haptics.selectionAsync();setOpenHelpClaimed(false)}} 
-                    type='oranges-help-invite' 
                 >
 
                     <TouchableOpacity
@@ -361,18 +362,132 @@ const ActivityReward = ({navigation, route}) => {
                         <AntDesign name="closecircle" size={24} color="black" />
                     </TouchableOpacity>
 
-                    <View style={{marginTop: 50,}}>
+                    <View style={{paddingVertical: 40}}>
                         <Image
                             style={{width: 50, height: 50, alignSelf:'center',}}
                             resizeMode='contain'
                             source={require('../../assets/orange_icon.png')}
                         />
 
-                        <Text style={{textAlign: 'center',fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 22 : 18,marginVertical: 10,}}>Claimed Rewards</Text>
+                        <Text style={{textAlign: 'center',fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16,marginVertical: 10,}}>Claimed Rewards</Text>
 
-                        <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,textAlign: 'center',paddingHorizontal: 5}}>The user has already claimed their Orange rewards.</Text>
+                        <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12,textAlign: 'center',paddingHorizontal: 5}}>The user has already claimed their Orange rewards.</Text>
                     </View>
-                </Modal>
+                </ModalSmall>
+            )}
+
+            {openHelpActivity && (
+                <ModalAugmented
+                    hide={() => {Haptics.selectionAsync();setOpenHelpActivity(false)}} 
+                >
+
+                    <TouchableOpacity
+                        style={{position: 'absolute',top: 10, right: 10,zIndex: 2}}
+                        onPress={() => {Haptics.selectionAsync();setOpenHelpActivity(false)}}
+                    >
+                        <AntDesign name="closecircle" size={24} color="black" />
+                    </TouchableOpacity>
+
+                    <View style={{paddingTop: 30,}}>
+                        <View style={[tailwind('flex flex-col items-center justify-center')]}>
+                            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 5}}>
+                                <Image
+                                    style={{width: 20, height: 20}}
+                                    resizeMode='contain'
+                                    source={require('../../assets/nice_orange.png')}
+                                />
+                                <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16,marginTop: 3,}}>Activity Rewards System</Text>
+                            </View>
+                            <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12, textAlign: 'center',marginTop: 10,}}>"Your engagement counts!</Text>
+                            <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12, textAlign: 'center',}}>Earn Oranges for every interaction and</Text>
+                            <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12, textAlign: 'center',}}>redeem them for exciting rewards."</Text>
+                        </View>
+
+                        <View style={{height: StyleSheet.hairlineWidth, width: 225, marginTop: 15,alignSelf:'center',backgroundColor: '#333',}}/>
+
+                        {/* POSTING */}
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',marginTop: 10,}}>
+                            <Image
+                                style={{width: 20, height: 20}}
+                                resizeMode='contain'
+                                source={require('../../assets/nice_orange.png')}
+                            />
+                            <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16,}}>Posting</Text>
+                        </View>
+
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,marginVertical: 5,}}>
+                            <Text style={{color: '#FF6B17', textDecorationLine: 'underline',fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>
+                                15 Oranges
+                            </Text>
+                            <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>per post</Text>
+                        </View>
+
+                        <Text style={{textAlign: 'center',marginTop: 10, fontSize: 12,fontFamily: 'GmarketBold',color:'#555'}}>*Post "Like" Milestones</Text>
+
+                        <View style={{marginTop: 8,alignSelf:'center',}}>
+                            <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 13 : 11,color:'#555',}}>· Extra <Text style={{color:'#FF6B17',fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 13 : 11,textDecorationLine:'underline'}}>30 Oranges</Text> when post reaches 50 likes.</Text>
+                            <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 13 : 11,color:'#555',}}>· Extra <Text style={{color:'#FF6B17',fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 13 : 11,textDecorationLine:'underline'}}>70 Oranges</Text> when post reaches 100 likes.</Text>
+                        </View>
+
+                        {/* COMMENTS */}
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',marginTop: 30,}}>
+                            <Image
+                                style={{width: 20, height: 20}}
+                                resizeMode='contain'
+                                source={require('../../assets/nice_orange.png')}
+                            />
+                            <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16,}}>Comments</Text>
+                        </View>
+
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,marginTop: 5,}}>
+                            <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 13 : 11,}}>
+                                3 Oranges
+                            </Text>
+                            <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 13 : 11,}}>per comment</Text>
+                        </View>
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,}}>
+                            <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 13 : 11,}}>4 Oranges</Text>
+                            <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 13 : 11,}}>per reply to Another User's Comment</Text>
+                        </View>
+
+                        {/* REACTIONS */}
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',marginTop: 30,}}>
+                            <Image
+                                style={{width: 20, height: 20}}
+                                resizeMode='contain'
+                                source={require('../../assets/nice_orange.png')}
+                            />
+                            <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16,}}>Reactions (Like&Repost)</Text>
+                        </View>
+
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,marginTop: 5,}}>
+                            <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 13 : 11,}}>2 Oranges</Text>
+                            <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 13 : 11,}}>per like</Text>
+                        </View>
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,}}>
+                            <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 13 : 11,}}>5 Oranges</Text>
+                            <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 13 : 11,}}>per repost</Text>
+                        </View>
+
+                        {/* MILESTONES BONUSES */}
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',marginTop: 30,}}>
+                            <Image
+                                style={{width: 20, height: 20}}
+                                resizeMode='contain'
+                                source={require('../../assets/nice_orange.png')}
+                            />
+                            <Text style={{fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',}}>Milestones Bonuses</Text>
+                        </View>
+
+                        <Text style={{textAlign: 'center',marginTop: 5,fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 13 : 11,}}>Achieve a milestone and receive</Text>
+                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3}}>
+                            <Text style={{color: '#FF6B17',fontWeight: 'bold',fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 15 : 13,marginTop: -2,}}>additional Oranges</Text>
+                            <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 13 : 11,}}>for each activity</Text>
+                        </View>
+
+                        <View style={{height: 50}}/>
+                    </View>
+                </ModalAugmented>
             )}
 
             <BottomSheetModalProvider>
@@ -398,11 +513,11 @@ const ActivityReward = ({navigation, route}) => {
                                             resizeMode='contain'
                                             source={require('../../assets/nice_orange.png')}
                                         />
-                                        <Text style={{fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 22 : 18,marginTop: 10,}}>Activity Rewards System</Text>
+                                        <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16,marginTop: 10,}}>Activity Rewards System</Text>
                                     </View>
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14, textAlign: 'center',marginTop: 10,}}>"Your engagement counts!</Text>
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14, textAlign: 'center',}}>Earn Oranges for every interaction and</Text>
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14, textAlign: 'center',}}>redeem them for exciting rewards."</Text>
+                                    <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12, textAlign: 'center',marginTop: 10,}}>"Your engagement counts!</Text>
+                                    <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12, textAlign: 'center',}}>Earn Oranges for every interaction and</Text>
+                                    <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12, textAlign: 'center',}}>redeem them for exciting rewards."</Text>
                                 </View>
 
                                 <View style={{height: StyleSheet.hairlineWidth, width: 225, marginTop: 15,alignSelf:'center',backgroundColor: '#333',}}/>
@@ -414,19 +529,21 @@ const ActivityReward = ({navigation, route}) => {
                                         resizeMode='contain'
                                         source={require('../../assets/nice_orange.png')}
                                     />
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',marginTop: 10,}}>Posting</Text>
+                                    <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16,marginTop: 10,}}>Posting</Text>
                                 </View>
 
                                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,marginVertical: 5,}}>
-                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline',fontSize: Platform.OS == 'ios' ? 16 : 14,fontWeight: 'bold',}}>15 Oranges</Text>
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>per post</Text>
+                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline',fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>
+                                        15 Oranges
+                                    </Text>
+                                    <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>per post</Text>
                                 </View>
 
-                                <Text style={{textAlign: 'center',marginTop: 10, fontSize: 15,fontWeight: 'bold',color:'#555'}}>*Post "Like" Milestones</Text>
+                                <Text style={{textAlign: 'center',marginTop: 10, fontSize: 12,fontFamily: 'GmarketBold',color:'#555'}}>*Post "Like" Milestones</Text>
 
                                 <View style={{marginTop: 8,alignSelf:'center',}}>
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,color:'#555',}}>· Extra <Text style={{color:'#FF6B17',fontWeight: 'bold',textDecorationLine:'underline'}}>30 Oranges</Text> when post reaches 50 likes.</Text>
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,color:'#555',}}>· Extra <Text style={{color:'#FF6B17',fontWeight: 'bold',textDecorationLine:'underline'}}>70 Oranges</Text> when post reaches 100 likes.</Text>
+                                    <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 13 : 11,color:'#555',}}>· Extra <Text style={{color:'#FF6B17',fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 14 : 12,textDecorationLine:'underline'}}>30 Oranges</Text> when post reaches 50 likes.</Text>
+                                    <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 13 : 11,color:'#555',}}>· Extra <Text style={{color:'#FF6B17',fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 14 : 12,textDecorationLine:'underline'}}>70 Oranges</Text> when post reaches 100 likes.</Text>
                                 </View>
 
                                 {/* COMMENTS */}
@@ -436,16 +553,18 @@ const ActivityReward = ({navigation, route}) => {
                                         resizeMode='contain'
                                         source={require('../../assets/nice_orange.png')}
                                     />
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',}}>Comments</Text>
+                                    <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16,}}>Comments</Text>
                                 </View>
 
                                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,marginTop: 5,}}>
-                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: Platform.OS == 'ios' ? 16 : 14,fontWeight: 'bold',}}>3 Oranges</Text>
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>per comment</Text>
+                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>
+                                        3 Oranges
+                                    </Text>
+                                    <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>per comment</Text>
                                 </View>
                                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,}}>
-                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: Platform.OS == 'ios' ? 16 : 14,fontWeight: 'bold',}}>4 Oranges</Text>
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>per reply to Another User's Comment</Text>
+                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>4 Oranges</Text>
+                                    <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>per reply to Another User's Comment</Text>
                                 </View>
 
                                 {/* REACTIONS */}
@@ -455,16 +574,16 @@ const ActivityReward = ({navigation, route}) => {
                                         resizeMode='contain'
                                         source={require('../../assets/nice_orange.png')}
                                     />
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',}}>Reactions (Like&Repost)</Text>
+                                    <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16,}}>Reactions (Like&Repost)</Text>
                                 </View>
 
                                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,marginTop: 5,}}>
-                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: Platform.OS == 'ios' ? 16 : 14,fontWeight: 'bold',}}>2 Oranges</Text>
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>per like</Text>
+                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>2 Oranges</Text>
+                                    <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>per like</Text>
                                 </View>
                                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3,}}>
-                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontSize: Platform.OS == 'ios' ? 16 : 14,fontWeight: 'bold',}}>5 Oranges</Text>
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>per repost</Text>
+                                    <Text style={{color: '#FF6B17', textDecorationLine: 'underline', fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>5 Oranges</Text>
+                                    <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>per repost</Text>
                                 </View>
 
                                 {/* MILESTONES BONUSES */}
@@ -477,10 +596,10 @@ const ActivityReward = ({navigation, route}) => {
                                     <Text style={{fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',}}>Milestones Bonuses</Text>
                                 </View>
 
-                                <Text style={{textAlign: 'center',marginTop: 5,fontSize: Platform.OS == 'ios' ? 16 : 14,}}>Achieve a milestone and receive</Text>
+                                <Text style={{textAlign: 'center',marginTop: 5,fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>Achieve a milestone and receive</Text>
                                 <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3}}>
-                                    <Text style={{color: '#FF6B17',fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 16 : 14,}}>additional Oranges</Text>
-                                    <Text style={{fontSize: Platform.OS == 'ios' ? 16 : 14,}}>for each activity</Text>
+                                    <Text style={{color: '#FF6B17',fontWeight: 'bold',fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 16 : 14,}}>additional Oranges</Text>
+                                    <Text style={{fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12,}}>for each activity</Text>
                                 </View>
 
                                 <View style={{height: 50}}/>
