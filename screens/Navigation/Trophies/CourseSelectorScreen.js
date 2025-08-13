@@ -23,7 +23,7 @@ export default function CourseSelectorScreen({ navigation, route }) {
     const { course } = route.params
     const sections = course.sections
 
-    const userCourse = Array.isArray(userData.courses) ? userData.courses.find(c => c.id === course.id) : null;
+    const userCourse = Array.isArray(userData?.courses) ? userData.courses.find(c => c.id === course.id) : null;
 
     const sectionsWithProgress = sections.map(section => {
         const userSection = userCourse?.sections?.find(s => s.id === section.id);

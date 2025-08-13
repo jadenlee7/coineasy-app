@@ -34,11 +34,6 @@ const CourseDetailScreen = ({ navigation, route }) => {
     const pages = course.pages
     const question = course.question
 
-
-    console.log('ici');
-    console.log(userData);
-    
-
     const [quizTime, setQuizTime] = useState(false)
     const [selectedOption, setSelectedOption] = useState(null);
     const [wrongAnswer, setWrongAnswer] = useState(null)
@@ -237,7 +232,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
 
     const onValidateQuiz = async () => {
 
-        const tempData = userData
+        const tempData = userData ?? {}
 
         if(tempData){
             let addNumber = 15
