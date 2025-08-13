@@ -98,7 +98,8 @@
     "stream-browserify": "^3.0.0",
     "tailwind-rn": "^4.2.0",
     "text-encoding": "^0.7.0",
-    "typescript": "~5.3.3"
+    "typescript": "~5.3.3",
+    "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
@@ -121,7 +122,7 @@
   },
   "resolutions": {
     "multiformats": "^9.9.0",
-    "uint8arrays": "3.1.1",
+    "uint8arrays": "^3.0.0",
     "@didtools/cacao": "1.0.0",
     "@ipld/dag-cbor": "^7.0.3",
     "@ceramicnetwork/common": "2.4.0",
