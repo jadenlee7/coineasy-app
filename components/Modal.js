@@ -70,13 +70,14 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     {
                         paddingBottom: paddingBottom,
                         top: 
-                            statusBarHeight > 25 && type != 'notifications' && type != 'oranges' && type != 'oranges-help' && type != 'oranges-help-invite' && type != 'small' && type != 'deleteAccount' ? 65 + statusBarHeight 
-                            : type != 'notifications' && type != 'oranges' && type != 'oranges-help' && type != 'oranges-help-invite' && type != 'small' && type != 'deleteAccount' ? 80 + statusBarHeight 
+                            statusBarHeight > 25 && type != 'notifications' && type != 'trophy' && type != 'oranges' && type != 'oranges-help' && type != 'oranges-help-invite' && type != 'small' && type != 'deleteAccount' ? 65 + statusBarHeight 
+                            : type != 'notifications' && type != 'oranges' && type != 'trophy' && type != 'oranges-help' && type != 'oranges-help-invite' && type != 'small' && type != 'deleteAccount' ? 80 + statusBarHeight 
                             : type == 'oranges' ? 150 + statusBarHeight 
                             : type == 'oranges-help' ? 100 + statusBarHeight 
                             : type == 'oranges-help-invite' ? 200 + statusBarHeight 
+                            : type == 'trophy' ? 220 
                             : 'auto',
-                        width: (type == 'notifications' || type == 'oranges' || type == 'oranges-help' || type == 'oranges-help-invite' || type == 'deleteAccount')  ? '90%' : '100%',
+                        width: (type == 'notifications' || type == 'oranges' || type == 'oranges-help' || type == 'oranges-help-invite' || type == 'deleteAccount' || type == 'trophy')  ? '90%' : '100%',
                         height: 
                             type == 'notifications' ? 400 
                             : type == 'oranges' && Platform.OS == 'ios' ? 450 
@@ -85,8 +86,10 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                             : type == 'oranges-help-invite' ? 260
                             : type == 'deleteAccount' && Platform.OS == 'ios' ? 470 
                             : type == 'deleteAccount' ? 500 
+                            : type == 'trophy' ? 350 
                             : 'auto',
                         alignSelf: 'center',
+                        borderRadius: 10
                     }, 
                 ]} 
             >

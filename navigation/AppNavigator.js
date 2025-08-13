@@ -11,9 +11,13 @@ import FollowNavigation from '../screens/Navigation/Follow/FollowNavigation';
 import FlashMessage from 'react-native-flash-message';
 import ConversationScreen from '../screens/Navigation/Chat/ConversationScreen';
 import ConversationDetails from '../screens/Navigation/Chat/ConversationDetails';
-import OrangeReward from '../screens/Navigation/OrangeReward';
+// import OrangeReward from '../screens/Navigation/OrangeReward';
 import RewardHistory from '../screens/Navigation/RewardHistory';
 import ActivityReward from '../screens/Navigation/ActivityReward';
+import CourseSelectorScreen from '../screens/Navigation/Trophies/CourseSelectorScreen';
+import CourseDetailScreen from '../screens/Navigation/Trophies/CourseDetailScreen';
+import TrophiePresentation from '../screens/Navigation/Trophies/TrophiePresentationScreen';
+import OrangeNavigation from '../screens/Navigation/OrangeNavigation';
 
 // const Stack = createNativeStackNavigator();
 
@@ -31,9 +35,13 @@ const AppNavigator = (props) => {
                     <Stack.Screen name="FollowNavigation" component={FollowNavigation} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="ConversationScreen" component={ConversationScreen} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="ConversationDetails" component={ConversationDetails} options={{ headerShown: false, gestureEnabled: true }} />
-                    <Stack.Screen name="OrangeReward" component={OrangeReward} options={{ headerShown: false, gestureEnabled: true }} />
+                    {/* <Stack.Screen name="OrangeReward" component={OrangeReward} options={{ headerShown: false, gestureEnabled: true }} /> */}
+                    <Stack.Screen name="OrangeNavigation" component={OrangeNavigation} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="RewardHistory" component={RewardHistory} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="ActivityReward" component={ActivityReward} options={{ headerShown: false, gestureEnabled: true }} />
+                    <Stack.Screen name="CourseSelector" component={CourseSelectorScreen} options={{ headerShown: false, gestureEnabled: true }} />
+                    <Stack.Screen name="CourseDetail" component={CourseDetailScreen} options={{ headerShown: false, gestureEnabled: true }} />
+                    <Stack.Screen name="TrophiePresentation" component={TrophiePresentation} options={{ headerShown: false, gestureEnabled: true }} />
                 </Stack.Navigator>
             </NavigationContainer>
 

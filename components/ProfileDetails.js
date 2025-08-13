@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as Clipboard from 'expo-clipboard';
 import Animated from 'react-native-reanimated';
-import { AntDesign, MaterialIcons } from '@expo/vector-icons';
+import { AntDesign, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from "@react-navigation/core";
 import { TabBar, TabView } from "react-native-tab-view";
 import ImageViewer from "react-native-image-zoom-viewer";
@@ -32,6 +32,7 @@ import ProfileReplies from '../screens/Navigation/Profile/ProfileReplies'
 import ProfileReposts from '../screens/Navigation/Profile/ProfileReposts'
 import { CheckIcon,CloseIcon,CopyIconBadge,FacebookIcon,InstagramIcon,LinkIcon,NotificationsIcon,SettingsIcon,TelegramIcon,TwitterIcon } from "./Icons";
 import moment from "moment";
+import Svg, { Circle } from "react-native-svg";
 
 const TabBarHeight = 50;
 const IndicatorWidth = 50
@@ -171,22 +172,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
                 <Text style={[tailwind(`text-slate-400 mt-2 text-center`), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{title}</Text>
             </TouchableOpacity>
-        ) : title == 'Orange' ? (
-            <TouchableOpacity 
-                style={tailwind('flex flex-col flex-1 items-center')}
-                onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeReward')}}
-                disabled={type == 'selected'}
-            >
-                <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
-                <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
-                    <Image
-                        style={{width: 20,height: 20,marginTop: 5}}
-                        resizeMode="contain"
-                        source={require('../assets/orange.png')}
-                    />
-                    <Text style={[tailwind(`text-slate-400 mt-2 text-center`), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{title}</Text>
-                </View>
-            </TouchableOpacity>
         ) : (
             <View style={tailwind('flex flex-col flex-1 items-center')}>
                 <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
@@ -267,6 +252,95 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
           return details.profile.pfp
         }
     }
+
+  const trophies = [
+    {
+        id: 1,
+        name: 'Starter',
+        image_icon: require('../assets/trophie_bitcoin.png'),
+        color: '#FF6B35',
+        progress: 100, // Complété
+    },
+    {
+        id: 2,
+        name: 'Professor',
+        image_icon: require('../assets/trophie_education.png'),
+        color: '#333',
+        progress: 75, // En cours
+    },
+    {
+        id: 3,
+        name: 'Student',
+        image_icon: require('../assets/trophie_book_gray.png'),
+        color: '#333',
+        progress: 56, // Non commencé
+    },
+    {
+        id: 4,
+        name: 'Orange Collector',
+        image_icon: require('../assets/trophie_orange_gray.png'),
+        color: '#333',
+        progress: 0, // Non commencé
+    },
+  ];
+
+    const renderTrophy = (trophy) => {
+        const isCompleted = trophy.progress === 100;
+        const hasProgress = trophy.progress > 0;
+
+        const radius = 30;
+        const strokeWidth = 3;
+        const circumference = 2 * Math.PI * radius;
+        const strokeDasharray = circumference;
+        const strokeDashoffset = circumference - (trophy.progress / 100) * circumference;
+
+        return (
+            <TouchableOpacity
+                key={trophy.id}
+                style={styles.trophyContainer}
+                activeOpacity={0.7}
+            >
+                <View style={styles.iconWrapper}>
+                    <View style={styles.iconContainer}>
+                        <View style={styles.iconBackground} />
+                        
+                        {hasProgress && (
+                            <View style={styles.svgContainer}>
+                                <Svg width="64" height="64" style={styles.svgProgress}>
+                                <Circle
+                                    cx="32"
+                                    cy="32"
+                                    r={radius}
+                                    stroke="#FF6B35"
+                                    strokeWidth={strokeWidth}
+                                    fill="transparent"
+                                    strokeDasharray={strokeDasharray}
+                                    strokeDashoffset={strokeDashoffset}
+                                    strokeLinecap="round"
+                                    transform="rotate(-90 32 32)"
+                                />
+                                </Svg>
+                            </View>
+                        )}
+                        
+                        {/* Icône au centre */}
+                        <View style={styles.iconInner}>
+                            <Image
+                                style={{width: 40,height: 40}}
+                                resizeMode='contain'
+                                source={trophy.image_icon}
+                                defaultSource={trophy.image_icon}
+                            />  
+                        </View>
+                    </View>
+                </View>
+
+                <Text style={[styles.trophyName,{ color: isCompleted ? '#333' : '#666' }]}>
+                    {trophy.name}
+                </Text>
+            </TouchableOpacity>
+        );
+    };
     
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
@@ -290,7 +364,44 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     </View>
                 </>
             ) : (
-                <HeaderImage/>
+                <>
+                    <HeaderImage/>
+
+                    <TouchableOpacity 
+                        onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeReward')}}
+                        style={{
+                            position: 'absolute',
+                            top: statusBarHeight > 25 ? 50 : 60,
+                            right: 10,
+                            borderRadius: 30,
+                            backgroundColor: '#FFF2E2',
+                            flexDirection:'row',
+                            gap: 6,
+                            alignSelf:'flex-end',
+                            marginRight: 5,
+                            paddingVertical: 5,
+                            paddingHorizontal:10,
+                            alignItems:'center'
+                        }}
+                    >
+                        <Image
+                            style={{width: 15, height: 15}}
+                            resizeMode='contain'
+                            source={require('../assets/trophie_icon_orange.png')}
+                        />
+                        <Text style={{fontWeight: 'bold',textAlign: 'center',color:'#FB5100', marginTop: Platform.OS == 'ios' ? 2 : 0,}}>
+                            {userData?.numberOranges && userData?.numberOranges.toString().length <= 3 ? userData?.numberOranges
+                                : userData?.numberOranges && userData?.numberOranges.toString().length == 4 ? userData?.numberOranges.toString().slice(0,1)+','+userData?.numberOranges.toString().slice(1,4)
+                                : userData?.numberOranges && userData?.numberOranges.toString().length == 5 ? userData?.numberOranges.toString().slice(0,2)+','+userData?.numberOranges.toString().slice(2,5)
+                                : userData?.numberOranges && userData?.numberOranges.toString().length == 6 ? userData?.numberOranges.toString().slice(0,3)+','+userData?.numberOranges.toString().slice(3,6)
+                                : userData?.numberOranges && userData?.numberOranges.toString().length == 7 ? userData?.numberOranges.toString().slice(0,1)+','+userData?.numberOranges.toString().slice(1,4)+','+userData?.numberOranges.toString().slice(4,7)
+                                : userData?.numberOranges && userData?.numberOranges.toString().length == 8 ? userData?.numberOranges.toString().slice(0,2)+','+userData?.numberOranges.toString().slice(2,5)+','+userData?.numberOranges.toString().slice(5,8)
+                                : userData?.numberOranges && userData?.numberOranges.toString().length == 9 ? userData?.numberOranges.toString().slice(0,3)+','+userData?.numberOranges.toString().slice(3,6)+','+userData?.numberOranges.toString().slice(6,9)
+                                : 0
+                            }
+                        </Text>
+                    </TouchableOpacity>
+                </>
             )}
 
             <Animated.ScrollView 
@@ -446,7 +557,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     <ProfileItem count={countPosts} title="Posts" />
                     <ProfileItem count={userInfo ? userInfo.count_followers : "-"} title="Followers" />
                     <ProfileItem count={userInfo ? userInfo.count_following : "-"} title="Following" />
-                    <ProfileItem count={userData?.numberOranges ?? 0} title="Orange" />
                 </View>
         
                 {!commonFollowLoading && type == "selected" && listCommonFollowers.length > 0 ? (
@@ -545,30 +655,42 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     </View>
                 }
         
-                {/** Profile navigation */}
-                {/* {Platform.OS == 'ios' ? (
-                    <>
-                        <View style={tailwind('flex flex-row px-4 border-b border-slate-100 mt-30px')}>
-                            <NavItem slug="feed" title="Feed" setNav={setNav} nav={nav} />
-                            <NavItem slug="replies" selected={true} title="Replies" nav={nav} setNav={setNav} />
-                            <NavItem slug="reposts" title="Reposts" nav={nav} setNav={setNav} />
+                <View style={styles.container}>
+                    <View style={styles.header}>
+                        <View style={styles.countContainer}>
+                            <Text style={[styles.title, {fontFamily: "GmarketBold",}]}>Trophies</Text>
+                            <Text style={{marginLeft: -5}}>
+                                <Text style={{color: '#FF6B17'}}>{userData?.completed_trophies ?? 0}</Text>
+                                <Text style={{color: 'gray'}}>/12</Text>
+                            </Text>
                         </View>
-                        <View style={tailwind('flex flex-col')}>
-                            <Posts type={nav} profile={userInfo} />
-                        </View>
-                    </>
-                ) : ( */}
-                    <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
-                        <TabView
-                            navigationState={{index: tabIndex, routes}}
-                            renderScene={renderScene}
-                            renderTabBar={renderTabBar}
-                            onIndexChange={setIndex}
-                            initialLayout={{width: windowSize.width}}
-                            style={{height: tabViewHeight,}}
-                        />
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('TrophiePresentation')}
+                        >
+                            <Text style={{fontFamily: "GmarketMedium",fontSize: 12,color: '#FF6B35'}}>Detail</Text>
+                        </TouchableOpacity>
                     </View>
-                {/* )} */}
+                    
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.trophiesContainer}
+                    >
+                        {trophies.map(renderTrophy)}
+                    </ScrollView>
+                </View>
+
+
+                <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
+                    <TabView
+                        navigationState={{index: tabIndex, routes}}
+                        renderScene={renderScene}
+                        renderTabBar={renderTabBar}
+                        onIndexChange={setIndex}
+                        initialLayout={{width: windowSize.width}}
+                        style={{height: tabViewHeight,}}
+                    />
+                </View>
 
 
             </Animated.ScrollView>
@@ -716,4 +838,88 @@ const styles = StyleSheet.create({
         width: '20%',
         backgroundColor: '#FF6B17',
     },
+
+
+    // TROPHY
+container: {
+    paddingVertical: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 16
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+  },
+  countContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  trophiesContainer: {
+    flexDirection: 'row',
+    gap: 0,
+  },
+  trophyContainer: {
+    alignItems: 'center',
+    paddingBottom: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    minWidth: 80,
+  },
+  iconWrapper: {
+    marginBottom: 8,
+  },
+  iconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  iconBackground: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: 32,
+    backgroundColor: '#F1F4F9',
+  },
+  progressCircle: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: 32,
+    borderWidth: 3,
+  },
+  iconInner: {
+    width: 50,
+    height: 50,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  trophyName: {
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 16,
+    flexWrap: 'wrap',
+    maxWidth: 70,
+
+  },
+  svgContainer: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  svgProgress: {
+    position: 'absolute',
+  },
 })

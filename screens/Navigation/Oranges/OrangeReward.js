@@ -4,11 +4,10 @@ import { Animated, Dimensions, Easing, Image, ImageBackground, Platform, Share, 
 import { ScrollView } from 'react-native-gesture-handler';
 
 
-import Modal from '../../components/Modal';
-import Button from '../../components/Button';
-import HeaderImage from '../../components/HeaderImage';
-import { listConstants } from '../../components/Constants';
-import { GlobalContext } from '../../contexts/GlobalContext';
+import Modal from '../../../components/Modal';
+import Button from '../../../components/Button';
+import { listConstants } from '../../../components/Constants';
+import { GlobalContext } from '../../../contexts/GlobalContext';
 
 import moment from 'moment-timezone';
 
@@ -18,8 +17,8 @@ import { AntDesign } from '@expo/vector-icons';
 import CountDownTimer from "react-native-countdown-timer-hooks";
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NewFeatureModal from '../../components/modals/NewFeatureModal';
-import { CopyIcon, CopyIcon2, CopyIconBadge } from '../../components/Icons';
+import NewFeatureModal from '../../../components/modals/NewFeatureModal';
+import { CopyIcon2 } from '../../../components/Icons';
 
 const {width, height} = Dimensions.get('window')
 
@@ -52,7 +51,7 @@ const OrangeReward = ({navigation, route}) => {
     const [thirdCelebrationTitle, setThirdCelebrationTitle] = useState(null)
 
     const modalRef = useRef(null); 
-    const snapPoints = useMemo(() => ['40%','40%'], []);
+    const snapPoints = useMemo(() => ['60%','60%'], []);
     const handleModalPress = useCallback(() => modalRef.current?.present(), []);
     
     const modalInviteRef = useRef(null); 
@@ -64,10 +63,6 @@ const OrangeReward = ({navigation, route}) => {
         checkFirstTimeReward()
         
         async function checkFirstTimeReward(){
-            // await AsyncStorage.removeItem('FirstTimeReward')
-            // userData.firstTime = false       
-            // setUserData({...userData})
-
             const isFirstTime = await AsyncStorage.getItem('FirstTimeReward')
             setFirstTimeReward(isFirstTime ?? 'true')
         }
@@ -213,66 +208,6 @@ const OrangeReward = ({navigation, route}) => {
             tempProfile.data = tempData
             const res = await orbis.updateProfile(tempProfile);
         }
-
-
-        // numberOranges: 1000
-        // listClaimedOranges: [
-        //     {
-        //         date: moment().format('YYYY-MM-DD'),
-        //         listOranges: [
-                        // {
-                        //     numberOranges: 10,
-                        //     type: 'Comment'
-                        // },
-                        // {
-                        //     numberOranges: 5,
-                        //     type: 'Daily Check-in'
-                        // },
-                        // {
-                        //     numberOranges: 5,
-                        //     type: 'Ad Rewards'
-                        // },
-                        // {
-                        //     numberOranges: 5,
-                        //     type: '7-Day Streak Bonus'
-                        // },
-        //         ]
-        //     }
-        // ]
-        // claimStreak: {
-        //     number: 0,
-        //     lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
-        // }
-        // adReward: {
-        //     lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
-        // }
-        // post: {
-        //     number: 0,
-        //     gained: 0,
-        //     lastPost: moment().format('YYYY-MM-DD HH:mm')
-            // listPostLiked: [
-            //     {
-            //         stream_id: "liujblmiuhboimiohnomihn",
-            //         milestone: 50
-            //     }
-            // ]
-        // }
-        // comment: {
-        //     number: 0,
-        //     gained: 0        
-        // }
-        // reaction: {
-        //     number: 0,
-        //     gained: 0,
-        //     lastReaction: moment().format('YYYY-MM-DD HH:mm')    
-        // }
-        // activityUnclaimed: {
-        //     number: 0,
-        // }
-        // activityClaimed: {
-        //     number: 0,
-        // }
-        // friendsInvited: 0
     }
 
     // Timer References
@@ -307,7 +242,7 @@ const OrangeReward = ({navigation, route}) => {
                     <Image
                         style={{width: 35, height: 35, alignSelf:'center',marginTop: -10}}
                         resizeMode='contain'
-                        source={e != claimStreak ? require('../../assets/orange_day_past.png') : require('../../assets/orange_day.png')}
+                        source={e != claimStreak ? require('../../../assets/orange_day_past.png') : require('../../../assets/orange_day.png')}
                     />
 
                     <Text style={{textAlign: 'center',fontSize: 13,fontWeight: 'bold',color: e < claimStreak ? '#4A4A4A' : 'black'}}>
@@ -570,28 +505,8 @@ const OrangeReward = ({navigation, route}) => {
     };
 
     return (
-        <View style={[tailwind('flex-1 flex-col')]}>
-            <HeaderImage />
-
-            <ImageBackground source={require('../../assets/bg_orange_reward.png')} resizeMode="stretch" style={{flex: 1,}}>
-
-                <TouchableOpacity style={{position: 'absolute',left: 10, top: 10}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
-                    <Image
-                        style={{width: 24,height: 24}}
-                        resizeMode='contain'
-                        source={require('../../assets/back_button.png')}
-                        defaultSource={require('../../assets/back_button.png')}
-                    />
-                </TouchableOpacity>
-
-                <View style={{borderRadius: 30,borderWidth:1,borderColor:'black', backgroundColor: '#FFF2E2',flexDirection:'row',gap: 6,alignSelf:'flex-end',marginRight: 5,paddingVertical: 5, paddingHorizontal:10,marginTop: 15,marginRight: 20, justifyContent:'center',alignItems:'center',}}>
-                    <Image
-                        style={{width: 20, height: 20}}
-                        resizeMode='contain'
-                        source={require('../../assets/orange_icon.png')}
-                    />
-                    <Text style={{fontWeight: 'bold',}}>{userData?.numberOranges ?? 0}</Text>
-                </View>
+        <ScrollView style={[tailwind('flex flex-col mt-4')]}>
+            {/* <ImageBackground source={require('../../../assets/bg_orange_reward.png')} resizeMode="stretch" style={{flex: 1,}}> */}
 
                 <View style={{flexDirection:'row',alignItems:'center',gap: 10,marginLeft: 20}}>
                     <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 19 : 16}}>Orange Rewards</Text>
@@ -599,7 +514,7 @@ const OrangeReward = ({navigation, route}) => {
                         <Image
                             style={{width: 20, height: 20}}
                             resizeMode='contain'
-                            source={require('../../assets/question_icon.png')}
+                            source={require('../../../assets/question_icon.png')}
                         />
                     </TouchableOpacity>
                 </View>
@@ -612,7 +527,7 @@ const OrangeReward = ({navigation, route}) => {
                         <Image
                             style={{width: width-20,height: 65,alignSelf:'center',}}
                             resizeMode='stretch'
-                            source={require('../../assets/new_feature_alert.png')}
+                            source={require('../../../assets/new_feature_alert.png')}
                         />
                     </TouchableOpacity>
                 )}
@@ -631,7 +546,7 @@ const OrangeReward = ({navigation, route}) => {
                     }]}
                 >
                     <ImageBackground 
-                        source={require('../../assets/bg_card_reward.png')} 
+                        source={require('../../../assets/bg_card_reward.png')} 
                         resizeMode="stretch" 
                         style={{flex: 1,justifyContent:'center',padding: 20}}
                     >
@@ -639,7 +554,7 @@ const OrangeReward = ({navigation, route}) => {
                             <Image
                                 style={{width: 80, height: 80, }}
                                 resizeMode='contain'
-                                source={require('../../assets/banner_day.png')}
+                                source={require('../../../assets/banner_day.png')}
                             />
                         </View>
 
@@ -648,7 +563,7 @@ const OrangeReward = ({navigation, route}) => {
                                 <Image
                                     style={{width: 35, height: 35}}
                                     resizeMode='contain'
-                                    source={require('../../assets/daily_icon.png')}
+                                    source={require('../../../assets/daily_icon.png')}
                                 />
                                 <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 16 : 14}}>Daily Check-in</Text>
                             </View>
@@ -669,13 +584,13 @@ const OrangeReward = ({navigation, route}) => {
 
                 {/* AD REWARD */}
                 <View style={[styles.elevate, {width: width-20, height: 100, alignSelf:'center',borderRadius: 10,marginTop: 10,  overflow:'hidden'}]}>
-                    <ImageBackground source={require('../../assets/bg_card_reward.png')} resizeMode="stretch" style={{flex: 1,justifyContent:'center',padding: 20}}>
+                    <ImageBackground source={require('../../../assets/bg_card_reward.png')} resizeMode="stretch" style={{flex: 1,justifyContent:'center',padding: 20}}>
                         <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginLeft: 5}}>
                             <View style={{flexDirection:'row',alignItems:'center',gap: 10}}>
                                 <Image
                                     style={{width: 35, height: 35}}
                                     resizeMode='contain'
-                                    source={require('../../assets/fire_icon.png')}
+                                    source={require('../../../assets/fire_icon.png')}
                                 />
                                 <View style={{}}>
                                     <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 16 : 14}}>Ad Rewards</Text>
@@ -702,13 +617,13 @@ const OrangeReward = ({navigation, route}) => {
 
                 {/* ACTIVITY REWARD */}
                 <View style={[styles.elevate, {width: width-20, height: 100, alignSelf:'center',borderRadius: 10,marginTop: 10,  overflow:'hidden'}]}>
-                    <ImageBackground source={require('../../assets/bg_card_reward.png')} resizeMode="stretch" style={{flex: 1,justifyContent:'center',padding: 20}}>
+                    <ImageBackground source={require('../../../assets/bg_card_reward.png')} resizeMode="stretch" style={{flex: 1,justifyContent:'center',padding: 20}}>
                         <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginLeft: 5}}>
                             <View style={{flexDirection:'row',alignItems:'center',gap: 10}}>
                                 <Image
                                     style={{width: 35, height: 35}}
                                     resizeMode='contain'
-                                    source={require('../../assets/pen_icon.png')}
+                                    source={require('../../../assets/pen_icon.png')}
                                 />
                                 <View style={{}}>
                                     <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 16 : 14}}>Activity Rewards</Text>
@@ -731,13 +646,13 @@ const OrangeReward = ({navigation, route}) => {
 
                 {/* INVITE FRIENDS */}
                 <View style={[styles.elevate, {width: width-20, height: 100, alignSelf:'center',borderRadius: 10,marginTop: 10,  overflow:'hidden'}]}>
-                    <ImageBackground source={require('../../assets/bg_card_reward.png')} resizeMode="stretch" style={{flex: 1,justifyContent:'center',padding: 20}}>
+                    <ImageBackground source={require('../../../assets/bg_card_reward.png')} resizeMode="stretch" style={{flex: 1,justifyContent:'center',padding: 20}}>
                         <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginLeft: 5}}>
                             <View style={{flexDirection:'row',alignItems:'center',gap: 10}}>
                                 <Image
                                     style={{width: 35, height: 35}}
                                     resizeMode='contain'
-                                    source={require('../../assets/invite_icon.png')}
+                                    source={require('../../../assets/invite_icon.png')}
                                 />
                                 <View style={{}}>
                                     <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 16 : 14}}>Invite Friends</Text>
@@ -764,7 +679,7 @@ const OrangeReward = ({navigation, route}) => {
                     <Text style={{fontSize: 18,fontWeight: 'bold',textAlign: 'center',}}>Track Your Rewards</Text>
                 </TouchableOpacity>
 
-            </ImageBackground>
+            {/* </ImageBackground> */}
 
 
 
@@ -793,7 +708,7 @@ const OrangeReward = ({navigation, route}) => {
                         <Image
                             style={{width: width-100, height: 100, alignSelf:'center',marginTop: 10,}}
                             resizeMode='contain'
-                            source={thirdCelebrationTitle ? require('../../assets/celebration_orange_streak.png') : require('../../assets/celebration_orange_claim.png')}
+                            source={thirdCelebrationTitle ? require('../../../assets/celebration_orange_streak.png') : require('../../../assets/celebration_orange_claim.png')}
                         />
                     </Animated.View>
                 </View>
@@ -849,7 +764,7 @@ const OrangeReward = ({navigation, route}) => {
                                 <Image
                                     style={{width: 35, height: 35}}
                                     resizeMode='contain'
-                                    source={require('../../assets/orange_icon.png')}
+                                    source={require('../../../assets/orange_icon.png')}
                                 />
                                 <Text style={{textAlign: 'center',fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',}}>+50</Text>                                
                             </View>
@@ -858,14 +773,14 @@ const OrangeReward = ({navigation, route}) => {
                                 <Image
                                     style={{width: 45, height: 45, alignSelf:'center',}}
                                     resizeMode='contain'
-                                    source={require('../../assets/orange_gray.png')}
+                                    source={require('../../../assets/orange_gray.png')}
                                 />
                                 <Text style={{textAlign: 'center',fontSize: Platform.OS == 'ios' ? 22 : 18,fontWeight: 'bold',marginLeft: -5}}>+30</Text>                                
                                 <TouchableOpacity onPress={() => {Haptics.selectionAsync();setOpenInviteHelp(true)}} style={{marginLeft: 5}}>
                                     <Image
                                         style={{width: 20, height: 20}}
                                         resizeMode='contain'
-                                        source={require('../../assets/question_icon.png')}
+                                        source={require('../../../assets/question_icon.png')}
                                     />
                                 </TouchableOpacity>
                             </View>
@@ -908,7 +823,7 @@ const OrangeReward = ({navigation, route}) => {
                                 <Image
                                     style={{width: 20, height: 20}}
                                     resizeMode='contain'
-                                    source={require('../../assets/nice_orange.png')}
+                                    source={require('../../../assets/nice_orange.png')}
                                 />
                                 <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 17 : 14}}>What is Orange Rewards?</Text>
                             </View>
@@ -921,7 +836,7 @@ const OrangeReward = ({navigation, route}) => {
                                 <Image
                                     style={{width: 20, height: 20}}
                                     resizeMode='contain'
-                                    source={require('../../assets/nice_orange.png')}
+                                    source={require('../../../assets/nice_orange.png')}
                                 />
                                 <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 17 : 14}}>What is Daily Check-in?</Text>
                             </View>
@@ -934,7 +849,7 @@ const OrangeReward = ({navigation, route}) => {
                                 <Image
                                     style={{width: 20, height: 20}}
                                     resizeMode='contain'
-                                    source={require('../../assets/nice_orange.png')}
+                                    source={require('../../../assets/nice_orange.png')}
                                 />
                                 <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 17 : 14}}>What is Ad Rewards?</Text>
                             </View>
@@ -947,7 +862,7 @@ const OrangeReward = ({navigation, route}) => {
                                 <Image
                                     style={{width: 20, height: 20}}
                                     resizeMode='contain'
-                                    source={require('../../assets/nice_orange.png')}
+                                    source={require('../../../assets/nice_orange.png')}
                                 />
                                 <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 17 : 14}}>What is Posting Rewards?</Text>
                             </View>
@@ -975,7 +890,7 @@ const OrangeReward = ({navigation, route}) => {
                         <Image
                             style={{width: 50, height: 50, alignSelf:'center',}}
                             resizeMode='contain'
-                            source={require('../../assets/orange2_icon.png')}
+                            source={require('../../../assets/orange2_icon.png')}
                         />
 
                         <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16,textAlign: 'center',marginVertical: 20,}}>
@@ -988,7 +903,7 @@ const OrangeReward = ({navigation, route}) => {
                             <Image
                                 style={{width: 25, height: 25}}
                                 resizeMode='contain'
-                                source={require('../../assets/nice_orange.png')}
+                                source={require('../../../assets/nice_orange.png')}
                             />
                         </View>
                     </View>
@@ -1007,7 +922,8 @@ const OrangeReward = ({navigation, route}) => {
                 </View>
             )}
 
-        </View>
+            <View style={{height: 150}}/>
+        </ScrollView>
     )
 }
 

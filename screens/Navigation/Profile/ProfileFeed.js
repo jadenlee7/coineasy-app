@@ -154,9 +154,6 @@ const ProfileFeed = (props) => {
                             await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
                         }else if(elt[0].url){
                             await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
-                        }else{
-                            console.log('AUCUNNNN');
-                            console.log(elt);
                         }
     
                         if(indexImage == e.content.media.length-1 && indexPost == data.length -1){

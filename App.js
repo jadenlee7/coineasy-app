@@ -1,4 +1,5 @@
 import './utils/polyfill';
+import 'react-native-reanimated';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { StyleSheet, View, Keyboard, Platform, Animated, Image, Dimensions } from 'react-native';
@@ -41,7 +42,7 @@ import { useWalletConnectModal } from '@walletconnect/modal-react-native';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
-import { Asset } from 'expo-asset';
+// import { Asset } from 'expo-asset';
 
 /** Initialize the Orbis class object */
 let orbis = new Orbis({
@@ -180,53 +181,6 @@ export default function App() {
             user.profile = data.details.profile
         }
 
-        // numberOranges: 1000
-        // listClaimedOranges: [
-        //     {
-        //         date: moment().format('YYYY-MM-DD'),
-        //         listOranges: [
-                        // {
-                        //     numberOranges: 10,
-                        //     type: 'Comment'
-                        // },
-                        // {
-                        //     numberOranges: 5,
-                        //     type: 'Daily Check-in'
-                        // },
-                        // {
-                        //     numberOranges: 5,
-                        //     type: 'Ad Rewards'
-                        // },
-                        // {
-                        //     numberOranges: 5,
-                        //     type: '7-Day Streak Bonus'
-                        // },
-        //         ]
-        //     }
-        // ]
-        // claimStreak: {
-        //     number: 0,
-        //     lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
-        // }
-        // adReward: {
-        //     lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
-        // }
-        // postStreak: {
-        //     number: 0,
-        // }
-        // commentStreak: {
-        //     number: 0,
-        // }
-        // reactionStreak: {
-        //     number: 0,
-        // }
-        // activityUnclaimed: {
-        //     number: 0,
-        // }
-        // activityClaimed: {
-        //     number: 0,
-        // }
-
         const listDid = await AsyncStorage.getItem("user-connected")
         const currentCeramicSession = await AsyncStorage.getItem("ceramic-session")
         var listConnected = JSON.parse(listDid)
@@ -284,16 +238,6 @@ export default function App() {
     }
   }, [user]);
 
-//   useEffect(() => {
-//     saveUserInStorage();
-
-//     async function saveUserInStorage() {
-//       if(user) {
-//         await AsyncStorage.setItem("user-connected", user.did);
-//       }
-//     }
-//   }, [user]);
-
     const onLayoutRootView = useCallback(async () => {
         if (isReady) {
             await SplashScreen.hideAsync();
@@ -336,9 +280,6 @@ export default function App() {
                 }else{
                     setUserData({...listDid[0].user.profile?.data})
                 }
-                // if(listDid[0].user.profile?.data?.oranges?.updated && moment(listDid[0].user.profile?.data?.oranges?.updated).subtract(2,'days') < moment()){
-                //     setShowClaimOranges(true)
-                // }
                 setIsReady(true);
                 
             }else{

@@ -8,10 +8,13 @@ import News from "../screens/News";
 import Profile from '../screens/Profile';
 import * as Haptics from 'expo-haptics';
 
-import { NavHomeIcon, NavCategoriesIcon, NavChartIcon, NavProfileIcon, NavSearchIcon } from "../components/Icons";
+import { NavHomeIcon, NavCategoriesIcon, NavChartIcon, NavProfileIcon, NavSearchIcon, NavCourseIcon, NavOrangeIcon } from "../components/Icons";
 import Search from '../screens/Search';
 import { GlobalContext } from '../contexts/GlobalContext';
 import NewFeatureModal from '../components/modals/NewFeatureModal';
+import Trophies from '../screens/Trophies';
+// import OrangeReward from '../screens/Navigation/OrangeReward';
+import OrangeNavigation from '../screens/Navigation/OrangeNavigation';
 
 const Tab = createBottomTabNavigator();
 
@@ -29,7 +32,12 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                         </View>
                     : title == 'cat' ? 
                         <View style={{marginTop: '20%',marginLeft: 20,width: 60,alignItems: 'center',}}>
-                            <NavCategoriesIcon color={focused ? "#FF6E31" : "#959595" }/> 
+                            {/* <NavCategoriesIcon color={focused ? "#FF6E31" : "#959595" }/>  */}
+                            <NavCourseIcon color={focused ? "#FF6E31" : "#959595" }/> 
+                        </View>
+                    : title == 'trophies' ? 
+                        <View style={{marginTop: '20%',marginLeft: 20,width: 60,alignItems: 'center',}}>
+                            <NavCourseIcon color={focused ? "#FF6E31" : "#959595" }/> 
                         </View>
                     : title == 'news' ? 
                         <View style={{marginTop: '20%',width: 60,alignItems: 'center',}}>
@@ -38,6 +46,10 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                     : title == 'search' ? 
                         <View style={{marginTop: '20%',marginRight: 20,width: 60,alignItems: 'center',}}>
                             <NavSearchIcon color={focused ? "#FF6E31" : "#959595" }/> 
+                        </View>
+                    : title == 'orange' ? 
+                        <View style={{marginTop: '20%',marginRight: 20,width: 60,alignItems: 'center',}}>
+                            <NavOrangeIcon color={focused ? "#FF6E31" : "#959595" }/> 
                         </View>
                     : 
                         <View style={{marginTop: '20%',marginRight: 35,width: 60,alignItems: 'center',}}>
@@ -69,13 +81,20 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                         },
                     }}
                 />
-                <Tab.Screen name="Categories" component={Categories} options={showIcons('cat')}
+                <Tab.Screen name="Trophies" component={Trophies} options={showIcons('trophies')}
                     listeners={{
                         tabPress: (e) => {
                             Haptics.selectionAsync();
                         },
                     }}                
                 />
+                {/* <Tab.Screen name="Categories" component={Categories} options={showIcons('cat')}
+                    listeners={{
+                        tabPress: (e) => {
+                            Haptics.selectionAsync();
+                        },
+                    }}                
+                /> */}
                 <Tab.Screen name="News" component={News} options={showIcons('news')}
                     listeners={{
                         tabPress: (e) => {
@@ -83,7 +102,7 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                         },
                     }}                
                 />
-                <Tab.Screen name="Search" component={Search} options={showIcons('search')}
+                <Tab.Screen name="Orange" component={OrangeNavigation} options={showIcons('orange')}
                     listeners={{
                         tabPress: (e) => {
                             Haptics.selectionAsync();

@@ -85,7 +85,7 @@ export default function NewFeatureModal() {
         }
         setNewFeatureVis(false);
 
-        isNavigating && navigation.navigate('OrangeReward')
+        isNavigating && navigation.navigate('OrangeNavigation')
     }
 
     async function claimFirstReward(){

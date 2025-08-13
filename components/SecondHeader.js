@@ -94,7 +94,7 @@ const SecondHeader = (props) => {
                 {cta == "notifications" &&
                     <>
                         <TouchableOpacity 
-                            onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeReward')}}
+                            onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeNavigation')}}
                             style={{
                                 borderRadius: 30,
                                 borderWidth:1,
