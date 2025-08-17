@@ -12,7 +12,10 @@
       "channel": "preview"
     },
     "production": {
-      "channel": "production"
+      "channel": "production",
+        "ios": {
+            "image": "macos-sequoia-15.3-xcode-16.2"
+        }
     }
   },
   "submit": {
