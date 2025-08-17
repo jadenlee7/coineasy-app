@@ -116,30 +116,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
             <View style={styles.content}>
                 <Text style={styles.description}>
                     {page.description}
-                    {/* {page.description.split(' ').map((word, wordIndex) => (
-                        word === 'consectetur' ? (
-                            <Text key={wordIndex} style={styles.highlight}>{word} </Text>
-                        ) : (
-                            word + ' '
-                        )
-                    ))} */}
                 </Text>
-
-                {/* <View style={styles.illustrationContainer}>
-                    <View style={styles.illustration}>
-                        <Ionicons name="book-outline" size={80} color="#ddd" />
-                    </View>
-                </View>
-
-                <Text style={styles.bottomDescription}>
-                    {page.bottomDescription.split(' ').map((word, wordIndex) => (
-                        (word === 'consectetur' || word === 'adipiscing') ? (
-                            <Text key={wordIndex} style={styles.highlight}>{word} </Text>
-                        ) : (
-                            word + ' '
-                        )
-                    ))}
-                </Text> */}
             </View>
             <View style={{ height: 100 }} />
         </ScrollView>
@@ -151,37 +128,6 @@ const CourseDetailScreen = ({ navigation, route }) => {
             nestedScrollEnabled
             keyboardShouldPersistTaps="handled"
         >
-            {/* <Text style={[tailwind('text-slate-900 p-5'), {fontSize: 14,fontFamily: "GmarketBold",lineHeight: 20,marginTop: -10,}]}>
-                {question.title}
-            </Text>
-
-            <View style={styles.container_quiz}>
-                <View style={styles.article_quiz}>
-                    <View style={styles.contentRow_quiz}>
-                        <View style={styles.leftColumn_quiz}>
-                            <Image 
-                                source={require('../../../assets/trophie_placeholder.png')}
-                                style={styles.image_quiz}
-                            />
-                        </View>
-                        
-                        <View style={styles.rightColumn_quiz}>
-                            <Text style={styles.text_quiz}>
-                                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam ultrices, 
-                                <Text style={styles.highlightText_quiz}> magna vitae eleifend placerat, turpis</Text>
-                                {' '}lectus maximus libero, Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                            </Text>
-                        </View>
-                    </View>
-                    
-                    <Text style={styles.textFull_quiz}>
-                        Etiam ultrices, magna 
-                        <Text style={styles.highlightText_quiz}> vitae eleifend?</Text>
-                        {' '}Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-                    </Text>
-                </View>
-            </View> */}
-
             <Text style={[tailwind('text-slate-900 p-5'), {fontSize: 14,fontFamily: "GmarketBold",lineHeight: 20,marginTop: -10,}]}>
                 {question.question}
             </Text>
@@ -332,7 +278,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
                     <Image
                         style={{width: screenWidth*0.7, height: 300, alignSelf:'center',borderRadius: 10,}}
                         resizeMode='contain'
-                        source={require('../../../assets/trophie_placeholder.png')}
+                        source={course.image}
                     />
 
                     <Text style={[tailwind('text-slate-900 p-5'), {fontSize: 14,fontFamily: "GmarketBold",lineHeight: 20,marginTop: -40,textAlign:'center'}]}>
@@ -352,7 +298,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
                     <Text style={{textAlign: 'center', marginTop: 0,fontWeight: 'bold',fontSize: 25,}}>80%</Text>
                     <Text style={{textAlign: 'center', marginTop: 0,color: '#FF6B17'}}>Nice!</Text>
 
-                    <View style={{position: 'absolute',bottom: 40, width: screenWidth}}>
+                    <View style={{position: 'absolute',bottom: 10, width: screenWidth}}>
                         <TouchableOpacity 
                             style={[styles.nextButton, {width:'80%', alignSelf:'center',}]}
                             onPress={onValidateQuiz}
@@ -454,9 +400,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   description: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 13,
+    lineHeight: 22,
     color: '#666',
+    fontFamily: "GmarketMedium",
   },
   highlight: {
     color: '#ff6b35',
@@ -528,11 +475,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
+    marginTop: 10,
   },
   nextButtonText: {
     fontSize: 16,
     color: '#fff',
     fontWeight: '600',
+    marginTop: -2,
   },
   nextIcon: {
     marginLeft: 2,
@@ -619,10 +568,11 @@ container_choice: {
     backgroundColor: '#fff',
   },
   optionText_choice: {
-    fontSize: 16,
+    fontSize: 13,
     color: '#333333',
     fontWeight: '400',
     flex: 1,
+    fontFamily: "GmarketMedium",
   },
   selectedText_choice: {
     color: '#333333',

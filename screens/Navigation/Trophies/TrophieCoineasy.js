@@ -217,6 +217,7 @@ const styles = StyleSheet.create({
   },
   courseDetails: {
     flex: 1,
+    marginLeft: 5
   },
   titleRow: {
     flexDirection: 'row',
@@ -225,10 +226,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   courseTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 14,
+    // fontWeight: '800',
     color: '#111827',
     marginRight: 8,
+    fontFamily: "GmarketMedium",
   },
   courseProgress: {
     fontSize: 14,
@@ -245,9 +247,11 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   courseDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
+      color: '#6B7280',
+      lineHeight: 16,
+    //   fontSize: 14,
+      fontSize: 12,
+    fontFamily: "GmarketMedium"
   },
   cardFooter: {
     flexDirection: 'row',
@@ -260,14 +264,16 @@ const styles = StyleSheet.create({
   rewardContainer: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'flex-start',
-    gap: 10
+    gap: 5
   },
   rewardLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
+    fontSize: 10,
+    // color: '#6B7280',
+    fontFamily: "GmarketMedium",
+    // marginBottom: 4,
+    marginTop: 1,
   },
   rewardValue: {
     flexDirection: 'row',

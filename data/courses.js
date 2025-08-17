@@ -94,7 +94,7 @@ export const courses = [
     // TROPHIE COINEASY
     {
         id: 1,
-        title: 'Basic',
+        title: 'Beginner',
         participants: '12,000',
         description: 'Learn the fundamentals of blockchain, crypto, and how to navigate Web3',
         reward: 200,
@@ -112,19 +112,19 @@ export const courses = [
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "Page 1 – Beyond Digital Money",
+                        title: "Beyond Digital Money",
                         description: "Ethereum is a blockchain launched in 2015 that not only supports digital money but also allows developers to build apps and programs directly on the network.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_ethereum_page1.webp')
                     },
                     {
-                        title: "Page 2 – Smart Contracts",
+                        title: "Smart Contracts",
                         description: "It introduced smart contracts, which are programs that automatically run when certain conditions are met, enabling services like DeFi and NFTs.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_ethereum_page2.webp')
                     },
                     {
-                        title: "Page 3 – The Currency",
+                        title: "The Currency",
                         description: "Ethereum’s native cryptocurrency is called Ether (ETH), and it is used to pay for transactions, run apps, and interact with smart contracts on the network.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_ethereum_page3.webp')
@@ -152,19 +152,19 @@ export const courses = [
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "Page 1 – The Creator",
+                        title: "The Creator",
                         description: "Satoshi Nakamoto is the anonymous person or group who created Bitcoin and published its whitepaper in 2008.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_satoshi_page1.webp')
                     },
                     {
-                        title: "Page 2 – The Disappearance",
+                        title: "The Disappearance",
                         description: "After launching Bitcoin in 2009 and communicating with early developers, Satoshi stopped all public activity in 2011 and has never been heard from again.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_satoshi_page2.webp')
                     },
                     {
-                        title: "Page 3 – The Mystery",
+                        title: "The Mystery",
                         description: "No one knows Satoshi’s true identity, and their Bitcoin wallet — holding over 1 million BTC — has never been moved, adding to the mystery.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_satoshi_page3.webp')
@@ -192,19 +192,19 @@ export const courses = [
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "Page 1 – The First Cryptocurrency",
+                        title: "The First Cryptocurrency",
                         description: "Bitcoin is the first cryptocurrency, created in 2009 to let people send money directly to each other without banks, and in 2010 it was famously used to buy two pizzas for 10,000 BTC — the first real-world Bitcoin purchase.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_bitcoin_page1.webp')
                     },
                     {
-                        title: "Page 2 – How It Works",
+                        title: "How It Works",
                         description: "Bitcoin transactions are recorded on a public blockchain and verified by a network of computers through a process called mining.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_bitcoin_page2.webp')
                     },
                     {
-                        title: "Page 3 – Limited Supply",
+                        title: "Limited Supply",
                         description: "Only 21 million Bitcoins will ever exist, which makes it scarce and one reason why people see it as valuable.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_bitcoin_page3.webp')
@@ -232,19 +232,19 @@ export const courses = [
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "Page 1 – Digital Money",
+                        title: "Digital Money",
                         description: "Cryptocurrency is a type of digital money that exists only online and uses blockchain technology to record and secure transactions.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_crypto_page1.webp')
                     },
                     {
-                        title: "Page 2 – No Middleman",
+                        title: "No Middleman",
                         description: "It allows people to send and receive payments directly to each other without needing a bank or payment company in the middle.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_crypto_page2.webp')
                     },
                     {
-                        title: "Page 3 – Many Types",
+                        title: "Many Types",
                         description: "There are thousands of different cryptocurrencies, with popular examples including Bitcoin, Ethereum, and Dogecoin.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_crypto_page3.webp')
@@ -272,19 +272,19 @@ export const courses = [
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "Page 1 – Public Blockchains",
+                        title: "Public Blockchains",
                         description: "A public blockchain is an open network where anyone can join without restrictions, verify transactions, and view the entire history publicly, making it fully decentralized; examples include Bitcoin and Ethereum.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_blockchain_page1.webp')
                     },
                     {
-                        title: "Page 2 – Private Blockchains",
+                        title: "Private Blockchains",
                         description: "A private blockchain is a closed network where only authorized individuals or organizations can join, often controlled by a single entity and used for business operations that require privacy, such as Corda or Ripple.",
                         bottomDescription: "",
                         image: null
                     },
                     {
-                        title: "Page 3 – Hybrid & Consortium",
+                        title: "Hybrid & Consortium",
                         description: "A consortium blockchain is a hybrid that combines features of public and private blockchains, managed by a group of organizations that share data while limiting access to approved participants, with examples like Hyperledger.",
                         bottomDescription: "",
                         image: null
@@ -312,19 +312,19 @@ export const courses = [
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "Page 1 – Blocks and Transactions",
+                        title: "Blocks and Transactions",
                         description: "A blockchain stores information in digital blocks, each containing transaction details, a time stamp, and a unique code called a hash.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_work_page1.webp')
                     },
                     {
-                        title: "Page 2 – Linking Blocks",
+                        title: "Linking Blocks",
                         description: "Each new block includes the hash of the previous block, creating a chain that makes it easy to detect and prevent tampering.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_work_page2.webp')
                     },
                     {
-                        title: "Page 3 – Consensus Mechanisms",
+                        title: "Consensus Mechanisms",
                         description: "Before a block is added, many computers on the network check and agree that the information is correct, using a process called consensus.",
                         bottomDescription: "",
                         image: null
@@ -352,13 +352,13 @@ export const courses = [
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "Page 1 – Understanding Blockchain",
+                        title: "Understanding Blockchain",
                         description: "Blockchain is a type of database that stores information in blocks linked together in a chain. Once data is recorded, it’s extremely difficult to change — making it secure and transparent.",
                         bottomDescription: "",
                         image: require('../assets/trophy/coineasy_what_page1.webp')
                     },
                     {
-                        title: "Page 2 – Why Blockchain Matters",
+                        title: "Why Blockchain Matters",
                         description: "Because it’s decentralized, no single person or company controls it. Anyone can participate, verify transactions, and trust the system without relying on a middleman.",
                         bottomDescription: "",
                         image: null
