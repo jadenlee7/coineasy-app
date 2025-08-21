@@ -54,51 +54,53 @@ export default function CourseSelectorScreen({ navigation, route }) {
         });
     };
 
-    const renderItem = ({ item }) => (
-        <TouchableOpacity onPress={() => handleCardPress(item)} activeOpacity={0.8}>
-            <View style={styles.card}>
-                <View style={styles.imageWrapper}>
-                    <Image 
-                        source={item.image} 
-                        style={styles.image} 
-                        resizeMode="cover" 
-                    />
-                    <View style={[styles.overlay, {flexDirection:'row', alignItems:'flex-end', justifyContent:'flex-end',}]}>
-                        <MultiplePeopleIcon color={'white'}/>
-                        <Text style={styles.overlayText}>{item.enrolled.toLocaleString()}</Text>
-                    </View>
-                </View>
-
-                <Text style={{fontFamily: "GmarketMedium",fontSize: 18,marginVertical: 4,}}>{item.title}</Text>
-                <Text style={{fontSize: 14,fontFamily: "GmarketMedium", color: '#555',marginBottom: 10,}}>{item.description}</Text>
-
-                <View style={{position: 'absolute',bottom: 10,left:10, width: '100%',}}>
-                    <View style={styles.progressBarBackground}>
-                        <View style={[styles.progressBarFill, { width: `${(item.progress / item.total) * 100}%` },]}/>
-                    </View>
-
-                    <View style={{display: 'flex', flexDirection:'row', justifyContent:'space-between',alignItems:'center',}}>
-                        <View style={{display: 'flex', flexDirection:'row', justifyContent:'center',alignItems:'center',}}>
-                            <Image
-                                style={{width: 15, height: 15, marginRight: 5}}
-                                resizeMode='contain'
-                                source={require('../../../assets/trophy/trophy_icon_orange.png')}
-                            /> 
-                            <Text style={styles.progressText}>{item.points}</Text>
+    const renderItem = ({ item }) => {
+        return(
+            <TouchableOpacity onPress={() => handleCardPress(item)} activeOpacity={0.8}>
+                <View style={styles.card}>
+                    <View style={styles.imageWrapper}>
+                        <Image 
+                            source={item.image} 
+                            style={styles.image} 
+                            resizeMode="cover" 
+                        />
+                        <View style={[styles.overlay, {flexDirection:'row', alignItems:'flex-end', justifyContent:'flex-end',}]}>
+                            <MultiplePeopleIcon color={'white'}/>
+                            <Text style={styles.overlayText}>{item.enrolled.toLocaleString()}</Text>
                         </View>
-                        <View style={{}}>
-                            <Text>
-                                <Text style={{ fontWeight: 'bold' }}>{item.progress}</Text>
-                                <Text style={{ color: 'grey' }}>/</Text>
-                                <Text style={{ color: 'grey' }}>{item.pages.length}</Text>
-                            </Text>
-                        </View>            
                     </View>
-                    
+
+                    <Text style={{fontFamily: "GmarketMedium",fontSize: 18,marginVertical: 4,}}>{item.title}</Text>
+                    <Text style={{fontSize: 14,fontFamily: "GmarketMedium", color: '#555',marginBottom: 10,}}>{item.description}</Text>
+
+                    <View style={{position: 'absolute',bottom: 10,left:10, width: '100%',}}>
+                        <View style={styles.progressBarBackground}>
+                            <View style={[styles.progressBarFill, { width: `${(item.progress / item.pages.length) * 100}%` },]}/>
+                        </View>
+
+                        <View style={{display: 'flex', flexDirection:'row', justifyContent:'space-between',alignItems:'center',}}>
+                            <View style={{display: 'flex', flexDirection:'row', justifyContent:'center',alignItems:'center',}}>
+                                <Image
+                                    style={{width: 15, height: 15, marginRight: 5}}
+                                    resizeMode='contain'
+                                    source={require('../../../assets/trophy/trophy_icon_orange.png')}
+                                /> 
+                                <Text style={styles.progressText}>{item.points}</Text>
+                            </View>
+                            <View style={{}}>
+                                <Text>
+                                    <Text style={{ fontWeight: 'bold' }}>{item.progress}</Text>
+                                    <Text style={{ color: 'grey' }}>/</Text>
+                                    <Text style={{ color: 'grey' }}>{item.pages.length}</Text>
+                                </Text>
+                            </View>            
+                        </View>
+                        
+                    </View>
                 </View>
-            </View>
-        </TouchableOpacity>
-    );
+            </TouchableOpacity>
+        )
+    }
 
     const PaginationDots = ({ length, activeIndex }) => {
         return (

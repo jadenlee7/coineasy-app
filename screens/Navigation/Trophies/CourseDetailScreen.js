@@ -53,14 +53,35 @@ const CourseDetailScreen = ({ navigation, route }) => {
             setCourseProgress(newProgress)
 
             const userCourse = Array.isArray(tempData.courses) ? tempData.courses.find(c => c.id === parentCourse.id) : null;
+
+            console.log('mdr');
+            console.log(Array.isArray(tempData.courses));
+            
+            console.log(userCourse);
+            console.log(parentCourse.id);
+            
+            console.log(tempData.courses ? tempData.courses.find(c => c.id === parentCourse.id) : 'pas defini');
+            
+            
+
             if(!userCourse){
-                tempData.courses = [{
-                    id: parentCourse.id,
-                    status: 'in-progress',
-                    sections: [
-                        { id: course.id, progress: newProgress, status: 'in-progress'},
-                    ]
-                }]
+                if(tempData.courses){
+                    tempData.courses.push({
+                        id: parentCourse.id,
+                        status: 'in-progress',
+                        sections: [
+                            { id: course.id, progress: newProgress, status: 'in-progress'},
+                        ]
+                    })
+                }else{
+                    tempData.courses = [{
+                        id: parentCourse.id,
+                        status: 'in-progress',
+                        sections: [
+                            { id: course.id, progress: newProgress, status: 'in-progress'},
+                        ]
+                    }]
+                }
             }else{
                 const userSection = userCourse?.sections?.find(s => s.id === course.id);
                 if (userSection) {
@@ -243,6 +264,11 @@ const CourseDetailScreen = ({ navigation, route }) => {
             if (allSectionsCompleted) {
                 userCourse.status = "completed"
             }
+
+            console.log('lalala');
+            console.log(tempData);
+            
+            
 
             setUserData({...tempData})
 
