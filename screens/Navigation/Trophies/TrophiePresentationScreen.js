@@ -23,7 +23,7 @@ const TrophiePresentation = ({ navigation, route }) => {
             id: 1,
             title: 'Starter',
             description: 'Start Coineasy',
-            image: require('../../../assets/trophie_bitcoin.png'),
+            image: require('../../../assets/trophy/trophy_bitcoin.png'),
             progress: 7,
             total: 12
         },
@@ -31,7 +31,7 @@ const TrophiePresentation = ({ navigation, route }) => {
             id: 2,
             title: 'Professor',
             description: 'Complete professional education',
-            image: require('../../../assets/trophie_education.png'),
+            image: require('../../../assets/trophy/trophy_education.png'),
             progress: 3,
             total: 3
         },
@@ -39,7 +39,7 @@ const TrophiePresentation = ({ navigation, route }) => {
             id: 3,
             title: 'Student',
             description: 'Complete Basic education',
-            image: require('../../../assets/trophie_book_gray.png'),
+            image: require('../../../assets/trophy/trophy_book_gray.png'),
             progress: 3,
             total: 4
         },
@@ -47,7 +47,7 @@ const TrophiePresentation = ({ navigation, route }) => {
             id: 4,
             title: 'Orange Collector',
             description: 'get 1000 oranges',
-            image: require('../../../assets/trophie_orange_gray.png'),
+            image: require('../../../assets/trophy/trophy_orange_gray.png'),
             progress: 1,
             total: 4
         },
@@ -55,7 +55,7 @@ const TrophiePresentation = ({ navigation, route }) => {
             id: 5,
             title: 'Student',
             description: 'Complete Basic education',
-            image: require('../../../assets/trophie_book_gray.png'),
+            image: require('../../../assets/trophy/trophy_book_gray.png'),
             progress: 2,
             total: 4
         },
@@ -63,7 +63,7 @@ const TrophiePresentation = ({ navigation, route }) => {
             id: 6,
             title: 'Orange Collector',
             description: 'get 1000 oranges',
-            image: require('../../../assets/trophie_orange_gray.png'),
+            image: require('../../../assets/trophy/trophy_orange_gray.png'),
             progress: 3,
             total: 5
         },
@@ -182,7 +182,7 @@ const TrophiePresentation = ({ navigation, route }) => {
                 <Image
                     style={{width: 15, height: 15}}
                     resizeMode='contain'
-                    source={require('../../../assets/trophie_icon_orange.png')}
+                    source={require('../../../assets/trophy/trophy_icon_orange.png')}
                 />
                 <Text style={{fontWeight: 'bold',textAlign: 'center',color:'#FB5100', marginTop: Platform.OS == 'ios' ? 2 : 0,}}>
                     {userData?.numberOranges && userData?.numberOranges.toString().length <= 3 ? userData?.numberOranges

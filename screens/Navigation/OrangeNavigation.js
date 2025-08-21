@@ -97,7 +97,7 @@ const OrangeNavigation = ({navigation, route}) => {
                 <Image
                     style={{width: 15, height: 15}}
                     resizeMode='contain'
-                    source={require('../../assets/trophie_icon_orange.png')}
+                    source={require('../../assets/trophy/trophy_icon_orange.png')}
                 />
                 <Text style={{fontWeight: 'bold',textAlign: 'center',color:'#FB5100', marginTop: Platform.OS == 'ios' ? 2 : 0,}}>
                     {userData?.numberOranges && userData?.numberOranges.toString().length <= 3 ? userData?.numberOranges

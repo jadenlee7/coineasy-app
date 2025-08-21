@@ -257,28 +257,28 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     {
         id: 1,
         name: 'Starter',
-        image_icon: require('../assets/trophie_bitcoin.png'),
+        image_icon: require('../assets/trophy/trophy_bitcoin.png'),
         color: '#FF6B35',
         progress: 100, // Complété
     },
     {
         id: 2,
         name: 'Professor',
-        image_icon: require('../assets/trophie_education.png'),
+        image_icon: require('../assets/trophy/trophy_education.png'),
         color: '#333',
         progress: 75, // En cours
     },
     {
         id: 3,
         name: 'Student',
-        image_icon: require('../assets/trophie_book_gray.png'),
+        image_icon: require('../assets/trophy/trophy_book_gray.png'),
         color: '#333',
         progress: 56, // Non commencé
     },
     {
         id: 4,
         name: 'Orange Collector',
-        image_icon: require('../assets/trophie_orange_gray.png'),
+        image_icon: require('../assets/trophy/trophy_orange_gray.png'),
         color: '#333',
         progress: 0, // Non commencé
     },
@@ -387,7 +387,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         <Image
                             style={{width: 15, height: 15}}
                             resizeMode='contain'
-                            source={require('../assets/trophie_icon_orange.png')}
+                            source={require('../assets/trophy/trophy_icon_orange.png')}
                         />
                         <Text style={{fontWeight: 'bold',textAlign: 'center',color:'#FB5100', marginTop: Platform.OS == 'ios' ? 2 : 0,}}>
                             {userData?.numberOranges && userData?.numberOranges.toString().length <= 3 ? userData?.numberOranges

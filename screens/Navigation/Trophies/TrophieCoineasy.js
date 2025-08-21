@@ -7,6 +7,7 @@ import {
   ScrollView,
   SafeAreaView,
   Image,
+  Platform,
 } from 'react-native';
 import { MultiplePeopleIcon } from '../../../components/Icons';
 import { useNavigation } from '@react-navigation/core';
@@ -28,11 +29,13 @@ const TrophieCoineasy = () => {
                 userCourse = userData.courses.find(c => c.id === course.id);
             }
 
+            const completedSections = userCourse?.sections?.filter(s => s.status === 'completed') ?? [];
+
             return {
                 ...course,
                 status: userCourse?.status || 'not-started',
-                progress: userCourse?.sections?.length ?? 0,
-                progressText: userCourse?.sections ? userCourse?.sections?.length+' in progress' : null
+                progress: completedSections.length,
+                progressText: completedSections.length == course?.sections?.length ? 'Completed' : userCourse?.sections ? userCourse?.sections?.length+' in progress' : null
             };
         });  
     
@@ -91,7 +94,11 @@ const TrophieCoineasy = () => {
                 {/* Course Cards */}
                 <View style={styles.courseContainer}>
                     {filteredCourses.map((course) => (
-                        <TouchableOpacity key={course.id} style={styles.courseCard} onPress={() => navigation.navigate('CourseSelector', { course })}>
+                        <TouchableOpacity 
+                            key={course.id} 
+                            style={styles.courseCard} 
+                            onPress={() => navigation.navigate('CourseSelector', { course })}
+                        >
                             <View style={styles.cardHeader}>
                                 <View style={styles.courseInfo}>
                                     <View style={{backgroundColor: '#F1F4F9',padding: 10, borderRadius: 50, marginRight: 5}}>
@@ -106,7 +113,7 @@ const TrophieCoineasy = () => {
                                         <View style={styles.titleRow}>
                                             <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
                                                 <Text style={styles.courseTitle}>{course.title}</Text>
-                                                <Text style={styles.courseProgress}>{course.progress} / {course.length}</Text>
+                                                <Text style={styles.courseProgress}>{course.progress} / {course.sections.length}</Text>
                                             </View>
                                             <View style={{flexDirection:'row', alignItems:'flex-end', justifyContent:'flex-end',}}>
                                                 <MultiplePeopleIcon color={'#959595'}/>
@@ -128,8 +135,8 @@ const TrophieCoineasy = () => {
                                         <Image
                                             style={{width: 18,height: 18}}
                                             resizeMode='contain'
-                                            source={require('../../../assets/trophie_icon_orange.png')}
-                                            defaultSource={require('../../../assets/trophie_icon_orange.png')}
+                                            source={require('../../../assets/trophy/trophy_icon_orange.png')}
+                                            defaultSource={require('../../../assets/trophy/trophy_icon_orange.png')}
                                         />                        
                                         <Text style={styles.rewardAmount}>{course.reward}</Text>
                                     </View>
@@ -226,7 +233,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   courseTitle: {
-    fontSize: 14,
+    fontSize: Platform.OS == 'ios' ? 16 : 14,
     // fontWeight: '800',
     color: '#111827',
     marginRight: 8,
@@ -269,10 +276,8 @@ const styles = StyleSheet.create({
     gap: 5
   },
   rewardLabel: {
-    fontSize: 10,
-    // color: '#6B7280',
+    fontSize: Platform.OS == 'ios' ? 12 : 10,
     fontFamily: "GmarketMedium",
-    // marginBottom: 4,
     marginTop: 1,
   },
   rewardValue: {

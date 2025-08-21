@@ -82,7 +82,7 @@ export default function CourseSelectorScreen({ navigation, route }) {
                             <Image
                                 style={{width: 15, height: 15, marginRight: 5}}
                                 resizeMode='contain'
-                                source={require('../../../assets/trophie_icon_orange.png')}
+                                source={require('../../../assets/trophy/trophy_icon_orange.png')}
                             /> 
                             <Text style={styles.progressText}>{item.points}</Text>
                         </View>
@@ -149,7 +149,7 @@ export default function CourseSelectorScreen({ navigation, route }) {
                 <Image
                     style={{width: 15, height: 15}}
                     resizeMode='contain'
-                    source={require('../../../assets/trophie_icon_orange.png')}
+                    source={require('../../../assets/trophy/trophy_icon_orange.png')}
                 />
                 <Text style={{fontWeight: 'bold',textAlign: 'center',color:'#FB5100', marginTop: Platform.OS == 'ios' ? 2 : 0,}}>
                     {userData?.numberOranges && userData?.numberOranges.toString().length <= 3 ? userData?.numberOranges
@@ -191,7 +191,7 @@ export default function CourseSelectorScreen({ navigation, route }) {
             <PaginationDots length={sectionsWithProgress.length} activeIndex={currentIndex} />
 
             <TouchableOpacity 
-                style={{backgroundColor: '#FF6E31', paddingVertical: 14, borderRadius: 50,position: 'absolute',bottom: 20, width: '90%',alignSelf:'center'}} 
+                style={{backgroundColor: '#FF6E31', paddingVertical: 14, borderRadius: 50,position: 'absolute',bottom: 30, width: '90%',alignSelf:'center'}} 
                 onPress={handleConfirm}
             >
                 <Text style={{color: 'white',fontWeight: 'bold',fontSize: 16,textAlign:'center'}}>Ok, Let’s do this.</Text>

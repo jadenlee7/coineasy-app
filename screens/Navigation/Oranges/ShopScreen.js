@@ -157,7 +157,7 @@ const ShopScreen = ({ goToGift }) => {
                                 <Image
                                     style={{width: 15, height: 15}}
                                     resizeMode='contain'
-                                    source={require('../../../assets/trophie_icon_orange.png')}
+                                    source={require('../../../assets/trophy/trophy_icon_orange.png')}
                                 />                                 
                             </View>
                             <Text style={{color: item.buttonText == 'Closed' ? '#959595' : 'white',fontSize: 11,fontFamily: 'GmarketBold'}}>{item.oranges}</Text>
