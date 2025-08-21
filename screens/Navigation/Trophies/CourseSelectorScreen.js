@@ -90,7 +90,7 @@ export default function CourseSelectorScreen({ navigation, route }) {
                             <Text>
                                 <Text style={{ fontWeight: 'bold' }}>{item.progress}</Text>
                                 <Text style={{ color: 'grey' }}>/</Text>
-                                <Text style={{ color: 'grey' }}>{item.total}</Text>
+                                <Text style={{ color: 'grey' }}>{item.pages.length}</Text>
                             </Text>
                         </View>            
                     </View>
