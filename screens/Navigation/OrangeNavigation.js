@@ -81,7 +81,7 @@ const OrangeNavigation = ({navigation, route}) => {
             <HeaderImage />
 
             {showBack && (
-                <TouchableOpacity style={{position: 'absolute',left: 20, top: Platform.OS == 'ios' && statusBarHeight > 25 ? 60 : Platform.OS == 'ios' ? 70 : statusBarHeight > 25 ? 55 : 60}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
+                <TouchableOpacity style={{position: 'absolute',left: 20, top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 55 : 60}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
                     <Image
                         style={{width: 24,height: 24}}
                         resizeMode='contain'
@@ -95,7 +95,7 @@ const OrangeNavigation = ({navigation, route}) => {
                 onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeNavigation')}}
                 style={{
                     position: 'absolute',
-                    top: statusBarHeight > 25 ? 50 : 60,
+                    top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 50 : 60,
                     right: 10,
                     borderRadius: 30,
                     backgroundColor: '#FFF2E2',

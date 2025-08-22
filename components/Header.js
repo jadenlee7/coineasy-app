@@ -35,7 +35,6 @@ export default function Header(props) {
                 top: statusBarHeight > 25 ? 0 : -20,
                 zIndex: 1000,
                 overflow: 'hidden',
-                backgroundColor: 'red',
             },
         ]}
         onLayout={(event) => {
@@ -57,7 +56,7 @@ export default function Header(props) {
         {screen == 'home' && props.route != 'Categories' && props.route != 'News'? (
             <View style={{
                     position: 'absolute',
-                    top: Platform.OS == 'ios' && statusBarHeight > 25 ? 60 : Platform.OS == 'ios' ? 70 : statusBarHeight > 25 ? 50 : 60,
+                    top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 50 : 60,
                     right: 20,
                     flexDirection:'row',
                     justifyContent:'center',

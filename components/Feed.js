@@ -75,10 +75,10 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                             if(index == 0){
                                 return (
                                     <>
-                                        <View style={{height: Platform.OS == 'ios' ? 0 : 55 + statusBarHeight, width: '100%', backgroundColor: 'white',}} />
+                                        {/* <View style={{height: Platform.OS == 'ios' ? 0 : 55 + statusBarHeight, width: '100%', backgroundColor: 'red',}} /> */}
 
                                         <PagerView 
-                                            style={{height: 100, width: '100%', marginVertical: 10,}} 
+                                            style={{height: 100, width: '100%', marginTop: statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight}} 
                                             initialPage={0}
                                             orientation='horizontal'
                                             onPageSelected={(props) => setIndexSwiper(props.nativeEvent.position)}

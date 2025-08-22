@@ -161,7 +161,6 @@ const TrophieProject = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   tabContainer: {
     flexGrow: 1,
