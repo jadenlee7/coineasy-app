@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexGrow: 1,
-    paddingHorizontal: 5,
+    paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: '#FFFFFF',
     marginBottom: 8,

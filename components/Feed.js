@@ -75,7 +75,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                             if(index == 0){
                                 return (
                                     <>
-                                        <View style={{height: Platform.OS == 'ios' ? 0 : 115 + statusBarHeight, width: '100%', backgroundColor: 'white',}} />
+                                        <View style={{height: Platform.OS == 'ios' ? 0 : 55 + statusBarHeight, width: '100%', backgroundColor: 'white',}} />
 
                                         <PagerView 
                                             style={{height: 100, width: '100%', marginVertical: 10,}} 
@@ -107,7 +107,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                                                 borderRadius: 10,
                                                 overflow:'hidden',                                                    
                                                 position: 'absolute',
-                                                top: Platform.OS == 'ios' ? 82 : 190 + statusBarHeight,
+                                                top: Platform.OS == 'ios' ? 22 : 130 + statusBarHeight,
                                                 right: 10,
                                             }}
                                         >

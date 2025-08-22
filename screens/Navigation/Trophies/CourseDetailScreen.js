@@ -54,16 +54,6 @@ const CourseDetailScreen = ({ navigation, route }) => {
 
             const userCourse = Array.isArray(tempData.courses) ? tempData.courses.find(c => c.id === parentCourse.id) : null;
 
-            console.log('mdr');
-            console.log(Array.isArray(tempData.courses));
-            
-            console.log(userCourse);
-            console.log(parentCourse.id);
-            
-            console.log(tempData.courses ? tempData.courses.find(c => c.id === parentCourse.id) : 'pas defini');
-            
-            
-
             if(!userCourse){
                 if(tempData.courses){
                     tempData.courses.push({
@@ -185,7 +175,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
                             ]}
                             numberOfLines={1}
                             adjustsFontSizeToFit
-                            minimumFontScale={0.7}
+                            minimumFontScale={selectedOption === option.id && rightAnswer ? 0.5 : 0.7}
                         >
                             {option.text}
                         </Text>
@@ -278,13 +268,13 @@ const CourseDetailScreen = ({ navigation, route }) => {
         }
 
         navigation.navigate('Trophies')
-    }
+    }    
 
     return (
         <View style={{flex: 1, backgroundColor: 'white',}}>
             <HeaderImage />
             
-            <TouchableOpacity style={{position: 'absolute',left: 20, top: statusBarHeight > 25 ? 55 : 60}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
+            <TouchableOpacity style={{position: 'absolute',left: 20, top: Platform.OS == 'ios' && statusBarHeight > 25 ? 60 : Platform.OS == 'ios' ? 70 : statusBarHeight > 25 ? 55 : 60}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
                 <Image
                     style={{width: 24,height: 24}}
                     resizeMode='contain'
@@ -297,7 +287,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
                 onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeNavigation')}}
                 style={{
                     position: 'absolute',
-                    top: statusBarHeight > 25 ? 50 : 60,
+                    top: Platform.OS == 'ios' && statusBarHeight > 25 ? 60 : Platform.OS == 'ios' ? 70 : statusBarHeight > 25 ? 50 : 60,
                     right: 10,
                     borderRadius: 30,
                     backgroundColor: '#FFF2E2',
@@ -366,7 +356,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
                 </>
             ) : (
                 <>
-                    <View style={{width:'100%', marginVertical: 5 ,flexDirection:'row', alignItems:'center',paddingHorizontal: 10}}>
+                    <View style={{width:'100%', marginTop: 8 ,flexDirection:'row', alignItems:'center',paddingHorizontal: 10}}>
                         <View style={[styles.progressBarBackground, {width:'85%'}]}>
                             <View style={[styles.progressBarFill, { width: `${(courseProgress / course.pages.length) * 100}%` },]}/>
                         </View>

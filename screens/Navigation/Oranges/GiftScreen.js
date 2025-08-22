@@ -29,8 +29,8 @@ const GiftScreen = () => {
         console.log("Texte copié !");
     };
 
-    const RewardItem = ({ item }) => (
-        <View style={styles.rewardItem}>
+    const RewardItem = ({ item, index }) => (
+        <View style={[styles.rewardItem, {marginTop: index == 0 ? 10 : 0,}]}>
             <Image
                 style={{width: 90, height: 90}}
                 resizeMode='contain'
@@ -63,10 +63,10 @@ const GiftScreen = () => {
     );
 
     return (
-        <SafeAreaView style={{flex: 1, backgroundColor: selectedGift ? 'white' : '#F5F5F5'}}>
+        <SafeAreaView style={{flex: 1, backgroundColor: 'white'}}>
             <ScrollView style={styles.scrollView}>
-                {!selectedGift ? giftList.map((item) => (
-                    <RewardItem key={item.id+'-gift'} item={item} />
+                {!selectedGift ? giftList.map((item, index) => (
+                    <RewardItem key={item.id+'-gift'} item={item} index={index}/>
                 )) : (
                     <View style={{backgroundColor: 'white',}}>
 
@@ -113,6 +113,7 @@ const GiftScreen = () => {
 
                     </View>
                 )}
+                <View style={{height: 50}}/>
             </ScrollView>
         </SafeAreaView>
     );
@@ -121,14 +122,13 @@ const GiftScreen = () => {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
   },
   rewardItem: {
     backgroundColor: 'white',
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
+    marginHorizontal: 10,
     marginBottom: 12,
     borderRadius: 12,
     shadowColor: '#000',

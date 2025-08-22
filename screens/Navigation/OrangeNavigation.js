@@ -31,6 +31,9 @@ const OrangeNavigation = ({navigation, route}) => {
     const tailwind = useTailwind();      
     const statusBarHeight = useStatusBarHeight();
 
+    const showBack = route.params?.back
+    
+
     const [tabIndex, setIndex] = useState(0);
     const routes = [
         {key:0, title: 'Reward'},
@@ -76,6 +79,17 @@ const OrangeNavigation = ({navigation, route}) => {
     return (
         <View style={[tailwind('flex flex-1')]}>
             <HeaderImage />
+
+            {showBack && (
+                <TouchableOpacity style={{position: 'absolute',left: 20, top: Platform.OS == 'ios' && statusBarHeight > 25 ? 60 : Platform.OS == 'ios' ? 70 : statusBarHeight > 25 ? 55 : 60}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
+                    <Image
+                        style={{width: 24,height: 24}}
+                        resizeMode='contain'
+                        source={require('../../assets/back_button.png')}
+                        defaultSource={require('../../assets/back_button.png')}
+                    />
+                </TouchableOpacity>
+            )}
 
             <TouchableOpacity 
                 onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeNavigation')}}

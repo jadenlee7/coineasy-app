@@ -92,6 +92,7 @@ export const shopData = [
 
 export const courses = [
     // TROPHIE COINEASY
+    
     {
         id: 1,
         title: 'Beginner',
@@ -103,112 +104,106 @@ export const courses = [
         sections: [
             {
                 id: '1-1',
-                title: 'What is Ethereum?',
-                description: 'In this course, you will learn what a crypto wallet is, why you need one, and the different types that exist.',
-                image: require('../assets/trophy/coineasy/ethereum.webp'),
+                title: 'What is Blockchain?',
+                description: 'In this course, you’ll get an introduction to blockchain technology and why it’s transforming the world.',
+                image: require('../assets/trophy/coineasy/what.webp'),
                 points: 60,
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "Beyond Digital Money",
-                        description: "Ethereum is a blockchain launched in 2015 that not only supports digital money but also allows developers to build apps and programs directly on the network.",
+                        title: "Understanding Blockchain",
+                        description: "Blockchain is a type of database that stores information in blocks linked together in a chain. Once data is recorded, it’s extremely difficult to change — making it secure and transparent.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/ethereum_page1.webp')
+                        image: require('../assets/trophy/coineasy/what_page1.webp')
                     },
                     {
-                        title: "Smart Contracts",
-                        description: "It introduced smart contracts, which are programs that automatically run when certain conditions are met, enabling services like DeFi and NFTs.",
+                        title: "Why Blockchain Matters",
+                        description: "Because it’s decentralized, no single person or company controls it. Anyone can participate, verify transactions, and trust the system without relying on a middleman.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/ethereum_page2.webp')
-                    },
-                    {
-                        title: "The Currency",
-                        description: "Ethereum’s native cryptocurrency is called Ether (ETH), and it is used to pay for transactions, run apps, and interact with smart contracts on the network.",
-                        bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/ethereum_page3.webp')
+                        image: require('../assets/trophy/coineasy/what_page1.webp')
                     },
                 ],
                 question: {
-                    question: "What is the native cryptocurrency of Ethereum?",
+                    question: "Blockchain is best described as:",
                     options: [
-                        { id: 0, text: 'ETH', isCorrect: true },
-                        { id: 1, text: 'BTC', isCorrect: false },
-                        { id: 2, text: 'SOL', isCorrect: false },
-                        { id: 3, text: 'DOGE', isCorrect: false },
+                        { id: 0, text: 'A type of social media', isCorrect: false },
+                        { id: 1, text: 'A decentralized digital ledger', isCorrect: true },
+                        { id: 2, text: 'A centralized database', isCorrect: false },
+                        { id: 3, text: 'A type of cryptocurrency', isCorrect: false },
                     ],
                 }
             },
             {
                 id: '1-2',
-                title: 'Who is Satoshi Nakamoto?',
-                description: 'In this course, you will learn about the mysterious creator of Bitcoin and the impact they left on the world.',
-                image: require('../assets/trophy/coineasy/satoshi.webp'),
+                title: 'How Does Blockchain Work?',
+                description: 'In this course, you will learn how blockchain records, links, and secures information.',
+                image: require('../assets/trophy/coineasy/work.webp'),
                 points: 60,
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "The Creator",
-                        description: "Satoshi Nakamoto is the anonymous person or group who created Bitcoin and published its whitepaper in 2008.",
+                        title: "Blocks and Transactions",
+                        description: "A blockchain stores information in digital blocks, each containing transaction details, a time stamp, and a unique code called a hash.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/satoshi_page1.webp')
+                        image: require('../assets/trophy/coineasy/work_page1.webp')
                     },
                     {
-                        title: "The Disappearance",
-                        description: "After launching Bitcoin in 2009 and communicating with early developers, Satoshi stopped all public activity in 2011 and has never been heard from again.",
+                        title: "Linking Blocks",
+                        description: "Each new block includes the hash of the previous block, creating a chain that makes it easy to detect and prevent tampering.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/satoshi_page2.webp')
+                        image: require('../assets/trophy/coineasy/work_page2.webp')
                     },
                     {
-                        title: "The Mystery",
-                        description: "No one knows Satoshi’s true identity, and their Bitcoin wallet — holding over 1 million BTC — has never been moved, adding to the mystery.",
+                        title: "Consensus Mechanisms",
+                        description: "Before a block is added, many computers on the network check and agree that the information is correct, using a process called consensus.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/satoshi_page3.webp')
+                        image: require('../assets/trophy/coineasy/work_page3.webp')
                     },
                 ],
                 question: {
-                    question: "Satoshi Nakamoto is:",
+                    question: "Which process ensures that transactions on a blockchain are valid?",
                     options: [
-                        { id: 0, text: 'The creator of Bitcoin', isCorrect: true },
-                        { id: 1, text: 'A famous singer', isCorrect: false },
-                        { id: 2, text: 'A government agency', isCorrect: false },
-                        { id: 3, text: 'A crypto exchange', isCorrect: false },
+                        { id: 0, text: 'Consensus mechanism', isCorrect: true },
+                        { id: 1, text: 'Web hosting', isCorrect: false },
+                        { id: 2, text: 'File sharing', isCorrect: false },
+                        { id: 3, text: 'Central banking', isCorrect: false },
                     ],
                 }
             },
             {
                 id: '1-3',
-                title: 'What is Bitcoin?',
-                description: 'In this course, you will learn what Bitcoin is, how it works, and why it is important.',
-                image: require('../assets/trophy/coineasy/bitcoin.webp'),
+                title: 'Types of Blockchains',
+                description: 'In this course, you’ll explore the different types of blockchains and their real-world uses.',
+                image: require('../assets/trophy/coineasy/blockchain.webp'),
                 points: 60,
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "The First Cryptocurrency",
-                        description: "Bitcoin is the first cryptocurrency, created in 2009 to let people send money directly to each other without banks, and in 2010 it was famously used to buy two pizzas for 10,000 BTC — the first real-world Bitcoin purchase.",
+                        title: "Public Blockchains",
+                        description: "A public blockchain is an open network where anyone can join without restrictions, verify transactions, and view the entire history publicly, making it fully decentralized; examples include Bitcoin and Ethereum.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/bitcoin_page1.webp')
+                        image: require('../assets/trophy/coineasy/blockchain_page1.webp')
                     },
                     {
-                        title: "How It Works",
-                        description: "Bitcoin transactions are recorded on a public blockchain and verified by a network of computers through a process called mining.",
+                        title: "Private Blockchains",
+                        description: "A private blockchain is a closed network where only authorized individuals or organizations can join, often controlled by a single entity and used for business operations that require privacy, such as Corda or Ripple.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/bitcoin_page2.webp')
+                        image: require('../assets/trophy/coineasy/blockchain_page2.webp')
                     },
                     {
-                        title: "Limited Supply",
-                        description: "Only 21 million Bitcoins will ever exist, which makes it scarce and one reason why people see it as valuable.",
+                        title: "Hybrid & Consortium",
+                        description: "A consortium blockchain is a hybrid that combines features of public and private blockchains, managed by a group of organizations that share data while limiting access to approved participants, with examples like Hyperledger.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/bitcoin_page3.webp')
+                        image: require('../assets/trophy/coineasy/blockchain_page3.webp')
                     },
                 ],
                 question: {
-                    question: "What is the maximum supply of Bitcoin?",
+                    question: "Bitcoin runs on which type of blockchain?",
                     options: [
-                        { id: 0, text: '10 million', isCorrect: false },
-                        { id: 1, text: '21 million', isCorrect: true },
-                        { id: 2, text: 'Unlimited', isCorrect: false },
-                        { id: 3, text: '100 million', isCorrect: false },
+                        { id: 0, text: 'Private', isCorrect: false },
+                        { id: 1, text: 'Public', isCorrect: true },
+                        { id: 2, text: 'Hybrid', isCorrect: false },
+                        { id: 3, text: 'Consortium', isCorrect: false },
                     ],
                 }
             },
@@ -251,111 +246,155 @@ export const courses = [
             },
             {
                 id: '1-5',
-                title: 'Types of Blockchains',
-                description: 'In this course, you’ll explore the different types of blockchains and their real-world uses.',
-                image: require('../assets/trophy/coineasy/blockchain.webp'),
+                title: 'What is Bitcoin?',
+                description: 'In this course, you will learn what Bitcoin is, how it works, and why it is important.',
+                image: require('../assets/trophy/coineasy/bitcoin.webp'),
                 points: 60,
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "Public Blockchains",
-                        description: "A public blockchain is an open network where anyone can join without restrictions, verify transactions, and view the entire history publicly, making it fully decentralized; examples include Bitcoin and Ethereum.",
+                        title: "The First Cryptocurrency",
+                        description: "Bitcoin is the first cryptocurrency, created in 2009 to let people send money directly to each other without banks, and in 2010 it was famously used to buy two pizzas for 10,000 BTC — the first real-world Bitcoin purchase.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/blockchain_page1.webp')
+                        image: require('../assets/trophy/coineasy/bitcoin_page1.webp')
                     },
                     {
-                        title: "Private Blockchains",
-                        description: "A private blockchain is a closed network where only authorized individuals or organizations can join, often controlled by a single entity and used for business operations that require privacy, such as Corda or Ripple.",
+                        title: "How It Works",
+                        description: "Bitcoin transactions are recorded on a public blockchain and verified by a network of computers through a process called mining.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/blockchain_page2.webp')
+                        image: require('../assets/trophy/coineasy/bitcoin_page2.webp')
                     },
                     {
-                        title: "Hybrid & Consortium",
-                        description: "A consortium blockchain is a hybrid that combines features of public and private blockchains, managed by a group of organizations that share data while limiting access to approved participants, with examples like Hyperledger.",
+                        title: "Limited Supply",
+                        description: "Only 21 million Bitcoins will ever exist, which makes it scarce and one reason why people see it as valuable.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/blockchain_page3.webp')
+                        image: require('../assets/trophy/coineasy/bitcoin_page3.webp')
                     },
                 ],
                 question: {
-                    question: "Bitcoin runs on which type of blockchain?",
+                    question: "What is the maximum supply of Bitcoin?",
                     options: [
-                        { id: 0, text: 'Private', isCorrect: false },
-                        { id: 1, text: 'Public', isCorrect: true },
-                        { id: 2, text: 'Hybrid', isCorrect: false },
-                        { id: 3, text: 'Consortium', isCorrect: false },
+                        { id: 0, text: '10 million', isCorrect: false },
+                        { id: 1, text: '21 million', isCorrect: true },
+                        { id: 2, text: 'Unlimited', isCorrect: false },
+                        { id: 3, text: '100 million', isCorrect: false },
                     ],
                 }
             },
             {
                 id: '1-6',
-                title: 'How Does Blockchain Work?',
-                description: 'In this course, you will learn how blockchain records, links, and secures information.',
-                image: require('../assets/trophy/coineasy/work.webp'),
+                title: 'Who is Satoshi Nakamoto?',
+                description: 'In this course, you will learn about the mysterious creator of Bitcoin and the impact they left on the world.',
+                image: require('../assets/trophy/coineasy/satoshi.webp'),
                 points: 60,
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "Blocks and Transactions",
-                        description: "A blockchain stores information in digital blocks, each containing transaction details, a time stamp, and a unique code called a hash.",
+                        title: "The Creator",
+                        description: "Satoshi Nakamoto is the anonymous person or group who created Bitcoin and published its whitepaper in 2008.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/work_page1.webp')
+                        image: require('../assets/trophy/coineasy/satoshi_page1.webp')
                     },
                     {
-                        title: "Linking Blocks",
-                        description: "Each new block includes the hash of the previous block, creating a chain that makes it easy to detect and prevent tampering.",
+                        title: "The Disappearance",
+                        description: "After launching Bitcoin in 2009 and communicating with early developers, Satoshi stopped all public activity in 2011 and has never been heard from again.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/work_page2.webp')
+                        image: require('../assets/trophy/coineasy/satoshi_page2.webp')
                     },
                     {
-                        title: "Consensus Mechanisms",
-                        description: "Before a block is added, many computers on the network check and agree that the information is correct, using a process called consensus.",
+                        title: "The Mystery",
+                        description: "No one knows Satoshi’s true identity, and their Bitcoin wallet — holding over 1 million BTC — has never been moved, adding to the mystery.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/work_page3.webp')
+                        image: require('../assets/trophy/coineasy/satoshi_page3.webp')
                     },
                 ],
                 question: {
-                    question: "Which process ensures that transactions on a blockchain are valid?",
+                    question: "Satoshi Nakamoto is:",
                     options: [
-                        { id: 0, text: 'Consensus mechanism', isCorrect: true },
-                        { id: 1, text: 'Web hosting', isCorrect: false },
-                        { id: 2, text: 'File sharing', isCorrect: false },
-                        { id: 3, text: 'Central banking', isCorrect: false },
+                        { id: 0, text: 'The creator of Bitcoin', isCorrect: true },
+                        { id: 1, text: 'A famous singer', isCorrect: false },
+                        { id: 2, text: 'A government agency', isCorrect: false },
+                        { id: 3, text: 'A crypto exchange', isCorrect: false },
                     ],
                 }
             },
             {
                 id: '1-7',
-                title: 'What is Blockchain?',
-                description: 'In this course, you’ll get an introduction to blockchain technology and why it’s transforming the world.',
-                image: require('../assets/trophy/coineasy/what.webp'),
+                title: 'What is Ethereum?',
+                description: 'In this course, you will learn what a crypto wallet is, why you need one, and the different types that exist.',
+                image: require('../assets/trophy/coineasy/ethereum.webp'),
                 points: 60,
                 enrolled: 12000,
                 pages: [
                     {
-                        title: "Understanding Blockchain",
-                        description: "Blockchain is a type of database that stores information in blocks linked together in a chain. Once data is recorded, it’s extremely difficult to change — making it secure and transparent.",
+                        title: "Beyond Digital Money",
+                        description: "Ethereum is a blockchain launched in 2015 that not only supports digital money but also allows developers to build apps and programs directly on the network.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/what_page1.webp')
+                        image: require('../assets/trophy/coineasy/ethereum_page1.webp')
                     },
                     {
-                        title: "Why Blockchain Matters",
-                        description: "Because it’s decentralized, no single person or company controls it. Anyone can participate, verify transactions, and trust the system without relying on a middleman.",
+                        title: "Smart Contracts",
+                        description: "It introduced smart contracts, which are programs that automatically run when certain conditions are met, enabling services like DeFi and NFTs.",
                         bottomDescription: "",
-                        image: require('../assets/trophy/coineasy/what_page1.webp')
+                        image: require('../assets/trophy/coineasy/ethereum_page2.webp')
+                    },
+                    {
+                        title: "The Currency",
+                        description: "Ethereum’s native cryptocurrency is called Ether (ETH), and it is used to pay for transactions, run apps, and interact with smart contracts on the network.",
+                        bottomDescription: "",
+                        image: require('../assets/trophy/coineasy/ethereum_page3.webp')
                     },
                 ],
                 question: {
-                    question: "Blockchain is best described as:",
+                    question: "What is the native cryptocurrency of Ethereum?",
                     options: [
-                        { id: 0, text: 'A type of social media', isCorrect: false },
-                        { id: 1, text: 'A decentralized digital ledger', isCorrect: true },
-                        { id: 2, text: 'A centralized database', isCorrect: false },
-                        { id: 3, text: 'A type of cryptocurrency', isCorrect: false },
+                        { id: 0, text: 'ETH', isCorrect: true },
+                        { id: 1, text: 'BTC', isCorrect: false },
+                        { id: 2, text: 'SOL', isCorrect: false },
+                        { id: 3, text: 'DOGE', isCorrect: false },
                     ],
                 }
             },
             {
                 id: '1-8',
+                title: 'What is a Crypto Wallet?',
+                description: 'In this course, you will learn what a crypto wallet is, why you need one, and the different types that exist.',
+                image: require('../assets/trophy/coineasy/crypto_wallet.webp'),
+                points: 60,
+                enrolled: 12000,
+                pages: [
+                    {
+                        title: "The Definition",
+                        description: "A crypto wallet is a tool, either an app or a physical device, that stores the private keys you need to access and send your cryptocurrency.",
+                        bottomDescription: "",
+                        image: require('../assets/trophy/coineasy/crypto_wallet_page1.webp')
+                    },
+                    {
+                        title: "How It Works",
+                        description: "Instead of storing coins like a physical wallet, it stores your private keys, which prove your ownership of cryptocurrency on the blockchain.",
+                        bottomDescription: "",
+                        image: require('../assets/trophy/coineasy/crypto_wallet_page2.webp')
+                    },
+                    {
+                        title: "Wallet Types",
+                        description: "There are hardware wallets, which are physical devices that store keys offline, software wallets, which are apps or programs connected to the internet, hot wallets, which stay online for quick access, and cold wallets, which remain offline for stronger security.",
+                        bottomDescription: "",
+                        image: require('../assets/trophy/coineasy/crypto_wallet_page3.webp')
+                    },
+                ],
+                question: {
+                    question: "Which wallet type stays completely offline for maximum security?",
+                    options: [
+                        { id: 0, text: 'Hot wallet', isCorrect: false },
+                        { id: 1, text: 'Cold wallet', isCorrect: true },
+                        { id: 2, text: 'Software wallet', isCorrect: false },
+                        { id: 3, text: 'Hardware wallet', isCorrect: false },
+                    ],
+                }
+            },
+
+            {
+                id: '1-9',
                 title: 'What is a Crypto Exchange?',
                 description: 'In this course, you will learn what a crypto exchange is, how it works, and the difference between centralized and decentralized exchanges.',
                 image: require('../assets/trophy/coineasy/exchange.webp'),
@@ -388,6 +427,80 @@ export const courses = [
                         { id: 1, text: 'Decentralized exchange', isCorrect: true },
                         { id: 2, text: 'Stock exchange', isCorrect: false },
                         { id: 3, text: 'Bank', isCorrect: false },
+                    ],
+                }
+            },
+            {
+                id: '1-10',
+                title: 'How to Keep Your Crypto Safe',
+                description: 'In this course, you will learn simple and effective ways to protect your cryptocurrency from theft and loss.',
+                image: require('../assets/trophy/coineasy/safe.webp'),
+                points: 60,
+                enrolled: 12000,
+                pages: [
+                    {
+                        title: "Use Secure Wallets",
+                        description: "Always store your crypto in a secure wallet, preferably a hardware or cold wallet, to keep your private keys safe from online attacks.",
+                        bottomDescription: "",
+                        image: require('../assets/trophy/coineasy/safe_page1.webp')
+                    },
+                    {
+                        title: "Protect Your Keys",
+                        description: "Never share your private keys or recovery phrases with anyone, and store them in a safe offline location that only you can access.",
+                        bottomDescription: "",
+                        image: require('../assets/trophy/coineasy/safe_page2.webp')
+                    },
+                    {
+                        title: "Beware of Scams",
+                        description: "Be cautious of phishing emails, fake websites, and suspicious links, and always double-check addresses before sending any crypto.",
+                        bottomDescription: "",
+                        image: require('../assets/trophy/coineasy/safe_page3.webp')
+                    },
+                ],
+                question: {
+                    question: "What is the most important thing to keep private in order to protect your crypto?",
+                    options: [
+                        { id: 0, text: 'Your wallet balance', isCorrect: false },
+                        { id: 1, text: 'Your private keys', isCorrect: true },
+                        { id: 2, text: 'Your transaction history', isCorrect: false },
+                        { id: 3, text: 'Your wallet app', isCorrect: false },
+                    ],
+                }
+            },
+            {
+                id: '1-11',
+                title: 'What is a Stablecoin?',
+                description: 'In this course, you will learn what a stablecoin is and why it is useful in crypto.',
+                image: require('../assets/trophy/coineasy/stablecoin.webp'),
+                points: 60,
+                enrolled: 12000,
+                pages: [
+                    {
+                        title: "The Definition",
+                        description: "A stablecoin is a type of cryptocurrency that is designed to keep its value stable, usually by being tied to something like the US dollar.",
+                        bottomDescription: "",
+                        image: require('../assets/trophy/coineasy/stablecoin_page1.webp')
+                    },
+                    {
+                        title: "How It Works",
+                        description: "For every stablecoin issued, there is usually a reserve of money or assets backing it, which helps maintain its price stability.",
+                        bottomDescription: "",
+                        image: require('../assets/trophy/coineasy/stablecoin_page2.webp')
+                    },
+                    {
+                        title: "Why It Matters",
+                        description: "Stablecoins are important because they let people trade, save, and move money in crypto without worrying about big price swings like Bitcoin or Ethereum.",
+                        bottomDescription: "",
+                        image: require('../assets/trophy/coineasy/stablecoin_page3.webp')
+                    },
+                ],
+                question: {
+                    question: "What makes a stablecoin “stable”?",
+                    options: [
+                        { id: 0, text: 'It has unlimited supply', isCorrect: false },
+                        { id: 1, text: 'It is backed by money or assets', isCorrect: true },
+                        { id: 2, text: 'It grows in value every year', isCorrect: false },
+                        { id: 3, text: 'It cannot be traded', isCorrect: false },
                     ],
                 }
             },
