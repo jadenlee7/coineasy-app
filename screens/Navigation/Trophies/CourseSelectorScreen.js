@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  Platform,
 } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
 import { useTailwind } from 'tailwind-rn';
@@ -19,6 +20,8 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function CourseSelectorScreen({ navigation, route }) {
     const { userData } = useContext(GlobalContext);
+    const tailwind = useTailwind();
+    const statusBarHeight = useStatusBarHeight();
 
     const { course } = route.params
     const sections = course.sections
@@ -27,15 +30,13 @@ export default function CourseSelectorScreen({ navigation, route }) {
 
     const sectionsWithProgress = sections.map(section => {
         const userSection = userCourse?.sections?.find(s => s.id === section.id);
+
         return {
             ...section,
-            progress: userSection?.progress ?? 0
+            progress: userSection?.progress ?? 0,
+            status: userSection?.status ?? 'not-started'
         };
     });
-
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const tailwind = useTailwind();
-    const statusBarHeight = useStatusBarHeight();
 
     const handleConfirm = () => {
         const selectedCourse = sectionsWithProgress[currentIndex];
@@ -56,47 +57,66 @@ export default function CourseSelectorScreen({ navigation, route }) {
 
     const renderItem = ({ item }) => {
         return(
-            <TouchableOpacity onPress={() => handleCardPress(item)} activeOpacity={0.8}>
-                <View style={styles.card}>
+            <TouchableOpacity 
+                onPress={() => handleCardPress(item)} 
+                activeOpacity={0.8}
+                style={{flex: 1}}
+                disabled={item.status === 'completed'}
+            >
+                <View style={[styles.card]}>
                     <View style={styles.imageWrapper}>
                         <Image 
                             source={item.image} 
-                            style={styles.image} 
-                            resizeMode="cover" 
+                            style={[styles.image, {opacity: item.status === 'completed' ? 0.6 : 1}]} 
+                            resizeMode="cover"
                         />
-                        <View style={[styles.overlay, {flexDirection:'row', alignItems:'flex-end', justifyContent:'flex-end',}]}>
+                        <View style={[styles.overlay, {flexDirection:'row', alignItems:'center', justifyContent:'center',opacity: item.status === 'completed' ? 0.6 : 1}]}>
                             <MultiplePeopleIcon color={'white'}/>
                             <Text style={styles.overlayText}>{item.enrolled.toLocaleString()}</Text>
                         </View>
                     </View>
 
-                    <Text style={{fontFamily: "GmarketMedium",fontSize: 18,marginVertical: 4,}}>{item.title}</Text>
-                    <Text style={{fontSize: 14,fontFamily: "GmarketMedium", color: '#555',marginBottom: 10,}}>{item.description}</Text>
-
-                    <View style={{position: 'absolute',bottom: 10,left:10, width: '100%',}}>
-                        <View style={styles.progressBarBackground}>
-                            <View style={[styles.progressBarFill, { width: `${(item.progress / item.pages.length) * 100}%` },]}/>
-                        </View>
-
-                        <View style={{display: 'flex', flexDirection:'row', justifyContent:'space-between',alignItems:'center',}}>
-                            <View style={{display: 'flex', flexDirection:'row', justifyContent:'center',alignItems:'center',}}>
-                                <Image
-                                    style={{width: 15, height: 15, marginRight: 5}}
-                                    resizeMode='contain'
-                                    source={require('../../../assets/trophy/trophy_icon_orange.png')}
-                                /> 
-                                <Text style={styles.progressText}>{item.points}</Text>
-                            </View>
-                            <View style={{}}>
-                                <Text>
-                                    <Text style={{ fontWeight: 'bold' }}>{item.progress}</Text>
-                                    <Text style={{ color: 'grey' }}>/</Text>
-                                    <Text style={{ color: 'grey' }}>{item.pages.length}</Text>
-                                </Text>
-                            </View>            
+                    <View style={{flex: 1, justifyContent: "space-between",}}>
+                        <View style={{flex: 1}}>
+                            <Text style={{opacity: item.status === 'completed' ? 0.5 : 1, fontFamily: "GmarketMedium",fontSize: 18,marginVertical: 4,}}>{item.title}</Text>
+                            <Text style={{opacity: item.status === 'completed' ? 0.5 : 1, fontSize: Platform.OS == 'ios' ? 16 : 15,lineHeight: 18, fontFamily: "GmarketMedium", color: '#555',marginVertical: 10,}}>{item.description}</Text>
                         </View>
                         
+                        <View style={{}}>
+
+                            {item.status != 'completed' ? (
+                                <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-evenly',gap: 10}}>
+                                    <View style={{flexDirection:'row', alignItems:'center',justifyContent:'center',}}>
+                                        <Image
+                                            style={{width: 20, height: 20, marginRight: 5}}
+                                            resizeMode='contain'
+                                            source={require('../../../assets/trophy/trophy_icon_orange.png')}
+                                        /> 
+                                        <Text style={styles.progressText}>{item.pages.length * 5}</Text>
+                                    </View>
+
+                                    <View style={[styles.progressBarBackground, {backgroundColor: item.progress > 0 ? '#eee' : ''}]}>
+                                        <View style={[styles.progressBarFill, { width: `${(item.progress / item.pages.length) * 100}%` },]}/>
+                                    </View>
+                                </View>
+                            ) : (
+                                <>
+                                    <Text style={{color:'#FF6B17',fontFamily:'GmarketMedium', opacity: 0.5}}>Completed!</Text>
+                                    <View style={{flexDirection:'row', alignItems:'center',justifyContent:'flex-start',opacity: 0.5}}>
+                                        <Image
+                                            style={{width: 20, height: 20, marginRight: 5}}
+                                            resizeMode='contain'
+                                            source={require('../../../assets/trophy/trophy_icon_orange.png')}
+                                        /> 
+                                        <Text style={styles.progressText}>{item.pages.length * 5}</Text>
+                                    </View>
+                                </>
+                            )}
+
+                            
+                        </View>
                     </View>
+
                 </View>
             </TouchableOpacity>
         )
@@ -116,7 +136,38 @@ export default function CourseSelectorScreen({ navigation, route }) {
                 ))}
             </View>
         );
-        };
+    };
+
+    const getInitialIndex = (sections) => {
+        // 1. Check if a course in in-progress status
+        const inProgressIndex = sections.findIndex(s => s.progress > 0 && s.progress < s.pages.length);
+        if (inProgressIndex !== -1) return inProgressIndex;
+
+        // 2. get the indexes
+        const completedIndices = sections
+            .map((s, idx) => (s.progress === s.pages.length ? idx : -1))
+            .filter(idx => idx !== -1);
+
+        if (completedIndices.length > 0) {
+            for (let i = 0; i < completedIndices.length - 1; i++) {
+                if (completedIndices[i + 1] > completedIndices[i] + 1) {
+                    return completedIndices[i] + 1;
+                }
+            }
+
+            const last = completedIndices[completedIndices.length - 1];
+            if (last + 1 < sections.length) return last + 1;
+
+            return last;
+        }
+
+        // 4. Else -> first course
+        return 0;
+    };
+
+    const initialIndex = getInitialIndex(sectionsWithProgress);
+
+    const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
     return (
         <View style={tailwind('flex flex-1 bg-white')}>
@@ -174,13 +225,13 @@ export default function CourseSelectorScreen({ navigation, route }) {
                     lineHeight: 20,
                 }]}
             >
-                What Section do you want?
+                What Course do you want?
             </Text>
 
             <Carousel
                 loop={false}
                 width={screenWidth}
-                height={screenHeight/1.8}
+                height={screenHeight/1.6}
                 autoPlay={false}
                 data={sectionsWithProgress}
                 scrollAnimationDuration={500}
@@ -188,13 +239,24 @@ export default function CourseSelectorScreen({ navigation, route }) {
                 renderItem={renderItem}
                 style={{ alignSelf: 'center',marginTop: -40,}}
                 mode="parallax"
+                defaultIndex={initialIndex}
             />
 
             <PaginationDots length={sectionsWithProgress.length} activeIndex={currentIndex} />
 
             <TouchableOpacity 
-                style={{backgroundColor: '#FF6E31', paddingVertical: 14, borderRadius: 50,position: 'absolute',bottom: 30, width: '90%',alignSelf:'center'}} 
+                style={{
+                    backgroundColor: '#FF6E31', 
+                    paddingVertical: 14, 
+                    borderRadius: 50,
+                    position: 'absolute',
+                    bottom: 30, 
+                    width: '90%',
+                    alignSelf:'center',
+                    opacity: sectionsWithProgress[currentIndex].status === 'completed' ? 0.6 : 1
+                }} 
                 onPress={handleConfirm}
+                disabled={sectionsWithProgress[currentIndex].status == 'completed'}
             >
                 <Text style={{color: 'white',fontWeight: 'bold',fontSize: 16,textAlign:'center'}}>Ok, Let’s do this.</Text>
             </TouchableOpacity>
@@ -215,6 +277,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   card: {
+    flex: 1,
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 16,
@@ -231,6 +294,7 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: 230,
+    borderRadius: 12
   },
   overlay: {
     position: 'absolute',
@@ -250,9 +314,8 @@ const styles = StyleSheet.create({
   },
   progressBarBackground: {
     height: 6,
-    backgroundColor: '#eee',
     borderRadius: 3,
-    marginBottom: 6,
+    width: '80%'
   },
   progressBarFill: {
     height: 6,
@@ -260,7 +323,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   progressText: {
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#555',
   },

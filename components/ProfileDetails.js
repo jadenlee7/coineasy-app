@@ -33,6 +33,7 @@ import ProfileReposts from '../screens/Navigation/Profile/ProfileReposts'
 import { CheckIcon,CloseIcon,CopyIconBadge,FacebookIcon,InstagramIcon,LinkIcon,NotificationsIcon,SettingsIcon,TelegramIcon,TwitterIcon } from "./Icons";
 import moment from "moment";
 import Svg, { Circle } from "react-native-svg";
+import { courses } from "../data/courses";
 
 const TabBarHeight = 50;
 const IndicatorWidth = 50
@@ -52,7 +53,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         modalProfileRef,
         addressCopied, setAddressCopied
     } = useContext(GlobalContext);
-    const tailwind = useTailwind();
+    const tailwind = useTailwind();    
 
     const snapPoints = useMemo(() => ['75%','75%'], []);
     const snapPointsSmall = useMemo(() => ['60%','60%'], []);
@@ -253,50 +254,131 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         }
     }
 
-  const trophies = [
-    {
-        id: 1,
-        name: 'Starter',
-        image_icon: require('../assets/trophy/trophy_bitcoin.png'),
-        color: '#FF6B35',
-        progress: 100, // Complété
-    },
-    {
-        id: 2,
-        name: 'Professor',
-        image_icon: require('../assets/trophy/trophy_education.png'),
-        color: '#333',
-        progress: 75, // En cours
-    },
-    {
-        id: 3,
-        name: 'Student',
-        image_icon: require('../assets/trophy/trophy_book_gray.png'),
-        color: '#333',
-        progress: 56, // Non commencé
-    },
-    {
-        id: 4,
-        name: 'Orange Collector',
-        image_icon: require('../assets/trophy/trophy_orange_gray.png'),
-        color: '#333',
-        progress: 0, // Non commencé
-    },
-  ];
+    const fullCourses = courses
+        .map(course => {
+            let userCourse = null
+            if(userData && Array.isArray(userData.courses)){
+                userCourse = userData.courses.find(c => c.id === course.id);
+            }
+
+            const completedSections = userCourse?.sections?.filter(s => s.status === 'completed') ?? [];
+
+            return {
+                ...course,
+                status: userCourse?.status || 'not-started',
+                progress: completedSections.length,
+                progressText: completedSections.length == course?.sections?.length ? 'Completed' : userCourse?.sections ? userCourse?.sections?.length+' in progress' : null
+            };
+        })
+
+    const result = fullCourses.map(item => {
+        const totalSections = item.sections.length;
+        const progress = item.progress;
+
+        return {
+            id: item.id,
+            category: item.category,
+            title: item.title,
+            progress,
+            totalSections,
+        };
+    });
+
+    const hasFinishedProjectCourse = result.some(
+        item => item.category === "project" && item.progress === item.totalSections
+    );
+
+    // Trophies rules (other than Beginner/Intermediate/Advanced)
+    const rules = {
+        'Course Finisher': () => hasFinishedProjectCourse.length >= 1 ? 1 : 0,
+        'Project Explorer': () => hasFinishedProjectCourse.length >= 3 ? 1 : 0,
+        'Project Master': () => hasFinishedProjectCourse.length >= 6 ? 1 : 0,
+        'Orange Spark': () => userData?.oranges?.count >= 100 ? 1 : 0,
+        'Orange Collector': () => userData?.oranges?.count >= 500 ? 1 : 0,
+        'Orange Tycoon': () => userData?.oranges?.count >= 2000 ? 1 : 0,
+    };
+
+    const mapping = {
+        'First Stepper': 'Beginner',
+        'Level Climber': 'Intermediate',
+        'Web3 Scholar': 'Advanced',
+    };
+
+    const trophies = [
+        {
+            name: 'First Stepper',
+            image_icon: require('../assets/trophy/profile_trophies/first_stepper.png'),
+        },
+        {
+            name: 'Level Climber',
+            image_icon: require('../assets/trophy/profile_trophies/level_climber.png'),
+        },
+        {
+            name: 'Web3 Scholar',
+            image_icon: require('../assets/trophy/profile_trophies/web3_scholar.png'),
+        },
+        {
+            name: 'Course Finisher',
+            image_icon: require('../assets/trophy/profile_trophies/course_finisher.png'),
+        },
+        {
+            name: 'Project Explorer',
+            image_icon: require('../assets/trophy/profile_trophies/project_explorer.png'),
+        },
+        {
+            name: 'Project Master',
+            image_icon: require('../assets/trophy/profile_trophies/project_master.png'),
+        },
+        {
+            name: 'Orange Spark',
+            image_icon: require('../assets/trophy/profile_trophies/orange_spark.png'),
+        },
+        {
+            name: 'Orange Collector',
+            image_icon: require('../assets/trophy/profile_trophies/orange_collector.png'),
+        },
+        {
+            name: 'Orange Tycoon',
+            image_icon: require('../assets/trophy/profile_trophies/orange_tycoon.png'),
+        },
+    ];
+
+    // Data merge
+    const trophiesWithProgress = trophies.map(trophy => {
+        let progress = 0;
+        let totalSections = 1;
+
+        if (mapping[trophy.name]) {
+            // Beginner / Intermediate / Advanced
+            const related = result.find(item => item.title === mapping[trophy.name]);
+            if (related) {
+                progress = related.progress;
+                totalSections = related.totalSections;
+            }
+        } else {
+            progress = rules[trophy.name]();
+        }
+
+        return {
+            ...trophy,
+            progress,
+            totalSections,
+        };
+    });
 
     const renderTrophy = (trophy) => {
-        const isCompleted = trophy.progress === 100;
+        const isCompleted = trophy.progress === trophy.totalSections;
         const hasProgress = trophy.progress > 0;
 
         const radius = 30;
         const strokeWidth = 3;
         const circumference = 2 * Math.PI * radius;
         const strokeDasharray = circumference;
-        const strokeDashoffset = circumference - (trophy.progress / 100) * circumference;
+        const strokeDashoffset = circumference - (trophy.progress / trophy.totalSections) * circumference;
 
         return (
             <TouchableOpacity
-                key={trophy.id}
+                key={trophy.name}
                 style={styles.trophyContainer}
                 activeOpacity={0.7}
             >
@@ -660,12 +742,12 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         <View style={styles.countContainer}>
                             <Text style={[styles.title, {fontFamily: "GmarketBold",}]}>Trophies</Text>
                             <Text style={{marginLeft: -5}}>
-                                <Text style={{color: '#FF6B17'}}>{userData?.completed_trophies ?? 0}</Text>
-                                <Text style={{color: 'gray'}}>/12</Text>
+                                <Text style={{color: '#FF6B17'}}>{trophiesWithProgress.filter(t => t.progress === t.totalSections).length}</Text>
+                                <Text style={{color: 'gray'}}>/{trophiesWithProgress.length}</Text>
                             </Text>
                         </View>
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('TrophiePresentation')}
+                            onPress={() => navigation.navigate('TrophiePresentation', {"data": trophiesWithProgress})}
                         >
                             <Text style={{fontFamily: "GmarketMedium",fontSize: 12,color: '#FF6B35'}}>Detail</Text>
                         </TouchableOpacity>
@@ -676,7 +758,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.trophiesContainer}
                     >
-                        {trophies.map(renderTrophy)}
+                        {trophiesWithProgress.map(renderTrophy)}
                     </ScrollView>
                 </View>
 

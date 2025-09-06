@@ -522,7 +522,7 @@ export const courses = [
                 image: require('../assets/trophy/trophy_ninja_bg_image.png'),
                 points: 60,
                 enrolled: 12000,
-                pages: Array.from({ length: 14 }, () => ({ ...courseObject })),
+                pages: Array.from({ length: 3 }, () => ({ ...courseObject })),
                 question: {
                     question: "What is this?",
                     options: [
@@ -540,7 +540,7 @@ export const courses = [
                 image: require('../assets/trophy/trophy_ninja_bg_image.png'),
                 points: 60,
                 enrolled: 12000,
-                pages: Array.from({ length: 14 }, () => ({ ...courseObject })),
+                pages: Array.from({ length: 3 }, () => ({ ...courseObject })),
                 question: {
                     question: "What is this?",
                     options: [
@@ -558,7 +558,7 @@ export const courses = [
                 image: require('../assets/trophy/trophy_ninja_bg_image.png'),
                 points: 60,
                 enrolled: 12000,
-                pages: Array.from({ length: 14 }, () => ({ ...courseObject })),
+                pages: Array.from({ length: 3 }, () => ({ ...courseObject })),
                 question: {
                     question: "What is this?",
                     options: [
@@ -576,7 +576,7 @@ export const courses = [
                 image: require('../assets/trophy/trophy_ninja_bg_image.png'),
                 points: 60,
                 enrolled: 12000,
-                pages: Array.from({ length: 14 }, () => ({ ...courseObject })),
+                pages: Array.from({ length: 3 }, () => ({ ...courseObject })),
                 question: {
                     question: "What is this?",
                     options: [
@@ -605,7 +605,7 @@ export const courses = [
                 image: require('../assets/trophy/trophy_ninja_bg_image.png'),
                 points: 60,
                 enrolled: 12000,
-                pages: Array.from({ length: 14 }, () => ({ ...courseObject })),
+                pages: Array.from({ length: 3 }, () => ({ ...courseObject })),
                 question: {
                     question: "What is this?",
                     options: [
@@ -623,7 +623,7 @@ export const courses = [
                 image: require('../assets/trophy/trophy_ninja_bg_image.png'),
                 points: 60,
                 enrolled: 12000,
-                pages: Array.from({ length: 14 }, () => ({ ...courseObject })),
+                pages: Array.from({ length: 3 }, () => ({ ...courseObject })),
                 question: {
                     question: "What is this?",
                     options: [
@@ -641,7 +641,7 @@ export const courses = [
                 image: require('../assets/trophy/trophy_ninja_bg_image.png'),
                 points: 60,
                 enrolled: 12000,
-                pages: Array.from({ length: 14 }, () => ({ ...courseObject })),
+                pages: Array.from({ length: 3 }, () => ({ ...courseObject })),
                 question: {
                     question: "What is this?",
                     options: [
@@ -659,7 +659,7 @@ export const courses = [
                 image: require('../assets/trophy/trophy_ninja_bg_image.png'),
                 points: 60,
                 enrolled: 12000,
-                pages: Array.from({ length: 14 }, () => ({ ...courseObject })),
+                pages: Array.from({ length: 3 }, () => ({ ...courseObject })),
                 question: {
                     question: "What is this?",
                     options: [
@@ -805,7 +805,7 @@ export const courses = [
         id: 7,
         title: 'Flock.io',
         participants: '12,000',
-        description: 'The peak of EVM performance. Designed for builders to scale and earn.',
+        description: 'Decentralized AI network for collaborative training with data privacy.',
         reward: 200,
         image_icon: require('../assets/trophy/trophy_flock.png'),
         category: 'project',

@@ -37,7 +37,30 @@ const TrophieProject = () => {
                 progress: completedSections.length,
                 progressText: completedSections.length == course?.sections?.length ? 'Completed' : userCourse?.sections ? userCourse?.sections?.length+' in progress' : null
             };
-        });  
+        })        
+        .sort((a, b) => {
+            // order of priority
+            const statusPriority = {
+                'in-progress': 1,
+                'not-started': 2,
+                'completed': 3,
+            };
+
+            const statusDiff = statusPriority[a.status] - statusPriority[b.status]; 
+            if (statusDiff !== 0) return statusDiff;
+
+            // si les statuts sont les mêmes → trier par "ordre pédagogique"
+            // Suppose que tu as un champ `level` = 'Beginner' | 'Intermediate' | 'Advanced'
+            const levelPriority = {
+                Beginner: 1,
+                Intermediate: 2,
+                Advanced: 3,
+            };
+
+            return (
+                (levelPriority[a.title] ?? 99) - (levelPriority[b.title] ?? 99)
+            );
+        });
 
     const tabs = ['All', 'Completed', 'In progress', 'Not started'];
 
@@ -93,65 +116,72 @@ const TrophieProject = () => {
 
                 {/* Course Cards */}
                 <View style={styles.courseContainer}>
-                    {filteredCourses.map((course) => (
-                        <TouchableOpacity 
-                            key={course.id} 
-                            style={styles.courseCard}
-                            onPress={() => navigation.navigate('CourseSelector', { course })}
-                        >
-                            <View style={styles.cardHeader}>
-                                <View style={styles.courseInfo}>
-                                    <View style={{backgroundColor: course.title == 'Notcoin' ? '#000' : '#F1F4F9', padding: 18, borderRadius: 50, marginRight: 5}}>
-                                        <Image
-                                            style={{width: 40,height: 40}}
-                                            resizeMode='contain'
-                                            source={course.image_icon}
-                                            defaultSource={course.image_icon}
-                                        />                        
-                                    </View>
-                                <View style={styles.courseDetails}>
-                                    <View style={styles.titleRow}>
-                                        <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
-                                            <Text style={styles.courseTitle}>{course.title}</Text>
-                                            <Text style={styles.courseProgress}>{course.progress} / {course.sections.length}</Text>
-                                        </View>
-                                        <View style={{flexDirection:'row', alignItems:'flex-end', justifyContent:'flex-end',}}>
-                                            <MultiplePeopleIcon color={'#959595'}/>
-                                            <Text style={styles.participants}>{course.participants}</Text>
-                                        </View>
-                                    </View>
-                                    <Text style={styles.courseDescription}>
-                                        {course.description}
-                                    </Text>
-                                </View>
-                                </View>
-                            </View>
+                    {filteredCourses.map((course) => {
 
-                            <View style={styles.cardFooter}>
-                                <View style={styles.rewardContainer}>
-                                    <Text style={styles.rewardLabel}>Total Reward</Text>
-                                    <View style={styles.rewardValue}>
-                                        <Image
-                                            style={{width: 18,height: 18}}
-                                            resizeMode='contain'
-                                            source={require('../../../assets/trophy/trophy_icon_project.png')}
-                                            defaultSource={require('../../../assets/trophy/trophy_icon_project.png')}
-                                        />                        
-                                        <Text style={styles.rewardAmount}>{course.reward}</Text>
-                                    </View>
-                                </View>
-                                
-                                {course.progressText && (
-                                    <View style={styles.progressIndicator}>
-                                        <View style={[styles.progressDot, { backgroundColor: getStatusColor(course.status) }]} />
-                                        <Text style={[styles.progressText, { color: getStatusColor(course.status) }]}>
-                                            {course.progressText}
+                        const totalReward = course.sections.reduce((acc, section) => {
+                            return acc + (section.pages?.length * 5 || 0);
+                        }, 0);
+
+                        return(
+                            <TouchableOpacity 
+                                key={course.id} 
+                                style={styles.courseCard}
+                                onPress={() => navigation.navigate('CourseSelector', { course })}
+                            >
+                                <View style={styles.cardHeader}>
+                                    <View style={styles.courseInfo}>
+                                        <View style={{backgroundColor: course.title == 'Notcoin' ? '#000' : '#F1F4F9', padding: 18, borderRadius: 50, marginRight: 5}}>
+                                            <Image
+                                                style={{width: 40,height: 40}}
+                                                resizeMode='contain'
+                                                source={course.image_icon}
+                                                defaultSource={course.image_icon}
+                                            />                        
+                                        </View>
+                                    <View style={styles.courseDetails}>
+                                        <View style={styles.titleRow}>
+                                            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
+                                                <Text style={styles.courseTitle}>{course.title}</Text>
+                                                <Text style={styles.courseProgress}>{course.progress} / {course.sections.length}</Text>
+                                            </View>
+                                            <View style={{flexDirection:'row', alignItems:'flex-end', justifyContent:'flex-end',}}>
+                                                <MultiplePeopleIcon color={'#959595'}/>
+                                                <Text style={styles.participants}>{course.participants}</Text>
+                                            </View>
+                                        </View>
+                                        <Text style={styles.courseDescription}>
+                                            {course.description}
                                         </Text>
                                     </View>
-                                )}
-                            </View>
-                        </TouchableOpacity>
-                    ))}
+                                    </View>
+                                </View>
+
+                                <View style={styles.cardFooter}>
+                                    <View style={styles.rewardContainer}>
+                                        <Text style={styles.rewardLabel}>Total Reward</Text>
+                                        <View style={styles.rewardValue}>
+                                            <Image
+                                                style={{width: 18,height: 18}}
+                                                resizeMode='contain'
+                                                source={require('../../../assets/trophy/trophy_icon_project.png')}
+                                                defaultSource={require('../../../assets/trophy/trophy_icon_project.png')}
+                                            />                        
+                                            <Text style={styles.rewardAmount}>{totalReward}</Text>
+                                        </View>
+                                    </View>
+                                    
+                                    {course.progressText && (
+                                        <View style={styles.progressIndicator}>
+                                            <View style={[styles.progressDot, { backgroundColor: getStatusColor(course.status) }]} />
+                                            <Text style={[styles.progressText, { color: getStatusColor(course.status) }]}>
+                                                {course.progressText}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                            </TouchableOpacity>
+                        )
+                    })}
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -230,10 +260,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   courseTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: Platform.OS == 'ios' ? 16 : 14,
     color: '#111827',
     marginRight: 8,
+    fontFamily: "GmarketBold",
   },
   courseProgress: {
     fontSize: 14,

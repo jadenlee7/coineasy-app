@@ -78,7 +78,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                                         {/* <View style={{height: Platform.OS == 'ios' ? 0 : 55 + statusBarHeight, width: '100%', backgroundColor: 'red',}} /> */}
 
                                         <PagerView 
-                                            style={{height: 100, width: '100%', marginTop: Platform.OS == 'ios' ? -28 : 80 + statusBarHeight + 80 + statusBarHeight}} 
+                                            style={{height: 100, width: '100%', marginTop: Platform.OS == 'ios' ? -48 : 60 + statusBarHeight}} 
                                             initialPage={0}
                                             orientation='horizontal'
                                             onPageSelected={(props) => setIndexSwiper(props.nativeEvent.position)}

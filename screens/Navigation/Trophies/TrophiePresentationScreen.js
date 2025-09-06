@@ -1,6 +1,6 @@
 //import liraries
 import React, { Component, useContext, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Dimensions, Platform } from 'react-native';
 import HeaderImage from '../../../components/HeaderImage';
 import * as Haptics from 'expo-haptics';
 import useStatusBarHeight from '../../../hooks/useStatusBarHeight';
@@ -13,65 +13,78 @@ const {width, height} = Dimensions.get('window')
 
 const TrophiePresentation = ({ navigation, route }) => {
 
+    const { data } = route.params
     const { userData } = useContext(GlobalContext);
     const statusBarHeight = useStatusBarHeight();
 
     const [openAchievement, setOpenAchievement] = useState(null)
 
-    const achievements = [
-        {
-            id: 1,
-            title: 'Starter',
-            description: 'Start Coineasy',
-            image: require('../../../assets/trophy/trophy_bitcoin.png'),
-            progress: 7,
-            total: 12
-        },
-        {
-            id: 2,
-            title: 'Professor',
-            description: 'Complete professional education',
-            image: require('../../../assets/trophy/trophy_education.png'),
-            progress: 3,
-            total: 3
-        },
-        {
-            id: 3,
-            title: 'Student',
-            description: 'Complete Basic education',
-            image: require('../../../assets/trophy/trophy_book_gray.png'),
-            progress: 3,
-            total: 4
-        },
-        {
-            id: 4,
-            title: 'Orange Collector',
-            description: 'get 1000 oranges',
-            image: require('../../../assets/trophy/trophy_orange_gray.png'),
-            progress: 1,
-            total: 4
-        },
-        {
-            id: 5,
-            title: 'Student',
-            description: 'Complete Basic education',
-            image: require('../../../assets/trophy/trophy_book_gray.png'),
-            progress: 2,
-            total: 4
-        },
-        {
-            id: 6,
-            title: 'Orange Collector',
-            description: 'get 1000 oranges',
-            image: require('../../../assets/trophy/trophy_orange_gray.png'),
-            progress: 3,
-            total: 5
-        },
-    ];
+    // const achievements = [
+    //     {
+    //         id: 1,
+    //         title: 'Starter',
+    //         description: 'Start Coineasy',
+    //         image: require('../../../assets/trophy/trophy_bitcoin.png'),
+    //         progress: 7,
+    //         total: 12
+    //     },
+    //     {
+    //         id: 2,
+    //         title: 'Professor',
+    //         description: 'Complete professional education',
+    //         image: require('../../../assets/trophy/trophy_education.png'),
+    //         progress: 3,
+    //         total: 3
+    //     },
+    //     {
+    //         id: 3,
+    //         title: 'Student',
+    //         description: 'Complete Basic education',
+    //         image: require('../../../assets/trophy/trophy_book_gray.png'),
+    //         progress: 3,
+    //         total: 4
+    //     },
+    //     {
+    //         id: 4,
+    //         title: 'Orange Collector',
+    //         description: 'get 1000 oranges',
+    //         image: require('../../../assets/trophy/trophy_orange_gray.png'),
+    //         progress: 1,
+    //         total: 4
+    //     },
+    //     {
+    //         id: 5,
+    //         title: 'Student',
+    //         description: 'Complete Basic education',
+    //         image: require('../../../assets/trophy/trophy_book_gray.png'),
+    //         progress: 2,
+    //         total: 4
+    //     },
+    //     {
+    //         id: 6,
+    //         title: 'Orange Collector',
+    //         description: 'get 1000 oranges',
+    //         image: require('../../../assets/trophy/trophy_orange_gray.png'),
+    //         progress: 3,
+    //         total: 5
+    //     },
+    // ];
+
+    const mapping = {
+        'First Stepper': 'Complete the Beginner course section.',
+        'Level Climber': 'Complete the Intermediate course section.',
+        'Web3 Scholar': 'Complete the Advanced course section.',
+        'Course Finisher': 'Complete any single course in EASYEDU.',
+        'Project Explorer': 'Complete 3 or more Web3 projects.',
+        'Project Master': 'Complete 6 or more Web3 projects.',
+        'Orange Spark': 'Earn a total of 100 Orange Points.',
+        'Orange Collector': 'Earn a total of 500 Orange Points.',
+        'Orange Tycoon': 'Earn a total of 2000 Orange Points.',
+    };
 
     const AchievementItem = (trophy) => {
         const current = trophy.progress
-        const total = trophy.total
+        const total = trophy.totalSections
         const percent = (current / total) * 100;
 
         const isCompleted = percent === 100;
@@ -82,15 +95,16 @@ const TrophiePresentation = ({ navigation, route }) => {
                 onPress={() => {Haptics.selectionAsync();setOpenAchievement(trophy)}}
             >
                 {renderTrophy(trophy)}
-                <Text style={styles.description}>{trophy.description}</Text>
-                <Text style={styles.progress}>{trophy.progress}/{trophy.total}</Text>
+
+                <Text style={styles.description}>{mapping[trophy.name]}</Text>
+                <Text style={styles.progress}>{trophy.progress}/{trophy.totalSections}</Text>
             </TouchableOpacity>
         )
     }
 
     const renderTrophy = (trophy) => {
         const current = trophy.progress
-        const total = trophy.total
+        const total = trophy.totalSections
         const percent = (current / total) * 100;
 
         const hasProgress = percent > 0;
@@ -103,7 +117,6 @@ const TrophiePresentation = ({ navigation, route }) => {
 
         return (
             <TouchableOpacity
-                key={trophy.id}
                 style={styles.trophyContainer}
                 activeOpacity={0.7}
             >
@@ -135,8 +148,8 @@ const TrophiePresentation = ({ navigation, route }) => {
                             <Image
                                 style={{width: 40,height: 40}}
                                 resizeMode='contain'
-                                source={trophy.image}
-                                defaultSource={trophy.image}
+                                source={trophy.image_icon}
+                                defaultSource={trophy.image_icon}
                             />  
                         </View>
                     </View>
@@ -201,15 +214,15 @@ const TrophiePresentation = ({ navigation, route }) => {
                 <View style={styles.countContainer}>
                     <Text style={[styles.title, {fontFamily: "GmarketBold",}]}>Trophies</Text>
                     <Text style={{marginLeft: -5}}>
-                        <Text style={{color: '#FF6B17'}}>{userData.completed_trophies ?? 0}</Text>
-                        <Text style={{color: 'gray'}}>/12</Text>
+                        <Text style={{color: '#FF6B17'}}>{data.filter(t => t.progress === t.totalSections).length}</Text>
+                        <Text style={{color: 'gray'}}>/{data.length}</Text>
                     </Text>
                 </View>
 
                 <FlatList
-                    data={achievements}
+                    data={data}
                     renderItem={({ item }) => <AchievementItem {...item} />}
-                    keyExtractor={item => item.id}
+                    keyExtractor={item => item.name}
                     numColumns={2}
                     style={{paddingHorizontal: 5}}
                     ListFooterComponent={() => <View style={{height: 100}} />}
@@ -230,15 +243,15 @@ const TrophiePresentation = ({ navigation, route }) => {
 
                     <View style={{flexDirection: 'column', alignItems: 'center', justifyContent:'space-between',paddingBottom: 30, paddingTop: 30, height:'100%'}}>
                         <Text style={{fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 17 : 14}}>
-                            {openAchievement.progress == openAchievement.total ? 'You won the trophy!' : 'Trophy pending'}
+                            {openAchievement.progress == openAchievement.totalSections ? 'You won the trophy!' : 'Trophy pending'}
                         </Text>
 
                         {renderTrophy(openAchievement)}
 
-                        <Text style={{fontSize: 11, color: '#959595',fontFamily: 'GmarketMedium'}}>{openAchievement.description}</Text>
+                        <Text style={{fontSize: 11, color: '#959595',fontFamily: 'GmarketMedium'}}>{mapping[openAchievement.name]}</Text>
                         <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
                             <Text style={{fontSize: 11, color: '#FF6B17',fontFamily: 'GmarketMedium'}}>{openAchievement.progress}</Text>
-                            <Text style={{fontSize: 11, color: '#959595',fontFamily: 'GmarketMedium'}}>/{openAchievement.total}</Text>
+                            <Text style={{fontSize: 11, color: '#959595',fontFamily: 'GmarketMedium'}}>/{openAchievement.totalSections}</Text>
                         </View>
                         
                         <TouchableOpacity
@@ -291,7 +304,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textAlign: 'center',
     color:'gray',
-    fontFamily: 'GmarketMedium'
+    fontFamily: 'GmarketMedium',
+    lineHeight: 13
   },
   progress: {
     fontSize: 12,
@@ -315,7 +329,6 @@ countContainer: {
 
   trophyContainer: {
     alignItems: 'center',
-    paddingBottom: 10,
     paddingHorizontal: 12,
     borderRadius: 12,
     minWidth: 80,

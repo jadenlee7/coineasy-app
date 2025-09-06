@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useState } from "react";
-import { ScrollView, RefreshControl, Text, View, TouchableOpacity, Image as RNImage, TouchableHighlight, Animated, Dimensions, BackHandler, ActivityIndicator, StyleSheet, Image } from 'react-native';
+import { ScrollView, RefreshControl, Text, View, TouchableOpacity, Image as RNImage, TouchableHighlight, Animated, Dimensions, BackHandler, ActivityIndicator, StyleSheet, Image, Platform } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -182,9 +182,9 @@ const Trophies = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
     label: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginTop: 5,
+        fontSize: Platform.OS == 'ios' ? 16 : 14,
+        marginTop: 8,
+        fontFamily: "GmarketBold",
     },
     tab: {
         elevation: 0,

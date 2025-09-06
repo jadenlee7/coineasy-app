@@ -55,8 +55,8 @@ const OrangeReward = ({navigation, route}) => {
     const handleModalPress = useCallback(() => modalRef.current?.present(), []);
     
     const modalInviteRef = useRef(null); 
-    const snapInvitePoints = useMemo(() => ['50%','50%'], []);
-    const snapInvitePointsIOS = useMemo(() => ['43%','43%'], []);
+    const snapInvitePoints = useMemo(() => ['70%','70%'], []);
+    const snapInvitePointsIOS = useMemo(() => ['63%','63%'], []);
     const handleModalInvitePress = useCallback(() => modalInviteRef.current?.present(), []);
 
     useEffect(() => {

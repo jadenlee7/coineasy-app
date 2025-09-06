@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -21,23 +21,55 @@ const TrophieCoineasy = () => {
     
     const [activeTab, setActiveTab] = useState('All');
 
-    const coineasyCourses = courses
-        .filter(course => course.category === 'coineasy')
-        .map(course => {
-            let userCourse = null
-            if(userData && Array.isArray(userData.courses)){
-                userCourse = userData.courses.find(c => c.id === course.id);
-            }
+    
+    useEffect(() => {
+        coineasyCourses = getCoineasyCourses()
+    }, [userData])
+    
+    const getCoineasyCourses =  () => {
+        const coineasyCourses = courses
+            .filter(course => course.category === 'coineasy')
+            .map(course => {
+                let userCourse = null
+                if(userData && Array.isArray(userData.courses)){
+                    userCourse = userData.courses.find(c => c.id === course.id);
+                }
 
-            const completedSections = userCourse?.sections?.filter(s => s.status === 'completed') ?? [];
+                const completedSections = userCourse?.sections?.filter(s => s.status === 'completed') ?? [];
 
-            return {
-                ...course,
-                status: userCourse?.status || 'not-started',
-                progress: completedSections.length,
-                progressText: completedSections.length == course?.sections?.length ? 'Completed' : userCourse?.sections ? userCourse?.sections?.length+' in progress' : null
-            };
-        });  
+                return {
+                    ...course,
+                    status: userCourse?.status || 'not-started',
+                    progress: completedSections.length,
+                    progressText: completedSections.length == course?.sections?.length ? 'Completed' : userCourse?.sections ? userCourse?.sections?.length+' in progress' : null
+                };
+            })
+            .sort((a, b) => {
+                // order of priority
+                const statusPriority = {
+                    'in-progress': 1,
+                    'not-started': 2,
+                    'completed': 3,
+                };
+
+                const statusDiff = statusPriority[a.status] - statusPriority[b.status]; 
+                if (statusDiff !== 0) return statusDiff;
+
+                const levelPriority = {
+                    Beginner: 1,
+                    Intermediate: 2,
+                    Advanced: 3,
+                };
+
+                return (
+                    (levelPriority[a.title] ?? 99) - (levelPriority[b.title] ?? 99)
+                );
+            });
+
+        return coineasyCourses
+    }
+    
+    let coineasyCourses = getCoineasyCourses()
     
     const tabs = ['All', 'Completed', 'In progress', 'Not started'];
 
@@ -93,66 +125,73 @@ const TrophieCoineasy = () => {
 
                 {/* Course Cards */}
                 <View style={styles.courseContainer}>
-                    {filteredCourses.map((course) => (
-                        <TouchableOpacity 
-                            key={course.id} 
-                            style={styles.courseCard} 
-                            onPress={() => navigation.navigate('CourseSelector', { course })}
-                        >
-                            <View style={styles.cardHeader}>
-                                <View style={styles.courseInfo}>
-                                    <View style={{backgroundColor: '#F1F4F9',padding: 10, borderRadius: 50, marginRight: 5}}>
-                                        <Image
-                                            style={{width: 48,height: 48}}
-                                            resizeMode='contain'
-                                            source={course.image_icon}
-                                            defaultSource={course.image_icon}
-                                        />                        
-                                    </View>
-                                    <View style={styles.courseDetails}>
-                                        <View style={styles.titleRow}>
-                                            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
-                                                <Text style={styles.courseTitle}>{course.title}</Text>
-                                                <Text style={styles.courseProgress}>{course.progress} / {course.sections.length}</Text>
-                                            </View>
-                                            <View style={{flexDirection:'row', alignItems:'flex-end', justifyContent:'flex-end',}}>
-                                                <MultiplePeopleIcon color={'#959595'}/>
-                                                <Text style={styles.participants}>{course.participants}</Text>
-                                            </View>
-                                        </View>
-                                        
-                                        <Text style={styles.courseDescription}>
-                                            {course.description}
-                                        </Text>
-                                    </View>
-                                </View>
-                            </View>
+                    {filteredCourses.map((course) => {
+                        
+                        const totalReward = course.sections.reduce((acc, section) => {
+                            return acc + (section.pages?.length * 5 || 0);
+                        }, 0);
 
-                            <View style={styles.cardFooter}>
-                                <View style={styles.rewardContainer}>
-                                    <Text style={styles.rewardLabel}>Total Reward</Text>
-                                    <View style={styles.rewardValue}>
-                                        <Image
-                                            style={{width: 18,height: 18}}
-                                            resizeMode='contain'
-                                            source={require('../../../assets/trophy/trophy_icon_orange.png')}
-                                            defaultSource={require('../../../assets/trophy/trophy_icon_orange.png')}
-                                        />                        
-                                        <Text style={styles.rewardAmount}>{course.reward}</Text>
+                        return(
+                            <TouchableOpacity 
+                                key={course.id} 
+                                style={styles.courseCard} 
+                                onPress={() => navigation.navigate('CourseSelector', { course })}
+                            >
+                                <View style={styles.cardHeader}>
+                                    <View style={styles.courseInfo}>
+                                        <View style={{backgroundColor: '#F1F4F9',padding: 10, borderRadius: 50, marginRight: 5}}>
+                                            <Image
+                                                style={{width: 48,height: 48}}
+                                                resizeMode='contain'
+                                                source={course.image_icon}
+                                                defaultSource={course.image_icon}
+                                            />                        
+                                        </View>
+                                        <View style={styles.courseDetails}>
+                                            <View style={styles.titleRow}>
+                                                <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
+                                                    <Text style={styles.courseTitle}>{course.title}</Text>
+                                                    <Text style={styles.courseProgress}>{course.progress} / {course.sections.length}</Text>
+                                                </View>
+                                                <View style={{flexDirection:'row', alignItems:'flex-end', justifyContent:'flex-end',}}>
+                                                    <MultiplePeopleIcon color={'#959595'}/>
+                                                    <Text style={styles.participants}>{course.participants}</Text>
+                                                </View>
+                                            </View>
+                                            
+                                            <Text style={styles.courseDescription}>
+                                                {course.description}
+                                            </Text>
+                                        </View>
                                     </View>
                                 </View>
-                                
-                                {course.progressText && (
-                                    <View style={styles.progressIndicator}>
-                                        <View style={[styles.progressDot, { backgroundColor: getStatusColor(course.status) }]} />
-                                        <Text style={[styles.progressText, { color: getStatusColor(course.status) }]}>
-                                            {course.progressText}
-                                        </Text>
+
+                                <View style={styles.cardFooter}>
+                                    <View style={styles.rewardContainer}>
+                                        <Text style={styles.rewardLabel}>Total Reward</Text>
+                                        <View style={styles.rewardValue}>
+                                            <Image
+                                                style={{width: 18,height: 18}}
+                                                resizeMode='contain'
+                                                source={require('../../../assets/trophy/trophy_icon_orange.png')}
+                                                defaultSource={require('../../../assets/trophy/trophy_icon_orange.png')}
+                                            />                        
+                                            <Text style={styles.rewardAmount}>{totalReward}</Text>
+                                        </View>
                                     </View>
-                                )}
-                            </View>
-                        </TouchableOpacity>
-                    ))}
+                                    
+                                    {course.progressText && (
+                                        <View style={styles.progressIndicator}>
+                                            <View style={[styles.progressDot, { backgroundColor: getStatusColor(course.status) }]} />
+                                            <Text style={[styles.progressText, { color: getStatusColor(course.status) }]}>
+                                                {course.progressText}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                            </TouchableOpacity>
+                        )
+                    })}
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -233,10 +272,9 @@ const styles = StyleSheet.create({
   },
   courseTitle: {
     fontSize: Platform.OS == 'ios' ? 16 : 14,
-    // fontWeight: '800',
     color: '#111827',
     marginRight: 8,
-    fontFamily: "GmarketMedium",
+    fontFamily: "GmarketBold",
   },
   courseProgress: {
     fontSize: 14,

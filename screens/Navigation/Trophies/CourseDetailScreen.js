@@ -8,7 +8,8 @@ import {
   Image,
   ScrollView,
   Alert,
-  Platform
+  Platform,
+  Animated
 } from 'react-native';
 import HeaderImage from '../../../components/HeaderImage';
 import { GlobalContext } from '../../../contexts/GlobalContext';
@@ -28,9 +29,13 @@ const CourseDetailScreen = ({ navigation, route }) => {
     const { orbis, user, userData, setUserData } = useContext(GlobalContext);
 
     const {parentCourse, course, courseId} = route.params
+    
+    const userProgress = userData.courses
+        ?.map(course => course.sections?.find(section => section.id === courseId))
+        .find(section => section !== undefined);
 
     const [currentPage, setCurrentPage] = useState(course.progress == course.pages.length ? course.pages.length-1 : course.progress);
-    const [courseProgress, setCourseProgress] = useState(course.progress == course.pages.length ? course.pages.length : course.progress+1)
+    const [courseProgress, setCourseProgress] = useState(course.progress == course.pages.length ? course.pages.length : course.progress == 0 ? 1 :course.progress)
 
     const pages = course.pages
     const question = course.question    
@@ -43,13 +48,12 @@ const CourseDetailScreen = ({ navigation, route }) => {
     const [quizEnded, setQuizEnded] = useState(false)
 
     const handleNext = async () => {
+        Haptics.selectionAsync();
         const tempData = userData ?? {}
 
-        if (currentPage < pages.length - 1) {
+        if (courseProgress < pages.length) {
             const newProgress = courseProgress+1
-
-            Haptics.selectionAsync();
-            setCurrentPage(currentPage + 1);
+            setCurrentPage(newProgress);
             setCourseProgress(newProgress)
 
             const userCourse = Array.isArray(tempData.courses) ? tempData.courses.find(c => c.id === parentCourse.id) : null;
@@ -88,7 +92,6 @@ const CourseDetailScreen = ({ navigation, route }) => {
             setQuizTime(true)
         }
 
-
         setUserData({...tempData})
 
         var tempProfile = user.profile
@@ -97,10 +100,11 @@ const CourseDetailScreen = ({ navigation, route }) => {
     };
 
     const handleBack = () => {
+        Haptics.selectionAsync();
+
         if(quizTime){
             setQuizTime(false)
-        }else if (currentPage > 0) {
-            Haptics.selectionAsync();
+        }else if (courseProgress > 0) {    
             setCurrentPage(currentPage - 1);
             setCourseProgress(courseProgress - 1);
         }
@@ -164,7 +168,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
                             selectedOption === option.id && rightAnswer && styles.rightOption_choice,
                             {fontFamily: "GmarketBold",}
                         ]}
-                        onPress={() => {setWrongAnswer(null);setRightAnswer(null);setSelectedOption(option.id)}}
+                        onPress={() => {Haptics.selectionAsync();setWrongAnswer(null);setRightAnswer(null);setSelectedOption(option.id)}}
                         activeOpacity={0.7}
                         disabled={rightAnswer}
                     >
@@ -192,6 +196,8 @@ const CourseDetailScreen = ({ navigation, route }) => {
 
 
     const handleSubmitOption = () => {
+        Haptics.selectionAsync();
+
         const selectedAnswer = question.options[selectedOption];
         if (selectedAnswer.isCorrect) {
             setWrongAnswer(null)
@@ -203,11 +209,11 @@ const CourseDetailScreen = ({ navigation, route }) => {
     };
 
     const onValidateQuiz = async () => {
-
+        Haptics.selectionAsync();
         const tempData = userData ?? {}
 
         if(tempData){
-            let addNumber = 15
+            let addNumber = 5 * pages.length
             tempData.numberOranges ? tempData.numberOranges += addNumber : tempData.numberOranges = addNumber
 
             if(tempData.listClaimedOranges){
@@ -255,26 +261,41 @@ const CourseDetailScreen = ({ navigation, route }) => {
                 userCourse.status = "completed"
             }
 
-            console.log('lalala');
-            console.log(tempData);
-            
-            
-
             setUserData({...tempData})
 
             var tempProfile = user.profile
-            tempProfile.data = tempData
+            tempProfile.data = tempData            
             const res = await orbis.updateProfile(tempProfile);
         }
 
-        navigation.navigate('Trophies')
+        navigation.navigate('Trophies')            
     }    
+
+    const progressAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const progress = (courseProgress / course.pages.length) * 100;
+
+        Animated.timing(progressAnim, {
+            toValue: progress,
+            duration: 400,
+            useNativeDriver: false,
+        }).start();
+    }, [courseProgress]);
+
+    const widthInterpolated = progressAnim.interpolate({
+        inputRange: [0, 100],
+        outputRange: ["0%", "100%"],
+    });
 
     return (
         <View style={{flex: 1, backgroundColor: 'white',}}>
             <HeaderImage />
             
-            <TouchableOpacity style={{position: 'absolute',left: 20, top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 55 : 60}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
+            <TouchableOpacity 
+                style={{position: 'absolute',left: 20, top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 55 : 60}} 
+                onPress={() => {Haptics.selectionAsync();navigation.goBack()}}
+            >
                 <Image
                     style={{width: 24,height: 24}}
                     resizeMode='contain'
@@ -297,7 +318,8 @@ const CourseDetailScreen = ({ navigation, route }) => {
                     marginRight: 5,
                     paddingVertical: 5,
                     paddingHorizontal:10,
-                    alignItems:'center'
+                    alignItems:'center',
+                    justifyContent:'center'
                 }}
             >
                 <Image
@@ -305,7 +327,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
                     resizeMode='contain'
                     source={require('../../../assets/trophy/trophy_icon_orange.png')}
                 />
-                <Text style={{fontWeight: 'bold',textAlign: 'center',color:'#FB5100', marginTop: Platform.OS == 'ios' ? 2 : 0,}}>
+                <Text style={{fontWeight: 'bold',textAlign: 'center',color:'#FB5100',}}>
                     {userData?.numberOranges && userData?.numberOranges.toString().length <= 3 ? userData?.numberOranges
                         : userData?.numberOranges && userData?.numberOranges.toString().length == 4 ? userData?.numberOranges.toString().slice(0,1)+','+userData?.numberOranges.toString().slice(1,4)
                         : userData?.numberOranges && userData?.numberOranges.toString().length == 5 ? userData?.numberOranges.toString().slice(0,2)+','+userData?.numberOranges.toString().slice(2,5)
@@ -321,28 +343,38 @@ const CourseDetailScreen = ({ navigation, route }) => {
             {quizEnded ? (
                 <>
 
-                    <Image
-                        style={{width: screenWidth*0.7, height: 300, alignSelf:'center',borderRadius: 10,}}
-                        resizeMode='contain'
-                        source={course.image}
-                    />
+                    <View style={{
+                        marginHorizontal: 40,
+                        marginVertical: 20,
+                        borderRadius: 16,
+                        padding: 20,
+                        borderWidth: 1,
+                        borderColor: '#E3E8EC',
+                        alignItems: "flex-start"
+                    }}>
+                        <Image
+                            style={{width:'100%', height: 205, }}
+                            resizeMode='contain'
+                            source={course.image}
+                        />
 
-                    <Text style={[tailwind('text-slate-900 p-5'), {fontSize: 14,fontFamily: "GmarketBold",lineHeight: 20,marginTop: -40,textAlign:'center'}]}>
-                        Completed {course.title}
+                        <Text style={{fontSize: 14,fontFamily: "GmarketMedium", marginTop: 20}}>
+                            {course.title}
+                        </Text>
+                    </View>
+
+                    <Text style={{fontSize: 16,fontFamily: "GmarketMedium", marginVertical: 10, textAlign:'center'}}>
+                        Completed
                     </Text>
 
-                    <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 2}}>
+                    <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3, marginTop: 10,}}>
                         <Image
-                            style={{width: 25, height: 25}}
+                            style={{width: 30, height: 30}}
                             resizeMode='contain'
                             source={require('../../../assets/trophy/trophy_icon_orange.png')}
                         />
-                        <Text style={{color: '#FB5100', fontWeight: 'bold', fontSize: 18}}>+15</Text>
+                        <Text style={{color: '#FB5100',fontFamily: 'GmarketBold', fontSize: 18,}}>+{5 * pages.length}</Text>
                     </View> 
-
-                    <Text style={{color: 'gray', textAlign: 'center', marginTop: 10,}}>Correct</Text>
-                    <Text style={{textAlign: 'center', marginTop: 0,fontWeight: 'bold',fontSize: 25,}}>80%</Text>
-                    <Text style={{textAlign: 'center', marginTop: 0,color: '#FF6B17'}}>Nice!</Text>
 
                     <View style={{position: 'absolute',bottom: 30, width: screenWidth}}>
                         <TouchableOpacity 
@@ -357,8 +389,10 @@ const CourseDetailScreen = ({ navigation, route }) => {
             ) : (
                 <>
                     <View style={{width:'100%', marginTop: 8 ,flexDirection:'row', alignItems:'center',paddingHorizontal: 10}}>
-                        <View style={[styles.progressBarBackground, {width:'85%'}]}>
-                            <View style={[styles.progressBarFill, { width: `${(courseProgress / course.pages.length) * 100}%` },]}/>
+                        <View style={[styles.progressBarBackground, { width: "85%" }]}>
+                            <Animated.View
+                            style={[styles.progressBarFill, { width: widthInterpolated }]}
+                            />
                         </View>
 
                         <Text style={{width:'15%',textAlign:'center'}}>
@@ -368,7 +402,6 @@ const CourseDetailScreen = ({ navigation, route }) => {
                         </Text>
                     </View>
 
-                    {/* Affichage des pages */}
                     {quizTime ? (
                         <>
                             {renderQuiz()}
@@ -376,22 +409,22 @@ const CourseDetailScreen = ({ navigation, route }) => {
                     ) : (
                         <View style={{ flex: 1 }}>
                             {pages.map((page, index) => (
-                                <View key={index} style={{ display: index === currentPage ? 'flex' : 'none', flex: 1 }}>
+                                <View key={index} style={{ display: index === courseProgress - 1 ? 'flex' : 'none', flex: 1 }}>
                                     {renderPage(page, index)}
                                 </View>
                             ))}
                         </View>
                     )}
 
-                    {/* Boutons de navigation */}
+                    {/* navigation */}
                     <View style={styles.navigationContainer}>
                         {quizTime && rightAnswer ? (
                             <TouchableOpacity 
-                                style={[styles.nextButton, {width: screenWidth*0.8, opacity: course.progress == course.pages.length ? 0.5 : 1}]}
+                                style={[styles.nextButton, {width: screenWidth*0.8, opacity: userProgress?.status == 'completed' ? 0.5 : 1}]}
                                 onPress={setQuizEnded}
-                                disabled={course.progress == course.pages.length}
+                                disabled={userProgress?.status == 'completed'}
                             >
-                                <Text style={styles.nextButtonText}>{course.progress == course.pages.length ? 'Already done' : 'Continue'}</Text>
+                                <Text style={styles.nextButtonText}>{userProgress?.status == 'completed' ? 'Already done' : 'Continue'}</Text>
                                 {course.progress != course.pages.length && <Ionicons name="chevron-forward" size={16} color="#fff" style={styles.nextIcon} />}
                             </TouchableOpacity>
 
