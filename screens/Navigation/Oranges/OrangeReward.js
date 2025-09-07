@@ -19,11 +19,12 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NewFeatureModal from '../../../components/modals/NewFeatureModal';
 import { CopyIcon2 } from '../../../components/Icons';
+import { useNavigation } from '@react-navigation/core';
 
 const {width, height} = Dimensions.get('window')
 
 
-const OrangeReward = ({navigation, route}) => {
+const OrangeReward = (props) => {
     const { 
         orbis,
         user,
@@ -39,6 +40,7 @@ const OrangeReward = ({navigation, route}) => {
         setAddressCopied
     } = useContext(GlobalContext);
     const tailwind = useTailwind();  
+    const navigation = useNavigation()
     
     const [openHelp, setOpenHelp] = useState(false)
     const [openInviteHelp, setOpenInviteHelp] = useState(false)
@@ -444,9 +446,9 @@ const OrangeReward = ({navigation, route}) => {
         setAddressCopied(false)
     }
 
-    const navigateNext = () => {
+    const navigateNext = (props) => {
         Haptics.selectionAsync();
-        if(navigation){
+        if(props = 'navigate'){
             navigation.navigate('ActivityReward')
         }else{
             setNewFeatureVis(false)
@@ -637,7 +639,7 @@ const OrangeReward = ({navigation, route}) => {
                                 color={activityClaim ? 'gray-100' : 'orange'}
                                 disabled={activityClaim}
                                 size="sm"
-                                onPress={navigateNext}
+                                onPress={() => navigateNext('navigate')}
                                 style={{height: 40, justifyContent: 'center',alignItems: 'center',width:'30%'}}
                             />
                         </View>

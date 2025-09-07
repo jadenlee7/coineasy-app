@@ -107,7 +107,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                                                 borderRadius: 10,
                                                 overflow:'hidden',                                                    
                                                 position: 'absolute',
-                                                top: Platform.OS == 'ios' ? 22 : 130 + statusBarHeight,
+                                                top: Platform.OS == 'ios' ? 12 : 130 + statusBarHeight,
                                                 right: 10,
                                             }}
                                         >
