@@ -268,7 +268,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
             const res = await orbis.updateProfile(tempProfile);
         }
 
-        navigation.navigate('Trophies')            
+        navigation.navigate('CourseSelector', { course: parentCourse })
     }    
 
     const progressAnim = useRef(new Animated.Value(0)).current;
@@ -376,7 +376,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
                         <Text style={{color: '#FB5100',fontFamily: 'GmarketBold', fontSize: 18,}}>+{5 * pages.length}</Text>
                     </View> 
 
-                    <View style={{position: 'absolute',bottom: 30, width: screenWidth}}>
+                    <View style={{position: 'absolute',bottom: 40, width: screenWidth}}>
                         <TouchableOpacity 
                             style={[styles.nextButton, {width:'80%', alignSelf:'center',}]}
                             onPress={onValidateQuiz}
@@ -388,10 +388,10 @@ const CourseDetailScreen = ({ navigation, route }) => {
                 </>
             ) : (
                 <>
-                    <View style={{width:'100%', marginTop: 8 ,flexDirection:'row', alignItems:'center',paddingHorizontal: 10}}>
+                    <View style={{width:'100%', marginTop: 20 ,flexDirection:'row', alignItems:'center',paddingHorizontal: 15}}>
                         <View style={[styles.progressBarBackground, { width: "85%" }]}>
                             <Animated.View
-                            style={[styles.progressBarFill, { width: widthInterpolated }]}
+                                style={[styles.progressBarFill, { width: widthInterpolated }]}
                             />
                         </View>
 
@@ -463,12 +463,12 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 12,
     backgroundColor: '#FFF2E2',
-    borderRadius: 3,
+    borderRadius: 10,
   },
   progressBarFill: {
     height: 12,
     backgroundColor: '#FF6B17',
-    borderRadius: 3,
+    borderRadius: 10,
   },
   content: {
     paddingHorizontal: 20,
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   description: {
-    fontSize: 13,
+    fontSize: Platform.OS == 'ios' ? 15 : 13,
     lineHeight: 22,
     color: '#666',
     fontFamily: "GmarketMedium",
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    marginBottom: 20,
+    marginBottom: 30,
   },
   backButton: {
     flexDirection: 'row',

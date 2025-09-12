@@ -22,38 +22,23 @@ export default function Login() {
         let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1Dhijs_O61shJEKNy6Sga16Iu3vgqwc8I/view?usp=sharing");
     }
 
-    // const moveAnimation = useRef(new Animated.Value(0)).current;
-    // const animate = () => {
-    //   Animated.timing(moveAnimation, {
-    //     toValue: (Dimensions.get('window').width/2)-100,
-    //     duration: 1000,
-    //     useNativeDriver: true
-    //   }).start();
-    // }
-
-    // useEffect(() => {
-    //     animate();
-    // }, []);
-
     return(
         <View style={tailwind('w-full h-full')}>
             <Image
-                resizeMode="cover"
+                resizeMode="stretch"
                 style={[tailwind('w-full h-full')]}
-                source={require('../assets/loginbg.png')} 
+                source={require('../assets/login_background.png')} 
             />
 
-            {/* <Animated.View style={{ transform: [{ translateX }], paddingTop: 300 }}>
-                <Text ref={ref}>Some Text</Text>
-            </Animated.View> */}
 
             <View style={[tailwind('w-full h-full absolute px-7 items-center')]}>
                 <View style={[tailwind('absolute w-full'), {top: '55%'}]}>
 
-                    {/* <Animated.Text style={[{  transform: [{translateX: moveAnimation}], fontSize: 30,fontWeight: 'bold',color: 'white'}]}>
-                        WELCOME TO
-                    </Animated.Text> */}
-
+                    <Image
+                        resizeMode="cover"
+                        style={{position: 'absolute',width: 128, height: 128, top: -95}}
+                        source={require('../assets/login_icon_background.png')} 
+                    />
                     <TouchableOpacity 
                         activeOpacity={0.8} 
                         style={[

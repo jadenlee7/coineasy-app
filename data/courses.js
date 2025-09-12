@@ -720,7 +720,7 @@ export const courses = [
         id: 5,
         title: '1inch',
         participants: '12,000',
-        description: 'In this course, you’ll get an introduction to 1inch and how it works in the DeFi world!',
+        description: '1inch is a DeFi aggregator finding the best prices across multiple liquidity sources',
         reward: 200,
         image_icon: require('../assets/trophy/trophy_1inch.png'),
         category: 'project',

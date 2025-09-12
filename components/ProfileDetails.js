@@ -453,7 +453,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeReward')}}
                         style={{
                             position: 'absolute',
-                            top: statusBarHeight > 25 ? 50 : 60,
+                            top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 50 : 60,
                             right: 10,
                             borderRadius: 30,
                             backgroundColor: '#FFF2E2',
@@ -463,7 +463,8 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                             marginRight: 5,
                             paddingVertical: 5,
                             paddingHorizontal:10,
-                            alignItems:'center'
+                            alignItems:'center',
+                            justifyContent:'center'
                         }}
                     >
                         <Image
@@ -471,7 +472,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                             resizeMode='contain'
                             source={require('../assets/trophy/trophy_icon_orange.png')}
                         />
-                        <Text style={{fontWeight: 'bold',textAlign: 'center',color:'#FB5100', marginTop: Platform.OS == 'ios' ? 2 : 0,}}>
+                        <Text style={{fontWeight: 'bold',textAlign: 'center',color:'#FB5100',}}>
                             {userData?.numberOranges && userData?.numberOranges.toString().length <= 3 ? userData?.numberOranges
                                 : userData?.numberOranges && userData?.numberOranges.toString().length == 4 ? userData?.numberOranges.toString().slice(0,1)+','+userData?.numberOranges.toString().slice(1,4)
                                 : userData?.numberOranges && userData?.numberOranges.toString().length == 5 ? userData?.numberOranges.toString().slice(0,2)+','+userData?.numberOranges.toString().slice(2,5)

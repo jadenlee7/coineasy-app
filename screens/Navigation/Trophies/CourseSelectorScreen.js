@@ -78,8 +78,24 @@ export default function CourseSelectorScreen({ navigation, route }) {
 
                     <View style={{flex: 1, justifyContent: "space-between",}}>
                         <View style={{flex: 1}}>
-                            <Text style={{opacity: item.status === 'completed' ? 0.5 : 1, fontFamily: "GmarketMedium",fontSize: 18,marginVertical: 4,}}>{item.title}</Text>
-                            <Text style={{opacity: item.status === 'completed' ? 0.5 : 1, fontSize: Platform.OS == 'ios' ? 16 : 15,lineHeight: 18, fontFamily: "GmarketMedium", color: '#555',marginVertical: 10,}}>{item.description}</Text>
+                            <Text style={{
+                                opacity: item.status === 'completed' ? 0.5 : 1, 
+                                fontFamily: "GmarketMedium",
+                                fontSize: Platform.OS == 'ios' ? 20 : 18,
+                                marginVertical: 4,
+                            }}>
+                                {item.title}
+                            </Text>
+                            <Text style={{
+                                opacity: item.status === 'completed' ? 0.5 : 1, 
+                                fontSize: Platform.OS == 'ios' ? 17 : 15,
+                                lineHeight: Platform.OS == 'ios' ? 22 : 20, 
+                                fontFamily: "GmarketMedium", 
+                                color: '#555',
+                                marginVertical: 10,
+                            }}>
+                                {item.description}
+                            </Text>
                         </View>
                         
                         <View style={{}}>
@@ -250,7 +266,7 @@ export default function CourseSelectorScreen({ navigation, route }) {
                     paddingVertical: 14, 
                     borderRadius: 50,
                     position: 'absolute',
-                    bottom: 30, 
+                    bottom: 40, 
                     width: '90%',
                     alignSelf:'center',
                     opacity: sectionsWithProgress[currentIndex].status === 'completed' ? 0.6 : 1

@@ -1,24 +1,24 @@
 {
   "expo": {
-    "name": "CoinEasy",
+    "name": "EasyGo",
     "slug": "coineasy_app",
     "scheme": "coineasyapp",
     "owner": "useorbis",
     "version": "2.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo_easygo_1024.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash_easygo.png",
       "resizeMode": "cover",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FFF8F0"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "70",
+      "buildNumber": "71",
       "bundleIdentifier": "com.coineasy.coineasysocial",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow CoinEasy to access your photos. Photos will be used for profile picture and post with Media. This is not mandatory, user can leave the default profile picture. It can then be updated in the user Profil page. Example: You want to create a Post with a photo, we'll need to access your media library",
@@ -28,10 +28,10 @@
       }
     },
     "android": {
-      "versionCode": 49,
+      "versionCode": 50,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/logo_easygo_1024.png",
+        "backgroundColor": "#FFF8F0"
       },
       "permissions": [
         "android.permission.RECORD_AUDIO",
@@ -47,7 +47,7 @@
       "package": "com.coineasy.coineasy"
     },
     "web": {
-      "favicon": "./assets/icon.png"
+      "favicon": "./assets/logo_easygo_1024.png"
     },
     "plugins": [
       [

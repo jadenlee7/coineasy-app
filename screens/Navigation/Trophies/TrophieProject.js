@@ -130,9 +130,9 @@ const TrophieProject = () => {
                             >
                                 <View style={styles.cardHeader}>
                                     <View style={styles.courseInfo}>
-                                        <View style={{backgroundColor: course.title == 'Notcoin' ? '#000' : '#F1F4F9', padding: 18, borderRadius: 50, marginRight: 5}}>
+                                        <View style={{backgroundColor: course.title == 'Notcoin' ? '#000' : '#F1F4F9', padding: (course.title == 'Vana' || course.title == '1inch') ? 18 : 0, borderRadius: 50, marginRight: 10}}>
                                             <Image
-                                                style={{width: 40,height: 40}}
+                                                style={{width: (course.title == 'Vana' || course.title == '1inch') ? 40 : 76,height: (course.title == 'Vana' || course.title == '1inch') ? 40 : 76}}
                                                 resizeMode='contain'
                                                 source={course.image_icon}
                                                 defaultSource={course.image_icon}
