@@ -14,10 +14,9 @@ import { useNavigation } from '@react-navigation/core';
 
 const {width, height} = Dimensions.get('window')
 
-const ClaimOrangesModal = (props) => {
+const ClaimOrangesModal = () => {
 
     const { user, userData, setUserData, orbis, setShowClaimOranges, adAlreadyClaimed } = useContext(GlobalContext);
-    const { onClaimAdReward } = props
     const tailwind = useTailwind();
     let navigation;
     try {
@@ -52,61 +51,129 @@ const ClaimOrangesModal = (props) => {
         setShowClaimOranges(false)
     }
 
-    // const claimAds = async () => {
-    //     const tempData = userData ?? {}
-
-    //     if(tempData){
-    //         if(tempData.numberOranges){
-    //             tempData.numberOranges += 10
-    //         }else{
-    //             tempData.numberOranges = 10
-    //         }
-    //         if(tempData.adReward){
-    //             tempData.adReward.lastClaim = moment().format('YYYY-MM-DD HH:mm:ss')
-    //         }else{
-    //             tempData.adReward = {
-    //                 lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
-    //             }
-    //         }
-
-    //         if(tempData.listClaimedOranges){
-    //             const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-    //             if(index != -1){
-    //                 tempData.listClaimedOranges[index].listOranges.push({
-    //                     numberOranges: 10,
-    //                     type: 'Ad Rewards'
-    //                 })
-    //             }else{
-    //                 tempData.listClaimedOranges.push({
-    //                     date: moment().format('YYYY-MM-DD'),
-    //                     listOranges: [
-    //                         {
-    //                             numberOranges: 10,
-    //                             type: 'Ad Rewards'
-    //                         },
-    //                     ]
-    //                 })
-    //             }
-    //         }else{
-    //             tempData.listClaimedOranges = [{
-    //                 date: moment().format('YYYY-MM-DD'),
-    //                 listOranges: [
-    //                         {
-    //                             numberOranges: 10,
-    //                             type: 'Ad Rewards'
-    //                         },
-    //                 ]
-    //             }]
-    //         }
+    const onClaimAdReward = async () => {
+            Haptics.selectionAsync();
+            const tempData = userData ?? {}
             
-    //         setUserData({...tempData})
+            if(tempData){
+                let addNumber = 10
+                tempData.numberOranges ? tempData.numberOranges += addNumber : tempData.numberOranges = addNumber
+    
+                if(tempData.listClaimedOranges){
+                    const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+                    if(index != -1){
+                        tempData.listClaimedOranges[index].listOranges.push({
+                            numberOranges: addNumber,
+                            type: 'Watch AD'
+                        })
+                    }else{
+                        tempData.listClaimedOranges.push({
+                            date: moment().format('YYYY-MM-DD'),
+                            listOranges: [
+                                {
+                                    numberOranges: addNumber,
+                                    type: 'Watch AD'
+                                },
+                            ]
+                        })
+                    }
+                }else{
+                    tempData.listClaimedOranges = [{
+                        date: moment().format('YYYY-MM-DD'),
+                        listOranges: [
+                                {
+                                    numberOranges: addNumber,
+                                    type: 'Watch AD'
+                                },
+                        ]
+                    }]
+                }
+    
+                const now = new Date();
+                const tomorrow = new Date();
+                tomorrow.setHours(24, 0, 0, 0); // reset to midnight
+    
+                var currentData = {
+                    ...tempData,
+                    adReward: {
+                        lastClaim: now.toISOString(),
+                        nextAvailable: tomorrow.toISOString(),
+                    },
+                }
+    
+                var tempProfile = user.profile
+                tempProfile.data = currentData
+                orbis.updateProfile(tempProfile)
+                .then(res => {
+                    setOpenDailyCheckinModal(true)
+    
+                    setUserData({
+                        ...tempData,
+                        adReward: {
+                            lastClaim: now.toISOString(),
+                            nextAvailable: tomorrow.toISOString(),
+                        },
+                    });
+                })
+            }
+            
+        }
 
-    //         var tempProfile = user.profile
-    //         tempProfile.data = tempData
-    //         const res = await orbis.updateProfile(tempProfile);
-    //     }
+    const claimAds = async () => {
+        const tempData = userData ?? {}
 
-    // }
+        if(tempData){
+            if(tempData.numberOranges){
+                tempData.numberOranges += 10
+            }else{
+                tempData.numberOranges = 10
+            }
+            if(tempData.adReward){
+                tempData.adReward.lastClaim = moment().format('YYYY-MM-DD HH:mm:ss')
+            }else{
+                tempData.adReward = {
+                    lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
+                }
+            }
+
+            if(tempData.listClaimedOranges){
+                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+                if(index != -1){
+                    tempData.listClaimedOranges[index].listOranges.push({
+                        numberOranges: 200,
+                        type: 'Ad Rewards'
+                    })
+                }else{
+                    tempData.listClaimedOranges.push({
+                        date: moment().format('YYYY-MM-DD'),
+                        listOranges: [
+                            {
+                                numberOranges: 200,
+                                type: 'Ad Rewards'
+                            },
+                        ]
+                    })
+                }
+            }else{
+                tempData.listClaimedOranges = [{
+                    date: moment().format('YYYY-MM-DD'),
+                    listOranges: [
+                            {
+                                numberOranges: 200,
+                                type: 'Ad Rewards'
+                            },
+                    ]
+                }]
+            }
+            
+            setUserData({...tempData})
+
+            var tempProfile = user.profile
+            tempProfile.data = tempData
+            const res = await orbis.updateProfile(tempProfile);
+        }
+
+    }
 
     let opacity = new Animated.Value(0);
     const size = opacity.interpolate({
@@ -148,7 +215,7 @@ const ClaimOrangesModal = (props) => {
         ]).start(() => {
             setPendingAds(false)
             setClaimedAds(true)
-            onClaimAdReward()
+            claimAds()
         })
     }
 
@@ -185,8 +252,8 @@ const ClaimOrangesModal = (props) => {
                     <Button 
                         size="md" 
                         color="white" 
-                        title="GOOD" 
-                        onPress={() => {Haptics.selectionAsync();setShowClaimOranges(false);}} 
+                        title="Go to Reward Page" 
+                        onPress={() => {Haptics.selectionAsync();setShowClaimOranges(false);navigation.navigate('RewardHistory')}} 
                         style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 20}}
                     />
                 </>
@@ -275,8 +342,8 @@ const ClaimOrangesModal = (props) => {
                     <Button 
                         size="md" 
                         color="white" 
-                        title="GOOD" 
-                        onPress={() => {Haptics.selectionAsync();setShowAds(false);setCompleteAds(false);setShowClose(false);setShowClaimOranges(false);}} 
+                        title="Go to Reward Page" 
+                        onPress={() => {Haptics.selectionAsync();setShowAds(false);setCompleteAds(false);setShowClose(false);setShowClaimOranges(false);navigation.navigate('RewardHistory')}} 
                         style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 30}}
                     />
                 </>

@@ -450,7 +450,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     <HeaderImage/>
 
                     <TouchableOpacity 
-                        onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeReward')}}
+                        onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeNavigation', {back: true})}}
                         style={{
                             position: 'absolute',
                             top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 50 : 60,

@@ -17,8 +17,9 @@
       "**/*"
     ],
     "ios": {
+      "icon": "./assets/logo_easygo_1064.png",
       "supportsTablet": false,
-      "buildNumber": "71",
+      "buildNumber": "72",
       "bundleIdentifier": "com.coineasy.coineasysocial",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow CoinEasy to access your photos. Photos will be used for profile picture and post with Media. This is not mandatory, user can leave the default profile picture. It can then be updated in the user Profil page. Example: You want to create a Post with a photo, we'll need to access your media library",
@@ -28,7 +29,7 @@
       }
     },
     "android": {
-      "versionCode": 50,
+      "versionCode": 51,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo_easygo_1024.png",
         "backgroundColor": "#FFF8F0"

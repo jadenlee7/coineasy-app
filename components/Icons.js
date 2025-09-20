@@ -153,6 +153,32 @@ export const CopyIcon2 = ({style}) => {
   )
 }
 
+export const PeopleIcon = ({style}) => {
+  return(
+    <Svg width="15" height="18" viewBox="0 0 15 18" fill="none" xmlns="http://www.w3.org/2000/svg" style={style}>
+        <Path d="M12.75 10.3542C13.3467 10.3542 13.919 10.578 14.341 10.9766C14.7629 11.3751 15 11.9156 15 12.4792V12.9856C15 15.5193 11.8425 17.4375 7.5 17.4375C3.1575 17.4375 0 15.6192 0 12.9856V12.4792C0 11.9156 0.237053 11.3751 0.65901 10.9766C1.08097 10.578 1.65326 10.3542 2.25 10.3542H12.75ZM7.5 0.4375C8.09095 0.4375 8.67611 0.547429 9.22208 0.761012C9.76804 0.974594 10.2641 1.28765 10.682 1.6823C11.0998 2.07695 11.4313 2.54546 11.6575 3.0611C11.8836 3.57673 12 4.12938 12 4.6875C12 5.24562 11.8836 5.79827 11.6575 6.3139C11.4313 6.82954 11.0998 7.29805 10.682 7.6927C10.2641 8.08735 9.76804 8.40041 9.22208 8.61399C8.67611 8.82757 8.09095 8.9375 7.5 8.9375C6.30653 8.9375 5.16193 8.48973 4.31802 7.6927C3.47411 6.89567 3 5.81467 3 4.6875C3 3.56033 3.47411 2.47933 4.31802 1.6823C5.16193 0.885267 6.30653 0.4375 7.5 0.4375Z" fill="#959595"/>
+    </Svg>
+  )
+}
+
+export const CheckStepIcon = ({style}) => {
+  return(
+    <Svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <Circle cx="8" cy="8" r="8" fill="#FF6B17"/>
+        <Path d="M4 7.27273L7.24324 10L12 6" stroke="white" stroke-linecap="round"/>
+    </Svg>
+  )
+}
+
+export const NotCheckStepIcon = ({style}) => {
+  return(
+    <Svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <Circle cx="8" cy="8" r="8" fill="#999999"/>
+        <Path d="M4 8L12 8" stroke="white" stroke-linecap="round"/>
+    </Svg>
+  )
+}
+
 export const PlusIcon = () => {
   return(
     <Svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" style={[{position: "absolute", bottom: 0, right: -5}]}>

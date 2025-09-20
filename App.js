@@ -661,174 +661,29 @@ export default function App() {
         let _posts = [_post, ...posts];
         setPosts(_posts);
 
+        const today = moment().format('YYYY-MM-DD');
+        const tempData = userData ?? {};
+        if (!tempData.todayActivities || tempData.todayActivities.date !== today) {
+            // Reset activities if date has changed
+            tempData.todayActivities = {
+                date: today,
+                posts: 0,
+                comments: 0,
+                likes: 0,
+            };
+        }
+
         // Orange Reward
-        const tempData = userData ?? {}
         if(replyTo){
-            if(tempData.listClaimedOranges){
-                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                if(index != -1){
-                    tempData.listClaimedOranges[index].listOranges.push({
-                        numberOranges: 3,
-                        type: 'Comment'
-                    })
-                    if(tempData.comment?.number == 19){
-                        tempData.listClaimedOranges[index].listOranges.push({
-                            numberOranges: 50,
-                            type: 'Comments Milestone achieved'
-                        })
-                    }
-                }else{
-                    const listReward = [{
-                        numberOranges: 3,
-                        type: 'Comment'
-                    }]
-                    tempData.comment?.number == 19 && listReward.push({
-                        numberOranges: 50,
-                        type: 'Comments Milestone achieved'
-                    })
-                    tempData.listClaimedOranges.push({
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: listReward
-                    })
-                }
-            }else{
-                tempData.listClaimedOranges = [{
-                    date: moment().format('YYYY-MM-DD'),
-                    listOranges: [
-                        {
-                            numberOranges: 3,
-                            type: 'Comment'
-                        },
-                    ]
-                }]
-            }
-
-            if(tempData.comment){
-                tempData.comment.number += 1
-                tempData.comment.gained += 3
-            }else{
-                tempData.comment = {
-                    number: 1,
-                    gained: 3,
-                    lastComment: moment().format('YYYY-MM-DD HH:mm')
+            if (_post.content.body.length >= 20 || _post.content.media || _post.content.body.includes("http://") || _post.content.body.includes("https://")) {
+                if (tempData.todayActivities.comments < 3) {
+                    tempData.todayActivities.comments += 1;
                 }
             }
-            tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 3 : tempData.activityUnclaimed = {number: 3}
-            tempData.comment.number == 20 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.comment.number == 20 ? tempData.activityUnclaimed = {number: 53} : null
-            tempData.comment.number == 20 ? tempData.comment.number = 0 : null
-
-
-        }else if(repost){
-
-            if(tempData.listClaimedOranges){
-                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                if(index != -1){
-                    tempData.listClaimedOranges[index].listOranges.push({
-                        numberOranges: 5,
-                        type: 'Repost'
-                    })
-                    if(tempData.reaction?.number == 29){
-                        tempData.listClaimedOranges[index].listOranges.push({
-                            numberOranges: 50,
-                            type: 'Reactions Milestone achieved'
-                        })
-                    }
-                }else{
-                    const listReward = [{
-                        numberOranges: 5,
-                        type: 'Repost'
-                    }]
-                    tempData.reaction?.number == 29 && listReward.push({
-                        numberOranges: 50,
-                        type: 'Reactions Milestone achieved'
-                    })
-                    tempData.listClaimedOranges.push({
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: listReward
-                    })
-                }
-            }else{
-                tempData.listClaimedOranges = [{
-                    date: moment().format('YYYY-MM-DD'),
-                    listOranges: [
-                        {
-                            numberOranges: 5,
-                            type: 'Repost'
-                        },
-                    ]
-                }]
-            }
-
-            if(tempData.reaction){
-                tempData.reaction.number += 1
-                tempData.reaction.gained += 5
-            }else{
-                tempData.reaction = {
-                    number: 1,
-                    gained: 5,
-                    lastReaction: moment().format('YYYY-MM-DD HH:mm')
-                }
-            }
-            tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 5 : tempData.activityUnclaimed = {number: 5}
-            tempData.reaction.number == 30 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.reaction.number == 30 ? tempData.activityUnclaimed = {number: 55} : null
-            tempData.reaction.number == 30 ? tempData.reaction.number = 0 : null
-    
         }else{
-
-            if(tempData.listClaimedOranges){
-                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                if(index != -1){
-                    tempData.listClaimedOranges[index].listOranges.push({
-                        numberOranges: 15,
-                        type: 'Post'
-                    })
-                    if(tempData.post?.number == 9){
-                        tempData.listClaimedOranges[index].listOranges.push({
-                            numberOranges: 50,
-                            type: 'Posting Milestone achieved'
-                        })
-                    }
-                }else{
-                    const listReward = [{
-                        numberOranges: 15,
-                        type: 'Post'
-                    }]
-                    if(tempData.post?.number == 9){
-                        listReward.push({
-                            numberOranges: 50,
-                            type: 'Posting Milestone achieved'
-                        })
-                    }
-                    tempData.listClaimedOranges.push({
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: listReward
-                    })
-                }
-            }else{
-                tempData.listClaimedOranges = [{
-                    date: moment().format('YYYY-MM-DD'),
-                    listOranges: [
-                        {
-                            numberOranges: 15,
-                            type: 'Post'
-                        },
-                    ]
-                }]
+            if (_post.content.body.length >= 50 || _post.content.media || _post.content.body.includes("http://") || _post.content.body.includes("https://")) {
+                tempData.todayActivities.posts += 1;
             }
-
-            if(tempData.post){
-                tempData.post.number += 1
-                tempData.post.gained += 15
-            }else{
-                tempData.post = {
-                    number: 1,
-                    gained: 15,
-                    lastPost: moment().format('YYYY-MM-DD HH:mm')
-                }
-            }
-            tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 15 : tempData.activityUnclaimed = {number: 15}
-            tempData.post.number == 10 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.post.number == 10 ? tempData.activityUnclaimed = {number: 65} : null
-            tempData.post.number == 10 ? tempData.post.number = 0 : null
         }
         
         setUserData({...tempData})
@@ -839,6 +694,193 @@ export default function App() {
 
         hidePostbox()
     }
+
+    // TEMP BACKUP
+    /** Will be called when a new post is being shared */
+    // async function defaultCallbackPostShared(_post) {
+    //     console.log("Enter defaultCallbackPostShared:", _post);
+    //     let _posts = [_post, ...posts];
+    //     setPosts(_posts);
+
+    //     // Orange Reward
+    //     const tempData = userData ?? {}
+    //     if(replyTo){
+    //         if(tempData.listClaimedOranges){
+    //             const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+    //             if(index != -1){
+    //                 tempData.listClaimedOranges[index].listOranges.push({
+    //                     numberOranges: 3,
+    //                     type: 'Comment'
+    //                 })
+    //                 if(tempData.comment?.number == 19){
+    //                     tempData.listClaimedOranges[index].listOranges.push({
+    //                         numberOranges: 50,
+    //                         type: 'Comments Milestone achieved'
+    //                     })
+    //                 }
+    //             }else{
+    //                 const listReward = [{
+    //                     numberOranges: 3,
+    //                     type: 'Comment'
+    //                 }]
+    //                 tempData.comment?.number == 19 && listReward.push({
+    //                     numberOranges: 50,
+    //                     type: 'Comments Milestone achieved'
+    //                 })
+    //                 tempData.listClaimedOranges.push({
+    //                     date: moment().format('YYYY-MM-DD'),
+    //                     listOranges: listReward
+    //                 })
+    //             }
+    //         }else{
+    //             tempData.listClaimedOranges = [{
+    //                 date: moment().format('YYYY-MM-DD'),
+    //                 listOranges: [
+    //                     {
+    //                         numberOranges: 3,
+    //                         type: 'Comment'
+    //                     },
+    //                 ]
+    //             }]
+    //         }
+
+    //         if(tempData.comment){
+    //             tempData.comment.number += 1
+    //             tempData.comment.gained += 3
+    //         }else{
+    //             tempData.comment = {
+    //                 number: 1,
+    //                 gained: 3,
+    //                 lastComment: moment().format('YYYY-MM-DD HH:mm')
+    //             }
+    //         }
+    //         tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 3 : tempData.activityUnclaimed = {number: 3}
+    //         tempData.comment.number == 20 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.comment.number == 20 ? tempData.activityUnclaimed = {number: 53} : null
+    //         tempData.comment.number == 20 ? tempData.comment.number = 0 : null
+
+
+    //     }else if(repost){
+
+    //         if(tempData.listClaimedOranges){
+    //             const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+    //             if(index != -1){
+    //                 tempData.listClaimedOranges[index].listOranges.push({
+    //                     numberOranges: 5,
+    //                     type: 'Repost'
+    //                 })
+    //                 if(tempData.reaction?.number == 29){
+    //                     tempData.listClaimedOranges[index].listOranges.push({
+    //                         numberOranges: 50,
+    //                         type: 'Reactions Milestone achieved'
+    //                     })
+    //                 }
+    //             }else{
+    //                 const listReward = [{
+    //                     numberOranges: 5,
+    //                     type: 'Repost'
+    //                 }]
+    //                 tempData.reaction?.number == 29 && listReward.push({
+    //                     numberOranges: 50,
+    //                     type: 'Reactions Milestone achieved'
+    //                 })
+    //                 tempData.listClaimedOranges.push({
+    //                     date: moment().format('YYYY-MM-DD'),
+    //                     listOranges: listReward
+    //                 })
+    //             }
+    //         }else{
+    //             tempData.listClaimedOranges = [{
+    //                 date: moment().format('YYYY-MM-DD'),
+    //                 listOranges: [
+    //                     {
+    //                         numberOranges: 5,
+    //                         type: 'Repost'
+    //                     },
+    //                 ]
+    //             }]
+    //         }
+
+    //         if(tempData.reaction){
+    //             tempData.reaction.number += 1
+    //             tempData.reaction.gained += 5
+    //         }else{
+    //             tempData.reaction = {
+    //                 number: 1,
+    //                 gained: 5,
+    //                 lastReaction: moment().format('YYYY-MM-DD HH:mm')
+    //             }
+    //         }
+    //         tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 5 : tempData.activityUnclaimed = {number: 5}
+    //         tempData.reaction.number == 30 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.reaction.number == 30 ? tempData.activityUnclaimed = {number: 55} : null
+    //         tempData.reaction.number == 30 ? tempData.reaction.number = 0 : null
+    
+    //     }else{
+
+    //         if(tempData.listClaimedOranges){
+    //             const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
+    //             if(index != -1){
+    //                 tempData.listClaimedOranges[index].listOranges.push({
+    //                     numberOranges: 15,
+    //                     type: 'Post'
+    //                 })
+    //                 if(tempData.post?.number == 9){
+    //                     tempData.listClaimedOranges[index].listOranges.push({
+    //                         numberOranges: 50,
+    //                         type: 'Posting Milestone achieved'
+    //                     })
+    //                 }
+    //             }else{
+    //                 const listReward = [{
+    //                     numberOranges: 15,
+    //                     type: 'Post'
+    //                 }]
+    //                 if(tempData.post?.number == 9){
+    //                     listReward.push({
+    //                         numberOranges: 50,
+    //                         type: 'Posting Milestone achieved'
+    //                     })
+    //                 }
+    //                 tempData.listClaimedOranges.push({
+    //                     date: moment().format('YYYY-MM-DD'),
+    //                     listOranges: listReward
+    //                 })
+    //             }
+    //         }else{
+    //             tempData.listClaimedOranges = [{
+    //                 date: moment().format('YYYY-MM-DD'),
+    //                 listOranges: [
+    //                     {
+    //                         numberOranges: 15,
+    //                         type: 'Post'
+    //                     },
+    //                 ]
+    //             }]
+    //         }
+
+    //         if(tempData.post){
+    //             tempData.post.number += 1
+    //             tempData.post.gained += 15
+    //         }else{
+    //             tempData.post = {
+    //                 number: 1,
+    //                 gained: 15,
+    //                 lastPost: moment().format('YYYY-MM-DD HH:mm')
+    //             }
+    //         }
+    //         tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 15 : tempData.activityUnclaimed = {number: 15}
+    //         tempData.post.number == 10 && tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 50 : tempData.post.number == 10 ? tempData.activityUnclaimed = {number: 65} : null
+    //         tempData.post.number == 10 ? tempData.post.number = 0 : null
+    //     }
+        
+    //     setUserData({...tempData})
+        
+    //     var tempProfile = user.profile
+    //     tempProfile.data = tempData
+    //     const res = await orbis.updateProfile(tempProfile);
+
+    //     hidePostbox()
+    // }
+
 
     function scrollToTop() {
         if(homeFeedRef?.current) {
@@ -981,11 +1023,6 @@ export default function App() {
                     {/** Display push notifications pane */}
                     {pushNotifsVis &&
                         <PushNotificationsModal />
-                    }
-
-                    {/** Display claim oranges pane */}
-                    {showClaimOranges &&
-                        <ClaimOrangesModal />
                     }
 
                     {/** Display nickname pane */}

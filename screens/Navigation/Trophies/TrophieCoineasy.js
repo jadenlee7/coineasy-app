@@ -95,7 +95,7 @@ const TrophieCoineasy = () => {
     });
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={{flex: 1}}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Tabs */}
                 <ScrollView 
@@ -199,9 +199,6 @@ const TrophieCoineasy = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   tabContainer: {
     flexGrow: 1,
     paddingHorizontal: 20,

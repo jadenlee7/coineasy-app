@@ -703,66 +703,22 @@ export const LikeCTA = ({post, isReply}) => {
         setCountLikes(countLikes ? countLikes+1 : numLikes+1)
 
         // Orange Reward
-        const tempData = userData
-
-        if(tempData.listClaimedOranges){
-            const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-            if(index != -1){
-                tempData.listClaimedOranges[index].listOranges.push({
-                    numberOranges: 2,
-                    type: 'Like'
-                })
-                if(tempData.reaction?.number == 29){
-                    tempData.listClaimedOranges[index].listOranges.push({
-                        numberOranges: 50,
-                        type: 'Reactions Milestone achieved'
-                    })
-                }
-            }else{
-                const listReward = [{
-                    numberOranges: 2,
-                    type: 'Like'
-                }]
-                if(tempData.reaction?.number == 29){
-                    listReward.push({
-                        numberOranges: 50,
-                        type: 'Reactions Milestone achieved'
-                    })
-                }
-                tempData.listClaimedOranges.push({
-                    date: moment().format('YYYY-MM-DD'),
-                    listOranges: listReward
-                })
-            }
-        }else{
-            tempData.listClaimedOranges = [{
-                date: moment().format('YYYY-MM-DD'),
-                listOranges: [
-                    {
-                        numberOranges: 2,
-                        type: 'Like'
-                    },
-                ]
-            }]
+        const today = moment().format('YYYY-MM-DD');
+        const tempData = userData ?? {};
+        if (!tempData.todayActivities || tempData.todayActivities.date !== today) {
+            // Reset activities if date has changed
+            tempData.todayActivities = {
+                date: today,
+                posts: 0,
+                comments: 0,
+                likes: 0,
+            };
         }
 
-        if(tempData.reaction){
-            tempData.reaction.number += 1
-            tempData.reaction.gained += 2
-        }else{
-            tempData.reaction = {
-                number: 1,
-                gained: 2,
-                lastReaction: moment().format('YYYY-MM-DD HH:mm')
-            }
+        if (tempData.todayActivities.likes < 5) {
+            tempData.todayActivities.likes += 1;
         }
-
-        tempData.activityUnclaimed ? tempData.activityUnclaimed.number += 2 : tempData.activityUnclaimed = {number: 2}
-        if(tempData.reaction.number == 30 && tempData.activityUnclaimed){
-            tempData.activityUnclaimed.number += 50
-        }
-        tempData.reaction.number == 30 ? tempData.reaction.number = 0 : null
-
+        
         setUserData({...tempData})
 
         var tempProfile = user.profile

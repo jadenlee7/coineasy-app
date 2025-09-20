@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { QuizCheckIcon, QuizErrorIcon } from '../../../components/Icons';
 import moment from 'moment';
+import HeaderActions from '../../../components/HeaderActions';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -290,90 +291,45 @@ const CourseDetailScreen = ({ navigation, route }) => {
 
     return (
         <View style={{flex: 1, backgroundColor: 'white',}}>
-            <HeaderImage />
             
-            <TouchableOpacity 
-                style={{position: 'absolute',left: 20, top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 55 : 60}} 
-                onPress={() => {Haptics.selectionAsync();navigation.goBack()}}
-            >
-                <Image
-                    style={{width: 24,height: 24}}
-                    resizeMode='contain'
-                    source={require('../../../assets/back_button.png')}
-                    defaultSource={require('../../../assets/back_button.png')}
-                />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-                onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeNavigation')}}
-                style={{
-                    position: 'absolute',
-                    top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 50 : 60,
-                    right: 10,
-                    borderRadius: 30,
-                    backgroundColor: '#FFF2E2',
-                    flexDirection:'row',
-                    gap: 6,
-                    alignSelf:'flex-end',
-                    marginRight: 5,
-                    paddingVertical: 5,
-                    paddingHorizontal:10,
-                    alignItems:'center',
-                    justifyContent:'center'
-                }}
-            >
-                <Image
-                    style={{width: 15, height: 15}}
-                    resizeMode='contain'
-                    source={require('../../../assets/trophy/trophy_icon_orange.png')}
-                />
-                <Text style={{fontWeight: 'bold',textAlign: 'center',color:'#FB5100',}}>
-                    {userData?.numberOranges && userData?.numberOranges.toString().length <= 3 ? userData?.numberOranges
-                        : userData?.numberOranges && userData?.numberOranges.toString().length == 4 ? userData?.numberOranges.toString().slice(0,1)+','+userData?.numberOranges.toString().slice(1,4)
-                        : userData?.numberOranges && userData?.numberOranges.toString().length == 5 ? userData?.numberOranges.toString().slice(0,2)+','+userData?.numberOranges.toString().slice(2,5)
-                        : userData?.numberOranges && userData?.numberOranges.toString().length == 6 ? userData?.numberOranges.toString().slice(0,3)+','+userData?.numberOranges.toString().slice(3,6)
-                        : userData?.numberOranges && userData?.numberOranges.toString().length == 7 ? userData?.numberOranges.toString().slice(0,1)+','+userData?.numberOranges.toString().slice(1,4)+','+userData?.numberOranges.toString().slice(4,7)
-                        : userData?.numberOranges && userData?.numberOranges.toString().length == 8 ? userData?.numberOranges.toString().slice(0,2)+','+userData?.numberOranges.toString().slice(2,5)+','+userData?.numberOranges.toString().slice(5,8)
-                        : userData?.numberOranges && userData?.numberOranges.toString().length == 9 ? userData?.numberOranges.toString().slice(0,3)+','+userData?.numberOranges.toString().slice(3,6)+','+userData?.numberOranges.toString().slice(6,9)
-                        : 0
-                    }
-                </Text>
-            </TouchableOpacity>
+            <HeaderImage />
+            <HeaderActions />
 
             {quizEnded ? (
                 <>
-
                     <View style={{
-                        marginHorizontal: 40,
                         marginVertical: 20,
                         borderRadius: 16,
                         padding: 20,
                         borderWidth: 1,
                         borderColor: '#E3E8EC',
-                        alignItems: "flex-start"
+                        width: screenWidth*0.8,
+                        alignSelf:'center',
+                        justifyContent:'center',
+                        alignItems:'center',
                     }}>
                         <Image
-                            style={{width:'100%', height: 205, }}
+                            style={{width: screenWidth*0.68, height: 205,}}
                             resizeMode='contain'
                             source={course.image}
                         />
 
-                        <Text style={{fontSize: 14,fontFamily: "GmarketMedium", marginTop: 20}}>
+                        <Text style={{fontSize: 14,fontFamily: "GmarketMedium", marginTop: 20, width: screenWidth*0.68,}}>
                             {course.title}
                         </Text>
                     </View>
 
-                    <Text style={{fontSize: 16,fontFamily: "GmarketMedium", marginVertical: 10, textAlign:'center'}}>
+                    <Text style={{fontSize: 20,fontFamily: "GmarketMedium", marginVertical: 10, textAlign:'center'}}>
                         Completed
                     </Text>
 
                     <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3, marginTop: 10,}}>
                         <Image
-                            style={{width: 30, height: 30}}
+                            style={{width: 35, height: 35}}
                             resizeMode='contain'
                             source={require('../../../assets/trophy/trophy_icon_orange.png')}
                         />
-                        <Text style={{color: '#FB5100',fontFamily: 'GmarketBold', fontSize: 18,}}>+{5 * pages.length}</Text>
+                        <Text style={{color: '#FB5100',fontFamily: 'GmarketBold', fontSize: 20,}}>+{5 * pages.length}</Text>
                     </View> 
 
                     <View style={{position: 'absolute',bottom: 40, width: screenWidth}}>
@@ -388,14 +344,14 @@ const CourseDetailScreen = ({ navigation, route }) => {
                 </>
             ) : (
                 <>
-                    <View style={{width:'100%', marginTop: 20 ,flexDirection:'row', alignItems:'center',paddingHorizontal: 15}}>
-                        <View style={[styles.progressBarBackground, { width: "85%" }]}>
+                    <View style={{width:'90%', marginTop: 20 ,flexDirection:'row', alignItems:'center',alignSelf:'center', gap: 10}}>
+                        <View style={[styles.progressBarBackground,]}>
                             <Animated.View
                                 style={[styles.progressBarFill, { width: widthInterpolated }]}
                             />
                         </View>
 
-                        <Text style={{width:'15%',textAlign:'center'}}>
+                        <Text style={{textAlign:'center'}}>
                             <Text style={{ fontWeight: 'bold' }}>{courseProgress}</Text>
                             <Text style={{ color: 'grey' }}>/</Text>
                             <Text style={{ color: 'grey' }}>{course.pages.length}</Text>

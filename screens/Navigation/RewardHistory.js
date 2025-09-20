@@ -1,23 +1,22 @@
-import React, { useContext } from 'react'
-import { Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useContext, useState } from 'react'
+import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import * as Haptics from 'expo-haptics';
-import { useTailwind } from 'tailwind-rn';
 
 import HeaderImage from '../../components/HeaderImage';
 import { GlobalContext } from '../../contexts/GlobalContext';
 import moment from 'moment';
 
-const {width, height} = Dimensions.get('window')
-
-
 const RewardHistory = ({navigation, route}) => {
-    const { orbis, user, userData } = useContext(GlobalContext);
+    const { userData } = useContext(GlobalContext);
 
-    const tailwind = useTailwind();
+    const categories = ["All", "Check-in", "AD", "Activity", "Invite", "Bonus"];
+    const [selectedCategory, setSelectedCategory] = useState("All");
 
     const tempList = userData?.listClaimedOranges
-    tempList.sort((a, b) => (moment(a.date).format('YYYY-MM-DD') < moment(b.date).format('YYYY-MM-DD')) ? 1 : -1)
+    if(tempList){
+        tempList.sort((a, b) => (moment(a.date).format('YYYY-MM-DD') < moment(b.date).format('YYYY-MM-DD')) ? 1 : -1)
+    }
     // const tempList = user?.profile?.data?.listClaimedOranges ?? [
     // {
     //         date: '2024-06-01',
@@ -82,11 +81,69 @@ const RewardHistory = ({navigation, route}) => {
     //     },
     // ]
 
+    // Category filter
+    const filterItems = () => {
+        if (selectedCategory === "All") return tempList;
+
+        return tempList.map((entry) => ({
+            ...entry,
+            listOranges: entry.listOranges.filter((orange) =>
+                (selectedCategory === "Check-in" && orange.type.toLowerCase().includes("check-in")) 
+                || (selectedCategory === "AD" && orange.type.toLowerCase().includes("ad")) 
+                || (selectedCategory === "Activity" && orange.type.toLowerCase().includes("activity")) 
+                || (selectedCategory === "Invite" && orange.type.toLowerCase().includes("invite"))
+                || (selectedCategory === "Bonus" && orange.type.toLowerCase().includes("bonus"))
+            ),
+        }));
+    };
+
+    const filteredList = filterItems();
+
+    const renderOrangeItem = (item, date) => {
+        return(
+            <View
+                key={`${date}-${item.type}-${item.numberOranges}`}
+                style={styles.card}
+            >
+                <View style={{gap: 10}}>
+                    <Text style={styles.title}>{item.type}</Text>
+
+                    <Text style={styles.subtitle}>
+                        {
+                            item.type.toLowerCase().includes("check-in") ? "Check-in reward"
+                            : item.type.toLowerCase().includes("ad") ? "Watch AD"
+                            : item.type.toLowerCase().includes("activity") ? "Complete daily task"
+                            : item.type.toLowerCase().includes("invite") ? "Invite reward"
+                            : item.type.toLowerCase().includes("bonus") ? "Bonus"
+                            : "Other"
+                        }
+                    </Text>
+                </View>
+
+                <View style={{flex: 1, gap: 5,alignItems:'flex-end',}}>
+                    <View style={{flexDirection: 'row', justifyContent:'center', gap: 4}}>
+                        <Image
+                            style={{width: 19,height: 19,}}
+                            resizeMode='contain'
+                            source={require('../../assets/trophy/trophy_icon_orange.png')}
+                            defaultSource={require('../../assets/trophy/trophy_icon_orange.png')}
+                        />  
+                        <Text style={{fontSize: Platform.OS == 'ios' ? 17 : 15, fontFamily:'GmarketBold',height: 19, }}>{item.numberOranges}</Text>
+                    </View>
+
+                    <Text style={styles.date}>
+                        {new Date(date).toLocaleDateString("fr-FR").replace(/\//g, ".")}
+                    </Text>
+                </View>
+            </View>
+        )
+    };
+
     return (
-        <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
+        <View style={[{flex: 1, backgroundColor: 'white',}]}>
             <HeaderImage />
 
-            <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 4}}>
+            <View style={{flexDirection: 'row',justifyContent: 'flex-start',alignItems: 'center',paddingLeft: 5,paddingTop: 4,}}>
                 <TouchableOpacity style={{margin: 15,}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
                     <Image
                         style={{width: 24,height: 24}}
@@ -95,66 +152,110 @@ const RewardHistory = ({navigation, route}) => {
                         defaultSource={require('../../assets/back_button.png')}
                     />
                 </TouchableOpacity>
+                <Text style={{fontFamily: 'GmarketBold', fontSize: Platform.OS == 'ios' ? 18 : 16,}}>Reward History</Text>
             </View>
 
-            <ScrollView style={{}}>
-                {tempList && tempList.length > 0 ? tempList.map((e, ind) => {
-                    return(
-                        <View key={Math.random()}>
-                            <View style={{paddingHorizontal: 20,marginBottom: 20,marginTop: ind == 0 ? 0 : 10,}} key={Math.random()}>
-                                <Text style={{color:'#959595',fontFamily: 'GmarketMedium',fontSize: 13,}}>{moment(e.date).format('MMMM Do')}</Text>
+            <SafeAreaView style={{flex: 1}}>
+                <ScrollView showsVerticalScrollIndicator={false}>
 
-                                {e.listOranges.map((elt, index) => {
-                                    return(
-                                        <View style={{flexDirection:'row',alignItems:'center',gap: 10,marginTop: index == 0 ? 10 : 20,}} key={Math.random()}>
-                                            <Image
-                                                style={{width: 40, height: 40}}
-                                                resizeMode='contain'
-                                                source={require('../../assets/orange_icon.png')}
-                                            />
+                    <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.tabContainer}
+                    >
+                        {categories.map((cat) => (
+                            <TouchableOpacity
+                                key={cat}
+                                style={[
+                                    styles.categoryButton,
+                                    selectedCategory === cat && styles.categoryButtonActive,
+                                ]}
+                                onPress={() => setSelectedCategory(cat)}
+                            >
+                                <Text
+                                    style={[
+                                        styles.categoryText,
+                                        selectedCategory === cat && styles.categoryTextActive,
+                                        {alignSelf:'center',}
+                                    ]}
+                                >
+                                    {cat}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
 
-                                            {elt.type.includes('Streak Bonus') ? (
-                                                <View style={{}}>
-                                                    <Text style={{color: '#FF6B17', fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,}}>+ {elt.numberOranges} Oranges</Text>
-                                                    <Text style={{color:'#FF6B17', fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,marginTop: 5}}>{elt.type}</Text>
-                                                </View>
-                                            ) : elt.type.includes('Account Creation') ? (
-                                                <View style={{}}>
-                                                    <Text style={{color: '#FF6B17', fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,}}>+ {elt.numberOranges} Oranges</Text>
-                                                    <Text style={{color:'#FF6B17', fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,marginTop: 5}}>{elt.type}</Text>
-                                                </View>
-                                            ) : elt.type.includes('Milestone') ? (
-                                                <View style={{}}>
-                                                    <Text style={{color: '#FF6B17', fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,}}>+ {elt.numberOranges} Oranges</Text>
-                                                    <Text style={{color:'#FF6B17', fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,marginTop: 5}}>{elt.type}</Text>
-                                                </View>
-                                            ) : (
-                                                <View style={{}}>
-                                                    <Text style={{fontFamily: 'GmarketMedium', fontSize: Platform.OS == 'ios' ? 14 : 12,}}>{elt.numberOranges} Oranges</Text>
-                                                    <Text style={{color:'#959595',fontFamily: 'GmarketMedium',fontSize: Platform.OS == 'ios' ? 14 : 12,marginTop: 5,}}>{elt.type}</Text>
-                                                </View>
+                    <View style={{paddingHorizontal: 7,}}>
+                        {filteredList.map((entry) =>
+                            entry.listOranges.map((orange, idx) =>
+                                renderOrangeItem(orange, entry.date, idx)
+                            )
+                        )}
+                    </View>
 
-                                            )}
-                                        </View>
-                                    )
-                                })}
-
-                            </View>
-                            <View style={{height: StyleSheet.hairlineWidth, width: width,backgroundColor: '#DCDCDC',}} />
-                        </View>
-                    )
-                }) : (
-                    <Text style={{textAlign: 'center',marginTop: 10,color: '#b8b8b8'}}>You don't have any Rewards</Text>
-                )}
-
-                <View style={{height: 50}}/>
-            </ScrollView>
-
-
+                    <View style={{height: 100}} />
+                </ScrollView>
+            </SafeAreaView>
         </View>
     )
 }
 
 export default RewardHistory
 
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({
+  tabContainer: {
+    flexGrow: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 8,
+  },
+  categoryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#F6F7FC",
+    marginRight: 8,
+  },
+  categoryButtonActive: {
+    backgroundColor: "#f97316",
+  },
+  categoryText: {
+    fontSize: 14,
+    color: "#454545",
+  },
+  categoryTextActive: {
+    color: "#ffffff",
+  },
+  card: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FEF5F3",
+    padding: 16,
+    paddingVertical: 20,
+    borderRadius: 16,
+    marginVertical: 5,
+    marginHorizontal: 10,
+  },
+  title: {
+    fontFamily: 'GmarketMedium',
+    fontSize: Platform.OS == 'ios' ? 17 : 15,
+    color: "#1f2937",
+  },
+  subtitle: {
+    fontFamily:'GmarketMedium',
+    fontSize: Platform.OS == 'ios' ? 13 : 11,
+    color: "#999",
+  },
+  date: {
+    fontSize: 12,
+    color: "#999",
+    marginTop: 4,
+  },
+  orangeCount: {
+    fontFamily: 'GmarketBold',
+    fontSize: Platform.OS == 'ios' ? 18 : 16,
+    color: "#000",
+  },
+});

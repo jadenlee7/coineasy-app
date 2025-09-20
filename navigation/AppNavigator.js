@@ -18,6 +18,7 @@ import CourseSelectorScreen from '../screens/Navigation/Trophies/CourseSelectorS
 import CourseDetailScreen from '../screens/Navigation/Trophies/CourseDetailScreen';
 import TrophiePresentation from '../screens/Navigation/Trophies/TrophiePresentationScreen';
 import OrangeNavigation from '../screens/Navigation/OrangeNavigation';
+import InviteFriendScreen from '../screens/Navigation/InviteFriendScreen';
 
 // const Stack = createNativeStackNavigator();
 
@@ -42,6 +43,7 @@ const AppNavigator = (props) => {
                     <Stack.Screen name="CourseSelector" component={CourseSelectorScreen} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="CourseDetail" component={CourseDetailScreen} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="TrophiePresentation" component={TrophiePresentation} options={{ headerShown: false, gestureEnabled: true }} />
+                    <Stack.Screen name="InviteFriendScreen" component={InviteFriendScreen} options={{ headerShown: false, gestureEnabled: true }} />
                 </Stack.Navigator>
             </NavigationContainer>
 
