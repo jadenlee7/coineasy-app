@@ -42,7 +42,7 @@ const Page = ({ page, parentCourse, screenWidth, screenHeight, styles }) => (
         nestedScrollEnabled
         keyboardShouldPersistTaps="handled"
     >
-        <Text style={[styles.title, { fontSize: Platform.OS == 'ios' ? 16 : 14, fontFamily: "GmarketBold", lineHeight: 20 }]}>
+        <Text style={[styles.title, { fontSize: Platform.OS == 'ios' ? 18 : 16, fontFamily: "GmarketBold", lineHeight: 20 }]}>
             {page.title}
         </Text>
         
@@ -89,7 +89,9 @@ const Quiz = ({
         nestedScrollEnabled
         keyboardShouldPersistTaps="handled"
     >
-        <Text style={[styles.title, { fontSize: 14, fontFamily: "GmarketBold", lineHeight: 20, marginTop: -10 }]}>{question.question}</Text>
+        <Text style={[styles.title, { fontSize: Platform.OS == 'ios' ? 18 : 16, fontFamily: "GmarketBold", lineHeight: 20, }]}>
+            {question.question}
+        </Text>
 
         <View style={styles.container_choice}>
             {question.options.map((option) => (
@@ -138,8 +140,9 @@ const NavigationButtons = ({
     handleSubmitOption,
     setQuizEnded,
     styles,
-    course
-}) => {
+    course,
+    currentPage
+}) => {    
     if (quizTime && rightAnswer) {
         return (
             <TouchableOpacity
@@ -156,8 +159,9 @@ const NavigationButtons = ({
     return (
         <>
             <TouchableOpacity
-                style={[styles.backButton, { opacity: 0.5 }]}
+                style={[styles.backButton, { opacity: currentPage === 1 ? 0.5 : 1}]}
                 onPress={handleBack}
+                disabled={currentPage === 1}
             >
                 <Ionicons name="chevron-back" size={16} color="#555555" style={styles.nextIcon} />
                 <Text style={styles.backButtonText}>Back</Text>
@@ -176,7 +180,6 @@ const NavigationButtons = ({
 
 const CourseDetailScreen = ({ navigation, route }) => {
 
-    const tailwind = useTailwind();
     const { orbis, user, userData, setUserData } = useContext(GlobalContext);
 
     const {parentCourse, course, courseId} = route.params
@@ -323,97 +326,14 @@ const CourseDetailScreen = ({ navigation, route }) => {
         return await orbis.updateProfile(tempProfile);
     }, [user.profile, orbis]);
 
-    
-    const renderPage = (page, index) => (
-        <ScrollView
-            style={{ width: screenWidth, height: screenHeight }}
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-            key={index}
-        >
-            <Text style={[tailwind('text-slate-900 p-5'), {fontSize: Platform.OS == 'ios' ? 16 : 14,fontFamily: "GmarketBold",lineHeight: 20}]}>
-                {page.title}
-            </Text>
-
-            {page.image && (
-                <View style={{}}>
-                    <Image 
-                        source={page.image}
-                        style={styles.image_quiz}
-                        resizeMode='cover'
-                    />
-                </View>
-            )}
-
-            <View style={styles.content}>
-                <Text style={styles.description}>
-                    {parentCourse.category === "project" ? 
-                        page.description
-                        .split(".")
-                        .filter(sentence => sentence.trim() !== "")
-                        .map(sentence => sentence.trim() + ".")
-                        .join("\n\n")
-                        : page.description}
-                </Text>
-            </View>
-
-            <View style={{ height: 100 }} />
-        </ScrollView>
-    );
-
-    const renderQuiz = () => (
-        <ScrollView
-            style={{ width: screenWidth, height: screenHeight }}
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-        >
-            <Text style={[tailwind('text-slate-900 p-5'), {fontSize: 14,fontFamily: "GmarketBold",lineHeight: 20,marginTop: -10,}]}>
-                {question.question}
-            </Text>
-
-            <View style={styles.container_choice}>
-                {question.options.map((option) => (
-                    <TouchableOpacity
-                        key={option.id}
-                        style={[
-                            styles.optionButton_choice,
-                            selectedOption === option.id && styles.selectedOption_choice,
-                            selectedOption === option.id && wrongAnswer && styles.wrongOption_choice,
-                            selectedOption === option.id && rightAnswer && styles.rightOption_choice,
-                            {fontFamily: "GmarketBold",}
-                        ]}
-                        onPress={() => {Haptics.selectionAsync();setWrongAnswer(null);setRightAnswer(null);setSelectedOption(option.id)}}
-                        activeOpacity={0.7}
-                        disabled={rightAnswer}
-                    >
-                        <Text 
-                            style={[
-                                styles.optionText_choice,
-                                selectedOption === option.id && styles.selectedText_choice
-                            ]}
-                            numberOfLines={1}
-                            adjustsFontSizeToFit
-                            minimumFontScale={selectedOption === option.id && rightAnswer ? 0.5 : 0.7}
-                        >
-                            {option.text}
-                        </Text>
-                        {selectedOption === option.id && !wrongAnswer && !rightAnswer && <QuizCheckIcon />}
-                        {selectedOption === option.id && wrongAnswer && <QuizErrorIcon />}
-                        {selectedOption === option.id && rightAnswer && <Text style={{color: '#32c913'}}>Correct!</Text>}
-                    </TouchableOpacity>
-                ))}
-            </View>
-
-            <View style={{ height: 100 }} />
-        </ScrollView>
-    );
-
 
     return (
         <View style={{flex: 1, backgroundColor: 'white',}}>
             
             <HeaderImage />
-            <HeaderActions />
+            <HeaderActions 
+                actions={() => {setCurrentPage(1);setCourseProgress(1)}}
+            />
 
             {quizEnded ? (
                 <CompletedView course={course} pages={course.pages} onValidateQuiz={onValidateQuiz} />
@@ -470,6 +390,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
                             setQuizEnded={() => setQuizEnded(true)}
                             styles={styles}
                             course={course}
+                            currentPage={currentPage}
                         />
                     </View>
                 </>
@@ -543,7 +464,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 20,
+    marginVertical: 15,
+    paddingHorizontal: 20,
   },
   description: {
     fontSize: Platform.OS == 'ios' ? 15 : 13,
