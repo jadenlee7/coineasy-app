@@ -14,11 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/core';
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { listConstants } from '../../../components/Constants';
-import moment from 'moment';
 import { GlobalContext } from '../../../contexts/GlobalContext';
-import Button from '../../../components/Button';
 import useCountdown from '../../../hooks/useCountdown';
 
 const {width, height} = Dimensions.get('window')
@@ -187,13 +183,13 @@ const OrangeReward = (props) => {
                     description="Complete daily tasks and earn Orange. Stay active every day to claim your reward!"
                     points="30"
                     buttonText={!timeLeftDailyActivity ? `Claim` : timeLeftDailyActivity || "Wait..."}
-                    buttonType={userData.todayActivities?.posts == 1 && userData.todayActivities?.comments == 2 && userData.todayActivities?.likes == 10 && !timeLeftDailyActivity ? "primary" : "secondary"}
+                    buttonType={userData?.todayActivities?.posts == 1 && userData?.todayActivities?.comments == 2 && userData?.todayActivities?.likes == 10 && !timeLeftDailyActivity ? "primary" : "secondary"}
                     // buttonType={userData.todayActivities?.posts == 1 && userData.todayActivities?.comments == 2 && userData.todayActivities?.likes == 10 ? "primary" : "secondary"}
                     onPress={!timeLeftDailyActivity ? handleClaimDailyActivity : null}
                 >
-                    <ProgressBar current={userData.todayActivities?.posts ?? 0} max={1} label="Post" />
-                    <ProgressBar current={userData.todayActivities?.comments ?? 0} max={5} label="Comments" />
-                    <ProgressBar current={userData.todayActivities?.likes ?? 0} max={10} label="Likes" />
+                    <ProgressBar current={userData?.todayActivities?.posts ?? 0} max={1} label="Post" />
+                    <ProgressBar current={userData?.todayActivities?.comments ?? 0} max={5} label="Comments" />
+                    <ProgressBar current={userData?.todayActivities?.likes ?? 0} max={10} label="Likes" />
                 </RewardCard>
 
                 {/* Invite Friends */}
@@ -204,7 +200,7 @@ const OrangeReward = (props) => {
                     points="100"
                     buttonText="View Details"
                     buttonType="primary"
-                    onPress={() => navigation.navigate('InviteFriendScreen')}
+                    onPress={() => {Haptics.selectionAsync();navigation.navigate('InviteFriendScreen')}}
                 />
 
                 <View style={{height: 30}} />

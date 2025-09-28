@@ -8,13 +8,13 @@ import {
   Image,
   Platform,
 } from 'react-native';
-import Carousel from 'react-native-reanimated-carousel';
+import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
+import Carousel from 'react-native-reanimated-carousel';
+
 import HeaderImage from '../../../components/HeaderImage';
-import useStatusBarHeight from '../../../hooks/useStatusBarHeight';
 import { GlobalContext } from '../../../contexts/GlobalContext';
 import { MultiplePeopleIcon } from '../../../components/Icons';
-import * as Haptics from 'expo-haptics';
 import HeaderActions from '../../../components/HeaderActions';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -22,7 +22,6 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function CourseSelectorScreen({ navigation, route }) {
     const { userData } = useContext(GlobalContext);
     const tailwind = useTailwind();
-    const statusBarHeight = useStatusBarHeight();
 
     const { course } = route.params
     const sections = course.sections
@@ -40,6 +39,7 @@ export default function CourseSelectorScreen({ navigation, route }) {
     });
 
     const handleConfirm = () => {
+        Haptics.selectionAsync();
         const selectedCourse = sectionsWithProgress[currentIndex];
         navigation.navigate('CourseDetail', { 
             parentCourse: course, 
@@ -49,6 +49,7 @@ export default function CourseSelectorScreen({ navigation, route }) {
     };
 
     const handleCardPress = (item) => {
+        Haptics.selectionAsync();
         navigation.navigate('CourseDetail', { 
             parentCourse: course,
             course: item,

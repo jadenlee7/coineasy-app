@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useMemo, useState } from 'react'
 import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import * as Haptics from 'expo-haptics';
@@ -13,11 +13,11 @@ const RewardHistory = ({navigation, route}) => {
     const categories = ["All", "Check-in", "AD", "Activity", "Invite", "Bonus"];
     const [selectedCategory, setSelectedCategory] = useState("All");
 
-    const tempList = userData?.listClaimedOranges
+    const tempList = userData?.listClaimedOranges ?? []
     if(tempList){
         tempList.sort((a, b) => (moment(a.date).format('YYYY-MM-DD') < moment(b.date).format('YYYY-MM-DD')) ? 1 : -1)
     }
-    // const tempList = user?.profile?.data?.listClaimedOranges ?? [
+    // const tempList = userData?.listClaimedOranges ?? [
     // {
     //         date: '2024-06-01',
     //         listOranges: [
@@ -81,23 +81,22 @@ const RewardHistory = ({navigation, route}) => {
     //     },
     // ]
 
-    // Category filter
-    const filterItems = () => {
-        if (selectedCategory === "All") return tempList;
+    const filteredList = useMemo(() => {
+        if (!tempList) return [];
 
-        return tempList.map((entry) => ({
+        const sortedList = [...tempList].sort(
+            (a, b) => moment(b.date).valueOf() - moment(a.date).valueOf()
+        );
+
+        if (selectedCategory === "All") return sortedList;
+
+        return sortedList.map((entry) => ({
             ...entry,
             listOranges: entry.listOranges.filter((orange) =>
-                (selectedCategory === "Check-in" && orange.type.toLowerCase().includes("check-in")) 
-                || (selectedCategory === "AD" && orange.type.toLowerCase().includes("ad")) 
-                || (selectedCategory === "Activity" && orange.type.toLowerCase().includes("activity")) 
-                || (selectedCategory === "Invite" && orange.type.toLowerCase().includes("invite"))
-                || (selectedCategory === "Bonus" && orange.type.toLowerCase().includes("bonus"))
+                orange.type.toLowerCase().includes(selectedCategory.toLowerCase())
             ),
         }));
-    };
-
-    const filteredList = filterItems();
+    }, [userData, selectedCategory]);
 
     const renderOrangeItem = (item, date) => {
         return(
@@ -186,10 +185,16 @@ const RewardHistory = ({navigation, route}) => {
                     </ScrollView>
 
                     <View style={{paddingHorizontal: 7,}}>
-                        {filteredList.map((entry) =>
-                            entry.listOranges.map((orange, idx) =>
-                                renderOrangeItem(orange, entry.date, idx)
+                        {filteredList.length > 0 ? (
+                            filteredList.map((entry) =>
+                                entry.listOranges.map((orange, idx) =>
+                                    renderOrangeItem(orange, entry.date, idx)
+                                )
                             )
+                        ) : (
+                            <Text style={{textAlign:'center', marginTop: 20, color:'#999'}}>
+                                No oranges claimed
+                            </Text>
                         )}
                     </View>
 

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,105 +12,318 @@ import {
   Animated
 } from 'react-native';
 import HeaderImage from '../../../components/HeaderImage';
+import HeaderActions from '../../../components/HeaderActions';
 import { GlobalContext } from '../../../contexts/GlobalContext';
+import { QuizCheckIcon, QuizErrorIcon } from '../../../components/Icons';
+
 import { useTailwind } from 'tailwind-rn';
-import useStatusBarHeight from '../../../hooks/useStatusBarHeight';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { QuizCheckIcon, QuizErrorIcon } from '../../../components/Icons';
 import moment from 'moment';
-import HeaderActions from '../../../components/HeaderActions';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+const ProgressBar = ({ progress }) => {
+    const widthInterpolated = progress.interpolate({
+        inputRange: [0, 100],
+        outputRange: ["0%", "100%"],
+    });
+
+    return (
+        <View style={styles.progressBarBackground}>
+            <Animated.View style={[styles.progressBarFill, { width: widthInterpolated }]} />
+        </View>
+    );
+};
+
+const Page = ({ page, parentCourse, screenWidth, screenHeight, styles }) => (
+    <ScrollView
+        style={{ width: screenWidth, height: screenHeight }}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+    >
+        <Text style={[styles.title, { fontSize: Platform.OS == 'ios' ? 16 : 14, fontFamily: "GmarketBold", lineHeight: 20 }]}>
+            {page.title}
+        </Text>
+        
+        {page.image && (
+            <View style={{}}>
+                <Image
+                source={page.image}
+                style={styles.image_quiz}
+                resizeMode='cover'
+                />
+            </View>
+        )}
+
+        <View style={styles.content}>
+            <Text style={styles.description}>
+                {parentCourse.category === "project" ?
+                page.description
+                    .split(".")
+                    .filter(sentence => sentence.trim() !== "")
+                    .map(sentence => sentence.trim() + ".")
+                    .join("\n\n")
+                : page.description}
+            </Text>
+        </View>
+
+        <View style={{ height: 100 }} />
+    </ScrollView>
+);
+
+const Quiz = ({
+    question,
+    selectedOption,
+    wrongAnswer,
+    rightAnswer,
+    setSelectedOption,
+    setWrongAnswer,
+    setRightAnswer,
+    styles,
+    screenWidth,
+    screenHeight
+}) => (
+    <ScrollView
+        style={{ width: screenWidth, height: screenHeight }}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+    >
+        <Text style={[styles.title, { fontSize: 14, fontFamily: "GmarketBold", lineHeight: 20, marginTop: -10 }]}>{question.question}</Text>
+
+        <View style={styles.container_choice}>
+            {question.options.map((option) => (
+                <TouchableOpacity
+                    key={option.id}
+                    style={[
+                        styles.optionButton_choice,
+                        selectedOption === option.id && styles.selectedOption_choice,
+                        selectedOption === option.id && wrongAnswer && styles.wrongOption_choice,
+                        selectedOption === option.id && rightAnswer && styles.rightOption_choice,
+                        { fontFamily: "GmarketBold" }
+                    ]}
+                    onPress={() => { Haptics.selectionAsync(); setWrongAnswer(null); setRightAnswer(null); setSelectedOption(option.id); }}
+                    activeOpacity={0.7}
+                    disabled={rightAnswer}
+                >
+                    <Text
+                        style={[
+                            styles.optionText_choice,
+                            selectedOption === option.id && styles.selectedText_choice
+                        ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={selectedOption === option.id && rightAnswer ? 0.5 : 0.7}
+                    >
+                        {option.text}
+                    </Text>
+                    {selectedOption === option.id && !wrongAnswer && !rightAnswer && <QuizCheckIcon />}
+                    {selectedOption === option.id && wrongAnswer && <QuizErrorIcon />}
+                    {selectedOption === option.id && rightAnswer && <Text style={{ color: '#32c913' }}>Correct!</Text>}
+                </TouchableOpacity>
+            ))}
+        </View>
+
+        <View style={{ height: 100 }} />
+    </ScrollView>
+);
+
+const NavigationButtons = ({
+    quizTime,
+    rightAnswer,
+    selectedOption,
+    userProgress,
+    handleBack,
+    handleNext,
+    handleSubmitOption,
+    setQuizEnded,
+    styles,
+    course
+}) => {
+    if (quizTime && rightAnswer) {
+        return (
+            <TouchableOpacity
+                style={[styles.nextButton, { width: screenWidth * 0.8, opacity: userProgress?.status == 'completed' ? 0.5 : 1 }]}
+                onPress={setQuizEnded}
+                disabled={userProgress?.status == 'completed'}
+            >
+                <Text style={styles.nextButtonText}>{userProgress?.status == 'completed' ? 'Already done' : 'Continue'}</Text>
+                {course.progress != course.pages.length && <Ionicons name="chevron-forward" size={16} color="#fff" style={styles.nextIcon} />}
+            </TouchableOpacity>
+        );
+    }
+
+    return (
+        <>
+            <TouchableOpacity
+                style={[styles.backButton, { opacity: 0.5 }]}
+                onPress={handleBack}
+            >
+                <Ionicons name="chevron-back" size={16} color="#555555" style={styles.nextIcon} />
+                <Text style={styles.backButtonText}>Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+                style={[styles.nextButton, { opacity: quizTime && (!selectedOption && selectedOption != 0) ? 0.5 : 1 }]}
+                onPress={quizTime ? handleSubmitOption : handleNext}
+                disabled={quizTime && (!selectedOption && selectedOption != 0)}
+            >
+                <Text style={styles.nextButtonText}>{quizTime ? 'Submit' : 'Next'}</Text>
+                <Ionicons name="chevron-forward" size={16} color="#fff" style={styles.nextIcon} />
+            </TouchableOpacity>
+        </>
+    );
+};
 
 const CourseDetailScreen = ({ navigation, route }) => {
 
     const tailwind = useTailwind();
-    const statusBarHeight = useStatusBarHeight();
     const { orbis, user, userData, setUserData } = useContext(GlobalContext);
 
     const {parentCourse, course, courseId} = route.params
     
-    const userProgress = userData.courses
-        ?.map(course => course.sections?.find(section => section.id === courseId))
-        .find(section => section !== undefined);
+    const userProgress = useMemo(() =>
+        userData?.courses?.map(course => course.sections?.find(section => section.id === courseId)).find(section => section !== undefined),
+        [userData?.courses, courseId]
+    );
 
     const [currentPage, setCurrentPage] = useState(course.progress == course.pages.length ? course.pages.length-1 : course.progress);
-    const [courseProgress, setCourseProgress] = useState(course.progress == course.pages.length ? course.pages.length : course.progress == 0 ? 1 :course.progress)
-
-    const pages = course.pages
-    const question = course.question    
-
+    const [courseProgress, setCourseProgress] = useState(course.progress == course.pages.length ? course.pages.length : course.progress == 0 ? 1 : course.progress)
     const [quizTime, setQuizTime] = useState(false)
     const [selectedOption, setSelectedOption] = useState(null);
     const [wrongAnswer, setWrongAnswer] = useState(null)
     const [rightAnswer, setRightAnswer] = useState(null)
-
     const [quizEnded, setQuizEnded] = useState(false)
+    
+    const progressAnim = useRef(new Animated.Value(0)).current;
 
-    const handleNext = async () => {
+    useEffect(() => {
+        const progress = (courseProgress / course.pages.length) * 100;
+        Animated.timing(progressAnim, {
+            toValue: progress,
+            duration: 400,
+            useNativeDriver: false,
+        }).start();
+    }, [courseProgress]);
+
+    const handleNext = useCallback(async () => {
         Haptics.selectionAsync();
-        const tempData = userData ?? {}
-
-        if (courseProgress < pages.length) {
-            const newProgress = courseProgress+1
+        const tempData = { ...userData };
+        if (courseProgress < course.pages.length) {
+            const newProgress = courseProgress + 1;
             setCurrentPage(newProgress);
-            setCourseProgress(newProgress)
-
-            const userCourse = Array.isArray(tempData.courses) ? tempData.courses.find(c => c.id === parentCourse.id) : null;
-
-            if(!userCourse){
-                if(tempData.courses){
-                    tempData.courses.push({
-                        id: parentCourse.id,
-                        status: 'in-progress',
-                        sections: [
-                            { id: course.id, progress: newProgress, status: 'in-progress'},
-                        ]
-                    })
-                }else{
-                    tempData.courses = [{
-                        id: parentCourse.id,
-                        status: 'in-progress',
-                        sections: [
-                            { id: course.id, progress: newProgress, status: 'in-progress'},
-                        ]
-                    }]
-                }
-            }else{
-                const userSection = userCourse?.sections?.find(s => s.id === course.id);
-                if (userSection) {
-                    userSection.progress = newProgress;
-                } else {
-                    userCourse.sections.push({
-                        id: course.id,
-                        progress: newProgress,
-                        status: 'in-progress'
-                    });
-                }
-            }
-        }else{
-            setQuizTime(true)
+            setCourseProgress(newProgress);
+            updateUserProgress(tempData, newProgress);
+        } else {
+            setQuizTime(true);
         }
 
-        setUserData({...tempData})
+        setUserData(tempData);
+        const res = await updateOrbisProfile(tempData);
+    }, [courseProgress, course.pages.length, userData]);
 
-        var tempProfile = user.profile
-        tempProfile.data = tempData
-        const res = await orbis.updateProfile(tempProfile);
-    };
-
-    const handleBack = () => {
+    const handleBack = useCallback(() => {
         Haptics.selectionAsync();
-
-        if(quizTime){
-            setQuizTime(false)
-        }else if (courseProgress > 0) {    
+        if (quizTime) {
+            setQuizTime(false);
+        } else if (courseProgress > 0) {
             setCurrentPage(currentPage - 1);
             setCourseProgress(courseProgress - 1);
         }
-    };
+    }, [quizTime, courseProgress, currentPage]);
 
+    const handleSubmitOption = useCallback(() => {
+        Haptics.selectionAsync();
+
+        const selectedAnswer = course.question.options[selectedOption];
+        if (selectedAnswer.isCorrect) {
+            setWrongAnswer(null);
+            setRightAnswer(true);
+        } else {
+            setWrongAnswer(true);
+            setRightAnswer(null);
+        }
+    }, [selectedOption, course.question.options]);
+
+    const onValidateQuiz = useCallback(async () => {
+        Haptics.selectionAsync();
+        const tempData = { ...userData };
+
+        if (tempData) {
+            const addNumber = 5 * course.pages.length;
+            updateOrangesAndProgress(tempData, addNumber);
+            setUserData(tempData);
+            const res = await updateOrbisProfile(tempData);
+        }
+        navigation.navigate('CourseSelector', { course: parentCourse });
+    }, [userData, course.pages.length, parentCourse]);
+
+    const updateUserProgress = useCallback((tempData, newProgress) => {
+        const userCourse = Array.isArray(tempData.courses) ? tempData.courses.find(c => c.id === parentCourse.id) : null;
+        if (!userCourse) {
+            if (tempData.courses) {
+                tempData.courses.push({
+                id: parentCourse.id,
+                status: 'in-progress',
+                sections: [{ id: course.id, progress: newProgress, status: 'in-progress' }],
+                });
+            } else {
+                tempData.courses = [{
+                id: parentCourse.id,
+                status: 'in-progress',
+                sections: [{ id: course.id, progress: newProgress, status: 'in-progress' }],
+                }];
+            }
+        } else {
+            const userSection = userCourse.sections?.find(s => s.id === course.id);
+            if (userSection) {
+                userSection.progress = newProgress;
+            } else {
+                userCourse.sections.push({ id: course.id, progress: newProgress, status: 'in-progress' });
+            }
+        }
+    }, [parentCourse.id, course.id]);
+
+
+    const updateOrangesAndProgress = useCallback((tempData, addNumber) => {
+        tempData.numberOranges = (tempData.numberOranges || 0) + addNumber;
+        if (tempData.listClaimedOranges) {
+            const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'));
+            if (index != -1) {
+                tempData.listClaimedOranges[index].listOranges.push({ numberOranges: addNumber, type: 'Quiz completed' });
+            } else {
+                tempData.listClaimedOranges.push({
+                date: moment().format('YYYY-MM-DD'),
+                listOranges: [{ numberOranges: addNumber, type: 'Quiz completed' }],
+                });
+            }
+        } else {
+            tempData.listClaimedOranges = [{
+                date: moment().format('YYYY-MM-DD'),
+                listOranges: [{ numberOranges: addNumber, type: 'Quiz completed' }],
+            }];
+        }
+
+        const userCourse = tempData.courses.find(c => c.id === parentCourse.id);
+        const userSection = userCourse.sections.find(s => s.id === course.id);
+        if (userSection) {
+            userSection.status = "completed";
+            userSection.progress = course.pages.length;
+        }
+
+        const allSectionsCompleted = parentCourse.sections.every(sec =>userCourse.sections?.some(us => us.id === sec.id && us.status === "completed"));
+        if (allSectionsCompleted) {
+            userCourse.status = "completed";
+        }
+    }, [parentCourse.sections, course.id, course.pages.length]);
+
+
+    const updateOrbisProfile = useCallback(async (tempData) => {
+        const tempProfile = user.profile;
+        tempProfile.data = tempData;
+        return await orbis.updateProfile(tempProfile);
+    }, [user.profile, orbis]);
+
+    
     const renderPage = (page, index) => (
         <ScrollView
             style={{ width: screenWidth, height: screenHeight }}
@@ -196,99 +409,6 @@ const CourseDetailScreen = ({ navigation, route }) => {
     );
 
 
-    const handleSubmitOption = () => {
-        Haptics.selectionAsync();
-
-        const selectedAnswer = question.options[selectedOption];
-        if (selectedAnswer.isCorrect) {
-            setWrongAnswer(null)
-            setRightAnswer(true)
-        } else {
-            setWrongAnswer(true)
-            setRightAnswer(null)
-        }
-    };
-
-    const onValidateQuiz = async () => {
-        Haptics.selectionAsync();
-        const tempData = userData ?? {}
-
-        if(tempData){
-            let addNumber = 5 * pages.length
-            tempData.numberOranges ? tempData.numberOranges += addNumber : tempData.numberOranges = addNumber
-
-            if(tempData.listClaimedOranges){
-                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                if(index != -1){
-                    tempData.listClaimedOranges[index].listOranges.push({
-                        numberOranges: addNumber,
-                        type: 'Quiz completed'
-                    })
-                }else{
-                    tempData.listClaimedOranges.push({
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: [
-                            {
-                                numberOranges: addNumber,
-                                type: 'Quiz completed'
-                            },
-                        ]
-                    })
-                }
-            }else{
-                tempData.listClaimedOranges = [{
-                    date: moment().format('YYYY-MM-DD'),
-                    listOranges: [
-                            {
-                                numberOranges: addNumber,
-                                type: 'Quiz completed'
-                            },
-                    ]
-                }]
-            }
-
-            const userCourse = Array.isArray(tempData.courses) ? tempData.courses.find(c => c.id === parentCourse.id) : null;
-            const userSection = userCourse.sections.find(s => s.id === course.id)
-            if (userSection) {
-                userSection.status = "completed"
-                userSection.progress = pages.length
-            }
-
-            const allSectionsCompleted = parentCourse.sections.every(sec =>
-                userCourse.sections?.some(us => us.id === sec.id && us.status === "completed")
-            );
-
-            if (allSectionsCompleted) {
-                userCourse.status = "completed"
-            }
-
-            setUserData({...tempData})
-
-            var tempProfile = user.profile
-            tempProfile.data = tempData            
-            const res = await orbis.updateProfile(tempProfile);
-        }
-
-        navigation.navigate('CourseSelector', { course: parentCourse })
-    }    
-
-    const progressAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        const progress = (courseProgress / course.pages.length) * 100;
-
-        Animated.timing(progressAnim, {
-            toValue: progress,
-            duration: 400,
-            useNativeDriver: false,
-        }).start();
-    }, [courseProgress]);
-
-    const widthInterpolated = progressAnim.interpolate({
-        inputRange: [0, 100],
-        outputRange: ["0%", "100%"],
-    });
-
     return (
         <View style={{flex: 1, backgroundColor: 'white',}}>
             
@@ -296,60 +416,11 @@ const CourseDetailScreen = ({ navigation, route }) => {
             <HeaderActions />
 
             {quizEnded ? (
-                <>
-                    <View style={{
-                        marginVertical: 20,
-                        borderRadius: 16,
-                        padding: 20,
-                        borderWidth: 1,
-                        borderColor: '#E3E8EC',
-                        width: screenWidth*0.8,
-                        alignSelf:'center',
-                        justifyContent:'center',
-                        alignItems:'center',
-                    }}>
-                        <Image
-                            style={{width: screenWidth*0.68, height: 205,}}
-                            resizeMode='contain'
-                            source={course.image}
-                        />
-
-                        <Text style={{fontSize: 14,fontFamily: "GmarketMedium", marginTop: 20, width: screenWidth*0.68,}}>
-                            {course.title}
-                        </Text>
-                    </View>
-
-                    <Text style={{fontSize: 20,fontFamily: "GmarketMedium", marginVertical: 10, textAlign:'center'}}>
-                        Completed
-                    </Text>
-
-                    <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 3, marginTop: 10,}}>
-                        <Image
-                            style={{width: 35, height: 35}}
-                            resizeMode='contain'
-                            source={require('../../../assets/trophy/trophy_icon_orange.png')}
-                        />
-                        <Text style={{color: '#FB5100',fontFamily: 'GmarketBold', fontSize: 20,}}>+{5 * pages.length}</Text>
-                    </View> 
-
-                    <View style={{position: 'absolute',bottom: 40, width: screenWidth}}>
-                        <TouchableOpacity 
-                            style={[styles.nextButton, {width:'80%', alignSelf:'center',}]}
-                            onPress={onValidateQuiz}
-                        >
-                            <Text style={styles.nextButtonText}>Good!</Text>
-                            <Ionicons name="chevron-forward" size={16} color="#fff" style={styles.nextIcon} />
-                        </TouchableOpacity>
-                    </View>
-                </>
+                <CompletedView course={course} pages={course.pages} onValidateQuiz={onValidateQuiz} />
             ) : (
                 <>
                     <View style={{width:'90%', marginTop: 20 ,flexDirection:'row', alignItems:'center',alignSelf:'center', gap: 10}}>
-                        <View style={[styles.progressBarBackground,]}>
-                            <Animated.View
-                                style={[styles.progressBarFill, { width: widthInterpolated }]}
-                            />
-                        </View>
+                        <ProgressBar progress={progressAnim} />
 
                         <Text style={{textAlign:'center'}}>
                             <Text style={{ fontWeight: 'bold' }}>{courseProgress}</Text>
@@ -359,52 +430,47 @@ const CourseDetailScreen = ({ navigation, route }) => {
                     </View>
 
                     {quizTime ? (
-                        <>
-                            {renderQuiz()}
-                        </>
+                        <Quiz
+                            question={course.question}
+                            selectedOption={selectedOption}
+                            wrongAnswer={wrongAnswer}
+                            rightAnswer={rightAnswer}
+                            setSelectedOption={setSelectedOption}
+                            setWrongAnswer={setWrongAnswer}
+                            setRightAnswer={setRightAnswer}
+                            styles={styles}
+                            screenWidth={screenWidth}
+                            screenHeight={screenHeight}
+                        />
                     ) : (
                         <View style={{ flex: 1 }}>
-                            {pages.map((page, index) => (
+                            {course.pages.map((page, index) => (
                                 <View key={index} style={{ display: index === courseProgress - 1 ? 'flex' : 'none', flex: 1 }}>
-                                    {renderPage(page, index)}
+                                    <Page 
+                                        page={page} 
+                                        parentCourse={parentCourse} 
+                                        screenWidth={screenWidth} 
+                                        screenHeight={screenHeight} 
+                                        styles={styles} 
+                                    />
                                 </View>
                             ))}
                         </View>
                     )}
 
-                    {/* navigation */}
                     <View style={styles.navigationContainer}>
-                        {quizTime && rightAnswer ? (
-                            <TouchableOpacity 
-                                style={[styles.nextButton, {width: screenWidth*0.8, opacity: userProgress?.status == 'completed' ? 0.5 : 1}]}
-                                onPress={setQuizEnded}
-                                disabled={userProgress?.status == 'completed'}
-                            >
-                                <Text style={styles.nextButtonText}>{userProgress?.status == 'completed' ? 'Already done' : 'Continue'}</Text>
-                                {course.progress != course.pages.length && <Ionicons name="chevron-forward" size={16} color="#fff" style={styles.nextIcon} />}
-                            </TouchableOpacity>
-
-                        ) : (
-                            <>
-                                <TouchableOpacity 
-                                    style={[styles.backButton, { opacity: currentPage === 0 ? 0.5 : 1 }]}
-                                    onPress={handleBack}
-                                    disabled={currentPage === 0}
-                                >
-                                    <Ionicons name="chevron-back" size={16} color="#555555" style={styles.nextIcon} />
-                                    <Text style={styles.backButtonText}>Back</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity 
-                                    style={[styles.nextButton, { opacity: quizTime && (!selectedOption && selectedOption != 0) ? 0.5 : 1 }]}
-                                    onPress={quizTime ? handleSubmitOption : handleNext}
-                                    disabled={quizTime && (!selectedOption && selectedOption != 0)}
-                                >
-                                    <Text style={styles.nextButtonText}>{quizTime ? 'Submit' : courseProgress == course.total ? 'Continue' : 'Next'}</Text>
-                                    <Ionicons name="chevron-forward" size={16} color="#fff" style={styles.nextIcon} />
-                                </TouchableOpacity>
-                            </>
-                        )}
+                        <NavigationButtons
+                            quizTime={quizTime}
+                            rightAnswer={rightAnswer}
+                            selectedOption={selectedOption}
+                            userProgress={userProgress}
+                            handleBack={handleBack}
+                            handleNext={handleNext}
+                            handleSubmitOption={handleSubmitOption}
+                            setQuizEnded={() => setQuizEnded(true)}
+                            styles={styles}
+                            course={course}
+                        />
                     </View>
                 </>
             )}
@@ -413,6 +479,50 @@ const CourseDetailScreen = ({ navigation, route }) => {
         </View>
     );
 };
+
+const CompletedView = ({ course, pages, onValidateQuiz }) => (
+    <>
+        <View style={{
+            marginVertical: 20,
+            borderRadius: 16,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: '#E3E8EC',
+            width: screenWidth * 0.8,
+            alignSelf: 'center',
+            justifyContent: 'center',
+            alignItems: 'center',
+        }}>
+            <Image
+                style={{ width: screenWidth * 0.68, height: 205 }}
+                resizeMode='contain'
+                source={course.image}
+            />
+
+            <Text style={{ fontSize: 14, fontFamily: "GmarketMedium", marginTop: 20, width: screenWidth * 0.68 }}>{course.title}</Text>
+        </View>
+
+        <Text style={{ fontSize: 20, fontFamily: "GmarketMedium", marginVertical: 10, textAlign: 'center' }}>Completed</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 3, marginTop: 10 }}>
+            <Image
+                style={{ width: 35, height: 35 }}
+                resizeMode='contain'
+                source={require('../../../assets/trophy/trophy_icon_orange.png')}
+            />
+            <Text style={{ color: '#FB5100', fontFamily: 'GmarketBold', fontSize: 20 }}>+{5 * pages.length}</Text>
+        </View>
+
+        <View style={{ position: 'absolute', bottom: 40, width: screenWidth }}>
+            <TouchableOpacity
+                style={[styles.nextButton, { width: '80%', alignSelf: 'center' }]}
+                onPress={onValidateQuiz}
+            >
+                <Text style={styles.nextButtonText}>Good!</Text>
+                <Ionicons name="chevron-forward" size={16} color="#fff" style={styles.nextIcon} />
+            </TouchableOpacity>
+        </View>
+    </>
+);
 
 const styles = StyleSheet.create({
   progressBarBackground: {
