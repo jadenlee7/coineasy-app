@@ -11,6 +11,7 @@ import TrophieCoineasy from "./Navigation/Trophies/TrophieCoineasy";
 import TrophieProject from "./Navigation/Trophies/TrophieProject";
 import { TabBar, TabView } from "react-native-tab-view";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
+import Header from "../components/Header";
 
 const TabBarHeight = 50;
 const IndicatorWidth = 50
@@ -118,9 +119,9 @@ const Trophies = ({ navigation, route }) => {
 
     return(
         <View style={tailwind('flex flex-1 bg-white')}>
-            <HeaderImage />
+            <Header />
 
-            <TouchableOpacity 
+            {/* <TouchableOpacity 
                 onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeNavigation')}}
                 style={{
                     position: 'absolute',
@@ -153,7 +154,7 @@ const Trophies = ({ navigation, route }) => {
                         : 0
                     }
                 </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <Text style={[
                 tailwind('text-slate-900 p-5'), 

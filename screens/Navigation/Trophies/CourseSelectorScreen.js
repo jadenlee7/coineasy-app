@@ -16,6 +16,8 @@ import HeaderImage from '../../../components/HeaderImage';
 import { GlobalContext } from '../../../contexts/GlobalContext';
 import { MultiplePeopleIcon } from '../../../components/Icons';
 import HeaderActions from '../../../components/HeaderActions';
+import Header from '../../../components/Header';
+import useStatusBarHeight from '../../../hooks/useStatusBarHeight';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -187,10 +189,12 @@ export default function CourseSelectorScreen({ navigation, route }) {
 
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
+    const statusBarHeight = useStatusBarHeight()
+
     return (
         <View style={tailwind('flex flex-1 bg-white')}>
 
-            <HeaderImage />
+            <Header />
             <HeaderActions />
 
             <Text style={[
@@ -199,6 +203,7 @@ export default function CourseSelectorScreen({ navigation, route }) {
                     fontSize: 16,
                     fontFamily: "GmarketBold",
                     lineHeight: 20,
+                    marginTop: statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight
                 }]}
             >
                 What Course do you want?

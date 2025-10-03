@@ -16,6 +16,7 @@ import ShopScreen from './Oranges/ShopScreen';
 import GiftScreen from './Oranges/GiftScreen';
 import moment from 'moment';
 import ClaimOrangesModal from '../../components/modals/ClaimOrangesModal';
+import Header from '../../components/Header';
 
 
 const TabBarHeight = 50;
@@ -308,7 +309,7 @@ const OrangeNavigation = ({navigation, route}) => {
 
     return (
         <View style={[tailwind('flex flex-1')]}>
-            <HeaderImage />
+            <Header />
 
             {showBack && (
                 <TouchableOpacity style={{position: 'absolute',left: 20, top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 55 : 60}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
@@ -321,7 +322,7 @@ const OrangeNavigation = ({navigation, route}) => {
                 </TouchableOpacity>
             )}
 
-            <TouchableOpacity 
+            {/* <TouchableOpacity 
                 onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeNavigation')}}
                 style={{
                     position: 'absolute',
@@ -355,10 +356,10 @@ const OrangeNavigation = ({navigation, route}) => {
                         : 0
                     }
                 </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
 
-            <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>
+            <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',marginTop: statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight}]}>
                 <TabView
                     navigationState={{index: tabIndex, routes}}
                     renderScene={renderScene}

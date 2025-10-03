@@ -34,6 +34,8 @@ import { CheckIcon,CloseIcon,CopyIconBadge,FacebookIcon,InstagramIcon,LinkIcon,N
 import moment from "moment";
 import Svg, { Circle } from "react-native-svg";
 import { courses } from "../data/courses";
+import Header from "./Header";
+import HeaderActions from "./HeaderActions";
 
 const TabBarHeight = 50;
 const IndicatorWidth = 50
@@ -426,70 +428,14 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
-            { type == 'selected' ? (
-                <>
-                    <HeaderImage />
-
-                    <View style={{backgroundColor: 'white',flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',paddingLeft: 5,paddingRight: 20,paddingTop: 4}}>
-                        <TouchableOpacity style={{margin: 15,}} onPress={() => {Haptics.selectionAsync();navigation.goBack()}}>
-                            <Image
-                                style={{width: 24,height: 24}}
-                                resizeMode='contain'
-                                source={require('../assets/back_button.png')}
-                                defaultSource={require('../assets/back_button.png')}
-                            />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity activeOpacity={0.7} onPress={() => {Haptics.selectionAsync();navigation.navigate('Notifications')}}>
-                            <NotificationsIcon />
-                        </TouchableOpacity>
-                    </View>
-                </>
-            ) : (
-                <>
-                    <HeaderImage/>
-
-                    <TouchableOpacity 
-                        onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeNavigation', {back: true})}}
-                        style={{
-                            position: 'absolute',
-                            top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 50 : 60,
-                            right: 10,
-                            borderRadius: 30,
-                            backgroundColor: '#FFF2E2',
-                            flexDirection:'row',
-                            gap: 6,
-                            alignSelf:'flex-end',
-                            marginRight: 5,
-                            paddingVertical: 5,
-                            paddingHorizontal:10,
-                            alignItems:'center',
-                            justifyContent:'center'
-                        }}
-                    >
-                        <Image
-                            style={{width: 15, height: 15}}
-                            resizeMode='contain'
-                            source={require('../assets/trophy/trophy_icon_orange.png')}
-                        />
-                        <Text style={{fontWeight: 'bold',textAlign: 'center',color:'#FB5100',}}>
-                            {userData?.numberOranges && userData?.numberOranges.toString().length <= 3 ? userData?.numberOranges
-                                : userData?.numberOranges && userData?.numberOranges.toString().length == 4 ? userData?.numberOranges.toString().slice(0,1)+','+userData?.numberOranges.toString().slice(1,4)
-                                : userData?.numberOranges && userData?.numberOranges.toString().length == 5 ? userData?.numberOranges.toString().slice(0,2)+','+userData?.numberOranges.toString().slice(2,5)
-                                : userData?.numberOranges && userData?.numberOranges.toString().length == 6 ? userData?.numberOranges.toString().slice(0,3)+','+userData?.numberOranges.toString().slice(3,6)
-                                : userData?.numberOranges && userData?.numberOranges.toString().length == 7 ? userData?.numberOranges.toString().slice(0,1)+','+userData?.numberOranges.toString().slice(1,4)+','+userData?.numberOranges.toString().slice(4,7)
-                                : userData?.numberOranges && userData?.numberOranges.toString().length == 8 ? userData?.numberOranges.toString().slice(0,2)+','+userData?.numberOranges.toString().slice(2,5)+','+userData?.numberOranges.toString().slice(5,8)
-                                : userData?.numberOranges && userData?.numberOranges.toString().length == 9 ? userData?.numberOranges.toString().slice(0,3)+','+userData?.numberOranges.toString().slice(3,6)+','+userData?.numberOranges.toString().slice(6,9)
-                                : 0
-                            }
-                        </Text>
-                    </TouchableOpacity>
-                </>
-            )}
+            <Header />
+            { type == 'selected' && <HeaderActions />}
 
             <Animated.ScrollView 
                 scrollEventThrottle={16}
-                style={{backgroundColor: 'white',marginTop: type == 'selected' ? -10 : 0}}
+                style={{backgroundColor: 'white',
+                    marginTop: statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight
+                }}
                 // contentContainerStyle={{flex:1}}
                 ref={scrollRef}
                 refreshControl={

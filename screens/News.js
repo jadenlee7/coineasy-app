@@ -17,6 +17,7 @@ import Feed from "../components/Feed";
 import HeaderImage from "../components/HeaderImage";
 import moment from "moment";
 import TimeAgo from "../components/TimeAgo.js";
+import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
 let page = 0
 
@@ -380,22 +381,22 @@ const News = ({ navigation, route }) => {
         )
     }
   
+    const statusBarHeight = useStatusBarHeight();
+    
 
     return(
         <View style={tailwind('flex flex-1 bg-white')}>
             { !selectedNews ? (
                 <>
-                    <HeaderImage />
+                    <Header />
 
-                    <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: 21,}}>
-                        <Text style={[tailwind('text-slate-900 px-5'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20, }]}>Explore EASY World!</Text>
-
-                        <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('Notifications')} style={{marginRight: 20,}}>
-                            <NotificationsIcon />
-                        </TouchableOpacity>
+                    <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: statusBarHeight > 25 ? 90 + statusBarHeight : 105 + statusBarHeight,}}>
+                        <Text style={[tailwind('text-slate-900 px-5'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20, }]}>
+                            Explore EASY World!
+                        </Text>
                     </View>
 
-                    <View style={tailwind('flex flex-col flex-1')}>
+                    <View style={[tailwind('flex flex-col flex-1')]}>
                         <View style={tailwind('flex flex-row mt-30px px-5')}>
                             <NavItem setNav={setNav} nav={nav} item="news" label="NEWS" />
                             <NavItem setNav={setNav} nav={nav} item="easy-edu" label="EASY EDU" />

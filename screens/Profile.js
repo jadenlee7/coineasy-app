@@ -7,6 +7,7 @@ import { GlobalContext } from "../contexts/GlobalContext";
 import ProfileDetails from "../components/ProfileDetails";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 import HeaderImage from "../components/HeaderImage";
+import Header from "../components/Header";
 
 const Profile = ({ navigation, route }) => {
     const { user, setUser, orbis } = useContext(GlobalContext);
@@ -44,9 +45,9 @@ const Profile = ({ navigation, route }) => {
                 <ProfileDetails profile={profile.details} />
             :
                 <View style={tailwind('flex-1 bg-white')}>
-                    <HeaderImage />
+                    <Header />
                     
-                    <ActivityIndicator style={{marginTop: 25}} size="small" color="#020617" />
+                    <ActivityIndicator style={{marginTop: 60}} size="small" color="#020617" />
                 </View>
             }
 

@@ -20,6 +20,8 @@ import { useTailwind } from 'tailwind-rn';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import moment from 'moment';
+import Header from '../../../components/Header';
+import useStatusBarHeight from '../../../hooks/useStatusBarHeight';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -326,11 +328,12 @@ const CourseDetailScreen = ({ navigation, route }) => {
         return await orbis.updateProfile(tempProfile);
     }, [user.profile, orbis]);
 
+    const statusBarHeight = useStatusBarHeight()
 
     return (
         <View style={{flex: 1, backgroundColor: 'white',}}>
             
-            <HeaderImage />
+            <Header />
             <HeaderActions 
                 actions={() => {setCurrentPage(1);setCourseProgress(1)}}
             />
@@ -339,7 +342,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
                 <CompletedView course={course} pages={course.pages} onValidateQuiz={onValidateQuiz} />
             ) : (
                 <>
-                    <View style={{width:'90%', marginTop: 20 ,flexDirection:'row', alignItems:'center',alignSelf:'center', gap: 10}}>
+                    <View style={{width:'90%', marginTop: statusBarHeight > 25 ? 80 + statusBarHeight : 95 + statusBarHeight ,flexDirection:'row', alignItems:'center',alignSelf:'center', gap: 10}}>
                         <ProgressBar progress={progressAnim} />
 
                         <Text style={{textAlign:'center'}}>
@@ -395,55 +398,58 @@ const CourseDetailScreen = ({ navigation, route }) => {
                     </View>
                 </>
             )}
-
-
         </View>
     );
 };
 
-const CompletedView = ({ course, pages, onValidateQuiz }) => (
-    <>
-        <View style={{
-            marginVertical: 20,
-            borderRadius: 16,
-            padding: 20,
-            borderWidth: 1,
-            borderColor: '#E3E8EC',
-            width: screenWidth * 0.8,
-            alignSelf: 'center',
-            justifyContent: 'center',
-            alignItems: 'center',
-        }}>
-            <Image
-                style={{ width: screenWidth * 0.68, height: 205 }}
-                resizeMode='contain'
-                source={course.image}
-            />
+const CompletedView = ({ course, pages, onValidateQuiz }) => {
+    const statusBarHeight = useStatusBarHeight()
 
-            <Text style={{ fontSize: 14, fontFamily: "GmarketMedium", marginTop: 20, width: screenWidth * 0.68 }}>{course.title}</Text>
-        </View>
+    return(
+        <>
+            <View style={{
+                marginTop: statusBarHeight > 25 ? 80 + statusBarHeight : 95 + statusBarHeight,
+                marginVertical: 20,
+                borderRadius: 16,
+                padding: 20,
+                borderWidth: 1,
+                borderColor: '#E3E8EC',
+                width: screenWidth * 0.8,
+                alignSelf: 'center',
+                justifyContent: 'center',
+                alignItems: 'center',
+            }}>
+                <Image
+                    style={{ width: screenWidth * 0.68, height: 205 }}
+                    resizeMode='contain'
+                    source={course.image}
+                />
 
-        <Text style={{ fontSize: 20, fontFamily: "GmarketMedium", marginVertical: 10, textAlign: 'center' }}>Completed</Text>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 3, marginTop: 10 }}>
-            <Image
-                style={{ width: 35, height: 35 }}
-                resizeMode='contain'
-                source={require('../../../assets/trophy/trophy_icon_orange.png')}
-            />
-            <Text style={{ color: '#FB5100', fontFamily: 'GmarketBold', fontSize: 20 }}>+{5 * pages.length}</Text>
-        </View>
+                <Text style={{ fontSize: 14, fontFamily: "GmarketMedium", marginTop: 20, width: screenWidth * 0.68 }}>{course.title}</Text>
+            </View>
 
-        <View style={{ position: 'absolute', bottom: 40, width: screenWidth }}>
-            <TouchableOpacity
-                style={[styles.nextButton, { width: '80%', alignSelf: 'center' }]}
-                onPress={onValidateQuiz}
-            >
-                <Text style={styles.nextButtonText}>Good!</Text>
-                <Ionicons name="chevron-forward" size={16} color="#fff" style={styles.nextIcon} />
-            </TouchableOpacity>
-        </View>
-    </>
-);
+            <Text style={{ fontSize: 20, fontFamily: "GmarketMedium", marginVertical: 10, textAlign: 'center' }}>Completed</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 3, marginTop: 10 }}>
+                <Image
+                    style={{ width: 35, height: 35 }}
+                    resizeMode='contain'
+                    source={require('../../../assets/trophy/trophy_icon_orange.png')}
+                />
+                <Text style={{ color: '#FB5100', fontFamily: 'GmarketBold', fontSize: 20 }}>+{5 * pages.length}</Text>
+            </View>
+
+            <View style={{ position: 'absolute', bottom: 40, width: screenWidth }}>
+                <TouchableOpacity
+                    style={[styles.nextButton, { width: '80%', alignSelf: 'center' }]}
+                    onPress={onValidateQuiz}
+                >
+                    <Text style={styles.nextButtonText}>Good!</Text>
+                    <Ionicons name="chevron-forward" size={16} color="#fff" style={styles.nextIcon} />
+                </TouchableOpacity>
+            </View>
+        </>
+    )
+}
 
 const styles = StyleSheet.create({
   progressBarBackground: {

@@ -29,17 +29,14 @@
       }
     },
     "android": {
-      "versionCode": 53,
+      "versionCode": 54,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo_easygo_1024.png",
         "backgroundColor": "#FFF8F0"
       },
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.ACCESS_MEDIA_LOCATION"
+        "android.permission.CAMERA"
       ],
       "blockedPermissions": [
         "android.permission.USE_FULL_SCREEN_INTENT"

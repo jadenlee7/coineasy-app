@@ -20,8 +20,8 @@ const HeaderActions = (props) => {
     return(
         <>
             <TouchableOpacity
-                style={{position: 'absolute',left: 17, top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 55 : 60}} 
-                onPress={() => {Haptics.selectionAsync();navigation.goBack();actions}}
+                style={{position: 'absolute',left: 17, top: Platform.OS == 'ios' && statusBarHeight > 25 ? 70 : Platform.OS == 'ios' ? 80 : statusBarHeight > 25 ? 55 : 60,zIndex: 999999}} 
+                onPress={() => {Haptics.selectionAsync();navigation.goBack();actions()}}
             >
                 <Image
                     style={{width: 24,height: 24}}
