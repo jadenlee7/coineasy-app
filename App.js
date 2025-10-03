@@ -156,9 +156,9 @@ export default function App() {
 
   /** Fonts */
   const [fontsLoaded] = useFonts({
-    'GmarketMedium': require('./assets/fonts/GmarketSansMedium.ttf'),
+    'GmarketMedium': Platform.OS == 'ios' ? require('./assets/fonts/GmarketSansMedium_ios.ttf') : require('./assets/fonts/GmarketSansMedium.ttf'),
     'GmarketMedium_ios': require('./assets/fonts/GmarketSansMedium_ios.ttf'),
-    'GmarketBold': require('./assets/fonts/GmarketSansBold.ttf'),
+    'GmarketBold': Platform.OS == 'ios' ? require('./assets/fonts/GmarketSansBold_ios.ttf') : require('./assets/fonts/GmarketSansBold.ttf'),
   });
 
   /** ---------- Helpers ---------- */
