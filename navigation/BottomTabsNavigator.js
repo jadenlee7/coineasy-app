@@ -81,20 +81,20 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                         },
                     }}
                 />
-                {/* <Tab.Screen name="Trophies" component={Trophies} options={showIcons('trophies')}
-                    listeners={{
-                        tabPress: (e) => {
-                            Haptics.selectionAsync();
-                        },
-                    }}                
-                /> */}
-                <Tab.Screen name="Categories" component={Categories} options={showIcons('cat')}
+                <Tab.Screen name="Trophies" component={Trophies} options={showIcons('trophies')}
                     listeners={{
                         tabPress: (e) => {
                             Haptics.selectionAsync();
                         },
                     }}                
                 />
+                {/* <Tab.Screen name="Categories" component={Categories} options={showIcons('cat')}
+                    listeners={{
+                        tabPress: (e) => {
+                            Haptics.selectionAsync();
+                        },
+                    }}                
+                /> */}
                 <Tab.Screen name="News" component={News} options={showIcons('news')}
                     listeners={{
                         tabPress: (e) => {
@@ -102,20 +102,13 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                         },
                     }}                
                 />
-                <Tab.Screen name="Search" component={Search} options={showIcons('search')}
+                <Tab.Screen name="Orange" component={OrangeNavigation} options={showIcons('orange')}
                     listeners={{
                         tabPress: (e) => {
                             Haptics.selectionAsync();
                         },
                     }}                
                 />
-                {/* <Tab.Screen name="Orange" component={OrangeNavigation} options={showIcons('orange')}
-                    listeners={{
-                        tabPress: (e) => {
-                            Haptics.selectionAsync();
-                        },
-                    }}                
-                /> */}
                 <Tab.Screen name="Profile" component={Profile} options={showIcons('profile')}
                     listeners={{
                         tabPress: (e) => {

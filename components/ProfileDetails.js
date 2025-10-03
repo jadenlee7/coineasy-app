@@ -683,7 +683,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         }
                     </View>
                 }
-{/*         
+        
                 <View style={styles.container}>
                     <View style={styles.header}>
                         <View style={styles.countContainer}>
@@ -707,7 +707,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     >
                         {trophiesWithProgress.map(renderTrophy)}
                     </ScrollView>
-                </View> */}
+                </View>
 
 
                 <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>

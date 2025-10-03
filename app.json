@@ -1,24 +1,25 @@
 {
   "expo": {
-    "name": "CoinEasy",
+    "name": "EasyGo",
     "slug": "coineasy_app",
     "scheme": "coineasyapp",
     "owner": "useorbis",
     "version": "2.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo_easygo_1024.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash_easygo.png",
       "resizeMode": "cover",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FFF8F0"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
+      "icon": "./assets/logo_easygo_1064.png",
       "supportsTablet": false,
-      "buildNumber": "75",
+      "buildNumber": "76",
       "bundleIdentifier": "com.coineasy.coineasysocial",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow CoinEasy to access your photos. Photos will be used for profile picture and post with Media. This is not mandatory, user can leave the default profile picture. It can then be updated in the user Profil page. Example: You want to create a Post with a photo, we'll need to access your media library",
@@ -28,23 +29,23 @@
       }
     },
     "android": {
-      "versionCode": 54,
+      "versionCode": 55,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/logo_easygo_1024.png",
+        "backgroundColor": "#FFF8F0"
       },
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.ACCESS_MEDIA_LOCATION"
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.USE_FULL_SCREEN_INTENT"
       ],
       "googleServicesFile": "./google-services.json",
       "package": "com.coineasy.coineasy"
     },
     "web": {
-      "favicon": "./assets/icon.png"
+      "favicon": "./assets/logo_easygo_1024.png"
     },
     "plugins": [
       [
@@ -69,7 +70,8 @@
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
           "isAccessMediaLocationEnabled": true
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {
