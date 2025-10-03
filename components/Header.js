@@ -64,7 +64,7 @@ export default function Header(props) {
                     gap: 10,
                 }}
             >
-                <TouchableOpacity 
+                {/* <TouchableOpacity 
                     onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeNavigation', {back: true})}}
                     style={{
                         borderRadius: 30,
@@ -95,7 +95,7 @@ export default function Header(props) {
                             : 0
                         }
                     </Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
 
                 <TouchableOpacity 
                     activeOpacity={0.7} 

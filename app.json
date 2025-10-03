@@ -1,51 +1,46 @@
 {
   "expo": {
-    "name": "EasyGo",
+    "name": "CoinEasy",
     "slug": "coineasy_app",
     "scheme": "coineasyapp",
     "owner": "useorbis",
     "version": "2.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo_easygo_1024.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash_easygo.png",
+      "image": "./assets/splash.png",
       "resizeMode": "cover",
-      "backgroundColor": "#FFF8F0"
+      "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "icon": "./assets/logo_easygo_1064.png",
       "supportsTablet": false,
-      "buildNumber": "74",
+      "buildNumber": "73",
       "bundleIdentifier": "com.coineasy.coineasysocial",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow CoinEasy to access your photos. Photos will be used for profile picture and post with Media. This is not mandatory, user can leave the default profile picture. It can then be updated in the user Profil page. Example: You want to create a Post with a photo, we'll need to access your media library",
         "NSPhotoLibraryAddUsageDescription": "Enable CoinEasy to save media to your gallery. Example: You want to download a media from a post into your phone",
-        "NSCameraUsageDescription": "Allow CoinEasy to access your camera. Camera will be used to create a media in your Post. Example: You want to share where you're at by taking a photo.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSCameraUsageDescription": "Allow CoinEasy to access your camera. Camera will be used to create a media in your Post. Example: You want to share where you're at by taking a photo."
       }
     },
     "android": {
       "versionCode": 54,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo_easygo_1024.png",
-        "backgroundColor": "#FFF8F0"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#ffffff"
       },
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA"
       ],
-      "blockedPermissions": [
-        "android.permission.USE_FULL_SCREEN_INTENT"
-      ],
       "googleServicesFile": "./google-services.json",
       "package": "com.coineasy.coineasy"
     },
     "web": {
-      "favicon": "./assets/logo_easygo_1024.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
       [
@@ -70,8 +65,7 @@
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
           "isAccessMediaLocationEnabled": true
         }
-      ],
-      "expo-font"
+      ]
     ],
     "extra": {
       "eas": {
