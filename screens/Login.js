@@ -1,16 +1,26 @@
-import React, { useState, useContext, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, Image, Animated, Easing, Dimensions, Platform } from 'react-native';
+import React, { useContext } from "react";
+import { Text, View, TouchableOpacity, Image, Platform } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as WebBrowser from 'expo-web-browser';
 
+import { usePrivy } from "@privy-io/expo";
+
 import ConnectModal from "../components/modals/ConnectModal";
 import { GlobalContext } from "../contexts/GlobalContext";
 
 export default function Login() {
-    const { connectType, setConnectType, connectModalVis, setConnectModalVis } = useContext(GlobalContext);
+    const { connectType, setConnectType, connectModalVis, setConnectModalVis, setUser, callbackConnect } = useContext(GlobalContext);
     const tailwind = useTailwind();
+
+    const { login, logout, user, isReady } = usePrivy();
+
+    if (!isReady) {
+        return <View style={{}}>
+            <Text style={{marginTop: 10,}}>LOADING</Text>
+        </View>;
+    }
 
     async function openTerms() {
         Haptics.selectionAsync();
@@ -20,6 +30,22 @@ export default function Login() {
     async function openPrivacy() {
         Haptics.selectionAsync();
         let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1Dhijs_O61shJEKNy6Sga16Iu3vgqwc8I/view?usp=sharing");
+    }
+
+    async function handlePrivyConnect(type) {
+        Haptics.selectionAsync();
+
+        console.log(type);
+
+        try {
+            await login(); // ouvre la modale Privy
+            setUser(user)
+            AsyncStorage.setItem("provider-type", "wallet-connect");
+            callbackConnect(resUser.details)
+            console.log("User connected:", user);
+        } catch (err) {
+            console.log("Error login Privy:", err);
+        }
     }
 
     return(
@@ -39,7 +65,36 @@ export default function Login() {
                         style={{position: 'absolute',width: 128, height: 128, top: -95}}
                         source={require('../assets/login_icon_background.png')} 
                     />
+
+                    {/* PRIVY INTEGRATION */}
                     <TouchableOpacity 
+                        activeOpacity={0.8}
+                        style={[
+                            tailwind('rounded-full text-center bg-slate-900 border-2 border-slate-900 mt-4'),
+                            { paddingTop: Platform.OS === 'ios' ? 12 : 10, paddingBottom: Platform.OS === 'ios' ? 12 : 10 }
+                        ]}
+                        onPress={() => handlePrivyConnect('signup')}
+                    >
+                        <Text style={[tailwind(`text-white px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>
+                            Sign up
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                        activeOpacity={0.8}
+                        style={[
+                            tailwind('rounded-full text-center bg-white mt-2 border-2 border-slate-900'),
+                            { paddingTop: Platform.OS === 'ios' ? 12 : 10, paddingBottom: Platform.OS === 'ios' ? 12 : 10 }
+                        ]}
+                        onPress={() => handlePrivyConnect('signin')}
+                    >
+                        <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>
+                            Sign in
+                        </Text>
+                    </TouchableOpacity>
+
+
+                    {/* <TouchableOpacity 
                         activeOpacity={0.8} 
                         style={[
                             tailwind('rounded-full text-center bg-slate-900 border-2 border-slate-900 mt-4'), 
@@ -65,7 +120,7 @@ export default function Login() {
                         activeOpacity={0.8}
                     >
                         <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign in</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
 
                     <View style={[tailwind(`w-full items-center`), {marginTop: 25}]}>
                         <Image

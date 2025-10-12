@@ -9,12 +9,13 @@ import Animated, {
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from "expo-linear-gradient";
+import { GlobalContext } from "../contexts/GlobalContext";
 
 
 export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24, type = null, isAds = null, pendingAds = null}) {
     const tailwind = useTailwind();
     const opacity = useSharedValue(0.25);
-    const bottom = useSharedValue(bottomStart);
+    const bottom = useSharedValue(bottomStart);    
 
     useEffect(() => {
         handleOpen();

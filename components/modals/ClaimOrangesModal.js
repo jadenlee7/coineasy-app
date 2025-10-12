@@ -16,7 +16,7 @@ const {width, height} = Dimensions.get('window')
 
 const ClaimOrangesModal = (props) => {
 
-    const { user, userData, setUserData, orbis, setShowClaimOranges, adAlreadyClaimed } = useContext(GlobalContext);
+    const { showClaimOranges, setShowClaimOranges, adAlreadyClaimed } = useContext(GlobalContext);
     const { onClaimAdReward } = props
     const tailwind = useTailwind();
     let navigation;
@@ -46,67 +46,13 @@ const ClaimOrangesModal = (props) => {
     const onHideModal = async () => {
         Haptics.selectionAsync()
 
-        setShowAds(false)
-        setCompleteAds(false)
-        setShowClose(false)
-        setShowClaimOranges(false)
+        setShowClaimOranges(false);
+        setShowAds(false);
+        setCompleteAds(false);
+        setPendingAds(false);
+        setClaimedAds(false);
+        setShowClose(false);
     }
-
-    // const claimAds = async () => {
-    //     const tempData = userData ?? {}
-
-    //     if(tempData){
-    //         if(tempData.numberOranges){
-    //             tempData.numberOranges += 10
-    //         }else{
-    //             tempData.numberOranges = 10
-    //         }
-    //         if(tempData.adReward){
-    //             tempData.adReward.lastClaim = moment().format('YYYY-MM-DD HH:mm:ss')
-    //         }else{
-    //             tempData.adReward = {
-    //                 lastClaim: moment().format('YYYY-MM-DD HH:mm:ss')
-    //             }
-    //         }
-
-    //         if(tempData.listClaimedOranges){
-    //             const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-    //             if(index != -1){
-    //                 tempData.listClaimedOranges[index].listOranges.push({
-    //                     numberOranges: 10,
-    //                     type: 'Ad Rewards'
-    //                 })
-    //             }else{
-    //                 tempData.listClaimedOranges.push({
-    //                     date: moment().format('YYYY-MM-DD'),
-    //                     listOranges: [
-    //                         {
-    //                             numberOranges: 10,
-    //                             type: 'Ad Rewards'
-    //                         },
-    //                     ]
-    //                 })
-    //             }
-    //         }else{
-    //             tempData.listClaimedOranges = [{
-    //                 date: moment().format('YYYY-MM-DD'),
-    //                 listOranges: [
-    //                         {
-    //                             numberOranges: 10,
-    //                             type: 'Ad Rewards'
-    //                         },
-    //                 ]
-    //             }]
-    //         }
-            
-    //         setUserData({...tempData})
-
-    //         var tempProfile = user.profile
-    //         tempProfile.data = tempData
-    //         const res = await orbis.updateProfile(tempProfile);
-    //     }
-
-    // }
 
     let opacity = new Animated.Value(0);
     const size = opacity.interpolate({
@@ -154,7 +100,7 @@ const ClaimOrangesModal = (props) => {
 
     return (
         <Modal 
-            hide={onHideModal} 
+            hide={() => onHideModal()} 
             type='oranges' 
             isAds={showAds}
             pendingAds={pendingAds}
@@ -255,7 +201,7 @@ const ClaimOrangesModal = (props) => {
 
                     <TouchableOpacity
                         style={{position: 'absolute',top: 15, right: 15, zIndex: 2}}
-                        onPress={onHideModal}
+                        onPress={() => onHideModal()}
                     >
                         <AntDesign name="closecircle" size={24} color="black" />
                     </TouchableOpacity>
@@ -276,8 +222,8 @@ const ClaimOrangesModal = (props) => {
                         size="md" 
                         color="white" 
                         title="GOOD" 
-                        onPress={() => {Haptics.selectionAsync();setShowAds(false);setCompleteAds(false);setShowClose(false);setShowClaimOranges(false);}} 
-                        style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 30}}
+                        onPress={() => onHideModal()} 
+                        style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 30,}}
                     />
                 </>
             )}

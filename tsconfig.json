@@ -1,4 +1,8 @@
 {
-  "compilerOptions": {},
-  "extends": "expo/tsconfig.base"
+  "compilerOptions": {
+    "strict": true,
+    // Allows us to use conditional/deep imports on published packages
+    "moduleResolution": "Bundler"
+  },
+  "extends": "expo/tsconfig.base",
 }
