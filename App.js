@@ -27,31 +27,31 @@ import PushNotificationsModal from "./components/modals/PushNotificationsModal";
 import NicknameModal from "./components/modals/NicknameModal";
 
 // Privy Integration
-import 'fast-text-encoding';
-import 'react-native-get-random-values';
-import '@ethersproject/shims';
-import { PrivyProvider} from '@privy-io/expo';
+// import 'fast-text-encoding';
+// import 'react-native-get-random-values';
+// import '@ethersproject/shims';
+// import { PrivyProvider} from '@privy-io/expo';
 
-const easyChain = {
-  id: 1313161855,
-  name: "EasyChain",
-  rpcUrls: {
-    default: {
-      http: ["https://0x4e45427f.rpc.aurora-cloud.dev"],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "EasyChain Explorer",
-      url: "https://0x4e45427f.explorer.aurora-cloud.dev",
-    },
-  },
-  nativeCurrency: {
-    name: "USD Coin",
-    symbol: "USDC",
-    decimals: 6,
-  },
-};
+// const easyChain = {
+//   id: 1313161855,
+//   name: "EasyChain",
+//   rpcUrls: {
+//     default: {
+//       http: ["https://0x4e45427f.rpc.aurora-cloud.dev"],
+//     },
+//   },
+//   blockExplorers: {
+//     default: {
+//       name: "EasyChain Explorer",
+//       url: "https://0x4e45427f.explorer.aurora-cloud.dev",
+//     },
+//   },
+//   nativeCurrency: {
+//     name: "USD Coin",
+//     symbol: "USDC",
+//     decimals: 6,
+//   },
+// };
 
 /** Expo */
 import { useFonts } from 'expo-font';
@@ -940,13 +940,14 @@ export default function App() {
     }
 
     return (
-        <PrivyProvider 
-            appId="cmfgz756i00hzjx0bfbwlttgz" 
-            supportedChains={[easyChain]}
-            // config={{
-            //     evmChains: [easyChain],
-            // }}
-        >
+        // <PrivyProvider 
+        //     appId="cmfgz756i00hzjx0bfbwlttgz" 
+        //     supportedChains={[easyChain]}
+        //     // config={{
+        //     //     evmChains: [easyChain],
+        //     // }}
+        // >
+        <>
             <StatusBar translucent={true} backgroundColor="#00000000" style="black"/>
             <GestureHandlerRootView onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
                 <GlobalContext.Provider value={{ 
@@ -1105,7 +1106,7 @@ export default function App() {
                     </TailwindProvider>
                 </GlobalContext.Provider>
             </GestureHandlerRootView>
-        </PrivyProvider>
+        </>
     );
 }
 

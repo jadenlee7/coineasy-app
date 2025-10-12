@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import * as WebBrowser from 'expo-web-browser';
 
-import { usePrivy } from "@privy-io/expo";
+// import { usePrivy } from "@privy-io/expo";
 
 import ConnectModal from "../components/modals/ConnectModal";
 import { GlobalContext } from "../contexts/GlobalContext";
@@ -14,13 +14,13 @@ export default function Login() {
     const { connectType, setConnectType, connectModalVis, setConnectModalVis, setUser, callbackConnect } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
-    const { login, logout, user, isReady } = usePrivy();
+    // const { login, logout, user, isReady } = usePrivy();
 
-    if (!isReady) {
-        return <View style={{}}>
-            <Text style={{marginTop: 10,}}>LOADING</Text>
-        </View>;
-    }
+    // if (!isReady) {
+    //     return <View style={{}}>
+    //         <Text style={{marginTop: 10,}}>LOADING</Text>
+    //     </View>;
+    // }
 
     async function openTerms() {
         Haptics.selectionAsync();
@@ -32,21 +32,21 @@ export default function Login() {
         let result = await WebBrowser.openBrowserAsync("https://drive.google.com/file/d/1Dhijs_O61shJEKNy6Sga16Iu3vgqwc8I/view?usp=sharing");
     }
 
-    async function handlePrivyConnect(type) {
-        Haptics.selectionAsync();
+    // async function handlePrivyConnect(type) {
+    //     Haptics.selectionAsync();
 
-        console.log(type);
+    //     console.log(type);
 
-        try {
-            await login(); // ouvre la modale Privy
-            setUser(user)
-            AsyncStorage.setItem("provider-type", "wallet-connect");
-            callbackConnect(resUser.details)
-            console.log("User connected:", user);
-        } catch (err) {
-            console.log("Error login Privy:", err);
-        }
-    }
+    //     try {
+    //         await login(); // ouvre la modale Privy
+    //         setUser(user)
+    //         AsyncStorage.setItem("provider-type", "wallet-connect");
+    //         callbackConnect(resUser.details)
+    //         console.log("User connected:", user);
+    //     } catch (err) {
+    //         console.log("Error login Privy:", err);
+    //     }
+    // }
 
     return(
         <View style={tailwind('w-full h-full')}>
@@ -67,7 +67,7 @@ export default function Login() {
                     />
 
                     {/* PRIVY INTEGRATION */}
-                    <TouchableOpacity 
+                    {/* <TouchableOpacity 
                         activeOpacity={0.8}
                         style={[
                             tailwind('rounded-full text-center bg-slate-900 border-2 border-slate-900 mt-4'),
@@ -91,10 +91,10 @@ export default function Login() {
                         <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>
                             Sign in
                         </Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
 
 
-                    {/* <TouchableOpacity 
+                    <TouchableOpacity 
                         activeOpacity={0.8} 
                         style={[
                             tailwind('rounded-full text-center bg-slate-900 border-2 border-slate-900 mt-4'), 
@@ -120,7 +120,7 @@ export default function Login() {
                         activeOpacity={0.8}
                     >
                         <Text style={[tailwind(`text-slate-900 px-8 text-center`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 25 }]}>Sign in</Text>
-                    </TouchableOpacity> */}
+                    </TouchableOpacity>
 
                     <View style={[tailwind(`w-full items-center`), {marginTop: 25}]}>
                         <Image

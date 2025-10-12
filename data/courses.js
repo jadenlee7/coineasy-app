@@ -695,13 +695,13 @@ export const courses = [
                         title: "What is Vana?",
                         description: "Vana is a decentralized data protocol that enables individuals to own, control, and monetize their data. It connects data providers and AI/DeFi applications through secure, privacy-preserving infrastructure. Users can share data with confidence, earn rewards, and contribute to the growth of the AI and Web3 ecosystem.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/vana.webp')
                     },
                     {
                         title: "Data Collectives",
                         description: "Vana’s Data Collectives allow communities to pool their data for specific purposes, such as training AI models or powering DeFi protocols, while maintaining full user control. This creates a new data economy where value flows back to the people who generate the data.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/vana.webp')
                     },
                 ],
                 question: {
@@ -737,13 +737,13 @@ export const courses = [
                         title: "What is 1inch?",
                         description: "1inch is a DeFi aggregator that integrates multiple DEXs to provide the most efficient swap routes. Users can find the best trading conditions with minimal slippage through 1inch.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/1inch.webp')
                     },
                     {
                         title: "Fusion Swap",
                         description: "1inch Fusion Swap allows users to trade at the best price with zero gas fees. It automatically matches orders with liquidity providers, enabling fast and efficient cross-chain swaps.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/1inch.webp')
                     },
                 ],
                 question: {
@@ -780,13 +780,13 @@ export const courses = [
                         title: "What is Sonic?",
                         description: "Sonic is a high-performance Layer 1 blockchain designed for ultra-fast transactions, low fees, and developer-friendly infrastructure. It enables builders to create scalable DeFi, GameFi, and Web3 applications without compromising speed or security. Users can enjoy seamless transactions, near-instant finality, and access to a growing ecosystem of decentralized applications.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/sonic.webp')
                     },
                     {
                         title: "High Performance",
                         description: "With Sonic’s high throughput and sub-second finality, projects can scale to millions of users while keeping costs minimal. Its ecosystem includes top DeFi apps, cross-chain integrations, and tools for both developers and everyday users.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/sonic.webp')
                     },
                 ],
                 question: {
@@ -814,7 +814,7 @@ export const courses = [
                 id: '7-1',
                 title: 'What is FLock?',
                 description: 'In this course, you’ll get an introduction to FLock and how it works in the decentralized AI world!',
-                image: require('../assets/trophy/project/sonic.webp'),
+                image: require('../assets/trophy/project/flock.webp'),
                 points: 60,
                 enrolled: 12000,
                 pages: [
@@ -822,13 +822,13 @@ export const courses = [
                         title: "What is FLock?",
                         description: "FLock is a decentralized federated learning protocol that enables AI models to be trained collaboratively without sharing raw data. It connects data owners and AI developers through a secure, privacy-preserving network. Users can contribute data locally, earn rewards, and help improve AI models while maintaining full control of their information.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/flock.webp')
                     },
                     {
                         title: "Federated Learning",
                         description: "With FLock’s federated learning framework, multiple participants can train AI models together by only sharing model updates, not the data itself. This approach preserves privacy, enhances security, and accelerates the creation of high-quality AI applications.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/flock.webp')
                     },
                 ],
                 question: {
@@ -864,13 +864,13 @@ export const courses = [
                         title: "What is Yala?",
                         description: "Yala is a decentralized stablecoin protocol that issues $YU, a Bitcoin-backed stablecoin designed for stability, security, and cross-chain usability. It provides overcollateralized minting with BTC and stablecoins, ensuring a reliable peg to $1 while enabling capital efficiency. Users can mint, trade, and use $YU across multiple chains, participate in liquidity pools, and earn rewards through staking.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/yala.webp')
                     },
                     {
                         title: "Dual-Collateral Model",
                         description: "Yala’s Peg Stability Module (PSM) and overcollateralized CDP system create a dual-collateral model, supporting both BTC and stablecoins for enhanced resilience. With deep integrations in DeFi, Yala offers fast, low-cost transactions and access to a growing multi-chain ecosystem.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/yala.webp')
                     },
                 ],
                 question: {
@@ -898,7 +898,7 @@ export const courses = [
                 id: '9-1',
                 title: 'What is Unit Network?',
                 description: 'In this course, you’ll get an introduction to Unit Network and how it’s building a fairer and more inclusive token economy!',
-                image: require('../assets/trophy/project/yala.webp'),
+                image: require('../assets/trophy/project/unit.webp'),
                 points: 60,
                 enrolled: 12000,
                 pages: [
@@ -906,13 +906,13 @@ export const courses = [
                         title: "What is Unit Network?",
                         description: "Unit Network is a Layer 1 blockchain and platform designed to power the creation, management, and exchange of community-driven tokens. It enables individuals, businesses, and communities to tokenize real-world assets, launch their own tokens, and participate in a transparent and decentralized economy. Users can earn rewards, access decentralized financial services, and contribute to building sustainable economic ecosystems.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/unit.webp')
                     },
                     {
                         title: "UNIT Token & Ecosystem",
                         description: "With its UNIT token at the core, Unit Network provides tools for liquidity pooling, decentralized lending, and cross-community collaboration. Its mission is to democratize finance by making tokenization accessible to everyone while ensuring security, efficiency, and long-term sustainability.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/unit.webp')
                     },
                 ],
                 question: {
@@ -948,13 +948,13 @@ export const courses = [
                         title: "What is Espresso?",
                         description: "Espresso is a modular blockchain infrastructure focused on scalable data availability (DA) for rollups and decentralized applications. It enables developers to offload data storage to a high-throughput DA layer while maintaining security and decentralization. Users and projects benefit from faster transaction confirmation, lower costs, and improved scalability without compromising trust.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/espresso.webp')
                     },
                     {
                         title: "HotShot Consensus",
                         description: "With its HotShot consensus and advanced DA architecture, Espresso delivers high bandwidth, rapid finality, and robust data integrity. This makes it an ideal foundation for rollups, DeFi protocols, and next-generation Web3 applications that require reliable and scalable data availability.",
                         bottomDescription: "",
-                        image: null
+                        image: require('../assets/trophy/project/espresso.webp')
                     },
                 ],
                 question: {
