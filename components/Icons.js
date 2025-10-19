@@ -215,6 +215,15 @@ export const NavHomeIcon = ({color}) => {
 }
 
 /** Icons for navigation */
+export const NewsIcon = ({color}) => {
+  return(
+    <Svg width="22" height="24" viewBox="0 0 22 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <Path d="M21 0C21.5523 1.93276e-07 22 0.447715 22 1V22C22 23.1046 21.1046 24 20 24H2C0.895431 24 3.22133e-08 23.1046 0 22V1C2.57704e-07 0.447716 0.447715 1.61064e-08 1 0H21ZM5 16C4.44772 16 4 16.4477 4 17C4 17.5523 4.44772 18 5 18H18C18.5523 18 19 17.5523 19 17C19 16.4477 18.5523 16 18 16H5ZM5 11C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13H11C11.5523 13 12 12.5523 12 12C12 11.4477 11.5523 11 11 11H5ZM5 4C4.44772 4 4 4.44772 4 5V7C4 7.55228 4.44772 8 5 8H17C17.5523 8 18 7.55228 18 7V5C18 4.44772 17.5523 4 17 4H5Z" fill={color}/>
+    </Svg>
+  )
+}
+
+/** Icons for navigation */
 export const NavCourseIcon = ({color}) => {
   return(
     <Svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">

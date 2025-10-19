@@ -4,41 +4,6 @@ const courseObject = {
     bottomDescription: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam ultrices, magna vitae eleifend placerat, turpis lectus maximus libero, sed egestas enim consectetur consectetur adipiscing elit. Etiam ultrices, magna vitae eleifend placerat.. Etiam ultrices, magna vitae eleifend placerat.. Etiam ultrices, magna vitae eleifend placerat.. Etiam ultrices, magna vitae eleifend placerat.. Etiam ultrices, magna vitae eleifend placerat.. Etiam ultrices, magna vitae eleifend placerat.. Etiam ultrices, magna vitae eleifend placerat."
 }
 
-export const giftData = [
-    {
-      id: 1,
-      title: 'Americano',
-      subtitle: 'Starbucks (Korea)',
-      date: '2025-06-10 17:31',
-      barCodeText: "9350138321499185",
-      status: 'Available'
-    },
-    {
-      id: 2,
-      title: 'Americano',
-      subtitle: 'Starbucks (Korea)',
-      date: '2025-06-09 11:28',
-      barCodeText: "9350259456387152",
-      status: 'Available'
-    },
-    {
-      id: 3,
-      title: 'Americano',
-      subtitle: 'Starbucks (Korea)',
-      date: '2025-06-03 19:47',
-      barCodeText: "9350974128462384",
-      status: 'Used'
-    },
-    {
-      id: 4,
-      title: 'Americano',
-      subtitle: 'Starbucks (Korea)',
-      date: '2025-06-02 20:02',
-      barCodeText: "9350345687421547",
-      status: 'Used'
-    },
-  ];
-
 export const shopData = [
     {
       id: 1,

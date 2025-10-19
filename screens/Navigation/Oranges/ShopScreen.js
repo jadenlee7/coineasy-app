@@ -7,32 +7,23 @@ import {
   Image,
   ScrollView,
   SafeAreaView,
-  Dimensions,
   Alert,
+  Platform,
 } from 'react-native';
-import { shopData } from '../../../data/courses';
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 import * as Haptics from 'expo-haptics';
 import { GlobalContext } from '../../../contexts/GlobalContext';
 import moment from 'moment';
 
-const {width, height} = Dimensions.get('window')
-
-const ShopScreen = ({ goToGift }) => {
+const ShopScreen = ({ setSelectedShopItem, handleModalPress }) => {
     const { 
         orbis,
         user,
         userData,
         setUserData,
+        setNewGiftsCount
     } = useContext(GlobalContext);
 
-    const [isSuccess, setIsSuccess] = useState(false)
-    const [selectedShopItem, setSelectedShopItem] = useState(null)
-
-    const modalRef = useRef(null); 
-    const snapPoints = useMemo(() => ['80%','80%'], []);
-    const handleModalPress = useCallback(() => modalRef.current?.present(), []);
 
     const onClaimProduct = async (item) => {
         Haptics.selectionAsync()
@@ -76,52 +67,37 @@ const ShopScreen = ({ goToGift }) => {
                 }]
             }
 
-            let barCodeText = '';
-            for (let i = 0; i < 16; i++) {
-                barCodeText += Math.floor(Math.random() * 10); // chiffre entre 0 et 9
+
+            const giftItem = {
+                id: Math.random(),
+                title: item.title,
+                subtitle: item.subtitle,
+                image: item.image,
+                date: moment().format("MM.DD.YYYY h:mm A"),
+                status: 'Not available yet'
             }
-
-            if(item.buttonText == 'Join'){
-                const random = Math.random();
-                setIsSuccess(random < 0.02)
-                if(random < 0.02){
-                    const giftItem = {
-                        id: item.id,
-                        title: item.title,
-                        subtitle: item.subtitle,
-                        date: moment().format("YYYY-MM-DD HH:mm"),
-                        barCodeText: barCodeText,
-                        status: 'Available'
-                    }
-                    if(tempData.gifts){
-                        tempData.gifts.push(giftItem)
-                    }else{
-                        tempData.gifts = [giftItem]
-                    }
-                }
+            if(tempData.gifts){
+                tempData.gifts.push(giftItem)
             }else{
-                setIsSuccess(true)
-
-                const giftItem = {
-                    id: Math.random(),
-                    title: item.title,
-                    subtitle: item.subtitle,
-                    date: moment().format("YYYY-MM-DD HH:mm"),
-                    barCodeText: barCodeText,
-                    status: 'Available'
-                }
-                if(tempData.gifts){
-                    tempData.gifts.push(giftItem)
-                }else{
-                    tempData.gifts = [giftItem]
-                }
+                tempData.gifts = [giftItem]
             }
 
             setUserData({...tempData})
             var tempProfile = user.profile
             tempProfile.data = tempData
-            await orbis.updateProfile(tempProfile);
-    
+
+            setNewGiftsCount(true)
+
+            setShopData(prev =>
+                prev.map(p =>
+                    p.id === item.id
+                    ? { ...p, remainer: Math.max(p.remainer - 1, 0) } // évite les valeurs négatives
+                    : p
+                )
+            );
+            
+            // await orbis.updateProfile(tempProfile);
+
             handleModalPress()
         }
 
@@ -129,30 +105,36 @@ const ShopScreen = ({ goToGift }) => {
 
     const RewardItem = ({ item, index }) => (
         <View style={[styles.rewardItem, {marginTop: index == 0 ? 10 : 0,}]}>
-            <Image
-                style={{width: 90, height: 90}}
-                resizeMode='contain'
-                source={item.image}
-            /> 
+            <View style={{flex: 1, flexDirection: 'column', justifyContent: 'space-between',}}>
+                <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start', gap: 10}}>
+                    <Image
+                        style={{width: 90, height: 90}}
+                        resizeMode='contain'
+                        source={item.image}
+                    /> 
+                    
+                    <View style={{flexShrink: 1, marginTop: 5,}}>
+                        <Text style={styles.title}>{item.title}</Text>
+                        <Text style={styles.subtitle}>{item.subtitle}</Text>
+                    </View>
+                </View>
 
-            <View style={{flex: 1, flexDirection: 'column', justifyContent: 'space-between',marginLeft: 10}}>
-                <View style={{flexShrink: 1}}>
-                    <Text style={styles.title}>{item.title}</Text>
-                    <Text style={styles.subtitle}>{item.subtitle}</Text>
+                
+                <View style={{marginTop: 10,flexDirection:'row',justifyContent:'space-between',alignItems:'center',}}>
 
                     <View style={{flexDirection:'row',justifyContent:'flex-start',alignItems:'center',fontFamily: 'GmarketMedium', marginTop: 5}}>
                         <Text style={{fontSize: 11,fontFamily: 'GmarketMedium',}}>{item.remainer}</Text>
                         <Text style={{fontSize: 11, color: '#959595',fontFamily: 'GmarketMedium'}}>/{item.total} Remain</Text>
                     </View>
-                </View>
-                
-                <View style={{minWidth: 80,alignItems: 'flex-end',marginTop: 10,}}>
+
                     <TouchableOpacity 
-                        style={[styles.button, { backgroundColor: item.buttonText == 'Closed' ? '#F1F4F9' : '#FF6B17' }]}
+                        style={[styles.button, { backgroundColor: item.remainer == 0 ? '#F1F4F9' : '#FF6B17' }]}
                         onPress={() => onClaimProduct(item)}
                     >
                         <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 7}}>
-                            <Text style={{color: item.buttonText == 'Closed' ? '#959595' : 'white',fontSize: 10,fontFamily: 'GmarketMedium'}}>{item.buttonText}</Text>
+                            <Text style={{color: item.remainer == 0 ? '#959595' : 'white',fontSize: 10,fontFamily: 'GmarketMedium'}}>
+                                {item.remainer > 0 ? 'Apply' : 'Closed'}
+                            </Text>
                             <View style={{width: 20, height: 20, borderRadius: 20,backgroundColor: '#FFF2E2', justifyContent:'center',alignItems:'center',}}>
                                 <Image
                                     style={{width: 15, height: 15}}
@@ -160,7 +142,7 @@ const ShopScreen = ({ goToGift }) => {
                                     source={require('../../../assets/trophy/trophy_icon_orange.png')}
                                 />                                 
                             </View>
-                            <Text style={{color: item.buttonText == 'Closed' ? '#959595' : 'white',fontSize: 11,fontFamily: 'GmarketBold'}}>{item.oranges}</Text>
+                            <Text style={{color: item.remainer == 0 ? '#959595' : 'white',fontSize: 11,fontFamily: 'GmarketBold'}}>{item.oranges}</Text>
                         </View>
                     </TouchableOpacity>
                 </View>
@@ -177,6 +159,39 @@ const ShopScreen = ({ goToGift }) => {
         setUserData({...tempData})
     }
 
+    const [shopData, setShopData] = useState([
+        {
+            id: 1,
+            title: 'Seed Box',
+            subtitle: 'This box will later be convertible into assets such as NFT whitelists, NFTs, tokens, and points.',
+            remainer: 1000,
+            total: 1000,
+            oranges: 200,
+            image: require('../../../assets/shop/seed_box.png'),
+            successText: "You've received a Seed Box",
+        },
+        {
+            id: 2,
+            title: 'Sprout Box',
+            subtitle: 'This box will later be convertible into assets such as NFT whitelists, NFTs, tokens, and points.',
+            remainer: 200,
+            total: 200,
+            oranges: 500,
+            image: require('../../../assets/shop/sprout_box.png'),
+            successText: "You've received a Sprout Box",
+        },
+        {
+            id: 3,
+            title: 'Orange Box',
+            subtitle: 'This box will later be convertible into assets such as NFT whitelists, NFTs, tokens, and points.',
+            remainer: 2,
+            total: 100,
+            oranges: 1000,
+            image: require('../../../assets/shop/orange_box.png'),
+            successText: "You've received an Orange Box",
+        },
+    ])
+
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView style={styles.scrollView}>
@@ -186,86 +201,14 @@ const ShopScreen = ({ goToGift }) => {
                     <Text style={{}}>orange</Text>
                 </TouchableOpacity> */}
                 {shopData.map((item, index) => (
-                    <RewardItem key={item.id+'-shop'} item={item} index={index}/>
+                    <RewardItem 
+                        key={item.id+'-shop'} 
+                        item={item} 
+                        index={index}
+                    />
                 ))}
                 <View style={{height: 50}}/>
             </ScrollView>
-
-            {selectedShopItem && (
-                <BottomSheetModalProvider>
-                    <BottomSheetModal
-                        ref={modalRef}
-                        index={1}
-                        snapPoints={snapPoints}
-                        handleIndicatorStyle={{backgroundColor: 'black',}}
-                        handleStyle={{height: 30,justifyContent: 'center',}}
-                        backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
-                        onDismiss={() => {setIsSuccess(false)}}
-                    >
-                        <View style={{justifyContent: 'space-between',}}>
-                            <View style={{}}>
-                                <Text style={{textAlign: 'center',fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16}}>
-                                    {isSuccess ? 'Congratulations' : 'So Close!'}
-                                </Text>
-                                <Text style={{
-                                    textAlign: 'center',
-                                    fontFamily: 'GmarketMedium',
-                                    fontSize: Platform.OS == 'ios' ? 14 : 11,
-                                    marginTop: Platform.OS == 'ios' ? 10 : 10,
-                                    color: isSuccess ? '#FF6B17' : 'black'
-                                }}>
-                                    {isSuccess ? selectedShopItem.successText : selectedShopItem.loseText}
-                                </Text>
-
-                                <Image
-                                    style={{width: 140, height: 140, alignSelf:'center', margin: 40, marginTop: 15,}}
-                                    resizeMode='contain'
-                                    source={selectedShopItem.image}
-                                /> 
-                            </View>
-
-                            <View style={{}}>
-                                {isSuccess && (
-                                    <TouchableOpacity
-                                        style={{
-                                            backgroundColor: 'white',
-                                            borderWidth: 1,
-                                            borderColor: 'black',
-                                            alignSelf:'center',
-                                            width: width*0.9,
-                                            paddingVertical: 17,
-                                            justifyContent:'center',
-                                            alignItems:'center',
-                                            borderRadius: 30,
-                                            marginBottom: 20
-                                        }}
-                                        onPress={() => {goToGift();setIsSuccess(false);modalRef.current?.close();}}
-                                    >
-                                        <Text style={{textAlign: 'center', fontFamily: 'GmarketBold', fontSize: 12,}}>Go to Gift Box</Text>
-                                    </TouchableOpacity>
-                                )}
-
-                                <TouchableOpacity
-                                    style={{
-                                        backgroundColor: '#FF6B17',
-                                        alignSelf:'center',
-                                        width: width*0.9,
-                                        paddingVertical: 17,
-                                        justifyContent:'center',
-                                        alignItems:'center',
-                                        borderRadius: 30
-                                    }}
-                                    onPress={() => {setIsSuccess(false);modalRef.current?.close();}}
-                                >
-                                    <Text style={{textAlign: 'center', color:'white', fontFamily: 'GmarketBold', fontSize: 12,}}>Ok</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-
-                    </BottomSheetModal>
-                </BottomSheetModalProvider>
-            )}
-
         </SafeAreaView>
     );
 };
@@ -295,13 +238,14 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   title: {
-    fontSize: 14,
+    fontSize: Platform.OS == 'ios' ? 16 : 14,
     fontFamily: 'GmarketBold',
     flexWrap: 'wrap',
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: Platform.OS == 'ios' ? 13 : 11,
+    fontFamily: 'GmarketMedium',
     color: '#959595',
     marginBottom: 2,
   },

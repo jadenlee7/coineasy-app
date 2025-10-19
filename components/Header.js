@@ -33,7 +33,7 @@ export default function Header(props) {
                 left: 0,
                 right: 0,
                 top: statusBarHeight > 25 ? 0 : -20,
-                zIndex: 1000,
+                // zIndex: 1000,
                 overflow: 'hidden',
             },
         ]}

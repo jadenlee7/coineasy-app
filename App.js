@@ -170,6 +170,7 @@ export default function App() {
   const [currentRoute, setCurrentRoute] = useState(null)
 
   const [tabViewHeight, setTabViewHeight] = useState(500)
+  const [newGiftsCount, setNewGiftsCount] = useState(false)
 
   const { provider } = useWalletConnectModal();    
 
@@ -1030,6 +1031,7 @@ export default function App() {
                         categoryPosts, setCategoryPosts,
                         categoriesVis, setCategoriesVis,
                         activityClaim, setActivityClaim,
+                        newGiftsCount, setNewGiftsCount,
                         listHiddenPost, setListHiddenPost,
                         listMutedUsers, setListMutedUsers,
                         showReportBack, setShowReportBack,

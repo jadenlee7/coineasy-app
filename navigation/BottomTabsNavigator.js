@@ -8,7 +8,7 @@ import News from "../screens/News";
 import Profile from '../screens/Profile';
 import * as Haptics from 'expo-haptics';
 
-import { NavHomeIcon, NavCategoriesIcon, NavChartIcon, NavProfileIcon, NavSearchIcon, NavCourseIcon, NavOrangeIcon } from "../components/Icons";
+import { NavHomeIcon, NavCategoriesIcon, NavChartIcon, NavProfileIcon, NavSearchIcon, NavCourseIcon, NavOrangeIcon, NewsIcon } from "../components/Icons";
 import Search from '../screens/Search';
 import { GlobalContext } from '../contexts/GlobalContext';
 import NewFeatureModal from '../components/modals/NewFeatureModal';
@@ -41,7 +41,7 @@ const BottomTabsNavigator = ({ navigation, route }) => {
                         </View>
                     : title == 'news' ? 
                         <View style={{marginTop: '20%',width: 60,alignItems: 'center',}}>
-                            <NavChartIcon color={focused ? "#FF6E31" : "#959595" }/> 
+                            <NewsIcon color={focused ? "#FF6E31" : "#959595" }/> 
                         </View>
                     : title == 'search' ? 
                         <View style={{marginTop: '20%',marginRight: 20,width: 60,alignItems: 'center',}}>

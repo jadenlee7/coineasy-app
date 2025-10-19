@@ -10,217 +10,43 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 
 import { GlobalContext } from "../contexts/GlobalContext";
-import { onboard_context, edu_context } from '../utils/config.js';
-import { InterpunctIcon, NotificationsIcon } from "../components/Icons";
+import { InterpunctIcon } from "../components/Icons";
 import Header from "../components/Header";
-import Feed from "../components/Feed";
-import HeaderImage from "../components/HeaderImage";
-import moment from "moment";
 import TimeAgo from "../components/TimeAgo.js";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
-
-let page = 0
 
 const News = ({ navigation, route }) => {
 
     const { 
-        orbis, 
         category, 
         setCategory, 
         selectedCategory, 
         setSelectedCategory, 
         currentRoute, 
-        setCurrentRoute, 
-        refreshing, 
-        setRefreshing, 
-        refreshingBottom, 
-        setRefreshingBottom, 
+        setCurrentRoute,
         setScrollAnim, 
         setOffsetAnim, 
-        newsFeedRef, 
         selectedNews, 
-        setSelectedNews, 
-        newsPosts, 
-        setNewsPosts, 
-        showPostbox,
-        setEditedPost
+        setSelectedNews,
     } = useContext(GlobalContext);
 
     const tailwind = useTailwind();
 
     const [news, setNews] = useState([]);
-    const [nav, setNav] = useState("news");
-    const [eduCategories, setEduCategories] = useState([]);
-    const [onboardCategories, setOnboardCategories] = useState([]);
 
     const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
         Haptics.selectionAsync()
-        if(currentRoute == 'Categories'){
-            if (selectedCategory) {
-                setSelectedCategory(null)
-                return true;
-            }else{
-                setScrollAnim(new Animated.Value(0))
-                setOffsetAnim(new Animated.Value(0))
-                navigation.goBack()
-                return true;
-            }
-        } else if(currentRoute == 'News'){
-            if (selectedNews) {
-                setSelectedNews(null)
-                return true;
-            }else{
-                setScrollAnim(new Animated.Value(0));
-                setOffsetAnim(new Animated.Value(0));
-                navigation.goBack()
-                return true;
-            }
-        } else if(currentRoute == 'Home'){
-            if (category) {
-                setCategory(null)
-            }
-            setScrollAnim(new Animated.Value(0));
-            setOffsetAnim(new Animated.Value(0));
-            navigation.replace('Navigator')
-            return true
-        }
+
+        setScrollAnim(new Animated.Value(0));
+        setOffsetAnim(new Animated.Value(0));
+        navigation.goBack()
+        return true;
     });
 
     useEffect(() => {
         return () => backhandler.remove();
     }, [navigation])
     
-
-    /** Will retrieve all posts shared in the global context */
-    async function loadNewsPosts(item) {
-        setNewsPosts([]);
-        setRefreshing(true);
-        let { data } = await orbis.getPosts({
-            contexts: [item.stream_id],
-            include_child_contexts: true
-        });
-        if(data) {
-            data.map(async (e, indexPost) => {
-                if(e.content.media?.length > 0){
-                    e.content.media.map(async (elt, indexImage) => {
-                        if(elt.url){
-                            await RNImage.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
-                        }else if(elt[0].url){
-                            await RNImage.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
-                        }else{
-                            console.log('AUCUNNNN');
-                            console.log(elt);
-                        }
-    
-                        if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
-                            setNewsPosts(data);
-                        }
-                    })
-                }else{
-                    if(indexPost == data.length -1){
-                        setNewsPosts(data);
-                    }
-                }
-            })
-            setNewsPosts(data);
-        }
-        setRefreshing(false);
-    }
-
-    /** This will load more posts and add those to the current list */
-    async function loadMoreNewsPosts() {
-        console.log("Enter loadMoreNewsPosts() with page:", page);
-        if(refreshingBottom) {
-            console.log("Already refreshing.");
-            return;
-        }
-        if (newsPosts.length % 50 === 0) {
-            setRefreshingBottom(true);
-            page++;
-            console.log("Enter loadMorenewsPosts with page:", page);
-            let { data } = await orbis.getPosts(
-                {
-                    contexts: [selectedNews.stream_id],
-                    include_child_contexts: true
-                },
-                page
-            );
-
-            if(data){
-                data.map(async (e, indexPost) => {
-                    if(e.content.media?.length > 0){
-                        e.content.media.map(async (elt, indexImage) => {
-                            if(elt.url){
-                                await RNImage.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
-                            }else if(elt[0].url){
-                                await RNImage.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
-                            }else{
-                                console.log('AUCUNNNN');
-                                console.log(elt);
-                            }
-        
-                            if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
-                                let _posts = [...selectedNews, ...data];
-                                setRefreshingBottom(false);
-                                setNewsPosts(_posts);
-                            }
-                        })
-                    }else{
-                        if(indexPost == data.length -1){
-                            let _posts = [...selectedNews, ...data];
-                            setRefreshingBottom(false);
-                            setNewsPosts(_posts);
-                        }
-                    }
-                })
-            }
-
-            // let _posts = [...selectedNews, ...data];
-            // setRefreshingBottom(false);
-            // setNewsPosts(_posts);
-        } else {
-            console.log("Reached the end news.");
-        }
-    }
-
-    const onRefresh = useCallback(async () => {
-        page = 0;
-        setRefreshing(true);
-        let { data, error } = await orbis.getPosts({
-            contexts: [selectedNews.stream_id],
-            include_child_contexts: true
-        });
-
-        if(data) {
-            data.map((e, indexPost) => {
-                if(e.content.media?.length > 0){
-                    e.content.media.map(async (elt, indexImage) => {
-                        if(elt.url){
-                            await RNImage.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
-                        }else if(elt[0].url){
-                            await RNImage.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
-                        }else{
-                            console.log('AUCUNNNN');
-                            console.log(elt);
-                        }
-    
-                        if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
-                            setNewsPosts(data);
-                        }
-                    })
-                }else{
-                    if(indexPost == data.length -1){
-                        setNewsPosts(data);
-                    }
-                }
-            })
-
-
-        //   setNewsPosts(data);
-        }
-        setRefreshing(false);
-      }, [selectedNews]);
-
 
     useEffect(() => {
         loadData();
@@ -234,203 +60,48 @@ const News = ({ navigation, route }) => {
 
     async function loadData() {
         loadNews();
-        loadOnboard();
-        loadEasEdu();
     }
 
     /** Will load news from Coineasy RSS feed */
     async function loadNews() {
-        let res = await fetch("https://rss.app/feeds/_z2HKiiCTPGaK4EIn.json");
+        // let res = await fetch("https://rss.app/feeds/_z2HKiiCTPGaK4EIn.json");
+        let res = await fetch("https://rss.app/feeds/v1.1/toWoTRT92EnG175n.json");
         let results = await res.json();
         setNews(results.items);
     }
 
-    /** Will load onboard categories */
-    async function loadOnboard() {
-        let { data, error } = await orbis.api.from("orbis_contexts").select().eq('context', onboard_context).order('created_at', { ascending: false });
+    const statusBarHeight = useStatusBarHeight();
+    
+    return(
+        <View style={tailwind('flex flex-1 bg-white')}>
+            <Header />
 
-        // Switch 1inch Network to first position
-        const indexItem = data.findIndex(e => e.content.displayName == '1inch Network')
-        const first_element = data.splice(indexItem, 1)[0];
-        data.splice(0, 0, first_element);
+            <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: statusBarHeight > 25 ? 90 + statusBarHeight : 105 + statusBarHeight,}}>
+                <Text style={[tailwind('text-slate-900 px-5'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20, }]}>
+                    EASY NEWS
+                </Text>
+            </View>
 
-        setOnboardCategories(data);
-    }
-
-    /** Will load easy edu categories */
-    async function loadEasEdu() {
-        let { data, error } = await orbis.api.from("orbis_contexts").select().eq('context', edu_context).order('created_at', { ascending: false });
-        setEduCategories(data);
-    }
-
-
-    /** Activity feed based on navigation selected */
-    const ActivityContent = ({nav, news, onboardCategories, eduCategories}) => {
-        switch (nav) {
-            case "news":
-                return(
-                <>
-                {news.length == 0 ?
-                    <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
-                :
-                    <>
-                    {news.map((item, key) => {
-                        return (
-                            <NewsItem item={item} key={key} />
-                        );
-                    })}
-                    </>
-                }
-                </>
-                )
-            case "onboard":
-                return(
-                <>
-                    {onboardCategories.length == 0 ?
+            <View style={[tailwind('flex flex-col flex-1')]}>
+                <ScrollView 
+                    style={tailwind('flex flex-col w-full px-4 mt-20px')} 
+                    refreshControl={
+                        <RefreshControl refreshing={false} onRefresh={loadData} />
+                    }
+                >
+                    {news.length == 0 ?
                         <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
                     :
                         <>
-                            {onboardCategories.map((item, key) => {
+                            {news.map((item, key) => {
                                 return (
-                                    <OnboardItem item={item} key={item.stream_id} />
+                                    <NewsItem item={item} key={key} />
                                 );
                             })}
                         </>
                     }
-                </>
-                );
-            case "easy-edu":
-                return(
-                    <>
-                        {eduCategories.length == 0 ?
-                            <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
-                        :
-                            <>
-                                {eduCategories.map((item, key) => {
-                                    return (
-                                        <OnboardItem item={item} key={item.stream_id} />
-                                    );
-                                })}
-                            </>
-                        }
-                    </>
-                );
-            default:
-        
-            }
-    }
-  
-    const NavItem = ({ setNav, nav, label, item }) => {
-        const tailwind = useTailwind();
-    
-        function select(item) {
-            setNav(item)
-            Haptics.selectionAsync();
-        }
-    
-        return(
-            <TouchableHighlight style={tailwind(`rounded-full py-3 border flex-1 border-slate-800 ${nav == item ? " bg-slate-800" : ""} ${item == "easy-edu" ? "mr-3 ml-3" : ""}`)} onPress={() => select(item)} underlayColor="#f8fafc">
-                <Text style={[tailwind(`text-center ${nav == item ? "text-white" : "text-slate-900" }`), { fontSize: 11, fontFamily: "GmarketBold" }]}>{label}</Text>
-            </TouchableHighlight>
-        )
-    }
-  
-    /** Rendering onboard and easy edu items */
-    const OnboardItem = ({item}) => {
-        const { setScrollAnim, setOffsetAnim } = useContext(GlobalContext);
-        const tailwind = useTailwind();
-    
-        function selectCat() {
-            Haptics.selectionAsync()
-            setSelectedNews(item)
-            loadNewsPosts(item)
-            setScrollAnim(new Animated.Value(0));
-            setOffsetAnim(new Animated.Value(0));
-        }
-    
-        return(
-            <TouchableHighlight 
-                style={[tailwind('flex flex-row p-2 rounded-lg border border-slate-200 mb-10px'), {elevation: 0}]} 
-                onPress={() => selectCat()} 
-                underlayColor="#f8fafc"
-            >
-                <>
-                    {/** Display image if any */}
-                    {item.content.imageUrl &&
-                        <Image
-                            style={[tailwind('rounded-md'), { aspectRatio: 1, width: 70 }]}
-                            source={item.content.imageUrl}
-                            transition={500}
-                            contentFit="cover"
-                            priority="high"
-                        />
-
-                        // <Image
-                        //     resizeMode="cover"
-                        //     style={[tailwind('rounded-md'), { aspectRatio: 1, width: 70 }]}
-                        //     source={{
-                        //         uri: item.content.imageUrl
-                        //     }}  
-                        // />
-                    }
-                    <View style={tailwind('flex flex-col ml-2 flex-1 justify-center')}>
-                        <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 15 }]}>{item.content.displayName}</Text>
-                    </View>
-                </>
-            </TouchableHighlight>
-        )
-    }
-  
-    const statusBarHeight = useStatusBarHeight();
-    
-
-    return(
-        <View style={tailwind('flex flex-1 bg-white')}>
-            { !selectedNews ? (
-                <>
-                    <Header />
-
-                    <View style={{flexDirection: 'row',justifyContent: 'space-between',alignItems: 'center',marginTop: statusBarHeight > 25 ? 90 + statusBarHeight : 105 + statusBarHeight,}}>
-                        <Text style={[tailwind('text-slate-900 px-5'), { fontSize: 16, fontFamily: "GmarketBold", lineHeight: 20, }]}>
-                            Explore EASY World!
-                        </Text>
-                    </View>
-
-                    <View style={[tailwind('flex flex-col flex-1')]}>
-                        <View style={tailwind('flex flex-row mt-30px px-5')}>
-                            <NavItem setNav={setNav} nav={nav} item="news" label="NEWS" />
-                            <NavItem setNav={setNav} nav={nav} item="easy-edu" label="EASY EDU" />
-                            <NavItem setNav={setNav} nav={nav} item="onboard" label="FEATURED" />
-                        </View>
-
-                        <ScrollView 
-                            style={tailwind('flex flex-col w-full px-4 mt-20px')} 
-                            refreshControl={
-                                <RefreshControl refreshing={false} onRefresh={loadData} />
-                            }
-                        >
-                            <ActivityContent nav={nav} news={news} onboardCategories={onboardCategories} eduCategories={eduCategories} />
-                        </ScrollView>
-                    </View>
-                </>
-            ) : (
-                <>
-                    <Header route={route.name} backNews={() => setSelectedNews(null)}/>
-                    <View style={tailwind('flex flex-col flex-1')}>
-                        <View style={tailwind('flex flex-1 bg-white')}>
-                            <Feed posts={newsPosts} refreshing={refreshing} refreshingBottom={refreshingBottom} onRefresh={onRefresh} loadMore={loadMoreNewsPosts} feedRef={newsFeedRef}/>
-            
-                            {/** Share button */}
-                            <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => {setEditedPost(null);showPostbox()}}>
-                                <RNImage
-                                    style={{ height: 70, width: 70 }}
-                                    source={require('../assets/share_btn.png')} 
-                                />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </>
-            )}
+                </ScrollView>
+            </View>
         </View>
     )
 }
@@ -440,7 +111,7 @@ export const NewsItem = ({item}) => {
     const tailwind = useTailwind();
   
     async function openNews() {
-      let result = await WebBrowser.openBrowserAsync(item.url);
+        await WebBrowser.openBrowserAsync(item.url);
     }
 
     const news_image = item.content_html?.slice(item.content_html.indexOf('src="') + 5,item.content_html.indexOf('" style'));
@@ -460,13 +131,6 @@ export const NewsItem = ({item}) => {
                         contentFit="cover"
                         priority="high"
                     />
-                    // <Image
-                    //     resizeMode="cover"
-                    //     style={[tailwind('rounded-md'), { aspectRatio: 1, height: 100, marginRight: 3 }]}
-                    //     source={{
-                    //         uri: item.image
-                    //     }}  
-                    // />
                 : typeof news_image !== 'undefined' &&
                     <Image
                         style={[tailwind('rounded-md'), { aspectRatio: 1, height: 100, marginRight: 3 }]}
@@ -475,15 +139,8 @@ export const NewsItem = ({item}) => {
                         contentFit="cover"
                         priority="high"
                     />
-                    // <Image
-                    //     resizeMode="cover"
-                    //     style={[tailwind('rounded-md'), { aspectRatio: 1, height: 100, marginRight: 3 }]}
-                    //     source={{
-                    //         uri: news_image
-                    //     }}  
-                    // />
                 }
-        
+
                 <View style={tailwind('flex flex-col ml-2 flex-1 justify-between')}>
                     <Text style={[tailwind(`text-slate-900`), { fontSize: 12, fontFamily: "GmarketBold", lineHeight: 16,}]}>{item.title}</Text>
                     <View style={tailwind('flex flex-row items-center mt-2')}>
@@ -500,6 +157,7 @@ export const NewsItem = ({item}) => {
                     </View>
                 </View>
             </>
+    
         </TouchableHighlight>
     )
   }

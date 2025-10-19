@@ -2,9 +2,9 @@ import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } 
 import { Animated, Dimensions, Easing, Image, ImageBackground, Modal, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { ScrollView } from 'react-native-gesture-handler';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 
-import HeaderImage from '../../components/HeaderImage';
 import { GlobalContext } from '../../contexts/GlobalContext';
 
 import * as Haptics from 'expo-haptics';
@@ -31,7 +31,8 @@ const OrangeNavigation = ({navigation, route}) => {
         userData,
         setUserData,
         tabViewHeight,
-        showClaimOranges
+        showClaimOranges,
+        newGiftsCount, setNewGiftsCount
     } = useContext(GlobalContext);
     const tailwind = useTailwind();      
     const statusBarHeight = useStatusBarHeight();
@@ -41,16 +42,36 @@ const OrangeNavigation = ({navigation, route}) => {
     const [openDailyCheckinModal, setOpenDailyCheckinModal] = useState(false)
     const [openDailyActivityModal, setOpenDailyActivityModal] = useState(false)
 
+    const [selectedShopItem, setSelectedShopItem] = useState(null)
+
+
+    const modalShopRef = useRef(null); 
+    const snapPoints = useMemo(() => ['65%','65%'], []);
+    const handleShopModalPress = useCallback(() => modalShopRef.current?.present(), []);
+
+
     const [tabIndex, setIndex] = useState(0);
     const routes = [
         {key:0, title: 'Reward'},
         {key:1, title: 'Shop'},
         {key:2, title: 'Gift'},
     ];
+
     
     const renderLabel = ({route, focused}) => { 
+        const showDot = route.title === 'Gift' && newGiftsCount;
+
         return ( 
-            <Text style={[styles.label, {opacity: focused ? 1 : 0.5}]}>{route.title}</Text>
+            // <Text style={[styles.label, {opacity: focused ? 1 : 0.5}]}>{route.title}</Text>
+            <View style={{alignItems: 'center', justifyContent: 'center'}}>
+                <Text style={[styles.label, {opacity: focused ? 1 : 0.5}]}>
+                    {route.title}
+                </Text>
+                {showDot && (
+                    <View style={styles.orangeDot} />
+                )}
+            </View>
+
         );
     };
 
@@ -275,6 +296,7 @@ const OrangeNavigation = ({navigation, route}) => {
         
     }
 
+
     const renderScene = ({route}) => {
         if(route.key == 0 ) return (
             <ScrollView>
@@ -286,12 +308,15 @@ const OrangeNavigation = ({navigation, route}) => {
         )
         if(route.key == 1 ) return (
             <ScrollView>
-                <ShopScreen goToGift={() => setIndex(2)}/>
+                <ShopScreen 
+                    setSelectedShopItem={setSelectedShopItem}
+                    handleModalPress={handleShopModalPress}
+                />
             </ScrollView>
         )
         if(route.key == 2 ) return (
             <ScrollView>
-                <GiftScreen />
+                <GiftScreen goToShop={() => setIndex(1)}/>
             </ScrollView>
         )
     }
@@ -305,6 +330,15 @@ const OrangeNavigation = ({navigation, route}) => {
                 indicatorStyle={[styles.indicator, { width: IndicatorWidth, left: (windowSize.width / 3 - IndicatorWidth) / 2 }]}
             />
         );
+    };
+
+    const onIndexChange = (index) => {
+        setIndex(index);
+
+        // Si l'utilisateur ouvre Gift (route key = 2)
+        if (routes[index].key == 2) {
+            setNewGiftsCount(false);
+        }
     };
 
     return (
@@ -327,7 +361,7 @@ const OrangeNavigation = ({navigation, route}) => {
                     navigationState={{index: tabIndex, routes}}
                     renderScene={renderScene}
                     renderTabBar={renderTabBar}
-                    onIndexChange={setIndex}
+                    onIndexChange={onIndexChange}
                     initialLayout={{width: windowSize.width}}
                     style={{height: tabViewHeight,}}
                 />
@@ -383,6 +417,83 @@ const OrangeNavigation = ({navigation, route}) => {
                     onClaimAdReward={onClaimAdReward}
                 />
             }
+
+            {selectedShopItem && (
+                <BottomSheetModalProvider>
+                    <BottomSheetModal
+                        ref={modalShopRef}
+                        index={1}
+                        snapPoints={snapPoints}
+                        handleIndicatorStyle={{backgroundColor: 'black',}}
+                        handleStyle={{height: 30,justifyContent: 'center',}}
+                        backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
+                    >
+                        <View style={{justifyContent: 'space-between',}}>
+                            <View style={{}}>
+                                <Text style={{textAlign: 'center',fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16}}>
+                                    Congratulations
+                                </Text>
+                                <Text style={{
+                                    textAlign: 'center',
+                                    fontFamily: 'GmarketMedium',
+                                    fontSize: Platform.OS == 'ios' ? 15 : 13,
+                                    marginVertical: 15,
+                                    color: '#FF6B17'
+                                }}>
+                                    {selectedShopItem.successText}
+                                </Text>
+
+                                <Image
+                                    style={{width: 140, height: 140, alignSelf:'center', margin: 40, marginTop: 15,}}
+                                    resizeMode='contain'
+                                    source={selectedShopItem.image}
+                                /> 
+                            </View>
+
+                            <View style={{}}>
+                                <TouchableOpacity
+                                    style={{
+                                        backgroundColor: 'white',
+                                        borderWidth: 1,
+                                        borderColor: 'black',
+                                        alignSelf:'center',
+                                        width: windowSize.width*0.9,
+                                        paddingVertical: 17,
+                                        justifyContent:'center',
+                                        alignItems:'center',
+                                        borderRadius: 30,
+                                        marginBottom: 20
+                                    }}
+                                    onPress={() => {onIndexChange(2);modalShopRef.current?.close();}}
+                                >
+                                    <Text style={{textAlign: 'center', fontFamily: 'GmarketBold', fontSize: 12,}}>Go to Gift Box</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={{
+                                        backgroundColor: '#FF6B17',
+                                        alignSelf:'center',
+                                        width: windowSize.width*0.9,
+                                        paddingVertical: 17,
+                                        justifyContent:'center',
+                                        alignItems:'center',
+                                        borderRadius: 30
+                                    }}
+                                    onPress={() => {modalShopRef.current?.close();}}
+                                >
+                                    <Text style={{textAlign: 'center', color:'white', fontFamily: 'GmarketBold', fontSize: 12,}}>Ok</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                    </BottomSheetModal>
+                </BottomSheetModalProvider>
+            )}
+
+
+
+
+
         </View>
     )
 }
@@ -407,6 +518,15 @@ const styles = StyleSheet.create({
         height: 4, 
         borderRadius: 10,
         width: '20%',
+        backgroundColor: '#FF6B17',
+    },
+    orangeDot: {
+        position: 'absolute',
+        top: 2,
+        right: -8,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
         backgroundColor: '#FF6B17',
     },
 })
