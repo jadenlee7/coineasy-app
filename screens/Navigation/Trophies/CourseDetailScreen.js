@@ -330,10 +330,6 @@ const CourseDetailScreen = ({ navigation, route }) => {
 
     const statusBarHeight = useStatusBarHeight()
 
-    if(courseProgress == 0){
-        return <Text style={{}}>loading</Text>
-    }
-
     return (
         <View style={{flex: 1, backgroundColor: 'white',}}>
             
