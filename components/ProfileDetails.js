@@ -429,7 +429,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     return(
         <View style={{flex: screen === 'home' ? 1 : 0,backgroundColor: 'white',}}>
             <Header />
-            { type == 'selected' && <HeaderActions />}
+            { type == 'selected' && <HeaderActions showOranges={false}/>}
 
             <Animated.ScrollView 
                 scrollEventThrottle={16}
@@ -444,7 +444,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
             >
 
                 {/** Display profile details */}
-                <View style={[tailwind('flex flex-col items-center'), {marginTop: type == 'selected' ? pfpMarginTop : 0,}]}>
+                <View style={[tailwind('flex flex-col items-center'), {marginTop: type == 'selected' ? 20 : 0,}]}>
                     <TouchableOpacity 
                         style={[tailwind("rounded-full"), {marginTop: type == 'selected' ? 0 : 42,}]}
                         onPress={() => {Haptics.selectionAsync();setShowProfileImage(true)}}
@@ -684,30 +684,32 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                     </View>
                 }
         
-                <View style={styles.container}>
-                    <View style={styles.header}>
-                        <View style={styles.countContainer}>
-                            <Text style={[styles.title, {fontFamily: "GmarketBold",}]}>Trophies</Text>
-                            <Text style={{marginLeft: -5}}>
-                                <Text style={{color: '#FF6B17'}}>{trophiesWithProgress.filter(t => t.progress === t.totalSections).length}</Text>
-                                <Text style={{color: 'gray'}}>/{trophiesWithProgress.length}</Text>
-                            </Text>
+                {type !== 'selected' && (
+                    <View style={styles.container}>
+                        <View style={styles.header}>
+                            <View style={styles.countContainer}>
+                                <Text style={[styles.title, {fontFamily: "GmarketBold",}]}>Trophies</Text>
+                                <Text style={{marginLeft: -5}}>
+                                    <Text style={{color: '#FF6B17'}}>{trophiesWithProgress.filter(t => t.progress === t.totalSections).length}</Text>
+                                    <Text style={{color: 'gray'}}>/{trophiesWithProgress.length}</Text>
+                                </Text>
+                            </View>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('TrophiePresentation', {"data": trophiesWithProgress})}
+                            >
+                                <Text style={{fontFamily: "GmarketMedium",fontSize: 12,color: '#FF6B35'}}>Detail</Text>
+                            </TouchableOpacity>
                         </View>
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('TrophiePresentation', {"data": trophiesWithProgress})}
+                        
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.trophiesContainer}
                         >
-                            <Text style={{fontFamily: "GmarketMedium",fontSize: 12,color: '#FF6B35'}}>Detail</Text>
-                        </TouchableOpacity>
+                            {trophiesWithProgress.map(renderTrophy)}
+                        </ScrollView>
                     </View>
-                    
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.trophiesContainer}
-                    >
-                        {trophiesWithProgress.map(renderTrophy)}
-                    </ScrollView>
-                </View>
+                )}
 
 
                 <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',}]}>

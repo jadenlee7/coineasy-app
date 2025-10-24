@@ -105,10 +105,10 @@ const OrangeNavigation = ({navigation, route}) => {
                 tempData.listClaimedOranges = [{
                     date: moment().format('YYYY-MM-DD'),
                     listOranges: [
-                            {
-                                numberOranges: addNumber,
-                                type: 'Check-in reward'
-                            },
+                        {
+                            numberOranges: addNumber,
+                            type: 'Check-in reward'
+                        },
                     ]
                 }]
             }
@@ -127,8 +127,17 @@ const OrangeNavigation = ({navigation, route}) => {
 
             var tempProfile = user.profile
             tempProfile.data = currentData
+
+            delete tempProfile.data.listClaimedOranges;
+
             orbis.updateProfile(tempProfile)
             .then(res => {
+                console.log('aquqiqiuj');
+                console.log(res);
+                console.log(tempProfile);
+                
+                
+                
                 setOpenDailyCheckinModal(true)
 
                 setUserData({

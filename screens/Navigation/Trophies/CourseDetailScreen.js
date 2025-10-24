@@ -199,7 +199,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
     const [rightAnswer, setRightAnswer] = useState(null)
     const [quizEnded, setQuizEnded] = useState(false)
     
-    const progressAnim = useRef(new Animated.Value(0)).current;
+    const progressAnim = useRef(new Animated.Value(33.33333333)).current;    
 
     useEffect(() => {
         const progress = (courseProgress / course.pages.length) * 100;
@@ -329,6 +329,10 @@ const CourseDetailScreen = ({ navigation, route }) => {
     }, [user.profile, orbis]);
 
     const statusBarHeight = useStatusBarHeight()
+
+    if(courseProgress == 0){
+        return <Text style={{}}>loading</Text>
+    }
 
     return (
         <View style={{flex: 1, backgroundColor: 'white',}}>

@@ -96,7 +96,7 @@ const ShopScreen = ({ setSelectedShopItem, handleModalPress }) => {
                 )
             );
             
-            // await orbis.updateProfile(tempProfile);
+            await orbis.updateProfile(tempProfile);
 
             handleModalPress()
         }
@@ -184,7 +184,7 @@ const ShopScreen = ({ setSelectedShopItem, handleModalPress }) => {
             id: 3,
             title: 'Orange Box',
             subtitle: 'This box will later be convertible into assets such as NFT whitelists, NFTs, tokens, and points.',
-            remainer: 2,
+            remainer: 100,
             total: 100,
             oranges: 1000,
             image: require('../../../assets/shop/orange_box.png'),
@@ -241,13 +241,14 @@ const styles = StyleSheet.create({
     fontSize: Platform.OS == 'ios' ? 16 : 14,
     fontFamily: 'GmarketBold',
     flexWrap: 'wrap',
-    marginBottom: 4,
+    marginBottom: Platform.OS == 'ios' ? 10 : 8,
   },
   subtitle: {
     fontSize: Platform.OS == 'ios' ? 13 : 11,
     fontFamily: 'GmarketMedium',
     color: '#959595',
     marginBottom: 2,
+    lineHeight: 14
   },
   points: {
     fontSize: 12,

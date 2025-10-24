@@ -187,16 +187,16 @@ export default function App() {
     ), 0, 1
   ));
   const navbarTranslate = clampedScroll.interpolate({
-    inputRange: [50, Platform.OS == 'ios' ? 170 : 150],
+    inputRange: [50, Platform.OS == 'ios' ? 170 : 120],
     outputRange: [0, Platform.OS == 'ios' ? -170 : -150],
     extrapolate: 'clamp'
   });
   
   /** Load fonts */
   const [fontsLoaded] = useFonts({
-    'GmarketMedium': require('./assets/fonts/GmarketSansMedium.ttf'),
+    'GmarketMedium': Platform.OS == 'ios' ? require('./assets/fonts/GmarketSansMedium_ios.ttf') : require('./assets/fonts/GmarketSansMedium.ttf'),
     'GmarketMedium_ios': require('./assets/fonts/GmarketSansMedium_ios.ttf'),
-    'GmarketBold': require('./assets/fonts/GmarketSansBold.ttf'),
+    'GmarketBold': Platform.OS == 'ios' ? require('./assets/fonts/GmarketSansBold_ios.ttf') : require('./assets/fonts/GmarketSansBold.ttf'),
   });
 
   useEffect(() => {

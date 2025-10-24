@@ -89,6 +89,7 @@ const Home = ({ navigation, route }) => {
     return(
         <>
             <Header />
+            
             <View style={tailwind('flex flex-col flex-1')}>
                 <View style={tailwind('flex flex-1 bg-white')}>
                     <Feed 

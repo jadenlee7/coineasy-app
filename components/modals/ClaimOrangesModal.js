@@ -1,7 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Alert, Animated, Dimensions, Easing, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Alert, Animated, Dimensions, Easing, Image, Linking, StyleSheet, Text, TouchableOpacity, View, Modal as RNModal } from 'react-native'
 
-import moment from 'moment';
 import Modal from '../Modal';
 import Button from '../Button';
 import { GlobalContext } from '../../contexts/GlobalContext';
@@ -12,11 +11,9 @@ import { AntDesign } from '@expo/vector-icons';
 import { CountdownCircleTimer } from 'react-native-countdown-circle-timer';
 import { useNavigation } from '@react-navigation/core';
 
-const {width, height} = Dimensions.get('window')
-
 const ClaimOrangesModal = (props) => {
 
-    const { showClaimOranges, setShowClaimOranges, adAlreadyClaimed } = useContext(GlobalContext);
+    const { setShowClaimOranges, adAlreadyClaimed } = useContext(GlobalContext);
     const { onClaimAdReward } = props
     const tailwind = useTailwind();
     let navigation;
@@ -27,9 +24,7 @@ const ClaimOrangesModal = (props) => {
     }
     
     const [showAds, setShowAds] = useState(!adAlreadyClaimed)
-    const [pendingAds, setPendingAds] = useState(false)
     const [completeAds, setCompleteAds] = useState(false)
-    const [claimedAds, setClaimedAds] = useState(false)
     const [showClose, setShowClose] = useState(false)
 
     const openUrl = async () => {
@@ -49,202 +44,125 @@ const ClaimOrangesModal = (props) => {
         setShowClaimOranges(false);
         setShowAds(false);
         setCompleteAds(false);
-        setPendingAds(false);
-        setClaimedAds(false);
         setShowClose(false);
     }
 
-    let opacity = new Animated.Value(0);
-    const size = opacity.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, width-100],
-    });
-    const animatedStyles = [
-        styles.box,
-        {
-            opacity,
-            width: size,
-            height: size,
-        },
-    ];
-
-    useEffect(() => {
-        if(pendingAds){
-            handleAds()
-        }
-    }, [pendingAds])
-    
-
-    const handleAds = async () => {
-        Animated.sequence([
-            Animated.timing(opacity, {
-                toValue: 1,
-                duration: 500,
-                easing: Easing.ease,
-                useNativeDriver: false,
-            }),
-
-            Animated.delay(1000),
-
-            Animated.timing(opacity, {
-                toValue: 0,
-                duration: 500,
-                useNativeDriver: false,
-            }),
-        ]).start(() => {
-            setPendingAds(false)
-            setClaimedAds(true)
-            onClaimAdReward()
-        })
-    }
-
     return (
-        <Modal 
-            hide={() => onHideModal()} 
-            type='oranges' 
-            isAds={showAds}
-            pendingAds={pendingAds}
-        >
-            { adAlreadyClaimed ? (
-                <>
-                    <TouchableOpacity
-                        style={{position: 'absolute',top: 15, right: 15, zIndex: 999999999}}
-                        onPress={() => {Haptics.selectionAsync();setShowClaimOranges(false)}}
-                    >
-                        <AntDesign name="closecircle" size={24} color="black" />
-                    </TouchableOpacity>
-
-                    <View style={[tailwind('flex flex-col items-center justify-center px-3')]}>
-                        <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 16,fontFamily: "GmarketBold",lineHeight: 24,marginTop: 20,}]}>
-                            Oops, this basket is empty!
-                        </Text>
-
-                        <Text style={{textAlign: 'center',}}>You've already claimed :)</Text>
-
-                        <Image 
-                            source={require('../../assets/orange_box.png')} 
-                            style={{height: '60%',alignSelf: 'center',marginTop: 20,}} 
-                            resizeMode="contain"
-                        />
-                    </View>
-
-                    <Button 
-                        size="md" 
-                        color="white" 
-                        title="GOOD" 
-                        onPress={() => {Haptics.selectionAsync();setShowClaimOranges(false);}} 
-                        style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 20}}
-                    />
-                </>
-            ) : !pendingAds && showAds ? (
-                <TouchableOpacity 
-                    style={[tailwind('flex flex-col items-center justify-center px-3')]}
-                    onPress={openUrl}
+        <>
+            {completeAds ? (
+                <RNModal 
+                    animationType="slide"
+                    transparent={true}
+                    visible={completeAds}
+                    onRequestClose={() => onHideModal()}
                 >
-                    <Text style={{position: 'absolute',top: 25, left: 20, color: 'white', fontSize: 15,fontFamily: 'GmarketMedium'}}>Click!</Text>
-                    <View style={{position: 'absolute',top: 10, right: 10}}>
-
-                        {showClose ? (
+                    <View style={{flex: 1, justifyContent:'center',alignItems:'center',backgroundColor: "rgba(0,0,0,0.5)",}}>
+                        <View style={{    
+                            width:'90%',
+                            backgroundColor: 'white',
+                            borderRadius: 20,
+                            paddingVertical: 35,
+                            alignItems: 'center',
+                            shadowColor: '#000',
+                            shadowOffset: {
+                                width: 0,
+                                height: 2,
+                            },
+                            shadowOpacity: 0.25,
+                            shadowRadius: 4,
+                            elevation: 5,
+                        }}>
+                            <Text style={{fontFamily:'GmarketBold', textAlign:'center',}}>Orange Collected!</Text>
+    
+                            <View style={{alignItems:'center',padding: 20}}>
+                                <Image
+                                    style={{width: 60,height: 60,}}
+                                    resizeMode='contain'
+                                    source={require('../../assets/trophy/reward/daily_check_in_orange.png')}
+                                    defaultSource={require('../../assets/trophy/reward/daily_check_in_orange.png')}
+                                />  
+                                <Text style={{fontFamily:'GmarketMedium',marginTop: 10,fontSize: 18,}}>+10</Text>
+                            </View>
+    
                             <TouchableOpacity
-                                style={{position: 'absolute',top: 10, right: 5}}
-                                onPress={() => {Haptics.selectionAsync();setShowAds(false);setCompleteAds(true)}}
+                                style={{backgroundColor: '#FF6B35', width:'90%', height: 50, borderRadius: 25,justifyContent:'center',alignItems:'center',}}
+                                onPress={() => onHideModal()}
                             >
-                                <AntDesign name="closecircle" size={24} color="white" />
+                                <Text style={{color:'white',fontSize: Platform.OS == 'ios' ? 17 : 15,fontFamily:'GmarketBold'}}>GOOD</Text>
                             </TouchableOpacity>
-                        ) : (
-                            <CountdownCircleTimer
-                                isPlaying
-                                duration={10}
-                                colors={['#fff',]}
-                                onComplete={() => setShowClose(true)}
-                                size={35}
-                                strokeWidth={3}
-                                trailColor="rgba(0,0,0,0)"
+                        </View>
+                    </View>
+                </RNModal>
+            ) : (
+                <Modal 
+                    hide={() => onHideModal()} 
+                    type='oranges' 
+                    isAds={showAds}
+                >
+                    { adAlreadyClaimed ? (
+                        <>
+                            <TouchableOpacity
+                                style={{position: 'absolute',top: 15, right: 15, zIndex: 999999999}}
+                                onPress={() => {Haptics.selectionAsync();setShowClaimOranges(false)}}
                             >
-                                {({ remainingTime }) => <Text style={{color:'#fff'}}>{remainingTime}</Text>}
-                            </CountdownCircleTimer>
-                        )}
-                    </View>
-                </TouchableOpacity>
-            ) : !showAds && !pendingAds && completeAds && !claimedAds? (
-                <>
-                    <TouchableOpacity
-                        style={{position: 'absolute',top: 15, right: 15, zIndex: 2}}
-                        onPress={onHideModal}
-                    >
-                        <AntDesign name="closecircle" size={24} color="black" />
-                    </TouchableOpacity>
+                                <AntDesign name="closecircle" size={24} color="black" />
+                            </TouchableOpacity>
 
-                    <View style={[tailwind('flex flex-col items-center justify-center px-3')]}>
-                        <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,marginTop: 20,}]}>
-                            You've got 10 Oranges!
-                        </Text>
+                            <View style={[tailwind('flex flex-col items-center justify-center px-3')]}>
+                                <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 16,fontFamily: "GmarketBold",lineHeight: 24,marginTop: 20,}]}>
+                                    Oops, this basket is empty!
+                                </Text>
 
-                        <Image 
-                            source={require('../../assets/orange_box.png')} 
-                            style={{height: '60%',alignSelf: 'center',marginTop: 40,}} 
-                            resizeMode="contain"
-                        />
+                                <Text style={{textAlign: 'center',}}>You've already claimed :)</Text>
 
-                    </View>
+                                <Image 
+                                    source={require('../../assets/orange_box.png')} 
+                                    style={{height: '60%',alignSelf: 'center',marginTop: 20,}} 
+                                    resizeMode="contain"
+                                />
+                            </View>
 
-                    <Button 
-                        size="md" 
-                        color="white" 
-                        title="Claim" 
-                        onPress={() => {Haptics.selectionAsync();setPendingAds(true)}} 
-                        style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 20}}
-                    />
-                </>
-            ) : claimedAds && !pendingAds && (
-                <>
-
-                    <TouchableOpacity
-                        style={{position: 'absolute',top: 15, right: 15, zIndex: 2}}
-                        onPress={() => onHideModal()}
-                    >
-                        <AntDesign name="closecircle" size={24} color="black" />
-                    </TouchableOpacity>
-
-                    <View style={[tailwind('flex flex-col items-center justify-center px-3')]}>
-                        <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,marginTop: 20,}]}>
-                            Now you have Oranges!
-                        </Text>
-
-                        <Image 
-                            source={require('../../assets/orange_box.png')} 
-                            style={{height: '60%',alignSelf: 'center',marginTop: 40,}} 
-                            resizeMode="contain"
-                        />
-                    </View>
-
-                    <Button 
-                        size="md" 
-                        color="white" 
-                        title="GOOD" 
-                        onPress={() => onHideModal()} 
-                        style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 30,}}
-                    />
-                </>
+                            <Button 
+                                size="md" 
+                                color="white" 
+                                title="GOOD" 
+                                onPress={() => {Haptics.selectionAsync();setShowClaimOranges(false);}} 
+                                style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 20}}
+                            />
+                        </>
+                    ) : showAds && (
+                        <TouchableOpacity 
+                            style={[tailwind('flex flex-col items-center justify-center px-3')]}
+                            onPress={openUrl}
+                        >
+                            <Text style={{position: 'absolute',top: 25, left: 20, color: 'white', fontSize: 15,fontFamily: 'GmarketMedium'}}>Click!</Text>
+                            <View style={{position: 'absolute',top: 10, right: 10}}>
+                                {showClose ? (
+                                    <TouchableOpacity
+                                        style={{position: 'absolute',top: 10, right: 5}}
+                                        onPress={() => {Haptics.selectionAsync();setShowAds(false);onClaimAdReward();setCompleteAds(true)}}
+                                    >
+                                        <AntDesign name="closecircle" size={24} color="white" />
+                                    </TouchableOpacity>
+                                ) : (
+                                    <CountdownCircleTimer
+                                        isPlaying
+                                        duration={10}
+                                        colors={['#fff',]}
+                                        onComplete={() => setShowClose(true)}
+                                        size={35}
+                                        strokeWidth={3}
+                                        trailColor="rgba(0,0,0,0)"
+                                    >
+                                        {({ remainingTime }) => <Text style={{color:'#fff'}}>{remainingTime}</Text>}
+                                    </CountdownCircleTimer>
+                                )}
+                            </View>
+                        </TouchableOpacity>
+                    )}
+                </Modal>
             )}
-
-            {/* Pop up celebration daily reward */}
-            {pendingAds && (
-                <View style={[styles.boxContainer, {width: width, height: 500, justifyContent:'center',alignItems:'center',}]}>
-                    <Animated.View style={animatedStyles}>
-                        <Text style={{textAlign: 'center',color:'white', fontSize: 18,fontWeight: 'bold',minWidth: width-100}}>
-                            +10 Oranges !
-                        </Text>
-
-                        <Image
-                            style={{width: width-100, height: 100, alignSelf:'center',marginTop: 10,}}
-                            resizeMode='contain'
-                            source={require('../../assets/celebration_orange_claim.png')}
-                        />
-                    </Animated.View>
-                </View>
-            )}
-        </Modal>
+        </>
     )
 }
 
