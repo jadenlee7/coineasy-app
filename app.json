@@ -19,7 +19,7 @@
     "ios": {
       "icon": "./assets/logo_easygo_1064.png",
       "supportsTablet": false,
-      "buildNumber": "82",
+      "buildNumber": "83",
       "bundleIdentifier": "com.coineasy.coineasysocial",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow CoinEasy to access your photos. Photos will be used for profile picture and post with Media. This is not mandatory, user can leave the default profile picture. It can then be updated in the user Profil page. Example: You want to create a Post with a photo, we'll need to access your media library",
