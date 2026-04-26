@@ -1,0 +1,33 @@
+{
+  "name": "easygo-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EasyGo Phase 1 backend — identity, 🍊 Orange ledger, Squid swap proxy, Telegram bot",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "lint": "echo \"(lint not configured yet)\""
+  },
+  "dependencies": {
+    "@privy-io/server-auth": "^1.18.0",
+    "@prisma/client": "^5.22.0",
+    "@squidrouter/sdk": "^2.8.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "pino": "^9.5.0",
+    "pino-http": "^10.3.0",
+    "viem": "^2.21.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
