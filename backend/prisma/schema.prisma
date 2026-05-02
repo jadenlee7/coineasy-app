@@ -1,0 +1,58 @@
+// Prisma schema for EasyGo Phase 1 backend.
+//
+// Path C: chain-agnostic at the model level. `walletAddress` and
+// `SwapLog.chainId` are strings so we can flip from Base (8453) to
+// EasyChain in Phase 2 without a destructive migration.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  privyDid         String   @unique
+  telegramId       String?  @unique
+  telegramUsername String?
+  kakaoId          String?  @unique
+  walletAddress    String?  @unique
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  ledger OrangeLedger[]
+  swaps  SwapLog[]
+}
+
+model OrangeLedger {
+  id        String   @id @default(cuid())
+  userId    String
+  delta     Int
+  reason    String
+  refId     String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@unique([reason, refId], map: "uniq_ledger_reason_ref")
+}
+
+model SwapLog {
+  id         String   @id @default(cuid())
+  userId     String
+  txHash     String   @unique
+  chainId    String
+  fromToken  String
+  toToken    String
+  fromAmount String
+  toAmount   String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
