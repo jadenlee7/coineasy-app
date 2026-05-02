@@ -1,22 +1,39 @@
 // hooks/useEasyChainProfile.js
 // Hook for EasyChain on-chain profile (avatar, handle, social IDs).
-// Phase 1: metadata-only (no NFT). Phase 2: ERC-721 avatar NFT.
+// Phase 1: backend-DB profile via /auth/me (no NFT, no on-chain reads).
+// Phase 2: ERC-721 avatar NFT on EasyChain — gated by isEasyChainReady().
 // See EASYGO_BUILD_PLAN.md §7 (profile model) and §11.
 
 import { useState, useEffect, useCallback } from 'react';
 import { isEasyChainReady, PROFILE_REGISTRY_ADDRESS } from '../utils/easychain';
 import { PHASE } from '../utils/easygo';
+import { api, ApiError } from '../utils/api';
 
 // ---------------------------------------------------------------------------
-// Profile shape (Phase 1)
-// ---------------------------------------------------------------------------
+// Profile shape (Phase 1, backend-DB):
 // {
 //   address: '0x...',
-//   handle: 'jaden',           // unique
-//   avatarUri: 'ipfs://...',   // pixel avatar (Figma spec)
+//   handle: 'jaden',
+//   avatarUri: 'ipfs://...' | null,
 //   socials: { telegram: '@jaden', twitter: '...', kakao: '...' },
 //   joinedAt: 1745625600,
 // }
+// ---------------------------------------------------------------------------
+
+function adaptBackendUser(me) {
+  if (!me) return null;
+  return {
+    address: me.address ?? null,
+    handle: me.handle ?? null,
+    avatarUri: me.avatarUri ?? null,
+    socials: {
+      telegram: me.telegramId ?? null,
+      kakao: me.kakaoId ?? null,
+      twitter: me.twitterId ?? null,
+    },
+    joinedAt: me.createdAt ?? null,
+  };
+}
 
 export function useEasyChainProfile(address) {
   const [profile, setProfile] = useState(null);
@@ -25,33 +42,38 @@ export function useEasyChainProfile(address) {
 
   const refresh = useCallback(async () => {
     if (!address) return;
-    if (!isEasyChainReady()) {
-      // Aurora chain config not yet wired
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
-      // TODO(phase1): read from PROFILE_REGISTRY_ADDRESS via getEasyChainProvider()
-      // const reg = new Contract(PROFILE_REGISTRY_ADDRESS, PROFILE_ABI, provider);
-      // const uri = await reg.getProfile(address);
-      // const meta = await fetch(resolveIpfs(uri)).then(r => r.json());
-      // setProfile(meta);
-      setProfile(null); // scaffolding default
+      if (PHASE.AVATAR_NFT_ENABLED && isEasyChainReady()) {
+        // Phase 2 path — read from PROFILE_REGISTRY_ADDRESS via getEasyChainProvider()
+        // const reg = new Contract(PROFILE_REGISTRY_ADDRESS, PROFILE_ABI, provider);
+        // const uri = await reg.getProfile(address);
+        // const meta = await fetch(resolveIpfs(uri)).then(r => r.json());
+        // setProfile(meta);
+        setProfile(null);
+        return;
+      }
+      // Phase 1 path — read from EasyGo backend
+      const me = await api.me();
+      setProfile(adaptBackendUser(me));
     } catch (e) {
-      setError(e);
+      if (e instanceof ApiError && (e.status === 401 || e.status === 404)) {
+        setProfile(null);
+      } else {
+        setError(e);
+      }
     } finally {
       setLoading(false);
     }
   }, [address]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   const updateProfile = useCallback(async (patch) => {
-    // TODO(phase1): upload metadata to IPFS, then call setProfile(uri) on PROFILE_REGISTRY
-    console.warn('[easychain-profile] update not yet wired', { address, patch });
+    // Phase 1: backend profile update endpoint not yet exposed (welcome-only path).
+    // Phase 2: upload metadata to IPFS, then call setProfile(uri) on PROFILE_REGISTRY.
+    console.warn('[easychain-profile] update not yet wired (Phase 1 read-only)', { address, patch });
     return null;
   }, [address]);
 
