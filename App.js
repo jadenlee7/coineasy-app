@@ -1,7 +1,7 @@
 import './utils/polyfill';
 import 'react-native-reanimated';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from "react";
 import { StyleSheet, View, Keyboard, Platform, Animated, Image, Dimensions } from 'react-native';
 
 import { StatusBar } from 'expo-status-bar';
@@ -26,32 +26,25 @@ import { context, onboard_context, edu_context } from './utils/config.js';
 import PushNotificationsModal from "./components/modals/PushNotificationsModal";
 import NicknameModal from "./components/modals/NicknameModal";
 
-// Privy Integration
-// import 'fast-text-encoding';
-// import 'react-native-get-random-values';
-// import '@ethersproject/shims';
-// import { PrivyProvider} from '@privy-io/expo';
+// Privy integration (Phase 1: Base chain only; EasyChain is Phase 2-gated)
+import 'fast-text-encoding';
+import 'react-native-get-random-values';
+import '@ethersproject/shims';
 
-// const easyChain = {
-//   id: 1313161855,
-//   name: "EasyChain",
-//   rpcUrls: {
-//     default: {
-//       http: ["https://0x4e45427f.rpc.aurora-cloud.dev"],
-//     },
-//   },
-//   blockExplorers: {
-//     default: {
-//       name: "EasyChain Explorer",
-//       url: "https://0x4e45427f.explorer.aurora-cloud.dev",
-//     },
-//   },
-//   nativeCurrency: {
-//     name: "USD Coin",
-//     symbol: "USDC",
-//     decimals: 6,
-//   },
-// };
+import { PrivyProvider, usePrivy } from '@privy-io/expo';
+import useAuthSync from './hooks/useAuthSync';
+
+// Phase 1 chain: Base mainnet (chainId 8453). EasyChain is gated by
+// PHASE.EASYCHAIN_ENABLED in EASYGO_BUILD_PLAN.md and added in Phase 2.
+const baseChain = {
+  id: 8453,
+  name: 'Base',
+  rpcUrls: { default: { http: ['https://mainnet.base.org'] } },
+  blockExplorers: { default: { name: 'BaseScan', url: 'https://basescan.org' } },
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+};
+
+const PRIVY_APP_ID = process.env.EXPO_PUBLIC_PRIVY_APP_ID;
 
 /** Expo */
 import { useFonts } from 'expo-font';
@@ -62,8 +55,15 @@ import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
 
 
-/** Import Orbis SDK */
-import { Orbis } from "@orbisclub/orbis-sdk";
+/**
+ * Orbis SDK was discontinued. We swap in a noop shim (utils/orbisCompat.js)
+ * so legacy screens/components that still call orbis.<x>(...) via
+ * GlobalContext do not crash. Subsequent PRs replace each callsite with
+ * the new social hooks (usePosts/useReplies/useSocialProfile/useFollow/
+ * useFeed) wired to the EasyGo backend, and then this shim is removed.
+ * See docs/MIGRATION_NOTES.md.
+ */
+import { createOrbisCompat } from './utils/orbisCompat';
 import moment from 'moment';
 import { useWalletConnectModal } from '@walletconnect/modal-react-native';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -71,16 +71,45 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
 // import { Asset } from 'expo-asset';
 
-/** Initialize the Orbis class object */
-let orbis = new Orbis({
-  useLit: false,
-  store: AsyncStorage,
-  storeAsync: true,
-  litCloud: true,
-  PINATA_GATEWAY: 'https://orbis.mypinata.cloud/ipfs/',
-  PINATA_API_KEY: '194337be204670686a63',
-  PINATA_SECRET_API_KEY: "d69ee5685fec8cd9012e9e02d28c6d017d22770de68c703f72eb368537b609bf"
-});
+// Orbis is no longer initialized. Hardcoded Pinata keys removed (revoked
+// upstream). The compat shim has the same surface as the old SDK so existing
+// GlobalContext consumers continue to work without changes.
+let orbis = createOrbisCompat();
+
+/**
+ * AuthBridge — runs inside <PrivyProvider> so usePrivy() is available.
+ * Watches Privy auth state, syncs to backend via useAuthSync, and writes
+ * the resulting profile back into GlobalContext (Orbis-compatible shape)
+ * so existing screens that read user/userData keep working.
+ * Subsequent PRs will read from useAuthSync directly and remove this bridge.
+ */
+function AuthBridge() {
+  const privy = usePrivy();
+  const { profile } = useAuthSync(privy);
+  const { setUser, setUserData } = useContext(GlobalContext);
+
+  useEffect(() => {
+    if (profile) {
+      // Map backend profile → Orbis-compatible shape for legacy screens
+      setUser({
+        id: profile.id,
+        did: profile.privyDid || `privy:${profile.id}`,
+        profile: {
+          username: profile.username || null,
+          pfp: profile.pfp || null,
+          description: profile.description || null,
+          data: profile.data || {},
+        },
+      });
+      setUserData(profile.data || {});
+    } else if (privy?.ready && !privy?.authenticated) {
+      setUser(null);
+      setUserData(null);
+    }
+  }, [profile, privy?.ready, privy?.authenticated]);
+
+  return null;
+}
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -941,13 +970,7 @@ export default function App() {
     }
 
     return (
-        // <PrivyProvider 
-        //     appId="cmfgz756i00hzjx0bfbwlttgz" 
-        //     supportedChains={[easyChain]}
-        //     // config={{
-        //     //     evmChains: [easyChain],
-        //     // }}
-        // >
+        <PrivyProvider appId={PRIVY_APP_ID} supportedChains={[baseChain]}>
         <>
             <StatusBar translucent={true} backgroundColor="#00000000" style="black"/>
             <GestureHandlerRootView onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
@@ -1108,7 +1131,9 @@ export default function App() {
                     </TailwindProvider>
                 </GlobalContext.Provider>
             </GestureHandlerRootView>
+          <AuthBridge />
         </>
+      </PrivyProvider>
     );
 }
 
