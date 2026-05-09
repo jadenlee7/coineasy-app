@@ -16,7 +16,6 @@
     "@expo/vector-icons": "^14.0.0",
     "@gorhom/bottom-sheet": "^4.6.1",
     "@ipld/dag-cbor": "7.0.1",
-    "@orbisclub/orbis-sdk": "github:yeloda/orbis-sdk#master",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-community/netinfo": "11.3.1",
     "@react-native-masked-view/masked-view": "0.3.1",
@@ -119,16 +118,6 @@
         "react-native-get-random-values"
       ]
     }
-  },
-  "resolutions": {
-    "multiformats": "^9.9.0",
-    "uint8arrays": "^3.0.0",
-    "@didtools/cacao": "1.0.0",
-    "@ipld/dag-cbor": "^7.0.3",
-    "@ceramicnetwork/common": "2.4.0",
-    "@ceramicnetwork/http-client": "2.3.1",
-    "@ceramicnetwork/blockchain-utils-linking": "2.0.8",
-    "@ceramicnetwork/stream-tile": "2.4.0"
   },
   "private": true
 }
