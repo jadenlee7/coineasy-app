@@ -12,7 +12,7 @@
  *     constants below are the only thing that must change here.
  */
 
-import { Squid } from '@squidrouter/sdk';
+import { Squid } from '@0xsquid/sdk';
 
 const INTEGRATOR_ID = process.env.SQUID_INTEGRATOR_ID;
 const BASE_URL = process.env.SQUID_API_URL || 'https://apiplus.squidrouter.com';

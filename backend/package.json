@@ -15,7 +15,7 @@
   "dependencies": {
     "@privy-io/server-auth": "^1.18.0",
     "@prisma/client": "^5.22.0",
-    "@squidrouter/sdk": "^2.8.0",
+    "@0xsquid/sdk": "^2.13.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "node-telegram-bot-api": "^0.66.0",
