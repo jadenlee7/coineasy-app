@@ -19,6 +19,9 @@ import { authRouter } from './routes/auth.js';
 import { orangeRouter } from './routes/orange.js';
 import { swapRouter } from './routes/swap.js';
 import { telegramRouter } from './routes/telegram.js';
+import { profilesRouter } from './routes/profiles.js';
+import { postsRouter } from './routes/posts.js';
+import { followsRouter } from './routes/follows.js';
 import { startTelegramBot } from './lib/telegram.js';
 
 const app = express();
@@ -35,6 +38,13 @@ app.use('/auth', authRouter);
 app.use('/orange', orangeRouter);
 app.use('/swap', swapRouter);
 app.use('/telegram', telegramRouter);
+
+// Social (PR #9)
+app.use('/profiles', profilesRouter);
+app.use('/posts', postsRouter);
+// followsRouter mounts /follows/* AND /profiles/:userId/{followers,following},
+// so it is mounted at root.
+app.use('/', followsRouter);
 
 // Optional: long-poll Telegram bot (only if token present).
 if (process.env.TELEGRAM_BOT_TOKEN) {

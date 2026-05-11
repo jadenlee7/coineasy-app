@@ -20,11 +20,29 @@ model User {
   telegramUsername String?
   kakaoId          String?  @unique
   walletAddress    String?  @unique
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
 
-  ledger OrangeLedger[]
-  swaps  SwapLog[]
+  // --- Social profile (PR #9) ---------------------------------------
+  // username: optional, unique handle. Lowercase enforced at app layer.
+  // displayName: free-form display name shown in UI.
+  // pfp: URL to avatar (media upload deferred to PR #10).
+  // bio: short user-written description.
+  username    String?  @unique
+  displayName String?
+  pfp         String?
+  bio         String?
+  // ------------------------------------------------------------------
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ledger    OrangeLedger[]
+  swaps     SwapLog[]
+
+  // Social relations (PR #9)
+  posts     Post[]    @relation("PostAuthor")
+  likes     Like[]
+  following Follow[]  @relation("Follower")
+  followers Follow[]  @relation("Followee")
 }
 
 model OrangeLedger {
@@ -55,4 +73,66 @@ model SwapLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+// =====================================================================
+// Social models (PR #9)
+//
+// Twitter-style flat thread model:
+//   - Post is the only content unit; replies are Posts with parentPostId.
+//   - This keeps queries simple (one table, one cursor) and lets us add
+//     quote/repost cheaply later.
+//
+// Cursor pagination: order by (createdAt DESC, id DESC); cursor = id.
+// =====================================================================
+
+model Post {
+  id           String   @id @default(cuid())
+  authorId     String
+  body         String   @db.VarChar(2000)
+  // Self-join: null = root post, non-null = reply to that post.
+  parentPostId String?
+  // mediaUrl reserved for PR #10 (media upload). Kept now to avoid a
+  // second migration when uploads land.
+  mediaUrl     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  author   User    @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  parent   Post?   @relation("PostReplies", fields: [parentPostId], references: [id], onDelete: SetNull)
+  replies  Post[]  @relation("PostReplies")
+  likes    Like[]
+
+  // Feed cursor: newest-first by (createdAt, id).
+  @@index([createdAt, id])
+  // Author's own timeline.
+  @@index([authorId, createdAt])
+  // Reply lookups for a given thread.
+  @@index([parentPostId, createdAt])
+}
+
+model Follow {
+  followerId String
+  followeeId String
+  createdAt  DateTime @default(now())
+
+  follower User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followee User @relation("Followee", fields: [followeeId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followeeId])
+  @@index([followeeId, createdAt])
+  @@index([followerId, createdAt])
+}
+
+model Like {
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId, createdAt])
+  @@index([postId, createdAt])
 }
