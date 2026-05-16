@@ -145,3 +145,52 @@ EasyChain wiring (chainId switch, PHASE.EASYCHAIN_ENABLED → true) only when on
 - A strategic event (e.g. EasyChain mainnet launch with co-marketing).
 
 Otherwise re-evaluate at 9 months.
+
+---
+
+## Path C v2 (in flight)
+
+The backend is pivoting from "self-hosted social app" to **"Web2 onboarding +
+onchain segmenting + advertiser campaigns"** while keeping Phase 1 surfaces
+(`/auth`, `/orange`, `/swap`, `/telegram`) running.
+
+High-level loops:
+
+1. **Onboarding**: Privy embedded smart wallet on Base, optional ENS subname
+   via JustaName (`<handle>.coineasy.eth`).
+2. **Engagement**: quizzes and on-chain trade quests reward 🍊 Orange.
+3. **Distribution**: a segmenter worker tags users from on-chain behaviour
+   (EFP follows, ERC-20 balances, swap activity). Advertisers target
+   segments and receive only aggregate metrics.
+
+### Feature flags
+
+All Path C v2 routes ship behind `PHASE.*` flags in `utils/easygo.js`. They
+all default to `false` and are flipped per-environment via env vars when the
+corresponding PR ships:
+
+| Flag                       | Activates                                         | PR  |
+| -------------------------- | ------------------------------------------------- | --- |
+| `SIWE_AUTH_ENABLED`        | SIWE verification path in `/auth/sync`            | S1  |
+| `JUSTANAME_ENABLED`        | `/identity/issue-subname`                         | S4  |
+| `SEGMENTS_ENABLED`         | Segment worker + `/segments` (read-only)          | S5  |
+| `QUESTS_ENABLED`           | `/quests/list`, `/quests/:id/complete`            | S6  |
+| `ADVERTISER_ADMIN_ENABLED` | `/admin/*` (advertiser-scoped, separate API keys) | S7  |
+
+Routes guarded by an off flag return `404` so the surface is invisible in
+production until the matching PR lands and the env var is set.
+
+### Privacy & consent (binding)
+
+- Linking Privy identity (email / social) to a wallet address makes our DB a
+  PII processor. Privacy policy and ToS reflect this before any segmenting
+  ships.
+- `UserConsent.segmentingOptIn` defaults to `false`. The segmenter skips
+  users without explicit opt-in.
+- Advertisers see **aggregate metrics only**. Wallet-address sharing requires
+  per-quest opt-in recorded on the `QuestCompletion`.
+- `/me/data` (read), `/me/consent` (toggle), and `/me/data DELETE` (forget)
+  ship in S3, before any advertiser campaign goes live.
+
+See [`docs/BACKEND_ROADMAP.md`](./docs/BACKEND_ROADMAP.md) for the full
+sequenced PR plan (S0..S9) and locked-in architectural decisions.
