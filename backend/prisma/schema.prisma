@@ -21,6 +21,11 @@ model User {
   kakaoId          String?  @unique
   walletAddress    String?  @unique
 
+  // --- SIWE-verified wallet (PR-S1, gated by PHASE.SIWE_AUTH_ENABLED) -
+  verifiedAddress  String?  @unique
+  siweChainId      Int?
+  // ------------------------------------------------------------------
+
   // --- Social profile (PR #9) ---------------------------------------
   // username: optional, unique handle. Lowercase enforced at app layer.
   // displayName: free-form display name shown in UI.
