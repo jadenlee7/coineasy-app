@@ -17,6 +17,13 @@
       },
       "channel": "preview"
     },
+    "testflight": {
+      "channel": "preview",
+      "environment": "preview",
+      "ios": {
+        "image": "macos-sequoia-15.3-xcode-16.2"
+      }
+    },
     "production": {
       "channel": "production",
       "environment": "production",
