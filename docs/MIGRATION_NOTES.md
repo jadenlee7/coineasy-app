@@ -118,6 +118,10 @@ screen. No social rows or tables are deleted by S8.
       preflight with zero failures.
 - [x] Inspect staging migration status, apply `prisma migrate deploy` once from
       a controlled release step, and verify both migrations are up to date.
+- [x] Create an Apple Distribution certificate and App Store provisioning
+      profile for `com.coineasy.coineasysocial`, then store both in EAS.
+- [ ] Complete the first iOS TestFlight staging build (`2.0.0` build `85`;
+      EAS build `4e1791dd-2905-4eb0-acd9-0d622155dcf5`, queued 2026-07-21).
 - [ ] Take or verify a recoverable staging DB backup before production approval.
 - [ ] Run real-device Privy login and core API QA against the staging URL.
 
