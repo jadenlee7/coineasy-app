@@ -67,7 +67,7 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] In the Privy mobile client, allow iOS
   `com.coineasy.coineasysocial`, Android `com.coineasy.coineasy`, and URL scheme
   `coineasyapp`.
-- [ ] Review the additive SQL in
+- [x] Review the additive SQL in
   `prisma/migrations/20260721143000_path_c_v2/migration.sql`.
 - [ ] Take or verify a recoverable database backup.
 - [x] Run `npm run prisma:status` against staging and record existing migration
