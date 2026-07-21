@@ -64,7 +64,7 @@ jobs:
           node-version: 20
 
       - name: Install mobile dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci
 
       - name: Run mobile preflight tests
         run: npm run test:preflight

@@ -37,6 +37,9 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   published in draft PR #17.
 - [x] GitHub Actions is configured to run backend tests, Prisma validation,
   local preflights, Expo Doctor, and Android/iOS static exports on the PR.
+- [x] Track the root `package-lock.json`, use `npm ci` for Mobile CI, remove the
+      unused `install`/`npx` dependency chain, and update `viem` within Privy's
+      supported range. A clean install, Android export, and Expo Doctor pass.
 - [ ] Draft PR #17 is reviewed and approved.
 - [x] Backend and Mobile CI checks pass on release
       `f252761a217094942bc18e57e09467c01a8bc8ba`.
@@ -85,6 +88,11 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   policy documents before enabling any consent-gated Path C feature.
 - [ ] Approve or remediate the known Squid, Telegram, and Privy/Solana audit
   findings; never use `npm audit fix --force` during release.
+  The 2026-07-21 audit reduced mobile findings from 95 to 36 (one critical)
+  without a framework migration. The remainder requires reviewed Expo 51,
+  React Native, and Privy upgrades. Backend still reports 25 transitive
+  findings (two critical) rooted in Squid, Privy/Solana, and Telegram; npm's
+  suggested resolutions are breaking changes and are not approved here.
 - [x] Document release SHA `f252761a217094942bc18e57e09467c01a8bc8ba`
   and previous known-good SHA `b1850d0`.
 - [x] Confirm an operator is available for the deployment and 15-minute watch.
