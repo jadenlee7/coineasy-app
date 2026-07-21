@@ -1,9 +1,9 @@
 {
   "expo": {
     "name": "EasyGo",
-    "slug": "coineasy_app",
+    "slug": "easygo",
     "scheme": "coineasyapp",
-    "owner": "useorbis",
+    "owner": "coineasy",
     "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo_easygo_1024.png",
@@ -76,14 +76,14 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "92489131-f028-4eb8-96ef-453311e899ec"
+        "projectId": "2297c440-2ab1-46d8-8c60-29e74977ed9f"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/92489131-f028-4eb8-96ef-453311e899ec"
+      "url": "https://u.expo.dev/2297c440-2ab1-46d8-8c60-29e74977ed9f"
     }
   }
 }

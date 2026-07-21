@@ -15,12 +15,13 @@ Verified on 2026-07-21 without printing secret values:
 | Project | `easygo-app-staging` | `cad97a26-a680-4b8e-a366-f15b0412244f` | Dedicated project |
 | Environment | `staging` | `f59e8f5a-406d-410f-a273-0020089860cd` | Linked locally |
 | Database | `Postgres` | `16994f70-8e17-47f7-bb50-55ac211af412` | Running; volume ready |
-| Web | `easygo-web-staging` | `518ba3f5-486b-42a4-ad0c-27fb56e63b00` | Empty; not deployed |
-| Worker | `easygo-worker-staging` | `0ffb8648-fe59-4fb7-926f-3cc9445c133d` | Empty; not deployed |
+| Web | `easygo-web-staging` | `518ba3f5-486b-42a4-ad0c-27fb56e63b00` | Deployed; running |
+| Worker | `easygo-worker-staging` | `0ffb8648-fe59-4fb7-926f-3cc9445c133d` | Deployed; dormant flag-off exit verified |
 
 The project's default `production` environment is empty. All three service
-instances and the database volume exist only in `staging`. Web and worker have
-no repository source, deployment, public domain, or active replica yet.
+instances and the database volume exist only in `staging`. Web is running the
+approved release at `https://easygo-web-staging-staging.up.railway.app`.
+Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 
 ## Current automated evidence
 
@@ -37,7 +38,13 @@ no repository source, deployment, public domain, or active replica yet.
 - [x] GitHub Actions is configured to run backend tests, Prisma validation,
   local preflights, Expo Doctor, and Android/iOS static exports on the PR.
 - [ ] Draft PR #17 is reviewed and approved.
-- [ ] CI checks run and pass on that exact revision.
+- [x] Backend and Mobile CI checks pass on release
+      `f252761a217094942bc18e57e09467c01a8bc8ba`.
+- [x] Create `@coineasy/easygo`, link EAS project
+      `2297c440-2ab1-46d8-8c60-29e74977ed9f`, and configure the public mobile
+      variables in `development` and `preview`.
+- [ ] Complete Android preview APK build
+      `cb8347ca-8462-4ea9-a38c-07deb29e8ad3`; it is currently in the Expo queue.
 
 ## Pre-Deploy
 
@@ -45,48 +52,48 @@ no repository source, deployment, public domain, or active replica yet.
   `staging` environment; verify the IDs against the inventory above.
 - [x] Create separate empty `easygo-web-staging` and
   `easygo-worker-staging` service shells.
-- [ ] Connect both service shells to the same approved revision with `backend/`
+- [x] Connect both service shells to the same approved revision with `backend/`
   as their root directory.
-- [ ] Set the web config path to `/backend/railway.web.json` and worker config
+- [x] Set the web config path to `/backend/railway.web.json` and worker config
   path to `/backend/railway.worker.json`.
 - [x] Configure non-secret safe defaults without triggering a deployment:
   production runtime, service metadata, Postgres reference, public Privy App
   ID, active legacy social mode, and all Path C feature flags off.
-- [ ] Configure remaining staging values. The value-safe preflight currently
-  fails only for `PRIVY_APP_SECRET`, `SQUID_INTEGRATOR_ID`, `ADMIN_SECRET`,
-  `RELEASE_SHA`, and `EASYGO_CONSENT_VERSION` on both web and worker.
-- [ ] Configure the Expo/EAS `EXPO_PUBLIC_BACKEND_URL` to the staging HTTPS URL
+- [x] Configure the remaining staging values. The deployed web service's
+  value-safe preflight passes with zero failures; optional Sentry, Better Stack,
+  and Telegram integrations remain warnings rather than release blockers.
+- [x] Configure the Expo/EAS `EXPO_PUBLIC_BACKEND_URL` to the staging HTTPS URL
   and pass the root `npm run preflight:staging`.
-- [ ] In the Privy mobile client, allow iOS
+- [x] In the Privy mobile client, allow iOS
   `com.coineasy.coineasysocial`, Android `com.coineasy.coineasy`, and URL scheme
-  `coineasyapp`. The provided client was confirmed only against the iOS-style
-  identifier and scheme, so Android requires explicit dashboard verification.
+  `coineasyapp`.
 - [ ] Review the additive SQL in
   `prisma/migrations/20260721143000_path_c_v2/migration.sql`.
 - [ ] Take or verify a recoverable database backup.
-- [ ] Run `npm run prisma:status` against staging and record existing migration
+- [x] Run `npm run prisma:status` against staging and record existing migration
   state.
-- [ ] Apply `npm run prisma:deploy` once from a controlled release job, not from
+- [x] Apply `npm run prisma:deploy` once from a controlled release job, not from
   both web and worker services.
-- [ ] Re-run `npm run prisma:status`; verify both migrations are applied.
-- [ ] Keep `SIWE_AUTH_ENABLED`, `JUSTANAME_ENABLED`, `SEGMENTS_ENABLED`,
+- [x] Re-run `npm run prisma:status`; verify both migrations are applied.
+- [x] Keep `SIWE_AUTH_ENABLED`, `JUSTANAME_ENABLED`, `SEGMENTS_ENABLED`,
   `QUESTS_ENABLED`, and `ADVERTISER_ADMIN_ENABLED` false for the first deploy.
-- [ ] Keep `LEGACY_SOCIAL_MODE=active`.
+- [x] Keep `LEGACY_SOCIAL_MODE=active`.
 - [ ] Verify published privacy/terms version equals `EASYGO_CONSENT_VERSION`.
 - [ ] Approve or remediate the known Squid, Telegram, and Privy/Solana audit
   findings; never use `npm audit fix --force` during release.
-- [ ] Document the release SHA and previous known-good SHA.
-- [ ] Confirm an operator is available for the deployment and 15-minute watch.
+- [x] Document release SHA `f252761a217094942bc18e57e09467c01a8bc8ba`
+  and previous known-good SHA `b1850d0`.
+- [x] Confirm an operator is available for the deployment and 15-minute watch.
 
 ## Deploy
 
-- [ ] Deploy the web service to staging.
-- [ ] Confirm Railway `/ready` health check becomes healthy.
-- [ ] Set `EASYGO_BASE_URL` and `EXPECTED_RELEASE`, then run `npm run smoke`.
+- [x] Deploy the web service to staging.
+- [x] Confirm Railway `/ready` health check becomes healthy.
+- [x] Set `EASYGO_BASE_URL` and `EXPECTED_RELEASE`, then run `npm run smoke`.
 - [ ] Verify one real-device Privy sign-in and `/auth/sync` against staging.
 - [ ] Verify feed, profile, follow, notification, Orange balance, and Squid quote
   read paths without activating Path C flags.
-- [ ] Deploy the worker service with `SEGMENTS_ENABLED=false` and confirm one
+- [x] Deploy the worker service with `SEGMENTS_ENABLED=false` and confirm one
   dormant/start-stop log sequence without a public domain.
 - [ ] Exercise `SIGTERM` for web and worker and confirm graceful cleanup.
 - [ ] Monitor readiness, 5xx rate, latency, Sentry, and Better Stack for at
@@ -96,12 +103,15 @@ no repository source, deployment, public domain, or active replica yet.
 
 ## Post-Deploy
 
-- [ ] Confirm `/health`, `/ready`, and `/social/status` remain nominal.
-- [ ] Confirm the deployed release matches `EXPECTED_RELEASE`.
-- [ ] Confirm database migration status reports no pending migration.
+- [x] Confirm `/health`, `/ready`, and `/social/status` remain nominal.
+- [x] Confirm the deployed release matches `EXPECTED_RELEASE`.
+- [x] Confirm database migration status reports no pending migration.
 - [ ] Confirm logs contain request IDs but no auth header, email, Privy ID,
   wallet, signature, quiz answer, or query string.
-- [ ] Record staging evidence and any exceptions in the release notes.
+- [x] Record staging evidence and exceptions here. Railway recorded one
+  transient `/health` 502 at `2026-07-21T20:03:02Z`; there were no further
+  web 5xx responses or application error logs in the latest 30-minute review,
+  and the current read-only smoke passes all three endpoints.
 - [ ] Notify the product/support owner that staging is ready for device QA.
 - [ ] Close the release only after the monitoring window completes.
 

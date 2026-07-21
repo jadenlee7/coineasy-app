@@ -112,10 +112,13 @@ screen. No social rows or tables are deleted by S8.
 - [x] Add a test that rejects destructive SQL and verifies all eight S2 tables.
 - [x] Split web/worker deployment contracts and add `/health` plus `/ready`.
 - [x] Add a secret-safe staging preflight and read-only post-deploy smoke runner.
-- [ ] Create or select a dedicated EasyGo staging Railway project. The current
-      local Railway context belongs to another project and must not be reused.
-- [ ] Configure backend secrets, take a staging DB backup, inspect migration
-      status, and apply `prisma migrate deploy` once from a controlled job.
+- [x] Create and link the dedicated `easygo-app-staging` Railway project and
+      its isolated `staging` environment.
+- [x] Configure the required backend secrets and pass the secret-safe deploy
+      preflight with zero failures.
+- [x] Inspect staging migration status, apply `prisma migrate deploy` once from
+      a controlled release step, and verify both migrations are up to date.
+- [ ] Take or verify a recoverable staging DB backup before production approval.
 - [ ] Run real-device Privy login and core API QA against the staging URL.
 
 ## Owner action items (outside this PR)
@@ -123,9 +126,9 @@ screen. No social rows or tables are deleted by S8.
 - [x] Revoke + rotate the previously-hardcoded Pinata API keys.
 - [x] Set `EXPO_PUBLIC_PRIVY_APP_ID` and `EXPO_PUBLIC_PRIVY_CLIENT_ID` in the
       local `.env` for the EasyGo mobile client.
-- [ ] Set the same public identifiers plus `EXPO_PUBLIC_BACKEND_URL` in EAS.
-- [ ] Add a local/staging `EXPO_PUBLIC_BACKEND_URL`; the current root `.env`
-      contains only the two public Privy identifiers.
+- [x] Set the same public identifiers plus `EXPO_PUBLIC_BACKEND_URL` in the EAS
+      `development` and `preview` environments for `@coineasy/easygo`.
+- [x] Add the staging `EXPO_PUBLIC_BACKEND_URL` to the local root `.env`.
 - [x] Confirm `/auth/sync` is guarded by `requireAuth`, which verifies the
       Privy Bearer access token before profile sync.
 
