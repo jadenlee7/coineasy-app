@@ -1,4 +1,3 @@
-import './utils/polyfill';
 import 'react-native-reanimated';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from "react";
@@ -11,7 +10,6 @@ import { useSharedValue } from 'react-native-reanimated';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { sleep } from './utils';
 import Login from "./screens/Login";
 import utilities from './tailwind.json';
 import QR from "./components/modals/QR.js";
@@ -19,12 +17,11 @@ import AppNavigator from './navigation/AppNavigator';
 import { GlobalContext } from "./contexts/GlobalContext";
 import RepostModal from "./components/modals/RepostModal";
 import PostboxModal from "./components/modals/PostboxModal";
-import NotificationsPane from "./components/panes/NotificationsPane";
 import PostSettingsModal from "./components/modals/PostSettingsModal";
 import UpdateProfileModal from "./components/modals/UpdateProfileModal";
-import { context, onboard_context, edu_context } from './utils/config.js';
 import PushNotificationsModal from "./components/modals/PushNotificationsModal";
 import NicknameModal from "./components/modals/NicknameModal";
+import { SOCIAL_CATEGORIES } from './data/socialCategories';
 
 // Privy integration (Phase 1: Base chain only; EasyChain is Phase 2-gated)
 import 'fast-text-encoding';
@@ -45,6 +42,8 @@ const baseChain = {
 };
 
 const PRIVY_APP_ID = process.env.EXPO_PUBLIC_PRIVY_APP_ID;
+const PRIVY_CLIENT_ID = process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID;
+const COURSE_PROGRESS_KEY = 'easygo_course_progress';
 
 /** Expo */
 import { useFonts } from 'expo-font';
@@ -55,33 +54,16 @@ import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
 
 
-/**
- * Orbis SDK was discontinued. We swap in a noop shim (utils/orbisCompat.js)
- * so legacy screens/components that still call orbis.<x>(...) via
- * GlobalContext do not crash. Subsequent PRs replace each callsite with
- * the new social hooks (usePosts/useReplies/useSocialProfile/useFollow/
- * useFeed) wired to the EasyGo backend, and then this shim is removed.
- * See docs/MIGRATION_NOTES.md.
- */
-import { createOrbisCompat } from './utils/orbisCompat';
 import moment from 'moment';
-import { useWalletConnectModal } from '@walletconnect/modal-react-native';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
 // import { Asset } from 'expo-asset';
 
-// Orbis is no longer initialized. Hardcoded Pinata keys removed (revoked
-// upstream). The compat shim has the same surface as the old SDK so existing
-// GlobalContext consumers continue to work without changes.
-let orbis = createOrbisCompat();
-
 /**
  * AuthBridge — runs inside <PrivyProvider> so usePrivy() is available.
  * Watches Privy auth state, syncs to backend via useAuthSync, and writes
- * the resulting profile back into GlobalContext (Orbis-compatible shape)
- * so existing screens that read user/userData keep working.
- * Subsequent PRs will read from useAuthSync directly and remove this bridge.
+ * the resulting profile into the shared presentation state.
  */
 function AuthBridge() {
   const privy = usePrivy();
@@ -89,24 +71,62 @@ function AuthBridge() {
   const { setUser, setUserData } = useContext(GlobalContext);
 
   useEffect(() => {
-    if (profile) {
-      // Map backend profile → Orbis-compatible shape for legacy screens
-      setUser({
-        id: profile.id,
-        did: profile.privyDid || `privy:${profile.id}`,
-        profile: {
-          username: profile.username || null,
-          pfp: profile.pfp || null,
-          description: profile.description || null,
-          data: profile.data || {},
-        },
-      });
-      setUserData(profile.data || {});
-    } else if (privy?.ready && !privy?.authenticated) {
-      setUser(null);
-      setUserData(null);
-    }
-  }, [profile, privy?.ready, privy?.authenticated]);
+    let cancelled = false;
+
+    const syncPresentationState = async () => {
+      let localCourses = [];
+      const courseProgressOwner = privy?.user?.id || profile?.privyDid || profile?.id || 'device';
+      try {
+        const stored = await AsyncStorage.getItem(`${COURSE_PROGRESS_KEY}:${courseProgressOwner}`);
+        const parsed = stored ? JSON.parse(stored) : [];
+        if (Array.isArray(parsed)) localCourses = parsed;
+      } catch (error) {
+        console.warn('[courses] unable to load local progress', error);
+      }
+      if (cancelled) return;
+
+      if (profile) {
+        // Map the backend profile into the presentation shape used by the app.
+        const profileData = {
+          ...(profile.data || {}),
+          ...(localCourses.length ? { courses: localCourses } : {}),
+          courseProgressOwner,
+          easygoUserId: profile.id,
+          walletAddress: profile.walletAddress || null,
+        };
+        setUser({
+          id: profile.id,
+          did: profile.privyDid || `privy:${profile.id}`,
+          profile: {
+            username: profile.displayName || profile.username || null,
+            pfp: profile.pfp || null,
+            description: profile.bio || profile.description || null,
+            data: profileData,
+          },
+        });
+        setUserData(profileData);
+      } else if (privy?.isReady && privy?.user) {
+        // Keep the app usable when the local backend is not running yet. The
+        // backend profile replaces this minimal Privy shape as soon as sync wins.
+        const fallbackData = {
+          ...(localCourses.length ? { courses: localCourses } : {}),
+          courseProgressOwner,
+        };
+        setUser((current) => current || {
+          id: privy.user.id,
+          did: `privy:${privy.user.id}`,
+          profile: { username: null, pfp: null, description: null, data: fallbackData },
+        });
+        setUserData((current) => current || fallbackData);
+      } else if (privy?.isReady && !privy?.user) {
+        setUser(null);
+        setUserData(null);
+      }
+    };
+
+    syncPresentationState();
+    return () => { cancelled = true; };
+  }, [profile, privy?.isReady, privy?.user]);
 
   return null;
 }
@@ -149,7 +169,6 @@ export default function App() {
   const [shareProfileVis, setShareProfileVis] = useState(false);
   const [showImageSender, setShowImageSender] = useState(null);
   const [listMessages, setListMessages] = useState([])
-  const [notificationsVis, setNotificationsVis] = useState(false);
   const [nicknameVis, setNicknameVis] = useState(false)
   const [connectType, setConnectType] = useState('')
   const [connectModalVis, setConnectModalVis] = useState(false);
@@ -161,7 +180,7 @@ export default function App() {
   const [listAccount, setListAccount] = useState([])
 
   const [posts, setPosts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(SOCIAL_CATEGORIES);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshingBottom, setRefreshingBottom] = useState(false);
   const [profileSelected, setProfileSelected] = useState();
@@ -201,8 +220,6 @@ export default function App() {
   const [tabViewHeight, setTabViewHeight] = useState(500)
   const [newGiftsCount, setNewGiftsCount] = useState(false)
 
-  const { provider } = useWalletConnectModal();    
-
   const [scrollAnim, setScrollAnim] = useState(new Animated.Value(0));
   const [offsetAnim, setOffsetAnim] = useState(new Animated.Value(0));
   const [clampedScroll, setClampedScroll] = useState(Animated.diffClamp(
@@ -229,70 +246,11 @@ export default function App() {
   });
 
   useEffect(() => {
-    saveUserInStorage();
-
-    async function saveUserInStorage() {
-      if(user) {
-        if(!user?.profile || !user?.profile?.username){
-            const { data, error } = await orbis.getProfile(user.did);
-            user.profile = data.details.profile
-        }
-
-        const listDid = await AsyncStorage.getItem("user-connected")
-        const currentCeramicSession = await AsyncStorage.getItem("ceramic-session")
-        var listConnected = JSON.parse(listDid)
-        const indexUser = listConnected?.findIndex(e => e.user.did == user.did)
-
-        if(listConnected && listConnected.length > 0){
-            if(typeof indexUser !== 'undefined' && indexUser != -1){
-                listConnected[indexUser].time = moment().format('YYYY-MM-DD HH:mm:ss')
-                listConnected[indexUser].user = user
-            }else{
-                listConnected.push({
-                    'user': user, 
-                    'time': moment().format('YYYY-MM-DD HH:mm:ss'),
-                    'ceramicSession': currentCeramicSession
-                })
-            }
-        }else{
-            listConnected = [{
-                'user': user,
-                'time': moment().format('YYYY-MM-DD HH:mm:ss'),
-                'ceramicSession': currentCeramicSession
-            }]
-        }
-
-        await AsyncStorage.setItem("user-connected", JSON.stringify(listConnected));
-
-        if(typeof indexUser !== 'undefined' && indexUser != -1){
-            await orbis.isConnected(listConnected[indexUser].ceramicSession);
-        }else if(currentCeramicSession){
-            await orbis.isConnected(currentCeramicSession);
-        }else{
-            await orbis.isConnected();
-        }
-  
-        setListAccount([...listConnected])
-        setSwitchLoading(false)
-        setSettingsVis(false);
-        setSwitchAccountVis(false)
-
-        modalSwitchRef.current?.close()
-      }else{
-        let res = await orbis.logout();
-        
-        provider?.disconnect().then(async res => {
-            setUser(null);
-            setUserData(null);
-        }).catch(e => {
-            console.log(e);
-            setUser(null);
-            setUserData(null);
-        })
-
-        modalSwitchRef.current?.close()
-      }
-    }
+    if (!user) return;
+    setSwitchLoading(false);
+    setSettingsVis(false);
+    setSwitchAccountVis(false);
+    modalSwitchRef.current?.close();
   }, [user]);
 
 
@@ -303,86 +261,26 @@ export default function App() {
     }, [isLayoutReady]);
     
 
-  /** Will check if user is connected on load to automatically re-connect user */
-    useEffect(() => {
-        connect();
-        loadContexts();
-        fecthBlockedUser();
-        fecthHiddenPost();
-        fecthMuteUser();
+  useEffect(() => {
+    const loadLocalList = async (key, setter) => {
+      try {
+        const stored = await AsyncStorage.getItem(key);
+        const parsed = stored ? JSON.parse(stored) : [];
+        setter(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        setter([]);
+      }
+    };
 
-        /** Will re-connect automatically the user to the account found in local storage */
-        async function connect() {
-            /** Check if user exists in local storage */
-            //   await AsyncStorage.removeItem("user-connected");
-
-            let _userDid = await AsyncStorage.getItem("user-connected");
-            let listDid = []
-            if(_userDid){
-                if(_userDid.charAt(0) != '['){
-                    await AsyncStorage.removeItem("user-connected");
-                }else{
-                    listDid = JSON.parse(_userDid)
-                }
-            }
-            
-            if(listDid && listDid.length != 0) {
-                if(listDid.length > 1){
-                    listDid.sort((a, b) => (a.time < b.time) ? 1 : -1)
-                }
-
-                const { data, error } = await orbis.getProfile(listDid[0]?.user?.did);                
-
-                setUser({...listDid[0].user})
-                if(data.details?.profile?.data){
-                    setUserData({...data.details.profile.data})
-                }else{
-                    setUserData({...listDid[0].user.profile?.data})
-                }
-                setIsLayoutReady(true);
-                
-            }else{
-                /** Retrieve user details */
-                let res = await orbis.isConnected();
-
-                if(res.status == 200) {
-                    setUser(res.details);
-                    setUserData(res.details.profile?.data);
-                }
-                
-                setIsLayoutReady(true);
-            }
-
-        }
-
-        // Will fetch all blocked user
-        async function fecthBlockedUser() {
-            let temp_list = await AsyncStorage.getItem("list_blocked_user");
-            const list_blocked_user = JSON.parse(temp_list)
-
-            if(list_blocked_user) {
-                setListBlockedUser([...list_blocked_user])
-            }
-        }
-        // Will fetch Hidden post
-        async function fecthHiddenPost() {
-            let temp_list = await AsyncStorage.getItem("list_hidden_post");
-            const list_hidden_post = JSON.parse(temp_list)
-
-            if(list_hidden_post) {
-                setListHiddenPost([...list_hidden_post])
-            }
-        }
-        // Will fetch mute users
-        async function fecthMuteUser() {
-            let temp_list = await AsyncStorage.getItem("list_muted_users");
-            const list_muted_users = JSON.parse(temp_list)
-
-            if(list_muted_users) {
-                setListMutedUsers([...list_muted_users])
-            }
-        }
-    }, []);
+    Promise.all([
+      loadLocalList('list_blocked_user', setListBlockedUser),
+      loadLocalList('list_hidden_post', setListHiddenPost),
+      loadLocalList('list_muted_users', setListMutedUsers),
+    ]).finally(() => {
+      setCategories(SOCIAL_CATEGORIES);
+      setIsLayoutReady(true);
+    });
+  }, []);
 
     useEffect(() => {
         page = 0;
@@ -410,24 +308,12 @@ export default function App() {
                     case "reply":
                         hideModals();
                         setPostDetailsVis(data.master ? data.master : data.post_id);
-
-                        await sleep(4000);
-                        if(feedRef?.current && data.master) {
-                            //setScrolled(0);
-                            feedRef.current.scrollToItem({ animated: true, item: data.post_id });
-                        }
                         break;
 
                     /** Open post pane for mentions */
                     case "mention":
                         hideModals();
                         setPostDetailsVis(data.post_id);
-
-                        await sleep(4000);
-                        if(feedRef?.current && data.master) {
-                            //setScrolled(0);
-                            feedRef.current.scrollToItem({ animated: true, item: data.post_id });
-                        }
                         break;
                     default:
                         break;
@@ -486,60 +372,11 @@ export default function App() {
     }
 
     async function googleConnect(token) {
-        let resUser = await orbis.connect_v2({
-            provider: "oauth",
-            oauth: {
-                type: "google",
-                token: token
-            }
-        });
-
-        if(resUser.status == 200) {
-            const { data, error } = await orbis.getProfile(resUser.details.did);
-            if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
-
-                let options= {
-                    did: resUser.details.did,
-                    context,
-                    include_child_contexts: true
-                };
-        
-                let { data } = await orbis.getPosts(options);
-                if(data.length == 0){
-                    provider?.disconnect().then(async res => {
-                        await AsyncStorage.removeItem("provider-type");       
-                        setUser(null);
-                        setUserData(null);
-                        setLoading(false)
-                    }).catch(e => {
-                        setUser(null);
-                        setUserData(null);
-                        setLoading(false)
-                    })
-                    
-                    if(!provider){
-                        setUser(null);
-                        setUserData(null);
-                    }
-        
-                    setLoading(false)
-                    setConnectModalVis(false)
-                    alert("You haven't signed up with this account before, do you want to sign up ?")
-                }else{
-                    setUser(resUser.details);
-                    setUserData(resUser.details.profile?.data);
-                    AsyncStorage.setItem("provider-type", "google");
-                    setLoading(false)
-                    callbackConnect(resUser.details);
-                }
-            }else{
-                setUser(resUser.details);
-                setUserData(resUser.details.profile?.data);
-                AsyncStorage.setItem("provider-type", "google");
-                setLoading(false)
-                callbackConnect(resUser.details);
-            }
-        }
+        // Legacy OAuth callback URLs are no longer authentication inputs.
+        // Privy owns OAuth state and token exchange inside screens/Login.js.
+        if (Platform.OS === 'ios') await WebBrowser.dismissBrowser();
+        console.warn('[auth] ignored legacy google-auth callback; use Privy login instead');
+        setLoading(false);
     }
 
     function hideModals() {
@@ -551,105 +388,23 @@ export default function App() {
 
     /** Will retrieve all posts shared in the global context */
     async function loadPosts() {
-        setPosts([]);
-        setRefreshing(true);
-        let _contexts = [context, onboard_context, edu_context];
-        let { data } = await orbis.getPosts({
-            contexts: category ? [category.stream_id] : _contexts,
-            include_child_contexts: true
-        });
-
-        if(data) {
-            data.map(async (e, indexPost) => {
-                if(e.content.media?.length > 0){
-                    e.content.media.map(async (elt, indexImage) => {
-                        if(elt.url){
-                            await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
-                        }else if(elt[0].url){
-                            await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
-                        }else{
-                            console.log(elt);
-                        }        
-
-                        if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
-                            setPosts(data);
-                            setRefreshing(false);
-                        }
-                    })
-                }else{
-                    if(indexPost == data.length -1){
-                        setPosts(data);
-                        setRefreshing(false);
-                    }
-                }
-            })
-        }else{
-            setRefreshing(false);
-        }
+        // Screen feeds own their server state through useFeed/usePosts.
+        setRefreshing(false);
     }
 
     /** This will load more posts and add those to the current list */
     async function loadMorePosts() {
-        if(refreshingBottom) {
-            return;
-        }
-        if (posts.length % 50 === 0) {
-            setRefreshingBottom(true);
-            page++;
-            let { data } = await orbis.getPosts({
-                contexts: category ? [category.stream_id] : [context, onboard_context, edu_context],
-                include_child_contexts: true
-            }, page);
-
-            if(data){
-                data.map(async (e, indexPost) => {
-                    if(e.content.media?.length > 0){
-                        e.content.media.map(async (elt, indexImage) => {
-                            if(elt.url){
-                                await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
-                            }else if(elt[0].url){
-                                await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
-                            }
-            
-                            if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
-                                let _posts = [...posts, ...data];
-                                setRefreshingBottom(false);
-                                setPosts(_posts);
-                            }
-                        })
-                    }else{
-                        if(indexPost == data.length -1){
-                            let _posts = [...posts, ...data];
-                            setRefreshingBottom(false);
-                            setPosts(_posts);
-                        }
-                    }
-                })
-            }
-        } else {
-            console.log("Reached the end.");
-        }
+        setRefreshingBottom(false);
     }
 
     /** Load all categories / contexts under the global context */
     async function loadContexts() {
-        let { data, error } = await orbis.api.from("orbis_contexts").select().eq('context', context).order('created_at', { ascending: false });
-        setCategories(data);
+        setCategories(SOCIAL_CATEGORIES);
     }
 
     const onRefresh = useCallback(async () => {
-        page = 0;
-        setRefreshing(true);
-        let { data, error } = await orbis.getPosts({
-            contexts: category ? [category.stream_id] : [context, onboard_context, edu_context],
-            include_child_contexts: true
-        });
-
-        error && console.log("Error getPosts:", error);
-        data && setPosts(data)
-
         setRefreshing(false);
-    }, [category]);
+    }, []);
 
     async function callbackConnect(detailUser) {
 
@@ -658,16 +413,6 @@ export default function App() {
         
         if(connectType == "signup"){
             handleModalNicknamePress()
-
-            if(detailUser && detailUser?.profile){
-                if(detailUser?.profile?.data){
-                    detailUser.profile.data.alreadyLogin = true
-                }else{
-                    detailUser.profile.data = {alreadyLogin: true}
-                }
-
-                const res = await orbis.updateProfile(detailUser.profile);
-            }
             setLoading(false);
         }else{
             const showNotificationDate = await AsyncStorage.getItem("showNotificationDate")
@@ -742,10 +487,6 @@ export default function App() {
         
         setUserData({...tempData})
         
-        var tempProfile = user.profile
-        tempProfile.data = tempData
-        const res = await orbis.updateProfile(tempProfile);
-
         hidePostbox()
     }
 
@@ -928,10 +669,6 @@ export default function App() {
         
     //     setUserData({...tempData})
         
-    //     var tempProfile = user.profile
-    //     tempProfile.data = tempData
-    //     const res = await orbis.updateProfile(tempProfile);
-
     //     hidePostbox()
     // }
 
@@ -970,12 +707,15 @@ export default function App() {
     }
 
     return (
-        <PrivyProvider appId={PRIVY_APP_ID} supportedChains={[baseChain]}>
+        <PrivyProvider
+          appId={PRIVY_APP_ID}
+          clientId={PRIVY_CLIENT_ID}
+          supportedChains={[baseChain]}
+        >
         <>
             <StatusBar translucent={true} backgroundColor="#00000000" style="black"/>
             <GestureHandlerRootView onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
                 <GlobalContext.Provider value={{ 
-                        orbis,
                         confetti,
                         refreshing,
                         categories,
@@ -1012,7 +752,6 @@ export default function App() {
                         setSettingsVis,
                         setShareProfileVis,
                         setSwitchAccountVis,
-                        setNotificationsVis,
                         setPostSettingsModalVis,
 
                         category, setCategory,
@@ -1110,11 +849,6 @@ export default function App() {
                         {/** QR modal container */}
                         {shareProfileVis &&
                             <QR hide={() => setShareProfileVis(false)} />
-                        }
-
-                        {/** Show notifications pane */}
-                        {notificationsVis &&
-                            <NotificationsPane />
                         }
 
                         {addressCopied && (

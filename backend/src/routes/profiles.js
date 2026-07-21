@@ -7,6 +7,7 @@
  * Endpoints
  *   GET  /profiles/me            — authed, returns own profile
  *   PUT  /profiles/me            — authed, edit own profile
+ *   GET  /profiles/search?q=     — public username/display-name search
  *   GET  /profiles/by-username/:username  — public lookup
  *   GET  /profiles/:userId       — public lookup by internal id
  *
@@ -22,6 +23,8 @@ import { prisma } from '../lib/db.js';
 export const profilesRouter = Router();
 
 const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
+const SEARCH_LIMIT_DEFAULT = 20;
+const SEARCH_LIMIT_MAX = 50;
 
 const updateSchema = z.object({
   username: z
@@ -50,6 +53,7 @@ async function publicProfile(user) {
     pfp: user.pfp,
     bio: user.bio,
     walletAddress: user.walletAddress,
+    subname: user.subnameStatus === 'ISSUED' ? user.subname : null,
     createdAt: user.createdAt,
     counts: { followers, following, posts },
   };
@@ -90,6 +94,29 @@ profilesRouter.put('/me', requireAuth, async (req, res) => {
     data: parsed.data,
   });
   res.json({ profile: await publicProfile(updated) });
+});
+
+profilesRouter.get('/search', async (req, res) => {
+  const query = String(req.query.q || '').trim().replace(/^@/, '').slice(0, 50);
+  const requestedLimit = Number(req.query.limit);
+  const limit = Number.isFinite(requestedLimit) && requestedLimit > 0
+    ? Math.min(Math.floor(requestedLimit), SEARCH_LIMIT_MAX)
+    : SEARCH_LIMIT_DEFAULT;
+
+  if (query.length < 2) return res.json({ rows: [] });
+
+  const users = await prisma.user.findMany({
+    where: {
+      OR: [
+        { username: { contains: query, mode: 'insensitive' } },
+        { displayName: { contains: query, mode: 'insensitive' } },
+      ],
+    },
+    orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+    take: limit,
+  });
+  const rows = await Promise.all(users.map(publicProfile));
+  res.json({ rows });
 });
 
 profilesRouter.get('/by-username/:username', async (req, res) => {

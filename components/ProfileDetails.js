@@ -21,9 +21,9 @@ import Modal from "./Modal.js";
 import HeaderImage from "./HeaderImage";
 import { shortAddress } from "../utils";
 import { UserPfp, Username } from "./User";
-import { context } from '../utils/config.js';
 import SettingsModal from "./modals/SettingsModal";
 import useDidToAddress from "../hooks/useDidToAddress";
+import useFollow from "../hooks/useFollow";
 import { GlobalContext } from "../contexts/GlobalContext";
 import SwitchAccountModal from "./modals/SwitchAccountModal";
 import useStatusBarHeight from "../hooks/useStatusBarHeight.js";
@@ -36,18 +36,19 @@ import Svg, { Circle } from "react-native-svg";
 import { courses } from "../data/courses";
 import Header from "./Header";
 import HeaderActions from "./HeaderActions";
+import { api } from "../utils/api";
+import { adaptSocialProfile, getEasyGoUserId } from "../utils/socialPostAdapter";
 
 const TabBarHeight = 50;
 const IndicatorWidth = 50
 
 const windowSize = Dimensions.get('window')
 
-export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
+export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 20, type}) {
     const { 
         user, setUser, 
-        userData, setUserData, 
+        userData,
         screen, 
-        orbis, 
         setShareProfileVis, 
         tabViewHeight, 
         modalSwitchRef, 
@@ -69,9 +70,6 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const handleUpdateProfilePress = useCallback(() => modalProfileRef.current?.present(), []);
 
 
-    const [isFollowing, setIsFollowing] = useState(false);
-    const [countPosts, setCountPosts] = useState("-");
-    const [followLoading, setFollowLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [listCommonFollowers, setListCommonFollowers ] = useState([]);
     const [commonFollowLoading, setCommonFollowLoading] = useState(true)
@@ -80,7 +78,17 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     const [showLinkModal, setShowLinkModal] = useState(false)
     const [showProfileImage, setShowProfileImage] = useState(false)
 
-    const { address } = useDidToAddress(profile?.did);
+    const targetUserId = getEasyGoUserId(profile);
+    const ownUserId = getEasyGoUserId(user);
+    const { address: didAddress } = useDidToAddress(profile?.did);
+    const address = profile?.profile?.data?.walletAddress || didAddress;
+    const {
+        isFollowing,
+        loading: followLoading,
+        follow: followUser,
+        unfollow: unfollowUser,
+        refresh: refreshFollow,
+    } = useFollow(targetUserId, { enabled: type === 'selected' && targetUserId !== ownUserId });
 
     const statusBarHeight = useStatusBarHeight();
 
@@ -89,64 +97,52 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
     useScrollToTop(scrollRef);
 
-    /** fetch common followers */
     useEffect(() => {
-        type == 'selected' && getListCommonFollow();
-
-        /** Will fetch common followers between you and the profile you are visiting */
-        async function getListCommonFollow() {
-            setCommonFollowLoading(true)
-            const result_selected_followers = await orbis.getProfileFollowers(profile.did)
-            const result_own_followers = await orbis.getProfileFollowers(user.did)
-
-            let common_followers = []
-            result_selected_followers?.data?.forEach(e => {
-                result_own_followers?.data?.map(elt => {
-                    if(elt.details.did == e.details.did){
-                        if(e.details.profile && e.details.profile.username){
-                            common_followers.push(e)
-                        }
-                    }
-                })
-            })
-
-            setListCommonFollowers(common_followers);
-            setCommonFollowLoading(false)
-        }
-    }, []);
+        setUserInfo(type === 'selected' ? profile : {
+            ...profile,
+            ...user,
+            profile: user?.profile || profile?.profile,
+        });
+    }, [profile, type, user]);
 
     useEffect(() => {
-        getProfile()
-        loadiIsFollowing();
-        getCountPosts();
-        setFollowLoading(true);
-
-        /** Will check if the connected user is following this user */
-        async function loadiIsFollowing() {
-            const res = await orbis.getIsFollowing(user.did, profile.did);
-            setIsFollowing(res?.data);
-            setFollowLoading(false);
-        }
-    
-        async function getProfile() {
-            const { data, error } = await orbis.getProfile(type == 'selected' ? profile.did : user.did);
-            setUserInfo(data.details);
+        if (type !== 'selected' || !targetUserId || !ownUserId) {
+            setListCommonFollowers([]);
+            setCommonFollowLoading(false);
+            return;
         }
 
-    }, [profile]);
-    
-    /** Will retrieve the count of posts shared by this profile in the context */
-    async function getCountPosts() {
-        const { count } = await orbis.api.from('orbis_posts').select('*', { count: 'exact', head: true }).eq('context', context).eq('creator', profile.did);
-        if(count) {
-            setCountPosts(count);
-        }
-    }
+        let active = true;
+        setCommonFollowLoading(true);
+        Promise.all([
+            api.follows.followers(targetUserId, { limit: 200 }),
+            api.follows.followers(ownUserId, { limit: 200 }),
+        ]).then(([selectedResult, ownResult]) => {
+            if (!active) return;
+            const ownFollowerIds = new Set((ownResult?.rows || []).map((item) => item.id));
+            const commonFollowers = (selectedResult?.rows || [])
+                .filter((item) => ownFollowerIds.has(item.id))
+                .map((item) => ({ details: adaptSocialProfile(item) }));
+            setListCommonFollowers(commonFollowers);
+        }).catch((error) => {
+            if (active) {
+                console.warn('[ProfileDetails] common followers unavailable', error);
+                setListCommonFollowers([]);
+            }
+        }).finally(() => {
+            if (active) setCommonFollowLoading(false);
+        });
+
+        return () => {
+            active = false;
+        };
+    }, [ownUserId, targetUserId, type]);
 
     const delay = ms => new Promise(res => setTimeout(res, ms));
 
     /** Will copy link in Clipboard */
     async function copy(val) {
+        if (!val) return;
         setAddressCopied(true)
         await delay(1000);
         setAddressCopied(false)
@@ -160,18 +156,26 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
     /** Will follow the user */
     async function follow(active) {
-        setFollowLoading(true);
+        const succeeded = active ? await followUser() : await unfollowUser();
+        if (!succeeded) {
+            Alert.alert('Could not update follow', 'Check the backend connection and try again.');
+            return;
+        }
 
-        const res = await orbis.setFollow(profile.did, active);
-        setFollowLoading(false);
-        setIsFollowing(active);
+        setUserInfo((current) => current ? ({
+            ...current,
+            count_followers: Math.max(0, (current.count_followers || 0) + (active ? 1 : -1)),
+        }) : current);
     }
 
     const ProfileItem = ({title, count}) => {
         const tailwind = useTailwind();
 
         { return title != 'Posts' && title != 'Orange' ? (
-            <TouchableOpacity style={tailwind('flex flex-col flex-1 items-center')} onPress={() => {Haptics.selectionAsync();navigation.navigate('FollowNavigation', {origin: title, profile, type, listCommonFollowers})}}>
+            <TouchableOpacity style={tailwind('flex flex-col flex-1 items-center')} onPress={() => {
+                Haptics.selectionAsync();
+                navigation.navigate('FollowNavigation', {origin: title, profile: userInfo || profile, type});
+            }}>
                 <Text style={[tailwind(`text-slate-900`), { fontSize: 15, fontFamily: "GmarketBold", lineHeight: 15 }]}>{count}</Text>
                 <Text style={[tailwind(`text-slate-400 mt-2 text-center`), { fontSize: 11, lineHeight: 19, fontFamily: "GmarketMedium", lineHeight: 15 }]}>{title}</Text>
             </TouchableOpacity>
@@ -185,14 +189,31 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
 
     async function updateProfile() {
         setRefreshing(true)
-        
-        const { data, error } = await orbis.getProfile(profile.did);
-        setUserInfo(data.details)
-        setUser(data)
-        
-        getCountPosts()
-
-        setRefreshing(false)
+        try {
+            const refreshed = await refreshProfile?.();
+            const details = adaptSocialProfile(refreshed);
+            if (details) {
+                setUserInfo(details);
+                if (type !== 'selected') {
+                    setUser((current) => ({
+                        ...current,
+                        id: details.id || current?.id,
+                        did: details.did || current?.did,
+                        profile: {
+                            ...current?.profile,
+                            ...details.profile,
+                            data: {
+                                ...current?.profile?.data,
+                                ...details.profile?.data,
+                            },
+                        },
+                    }));
+                }
+            }
+            if (type === 'selected') await refreshFollow();
+        } finally {
+            setRefreshing(false)
+        }
     }
 
     const openLink = async (url) => {
@@ -249,10 +270,11 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
     };
 
     function getProfilePicture(details) {
-        if(details.profile.pfp.includes("ipfs://")) {
-          return details.profile.pfp.replace("ipfs://", "https://ipfs.io/ipfs")
+        const pfp = details?.profile?.pfp || '';
+        if(pfp.includes("ipfs://")) {
+          return pfp.replace("ipfs://", "https://ipfs.io/ipfs")
         } else {
-          return details.profile.pfp
+          return pfp
         }
     }
 
@@ -449,7 +471,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                         style={[tailwind("rounded-full"), {marginTop: type == 'selected' ? 0 : 42,}]}
                         onPress={() => {Haptics.selectionAsync();setShowProfileImage(true)}}
                     >
-                        <UserPfp details={profile} height={60} />
+                        <UserPfp details={userInfo || profile} height={60} />
                     </TouchableOpacity>
                     
                     <View style={tailwind('mt-2 flex flex-row items-center')}>
@@ -583,7 +605,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
         
                 {/** KPI counts */}
                 <View style={[tailwind('flex flex-row px-4'), {paddingTop: 10}]}>
-                    <ProfileItem count={countPosts} title="Posts" />
+                    <ProfileItem count={userInfo ? userInfo.count_posts : "-"} title="Posts" />
                     <ProfileItem count={userInfo ? userInfo.count_followers : "-"} title="Followers" />
                     <ProfileItem count={userInfo ? userInfo.count_following : "-"} title="Following" />
                 </View>
@@ -591,7 +613,10 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 {!commonFollowLoading && type == "selected" && listCommonFollowers.length > 0 ? (
                     <TouchableOpacity 
                         style={{width: '100%', justifyContent: 'center', marginTop: 15,}}
-                        onPress={() => {Haptics.selectionAsync();navigation.navigate('FollowNavigation', {origin: "Mutual", profile, type, listCommonFollowers})}}
+                        onPress={() => {
+                            Haptics.selectionAsync();
+                            navigation.navigate('FollowNavigation', {origin: 'Mutual', profile: userInfo || profile, type});
+                        }}
                     >
                         {listCommonFollowers.length < 3 ? (
                             <View style={{flexDirection: 'row',alignItems: 'center',justifyContent: 'center',}}>
@@ -668,7 +693,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                 )}
         
                 {/** Edit CTA (only if user is connected) */}
-                {user.did == profile.did ?
+                {ownUserId && ownUserId === targetUserId ?
                     <View style={[tailwind('flex flex-row px-4 pt-4 items-center justify-evenly'), {width: '95%',alignSelf: 'center',}]}>
                         <Button title="Edit Profile" color="orange" size="sm" onPress={() => {Haptics.selectionAsync();handleUpdateProfilePress()}} style={{height: 40,justifyContent: 'center',alignItems: 'center',flex: 1}}/>
                         <View style={{width: 10}} />
@@ -832,7 +857,7 @@ export default function ProfileDetails({profile, pfpMarginTop = 20, type}) {
                             </TouchableOpacity>
                         </View>
                         <ImageViewer 
-                            imageUrls={[{url: getProfilePicture(profile)}]}
+                            imageUrls={[{url: getProfilePicture(userInfo || profile)}]}
                             onSwipeDown={() => setShowProfileImage(!showProfileImage)} 
                             enableSwipeDown={true} 
                             loadingRender={() => { return (

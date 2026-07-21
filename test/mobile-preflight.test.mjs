@@ -1,0 +1,69 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { parseEnvText, validateMobileEnvironment } from '../scripts/mobile-preflight.mjs';
+
+const appConfig = {
+  expo: {
+    scheme: 'coineasyapp',
+    ios: { bundleIdentifier: 'com.coineasy.coineasysocial' },
+    android: { package: 'com.coineasy.coineasy' },
+  },
+};
+
+test('env parser reads values without treating comments as configuration', () => {
+  assert.deepEqual(parseEnvText(`
+# comment
+EXPO_PUBLIC_PRIVY_APP_ID=app-id
+EXPO_PUBLIC_PRIVY_CLIENT_ID="client-id"
+`), {
+    EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
+    EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
+  });
+});
+
+test('local preflight accepts Privy IDs but warns while backend is disconnected', () => {
+  const result = validateMobileEnvironment({
+    EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
+    EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
+  }, appConfig);
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.warnings.some((item) => item.name === 'backend URL'), true);
+});
+
+test('staging preflight requires an HTTPS backend and preserves native identity', () => {
+  const missing = validateMobileEnvironment({
+    EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
+    EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
+  }, appConfig, { target: 'staging' });
+  assert.equal(missing.errors.some((item) => item.name === 'backend URL'), true);
+
+  const insecure = validateMobileEnvironment({
+    EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
+    EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
+    EXPO_PUBLIC_BACKEND_URL: 'http://api.easygo.example',
+  }, appConfig, { target: 'staging' });
+  assert.equal(insecure.errors.some((item) => item.name === 'backend URL format'), true);
+
+  const ready = validateMobileEnvironment({
+    EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
+    EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
+    EXPO_PUBLIC_BACKEND_URL: 'https://api.easygo.example',
+  }, appConfig, { target: 'staging' });
+  assert.deepEqual(ready.errors, []);
+});
+
+test('native identifiers and scheme fail if the configured app identity drifts', () => {
+  const result = validateMobileEnvironment({
+    EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
+    EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
+  }, {
+    expo: {
+      scheme: 'wrong',
+      ios: { bundleIdentifier: 'com.example.wrong' },
+      android: {},
+    },
+  });
+  assert.equal(result.errors.some((item) => item.name === 'URL scheme'), true);
+  assert.equal(result.errors.some((item) => item.name === 'iOS bundle identifier'), true);
+  assert.equal(result.errors.some((item) => item.name === 'Android package'), true);
+});

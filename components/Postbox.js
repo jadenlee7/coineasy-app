@@ -1,20 +1,19 @@
 import React, { useContext, useState, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, TouchableHighlight, TextInput, ActivityIndicator, Platform, Image, ScrollView, BackHandler, Dimensions, KeyboardAvoidingView, Animated, Keyboard, ImageBackground } from 'react-native';
+import { Alert, Text, View, TouchableOpacity, TouchableHighlight, TextInput, ActivityIndicator, Platform, Image, ScrollView, BackHandler, Dimensions, KeyboardAvoidingView, Animated, Keyboard } from 'react-native';
 
-import mime from 'mime'
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
-import * as ImagePicker from 'expo-image-picker';
 
 import Post from "./Post";
 import Button from "./Button";
-import { getTimestamp } from "../utils";
-import { context } from '../utils/config.js';
 import User, { UserPfp, Username } from "./User";
 import { checkContextAccess, isOwner } from "../utils";
 import { GlobalContext } from "../contexts/GlobalContext";
 import { BackIcon, ImagePickerIcon, CaretDownIcon, CloseIcon, LockIcon, UnlockIcon, CameraIcon } from "./Icons";
-import moment from "moment";
+import usePosts from "../hooks/usePosts";
+import useReplies from "../hooks/useReplies";
+import { api } from "../utils/api";
+import { adaptSocialAuthor } from "../utils/socialPostAdapter";
 
 /** Init mentions object */
 let mentions = [];
@@ -25,7 +24,6 @@ export default function Postbox({isReply = false}) {
     const { 
         user, 
         userData,
-        orbis, 
         setShowConnectModal, 
         hidePostbox, 
         replyTo, 
@@ -39,11 +37,12 @@ export default function Postbox({isReply = false}) {
         selectedNews, 
         currentRoute,
         categoriesVis,
-        setCategoriesVis,
-        modalPostBoxRef,
-        setUserData
+        setCategoriesVis
     } = useContext(GlobalContext);
     const tailwind = useTailwind();
+    const replyParentId = replyTo?.easygo?.postId || replyTo?.stream_id || null;
+    const { create: createPost, update: updatePost, backendConfigured } = usePosts({ autoLoad: false });
+    const { create: createReply } = useReplies(replyParentId, { autoLoad: false });
 
     const textInputRef = useRef();
     const moveAnimation1 = useRef(new Animated.Value(0)).current;
@@ -51,21 +50,15 @@ export default function Postbox({isReply = false}) {
 
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
-    const [imageLoading, setImageLoading] = useState(false);
-    const [cameraLoading, setCameraLoading] = useState(false);
     const [categorySelected, setCategorySelected] = useState(false);
     const [hasAccess, setHasAccess] = useState(false);
     const [mentionsBoxVis, setMentionsBoxVis] = useState(false);
     const [currentMention, setCurrentMention] = useState(null);
     const [listMedia, setListMedia] = useState([]);
-    const [keepFocus, setKeepFocus] = useState(false)
     const [fullListFollow, setFullListFollow] = useState([])
     const [keyboardHeight, setKeyboardHeight] = useState(0);
 
     useEffect(() => {
-        /** Make sure mentions is reset */
-        mentions = [];
-
         /** If user is editing a post we pre-fill the content */
         if(editedPost) {
             setMessage(editedPost.value.content.body);
@@ -79,9 +72,13 @@ export default function Postbox({isReply = false}) {
 
             setCategorySelected(temp_category)
         }
+    }, [editedPost])
 
+    useEffect(() => {
         getListFollow()
+    }, [backendConfigured, user?.id])
 
+    useEffect(() => {
         function onKeyboardDidShow(e) {setKeyboardHeight(e.endCoordinates.height);}
         function onKeyboardDidHide(e) {setKeyboardHeight(0);}
 
@@ -94,14 +91,27 @@ export default function Postbox({isReply = false}) {
     }, [])
 
     async function getListFollow() {
-        const result_followers = await orbis.getProfileFollowers(user.did);
-        const result_following = await orbis.getProfileFollowing(user.did);
+        if (!user?.id || !backendConfigured) {
+            setFullListFollow([]);
+            return;
+        }
 
-        result_followers.data?.forEach(e => e.details.type = 'Followers');
-        result_following.data?.forEach(e => e.details.type = 'Following');
-
-        const full_list_follow = [...result_followers.data, ...result_following.data];
-        setFullListFollow([...full_list_follow])
+        try {
+            const [followersResult, followingResult] = await Promise.all([
+                api.follows.followers(user.id, { limit: 100 }),
+                api.follows.following(user.id, { limit: 100 }),
+            ]);
+            const followers = (followersResult?.rows || []).map((profile) => ({
+                details: { ...adaptSocialAuthor(profile), type: 'Followers' },
+            }));
+            const following = (followingResult?.rows || []).map((profile) => ({
+                details: { ...adaptSocialAuthor(profile), type: 'Following' },
+            }));
+            setFullListFollow([...followers, ...following]);
+        } catch (error) {
+            console.warn('[Postbox] unable to load mention suggestions', error);
+            setFullListFollow([]);
+        }
     }
 
     async function checkAccess(temp_cat) {
@@ -124,51 +134,89 @@ export default function Postbox({isReply = false}) {
     }, [category, selectedCategory, selectedNews])
 
     async function edit() {
+        if (loading) return;
+        Haptics.selectionAsync();
+        const postId = editedPost?.value?.easygo?.postId || editedPost?.value?.stream_id;
+        const body = message.trim();
+        if (!backendConfigured) {
+            Alert.alert('Backend not connected', 'Add EXPO_PUBLIC_BACKEND_URL to .env before editing.');
+            return;
+        }
+        if (!user || !postId) {
+            Alert.alert('Post unavailable', 'Sign in again and reopen the post before editing.');
+            return;
+        }
+        if (!body) {
+            Alert.alert('Write something first', 'A post needs some text.');
+            return;
+        }
+
+        const categoryTag = categorySelected?.tag || categorySelected?.content?.displayName;
+        const normalizedCategoryTag = typeof categoryTag === 'string' && categoryTag.startsWith('#') ? categoryTag : null;
+        const publishBody = normalizedCategoryTag && !body.toLowerCase().includes(normalizedCategoryTag.toLowerCase())
+            ? `${body}\n\n${normalizedCategoryTag}`
+            : body;
+        if (publishBody.length > 2000) {
+            Alert.alert('Post is too long', 'Shorten the post to 2,000 characters or fewer.');
+            return;
+        }
+
+        const firstMedia = listMedia?.[0];
+        const mediaUrl = firstMedia?.url || firstMedia?.[0]?.url || null;
+        setLoading(true);
         try {
-            Haptics.selectionAsync();
-            setLoading(true);
-            let content = {...editedPost.value.content};
-            content.body = message;
-            content.media = listMedia ? listMedia : null
-            content.mention = mentions
-
-            if(categorySelected){
-                content.context = categorySelected.stream_id
-                content.context_details = categorySelected.content
+            const updated = await updatePost(postId, { body: publishBody, mediaUrl });
+            if (!updated) {
+                Alert.alert('Could not edit post', 'Check the backend connection and try again.');
+                return;
             }
-            
-            /** Share edited post */
-            let res = await orbis.editPost(editedPost.value.stream_id, content);
-            console.log("res:", res);
-
-            if(res.status == 200) {
-                editedPost.callback(
-                    message,
-                    listMedia,
-                    categorySelected
-                );
-                setMessage("");
-                mentions = [];
-            } else {
-                console.log("res:", res);
-                alert("Error editing post.");
-            }
-
-            /** Stop loading indicator */
-            setLoading(false);
-            modalPostBoxRef.current?.close()
-        } catch(e) {
-            alert("Error editing post.");
+            editedPost?.callback?.(
+                updated.content.body,
+                updated.content.media,
+                categorySelected || null
+            );
+            if (!editedPost?.callback) hidePostbox();
+        } finally {
             setLoading(false);
         }
     }
 
-    /** Will share message with Orbis */
+    /** Create a root post or reply through the EasyGo backend. */
     async function send() {
 
         try {
+            if (loading) return;
             Haptics.selectionAsync();
-            let _context = context;
+            const body = message.trim();
+
+            if (!backendConfigured) {
+                Alert.alert('Backend not connected', 'Add EXPO_PUBLIC_BACKEND_URL to .env before publishing.');
+                return;
+            }
+            if (!user) {
+                showConnect();
+                return;
+            }
+            if (repost) {
+                Alert.alert('Reposts are coming next', 'EasyGo repost publishing is not connected yet.');
+                return;
+            }
+            if (!body) {
+                Alert.alert('Write something first', 'A post or reply needs some text before it can be published.');
+                return;
+            }
+
+            const categoryTag = categorySelected?.tag || categorySelected?.content?.displayName;
+            const normalizedCategoryTag = typeof categoryTag === 'string' && categoryTag.startsWith('#') ? categoryTag : null;
+            const publishBody = !replyTo && normalizedCategoryTag && !body.toLowerCase().includes(normalizedCategoryTag.toLowerCase())
+                ? `${body}\n\n${normalizedCategoryTag}`
+                : body;
+            if (publishBody.length > 2000) {
+                Alert.alert('Post is too long', 'Shorten the post so the category hashtag fits within 2,000 characters.');
+                return;
+            }
+
+            let _context = null;
             let master;
             if(replyTo) {
                 _context = replyTo.content.context;
@@ -186,7 +234,7 @@ export default function Postbox({isReply = false}) {
 
             setLoading(true);
             let content = {
-                body: message != '' ? message : 'Message sans body',
+                body: publishBody,
                 context: _context,
                 media: listMedia ? listMedia : null,
                 repost: repost ? repost.stream_id : null,
@@ -196,10 +244,13 @@ export default function Postbox({isReply = false}) {
                 repost_details: repost
             };
 
-            let res = await orbis.createPost(content);
+            const firstMedia = listMedia?.[0];
+            const mediaUrl = firstMedia?.url || firstMedia?.[0]?.url || null;
+            const created = replyTo
+                ? await createReply({ body: publishBody, mediaUrl })
+                : await createPost({ body: publishBody, mediaUrl });
 
-            /** Wait for new post to be indexed */
-            if(res.status == 200) {
+            if(created) {
                 setMessage("");
                 mentions = [];
 
@@ -207,17 +258,8 @@ export default function Postbox({isReply = false}) {
                 temp_details.context_details = categorySelected?.content
                 temp_details.context_id = categorySelected?.stream_id
                 let _callbackContent = {
-                    creator: user.did,
-                    creator_details: {
-                        did: user.did,
-                        profile: user.profile
-                    },
-                    stream_id: res.doc,
-                    content: content,
-                    count_replies: 0,
-                    count_likes: 0,
-                    count_repost: 0,
-                    timestamp: getTimestamp(),
+                    ...created,
+                    content: { ...created.content, ...content },
                     repost_details: repost,
                     context: categorySelected?.stream_id,
                     context_details: categorySelected ? temp_details : null,
@@ -225,10 +267,14 @@ export default function Postbox({isReply = false}) {
 
                 /** If any trigger callback after the post is shared */
                 if(callbackPostShared) {
-                    callbackPostShared(_callbackContent);
+                    await callbackPostShared(_callbackContent);
                 }else{
-                    defaultCallbackPostShared(_callbackContent)
+                    await defaultCallbackPostShared(_callbackContent)
                 }
+
+                setLoading(false);
+                hidePostbox();
+                return;
 
             //     const tempData = userData ?? {}                
 
@@ -470,18 +516,19 @@ export default function Postbox({isReply = false}) {
 
             //     var tempProfile = user.profile
             //     tempProfile.data = tempData
-            //     await orbis.updateProfile(tempProfile);
+            //     Profile reward syncing moved to the backend.
 
             //     setLoading(false);
             } else {
-                console.log(res);
-                alert(res.result ?? 'An error occured, please try again later');
+                Alert.alert('Could not publish', 'Please check your connection and try again.');
                 setLoading(false);
             }
 
             // hidePostbox()
         } catch(e) {
             console.log("Error sharing post: ", e);
+            Alert.alert('Could not publish', 'Please check your connection and try again.');
+            setLoading(false);
         }
     }
 
@@ -491,114 +538,9 @@ export default function Postbox({isReply = false}) {
         setShowConnectModal(true)
     }
 
-    /** Will open the media library and allow user to select a photo */
-    async function openCamera() {
-        setKeepFocus(true)
-
-        try {
-            const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-
-            console.log(permissionResult);
-
-            if (permissionResult.granted === false) {
-                alert("You have refused to allow this app to access your camera.");
-            } else {
-                let result = await ImagePicker.launchCameraAsync();
-    
-                if(!result.canceled){
-                    /** Handle Image picked */
-                    let imagePath = result.assets[0].uri;
-                    setCameraLoading(true);
-        
-                    const imageType = mime.getType(imagePath)
-        
-                    /** Create file object */
-                    let file = {
-                        name: "test",
-                        type: imageType,
-                        uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
-                    }
-        
-                    /** Upload Image to IPFS */
-                    const resUpload = await orbis.uploadMedia(file);
-        
-                    /** Handle result returned by Orbis SDK */
-                    if(resUpload.status == 200) {
-                        let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
-                        let media = [{
-                            gateway: resUpload.result.gateway,
-                            url: finalUrl
-                        }]
-                        listMedia.push(media)
-        
-                        setListMedia([...listMedia]);
-                        setCameraLoading(false);
-                    } else {
-                        alert("Error uploading image.");
-                        setCameraLoading(false);
-                    }
-                }
-            }
-
-            setKeepFocus(false)
-        } catch (error) {
-            console.log('ICI');
-            console.log(error);
-            setKeepFocus(false)
-        }
-
-    }
-
-
-
-    /** Will open the media library and allow user to select a photo */
-    async function selectPhoto() {
-        try {
-            /** Open Image library to allow user to select a picture */
-            let result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: "Images",
-                // allowsEditing: true,
-                // aspect: [1, 1],
-                quality: 0.25,
-            });
-
-            if (!result.canceled) {
-                /** Handle Image picked */
-                let imagePath = result.assets[0].uri;
-                setImageLoading(true);
-
-                const imageType = mime.getType(imagePath)
-
-                /** Create file object */
-                let file = {
-                    name: "test",
-                    type: imageType,
-                    uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
-                }
-
-                /** Upload Image to IPFS */
-                const resUpload = await orbis.uploadMedia(file);
-
-                /** Handle result returned by Orbis SDK */
-                if(resUpload.status == 200) {
-                    let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
-                    let media = [{
-                        gateway: resUpload.result.gateway,
-                        url: finalUrl
-                    }]
-                    listMedia.push(media)
-
-                    setListMedia([...listMedia]);
-                    setImageLoading(false);
-                } else {
-                    alert("Error uploading image.");
-                    setImageLoading(false);
-                }
-            }
-        } catch(e) {
-            console.log("Error selecting photo:", e);
-            setImageLoading(false);
-        }
+    function showMediaComingSoon() {
+        Haptics.selectionAsync();
+        Alert.alert('Media uploads are coming next', 'Text posts and replies work now. EasyGo media storage is the next backend step.');
     }
 
     function openCategory() {
@@ -727,19 +669,22 @@ export default function Postbox({isReply = false}) {
         textInputRef?.current?.focus();
     }
 
-    BackHandler.addEventListener('hardwareBackPress', function () {
-        if(categoriesVis){
-            setCategoriesVis(false)
-            return true
-        }else{
+    useEffect(() => {
+        const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
+            if(categoriesVis){
+                setCategoriesVis(false)
+                return true
+            }
             hidePostbox()
             return true
-        }
-    })
+        })
+
+        return () => backhandler.remove()
+    }, [categoriesVis, hidePostbox, setCategoriesVis])
 
 
     const UserLoop = ({term, mentionUser}) => {
-        const { user, orbis } = useContext(GlobalContext);
+        const { user } = useContext(GlobalContext);
         const tailwind = useTailwind();
         const [users, setUsers] = useState([]);
         const [followUsers, setFollowUsers] = useState([]);
@@ -750,8 +695,6 @@ export default function Postbox({isReply = false}) {
 
             async function searchUsers() {
                 setUsersLoading(true);
-
-                const {data, error} = await orbis.getProfilesByUsername(term);
 
                 let result = term != '' ? fullListFollow.filter(e => e.details?.profile?.username?.startsWith(term)) : fullListFollow
 
@@ -764,9 +707,7 @@ export default function Postbox({isReply = false}) {
                     return false;
                 });
 
-                let listWithoutCommon = data.filter(elt1 => !result.some(elt2 => elt2.details.did === elt1.did));
-
-                setUsers(listWithoutCommon);
+                setUsers([]);
                 setFollowUsers(listWithoutDuplicates)
                 setUsersLoading(false);
             }
@@ -785,7 +726,7 @@ export default function Postbox({isReply = false}) {
         return (
             <ScrollView keyboardShouldPersistTaps='handled'>
                 {/** Show everyone tag if user is admin */}
-                {(isOwner(user.did) && "everyone".includes(term)) &&
+                {(isOwner(user?.did) && "everyone".includes(term)) &&
                     <TouchableOpacity style={tailwind("p-2 px-4")} activeOpacity={0.6} onPress={() => mentionUser({did: "did:@:everyone", profile: {username: "everyone"}})}>
                         <View style={tailwind('flex flex-row items-center')}>
                             <Image
@@ -944,7 +885,7 @@ export default function Postbox({isReply = false}) {
 
                         {replyTo && <View style={[tailwind('bg-slate-200 flex-1'), {width: 1, height:50,position: 'absolute',top: 45,left: 30}]} />}
 
-                        {!replyTo && userData.rewardFirstPost == 'reward pending' && (
+                        {!replyTo && userData?.rewardFirstPost == 'reward pending' && (
                             <View style={{backgroundColor: '#FFE9E3',width:'100%', alignSelf:'center',borderRadius: 10,paddingVertical: 10}}>
                                 <Text style={{color:'#FF6E31',fontWeight: 'bold',textAlign: 'center',}}>Receive 50 Oranges Reward for your first post!</Text>
                             </View>
@@ -974,7 +915,6 @@ export default function Postbox({isReply = false}) {
                                 placeholder={replyTo ? "Post your reply" : "Tell us about your story!" }
                                 placeholderTextColor="#64748b"
                                 multiline={true}
-                                onBlur={e => {if(keepFocus){e.target.focus()}}}
                             />
                         }
 
@@ -1055,21 +995,13 @@ export default function Postbox({isReply = false}) {
                     {Keyboard.isVisible() && Platform.OS == 'ios' && (
                         <View style={{position: 'absolute',bottom: keyboardHeight-20,width: width,flexDirection:'row',paddingHorizontal: 20, backgroundColor: 'white',height: 50,alignItems:'center',}}>
                             <View style={tailwind('flex flex-1 flex-row items-start')}>
-                                {imageLoading ?
-                                    <ActivityIndicator size="small" color="#FF6B17" />
-                                :
-                                    <TouchableOpacity onPress={() => selectPhoto()} style={{marginTop: 5}}>
-                                        <ImagePickerIcon />
-                                    </TouchableOpacity>
-                                }
+                                <TouchableOpacity onPress={showMediaComingSoon} style={{marginTop: 5}}>
+                                    <ImagePickerIcon />
+                                </TouchableOpacity>
         
-                                {cameraLoading ?
-                                    <ActivityIndicator size="small" color="#FF6B17" style={{marginLeft: 17,}}/>
-                                :
-                                    <TouchableOpacity onPress={() => {setKeepFocus(true);openCamera()}} style={{marginLeft: 15,}}>
-                                        <CameraIcon />
-                                    </TouchableOpacity>
-                                }
+                                <TouchableOpacity onPress={showMediaComingSoon} style={{marginLeft: 15,}}>
+                                    <CameraIcon />
+                                </TouchableOpacity>
                             </View>
         
                             {/** Post button */}
@@ -1086,21 +1018,13 @@ export default function Postbox({isReply = false}) {
 
                     {/** Image picker icon */}
                     <View style={tailwind('flex flex-1 flex-row items-start')}>
-                        {imageLoading ?
-                            <ActivityIndicator size="small" color="#FF6B17" />
-                        :
-                            <TouchableOpacity onPress={() => selectPhoto()} style={{marginTop: 5}}>
-                                <ImagePickerIcon />
-                            </TouchableOpacity>
-                        }
+                        <TouchableOpacity onPress={showMediaComingSoon} style={{marginTop: 5}}>
+                            <ImagePickerIcon />
+                        </TouchableOpacity>
 
-                        {cameraLoading ?
-                            <ActivityIndicator size="small" color="#FF6B17" style={{marginLeft: 17,}}/>
-                        :
-                            <TouchableOpacity onPress={() => {setKeepFocus(true);openCamera()}} style={{marginLeft: 15,}}>
-                                <CameraIcon />
-                            </TouchableOpacity>
-                        }
+                        <TouchableOpacity onPress={showMediaComingSoon} style={{marginLeft: 15,}}>
+                            <CameraIcon />
+                        </TouchableOpacity>
                     </View>
 
                     {/** Post button */}

@@ -1,9 +1,8 @@
 import React, { useContext, useState } from "react";
-import { Text, View, Image, Platform } from 'react-native';
+import { Alert, Text, View, Image, Platform } from 'react-native';
 
 import Modal from "../Modal";
 import Button from "../Button";
-import { context } from "../../utils/config"
 import { GlobalContext } from "../../contexts/GlobalContext";
 import { registerForPushNotificationsAsync } from "../../utils/push";
 
@@ -15,12 +14,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 export default function PushNotificationsModal() {
-    const { user, setUser, orbis, setPushNotifsVis, setNewFeatureVis } = useContext(GlobalContext);
+    const { setPushNotifsVis, setNewFeatureVis } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const [toggleCheckBox, setToggleCheckBox] = useState(false)
 
-    /** Will enable push notifications and save the token with Orbis */
+    /** Request device permission and retain the Expo token until server-side delivery ships. */
     async function enablePushNotifications() {
         Haptics.selectionAsync();
 
@@ -31,17 +30,8 @@ export default function PushNotificationsModal() {
             console.log(error);
         }
 
-        if(res) {
-            try {
-                let result = await orbis.addNotificationsSubscription({
-                    type: "push",
-                    value: res.data,
-                    scopes: ["follow", "replies", "messages", "reposts", "reactions"],
-                    context: context
-                });
-            } catch (error) {
-                console.log(error);
-            }
+        if(res?.data) {
+            await AsyncStorage.setItem('easygo_expo_push_token', res.data);
 
             if(toggleCheckBox){
                 await AsyncStorage.setItem("showNotificationDate", moment().add(7, 'days').format('YYYY-MM-DD'))
@@ -52,6 +42,10 @@ export default function PushNotificationsModal() {
             }
             
             setPushNotifsVis(false);
+            Alert.alert(
+                'Notifications enabled',
+                'Device permission is ready. Remote EasyGo delivery will activate when backend token registration ships.'
+            );
         } else {
             alert("Error retrieving push notifications token.");
         }

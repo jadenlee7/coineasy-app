@@ -11,8 +11,7 @@ import { api, setApiTokenProvider, ApiError } from '../utils/api';
 // useAuthSync(privy)
 //
 // privy: the object returned from Privy SDK usePrivy() — must expose:
-//   - ready: boolean
-//   - authenticated: boolean
+//   - isReady: boolean (legacy integrations may expose `ready`)
 //   - user: { id, ... } | null
 //   - getAccessToken: () => Promise<string>
 //
@@ -25,6 +24,8 @@ export function useAuthSync(privy) {
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState(null);
   const syncedForUserId = useRef(null);
+  const ready = privy?.isReady ?? privy?.ready ?? false;
+  const authenticated = privy?.authenticated ?? Boolean(privy?.user);
 
   // Wire token provider exactly once when getAccessToken becomes available
   useEffect(() => {
@@ -34,16 +35,19 @@ export function useAuthSync(privy) {
   }, [privy?.getAccessToken]);
 
   const sync = useCallback(async () => {
-    if (!privy?.authenticated || !privy?.user?.id) return null;
+    if (!authenticated || !privy?.user?.id) return null;
     if (syncedForUserId.current === privy.user.id) return profile;
 
     setSyncing(true);
     setError(null);
     try {
       const result = await api.syncProfile();
-      syncedForUserId.current = privy.user.id;
-      setProfile(result);
-      return result;
+      const syncedProfile = result?.user ?? result ?? null;
+      if (syncedProfile) {
+        syncedForUserId.current = privy.user.id;
+        setProfile(syncedProfile);
+      }
+      return syncedProfile;
     } catch (e) {
       // Don't throw — fail soft so UI stays usable in dev before backend is reachable
       if (!(e instanceof ApiError)) console.warn('[auth-sync] unexpected', e);
@@ -52,20 +56,20 @@ export function useAuthSync(privy) {
     } finally {
       setSyncing(false);
     }
-  }, [privy?.authenticated, privy?.user?.id, profile]);
+  }, [authenticated, privy?.user?.id, profile]);
 
   // Auto-sync when Privy reaches authenticated state
   useEffect(() => {
-    if (privy?.ready && privy?.authenticated) {
+    if (ready && authenticated) {
       sync();
     }
-    if (privy?.ready && !privy?.authenticated) {
+    if (ready && !authenticated) {
       // Logged out — clear local cache + token provider
       syncedForUserId.current = null;
       setProfile(null);
       setApiTokenProvider(null);
     }
-  }, [privy?.ready, privy?.authenticated, sync]);
+  }, [ready, authenticated, sync]);
 
   return { profile, syncing, error, resync: sync };
 }

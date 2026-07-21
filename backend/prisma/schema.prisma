@@ -14,19 +14,42 @@ datasource db {
 }
 
 model User {
-  id               String   @id @default(cuid())
-  privyDid         String   @unique
-  telegramId       String?  @unique
+  id               String  @id @default(cuid())
+  privyDid         String  @unique
+  telegramId       String? @unique
   telegramUsername String?
-  kakaoId          String?  @unique
-  walletAddress    String?  @unique
+  kakaoId          String? @unique
+  walletAddress    String? @unique
+
+  // --- SIWE wallet verification (Path C v2 S1) --------------------
+  // Nonces are short-lived, hashed, and bound to both user and address.
+  verifiedAddress    String?   @unique
+  siweChainId        Int?
+  siweVerifiedAt     DateTime?
+  siweNonceHash      String?
+  siweNonceAddress   String?
+  siweNonceExpiresAt DateTime?
+  // ------------------------------------------------------------------
+
+  // --- ENS subname issuance (Path C v2 S4) --------------------------
+  // The name is issued on Ethereum mainnet by JustaName, while the same
+  // verified EVM address is also stored under the Base ENSIP-19 coin type.
+  subname                   String?          @unique
+  subnameStatus             EnsSubnameStatus @default(NOT_REQUESTED)
+  subnameAddress            String?
+  subnameChainId            Int?
+  subnameRequestedAt        DateTime?
+  subnameIssuedAt           DateTime?
+  subnameChallengeHash      String?
+  subnameChallengeExpiresAt DateTime?
+  // ------------------------------------------------------------------
 
   // --- Social profile (PR #9) ---------------------------------------
   // username: optional, unique handle. Lowercase enforced at app layer.
   // displayName: free-form display name shown in UI.
   // pfp: URL to avatar (media upload deferred to PR #10).
   // bio: short user-written description.
-  username    String?  @unique
+  username    String? @unique
   displayName String?
   pfp         String?
   bio         String?
@@ -35,14 +58,21 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ledger    OrangeLedger[]
-  swaps     SwapLog[]
+  ledger OrangeLedger[]
+  swaps  SwapLog[]
 
   // Social relations (PR #9)
-  posts     Post[]    @relation("PostAuthor")
+  posts     Post[]   @relation("PostAuthor")
   likes     Like[]
-  following Follow[]  @relation("Follower")
-  followers Follow[]  @relation("Followee")
+  following Follow[] @relation("Follower")
+  followers Follow[] @relation("Followee")
+
+  // Path C v2 ownership. All user-owned privacy/targeting records are
+  // removed by the future S3 account-forget flow.
+  consent          UserConsent?
+  consentAudits    UserConsentAudit[]
+  questCompletions QuestCompletion[]
+  segments         UserSegment[]
 }
 
 model OrangeLedger {
@@ -55,8 +85,8 @@ model OrangeLedger {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, createdAt])
   @@unique([reason, refId], map: "uniq_ledger_reason_ref")
+  @@index([userId, createdAt])
 }
 
 model SwapLog {
@@ -98,10 +128,10 @@ model Post {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  author   User    @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  parent   Post?   @relation("PostReplies", fields: [parentPostId], references: [id], onDelete: SetNull)
-  replies  Post[]  @relation("PostReplies")
-  likes    Like[]
+  author  User   @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  parent  Post?  @relation("PostReplies", fields: [parentPostId], references: [id], onDelete: SetNull)
+  replies Post[] @relation("PostReplies")
+  likes   Like[]
 
   // Feed cursor: newest-first by (createdAt, id).
   @@index([createdAt, id])
@@ -135,4 +165,209 @@ model Like {
   @@id([postId, userId])
   @@index([userId, createdAt])
   @@index([postId, createdAt])
+}
+
+// =====================================================================
+// Path C v2 data model (S2)
+//
+// These tables are additive and dormant until the later S3-S7 routes and
+// workers ship. Privacy defaults are deliberately deny-by-default.
+// See docs/adr/0001-path-c-v2-data-model.md.
+// =====================================================================
+
+enum ConsentAuditAction {
+  GRANTED
+  UPDATED
+  REVOKED
+  VERSION_RESET
+}
+
+enum EnsSubnameStatus {
+  NOT_REQUESTED
+  PENDING
+  ISSUED
+  FAILED
+}
+
+enum QuestType {
+  QUIZ
+  TRANSACTION
+}
+
+enum QuestStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum QuestCompletionStatus {
+  STARTED
+  SUBMITTED
+  VERIFIED
+  REJECTED
+}
+
+enum SegmentStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum SegmentAssignmentSource {
+  INDEXER
+  MANUAL
+}
+
+enum AdvertiserStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+model UserConsent {
+  userId            String    @id
+  consentVersion    String?   @db.VarChar(50)
+  termsAcceptedAt   DateTime?
+  privacyAcceptedAt DateTime?
+  segmentingOptIn   Boolean   @default(false)
+  marketingOptIn    Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserConsentAudit {
+  id                String             @id @default(cuid())
+  userId            String
+  action            ConsentAuditAction
+  consentVersion    String?            @db.VarChar(50)
+  segmentingOptIn   Boolean            @default(false)
+  marketingOptIn    Boolean            @default(false)
+  termsAcceptedAt   DateTime?
+  privacyAcceptedAt DateTime?
+  createdAt         DateTime           @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Quest {
+  id                    String      @id @default(cuid())
+  campaignId            String?
+  slug                  String      @unique @db.VarChar(100)
+  title                 String      @db.VarChar(200)
+  description           String      @db.VarChar(2000)
+  type                  QuestType
+  status                QuestStatus @default(DRAFT)
+  rewardOrange          Int         @default(0)
+  requirements          Json
+  requiresWalletSharing Boolean     @default(false)
+  startsAt              DateTime?
+  endsAt                DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  campaign    Campaign?         @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  completions QuestCompletion[]
+
+  @@index([status, startsAt, endsAt])
+  @@index([campaignId, status])
+}
+
+model QuestCompletion {
+  id                       String                @id @default(cuid())
+  questId                  String
+  userId                   String
+  status                   QuestCompletionStatus @default(STARTED)
+  verifyProof              Json?
+  walletSharingOptIn       Boolean               @default(false)
+  walletSharingConsentedAt DateTime?
+  submittedAt              DateTime?
+  verifiedAt               DateTime?
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+
+  quest Quest @relation(fields: [questId], references: [id], onDelete: Restrict)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([questId, userId])
+  @@index([questId, status])
+  @@index([userId, createdAt])
+}
+
+model Segment {
+  id          String        @id @default(cuid())
+  slug        String        @unique @db.VarChar(100)
+  name        String        @db.VarChar(200)
+  description String?       @db.VarChar(2000)
+  status      SegmentStatus @default(DRAFT)
+  ruleVersion Int           @default(1)
+  rule        Json
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  users     UserSegment[]
+  campaigns Campaign[]
+
+  @@index([status, updatedAt])
+}
+
+model UserSegment {
+  userId      String
+  segmentId   String
+  source      SegmentAssignmentSource @default(INDEXER)
+  ruleVersion Int
+  matchedAt   DateTime                @default(now())
+  expiresAt   DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  segment Segment @relation(fields: [segmentId], references: [id], onDelete: Restrict)
+
+  @@id([userId, segmentId])
+  @@index([segmentId, matchedAt])
+  @@index([userId, expiresAt])
+}
+
+model Advertiser {
+  id        String           @id @default(cuid())
+  slug      String           @unique @db.VarChar(100)
+  name      String           @db.VarChar(200)
+  status    AdvertiserStatus @default(DRAFT)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  campaigns Campaign[]
+}
+
+model Campaign {
+  id              String         @id @default(cuid())
+  advertiserId    String
+  targetSegmentId String?
+  slug            String         @unique @db.VarChar(100)
+  name            String         @db.VarChar(200)
+  status          CampaignStatus @default(DRAFT)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  advertiser    Advertiser @relation(fields: [advertiserId], references: [id], onDelete: Restrict)
+  targetSegment Segment?   @relation(fields: [targetSegmentId], references: [id], onDelete: Restrict)
+  quests        Quest[]
+
+  @@index([advertiserId, status])
+  @@index([targetSegmentId, status])
+  @@index([status, startsAt, endsAt])
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useMemo, useRef, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -12,95 +12,14 @@ import {
 } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
-import { GlobalContext } from '../../../contexts/GlobalContext';
-import moment from 'moment';
 
-const ShopScreen = ({ setSelectedShopItem, handleModalPress }) => {
-    const { 
-        orbis,
-        user,
-        userData,
-        setUserData,
-        setNewGiftsCount
-    } = useContext(GlobalContext);
-
-
-    const onClaimProduct = async (item) => {
+const ShopScreen = () => {
+    const onClaimProduct = (item) => {
         Haptics.selectionAsync()
-        setSelectedShopItem(item)
-
-        let removeNumber = item.oranges
-        const tempData = userData
-
-        if(tempData && tempData.numberOranges < removeNumber){
-            Alert.alert("You don't have enough oranges.")
-        }else{
-            tempData.numberOranges > removeNumber ? tempData.numberOranges -= removeNumber : tempData.numberOranges = 0
-    
-            if(tempData.listClaimedOranges){
-                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                if(index != -1){
-                    tempData.listClaimedOranges[index].listOranges.push({
-                        numberOranges: removeNumber,
-                        type: item.title
-                    })
-                }else{
-                    tempData.listClaimedOranges.push({
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: [
-                            {
-                                numberOranges: removeNumber,
-                                type: item.title
-                            },
-                        ]
-                    })
-                }
-            }else{
-                tempData.listClaimedOranges = [{
-                    date: moment().format('YYYY-MM-DD'),
-                    listOranges: [
-                            {
-                                numberOranges: removeNumber,
-                                type: item.title
-                            },
-                    ]
-                }]
-            }
-
-
-            const giftItem = {
-                id: Math.random(),
-                title: item.title,
-                subtitle: item.subtitle,
-                image: item.image,
-                date: moment().format("MM.DD.YYYY h:mm A"),
-                status: 'Not available yet'
-            }
-            if(tempData.gifts){
-                tempData.gifts.push(giftItem)
-            }else{
-                tempData.gifts = [giftItem]
-            }
-
-            setUserData({...tempData})
-            var tempProfile = user.profile
-            tempProfile.data = tempData
-
-            setNewGiftsCount(true)
-
-            setShopData(prev =>
-                prev.map(p =>
-                    p.id === item.id
-                    ? { ...p, remainer: Math.max(p.remainer - 1, 0) } // évite les valeurs négatives
-                    : p
-                )
-            );
-            
-            await orbis.updateProfile(tempProfile);
-
-            handleModalPress()
-        }
-
+        Alert.alert(
+            'Shop coming soon',
+            `${item.title} is preview-only. Orange will not be deducted until server-backed inventory and fulfillment are ready.`,
+        )
     }
 
     const RewardItem = ({ item, index }) => (
@@ -151,15 +70,7 @@ const ShopScreen = ({ setSelectedShopItem, handleModalPress }) => {
         </View>
     );
 
-    const addOrange = async () => {
-        const tempData = userData
-    
-        tempData.numberOranges = 2000
-                
-        setUserData({...tempData})
-    }
-
-    const [shopData, setShopData] = useState([
+    const shopData = [
         {
             id: 1,
             title: 'Seed Box',
@@ -190,16 +101,11 @@ const ShopScreen = ({ setSelectedShopItem, handleModalPress }) => {
             image: require('../../../assets/shop/orange_box.png'),
             successText: "You've received an Orange Box",
         },
-    ])
+    ]
 
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView style={styles.scrollView}>
-                {/* <TouchableOpacity
-                    onPress={() => addOrange()}
-                >
-                    <Text style={{}}>orange</Text>
-                </TouchableOpacity> */}
                 {shopData.map((item, index) => (
                     <RewardItem 
                         key={item.id+'-shop'} 

@@ -2,21 +2,33 @@
   "name": "easygo-backend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "EasyGo Phase 1 backend — identity, 🍊 Orange ledger, Squid swap proxy, Telegram bot",
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
+    "worker:segments": "node src/worker.js",
+    "worker:segments:once": "node src/worker.js --once",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
+    "prisma:status": "prisma migrate status",
+    "prisma:seed": "prisma db seed",
+    "preflight": "node scripts/preflight.js",
+    "preflight:staging": "node scripts/preflight.js --target=staging",
+    "smoke": "node scripts/smoke.js",
+    "test": "node --test",
     "lint": "echo \"(lint not configured yet)\""
   },
   "dependencies": {
-    "@privy-io/server-auth": "^1.18.0",
-    "@prisma/client": "^5.22.0",
     "@0xsquid/sdk": "^2.13.0",
     "@0xsquid/squid-types": "^0.1.216",
+    "@justaname.id/sdk": "^0.3.0",
+    "@logtail/pino": "^0.5.8",
+    "@prisma/client": "^5.22.0",
+    "@privy-io/server-auth": "^1.18.0",
+    "@sentry/node": "^10.67.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "node-telegram-bot-api": "^0.66.0",
@@ -31,5 +43,12 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "overrides": {
+    "axios": "1.18.1",
+    "qs": "6.15.3"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   }
 }

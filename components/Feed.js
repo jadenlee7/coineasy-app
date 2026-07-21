@@ -14,8 +14,8 @@ import { RepostIcon } from "./Icons";
 import { GlobalContext } from "../contexts/GlobalContext";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
-export default function Feed({posts, refreshing, refreshingBottom, onRefresh, loadMore, header, feedRef }) {
-    const { orbis, userData, homeFeedRef, scrollAnim, listBlockedUser, listHiddenPost, listMutedUsers, setShowClaimOranges, setTodayOranges, setAdAlreadyClaimed} = useContext(GlobalContext);
+export default function Feed({posts = [], refreshing, refreshingBottom, onRefresh, loadMore, header, feedRef, error, backendConfigured = true, showBanner = true, emptyTitle, emptyDescription }) {
+    const { userData, homeFeedRef, scrollAnim, listBlockedUser, listHiddenPost, listMutedUsers, setShowClaimOranges, setTodayOranges, setAdAlreadyClaimed} = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const statusBarHeight = useStatusBarHeight();
@@ -28,22 +28,10 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
         }
     }
     
-    let filteredPosts = posts.filter(e => !listBlockedUser?.includes(e.creator) && !listBlockedUser?.includes(e.reply_to_creator_details?.did)) 
+    const safePosts = Array.isArray(posts) ? posts : [];
+    let filteredPosts = safePosts.filter(e => !listBlockedUser?.includes(e.creator) && !listBlockedUser?.includes(e.reply_to_creator_details?.did))
     filteredPosts = filteredPosts.filter(e => !listHiddenPost?.includes(e.stream_id) && !listHiddenPost?.includes(e.reply_to))
     filteredPosts = filteredPosts.filter(e => !listMutedUsers?.includes(e.creator) && !listMutedUsers?.includes(e.reply_to_creator_details?.did))
-
-    filteredPosts.map(async (e)=>{
-        if(e.content.reply_to){
-            const resultPost = await orbis.getPost(e.content.reply_to)
-
-            e.reply_to_details.count_likes = resultPost.data?.count_likes
-            e.reply_to_details.count_replies = resultPost.data?.count_replies
-            e.reply_to_details.count_repost = resultPost.data?.count_repost
-            e.reply_to_details.timestamp = resultPost.data?.timestamp
-        }
-
-        return e
-    })
 
     useScrollToTop(feedRef ? feedRef : homeFeedRef);
 
@@ -60,11 +48,11 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
 
     return(
         <>
-            {(refreshing && posts.length == 0) ?
+            {(refreshing && safePosts.length == 0) ?
                 <ActivityIndicator style={{marginTop: 190}} size="small" color="#020617" />
             :
                 <>
-                {posts.length > 0 ?
+                {filteredPosts.length > 0 ?
                     <Animated.FlatList
                         ref={feedRef ? feedRef : homeFeedRef}
                         style={tailwind('w-full')}
@@ -72,7 +60,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                         ListHeaderComponent={header}
                         ListHeaderComponentStyle={tailwind('flex flex-1')}
                         renderItem={({item, index}) => {
-                            if(index == 0){
+                            if(index == 0 && showBanner){
                                 return (
                                     <>
                                         {/* <View style={{height: Platform.OS == 'ios' ? 0 : 55 + statusBarHeight, width: '100%', backgroundColor: 'red',}} /> */}
@@ -134,7 +122,7 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                                 return (<PostInFeed post={item} key={item.stream_id} />)
                             }
                         }}
-                        keyExtractor={item => item.stream_id}
+                        keyExtractor={item => String(item.stream_id)}
                         refreshing={refreshing}
                         scrollEventThrottle={16}
                         onEndReached={onEndReached}
@@ -145,8 +133,8 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                                 colors={["#020617"]}
                                 refreshing={refreshing}
                                 onRefresh={onRefresh}
-                                progressViewOffset={120 + statusBarHeight}
-                                style={{marginTop: 120 + statusBarHeight}}
+                                progressViewOffset={showBanner ? 120 + statusBarHeight : 0}
+                                style={{marginTop: showBanner ? 120 + statusBarHeight : 0}}
                             />
                         }
                         onScroll={Animated.event(
@@ -155,15 +143,37 @@ export default function Feed({posts, refreshing, refreshingBottom, onRefresh, lo
                         )}
                     />
                 :
-                    <View style={tailwind('bg-slate-50 px-2 py-4 items-center mt-4 mx-6 rounded-md mt-160px')} >
-                        <Text style={tailwind('text-secondary items-center ml-1')}>There isn't any post shared here.</Text>
+                    <View style={[tailwind('bg-slate-50 px-5 py-5 items-center mx-6 rounded-md'), {marginTop: showBanner ? 160 : 30}]} >
+                        <Text style={[tailwind('text-slate-900 text-center'), {fontFamily: 'GmarketBold'}]}>
+                            {emptyTitle || (!backendConfigured
+                                ? 'EasyGo feed is getting connected.'
+                                : error
+                                    ? "We couldn't load the feed."
+                                    : 'No posts yet.')}
+                        </Text>
+                        <Text style={[tailwind('text-secondary text-center'), {marginTop: 8, lineHeight: 19}]}>
+                            {emptyDescription || (!backendConfigured
+                                ? 'Community posts will appear once the backend is ready.'
+                                : error
+                                    ? 'Check your connection and try again.'
+                                    : 'Be the first to share something with the community.')}
+                        </Text>
+                        {error && onRefresh &&
+                            <TouchableOpacity
+                                activeOpacity={0.75}
+                                onPress={onRefresh}
+                                style={{marginTop: 14, borderRadius: 18, backgroundColor: '#FF6B17', paddingHorizontal: 18, paddingVertical: 9}}
+                            >
+                                <Text style={{color: 'white', fontFamily: 'GmarketBold', fontSize: 13}}>Try again</Text>
+                            </TouchableOpacity>
+                        }
                     </View>
                 }
                 </>
             }
 
 
-            {(refreshingBottom && posts && posts.length > 0) &&
+            {(refreshingBottom && safePosts.length > 0) &&
                 <ActivityIndicator style={{marginTop: 10}} size="small" color="#020617" />
             }
         </>

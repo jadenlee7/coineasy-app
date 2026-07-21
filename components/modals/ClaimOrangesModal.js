@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Alert, Animated, Dimensions, Easing, Image, Linking, StyleSheet, Text, TouchableOpacity, View, Modal as RNModal } from 'react-native'
+import { Alert, Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View, Modal as RNModal } from 'react-native'
 
 import Modal from '../Modal';
 import Button from '../Button';
@@ -26,6 +26,7 @@ const ClaimOrangesModal = (props) => {
     const [showAds, setShowAds] = useState(!adAlreadyClaimed)
     const [completeAds, setCompleteAds] = useState(false)
     const [showClose, setShowClose] = useState(false)
+    const [claimLoading, setClaimLoading] = useState(false)
 
     const openUrl = async () => {
         let url = 'https://youtu.be/EPLZlxe07Eg'
@@ -45,6 +46,20 @@ const ClaimOrangesModal = (props) => {
         setShowAds(false);
         setCompleteAds(false);
         setShowClose(false);
+        setClaimLoading(false);
+    }
+
+    const claimAdReward = async () => {
+        if (claimLoading) return;
+        setClaimLoading(true);
+        const claimed = await onClaimAdReward();
+        setClaimLoading(false);
+        if (claimed) {
+            setShowAds(false);
+            setCompleteAds(true);
+        } else {
+            onHideModal();
+        }
     }
 
     return (
@@ -140,9 +155,10 @@ const ClaimOrangesModal = (props) => {
                                 {showClose ? (
                                     <TouchableOpacity
                                         style={{position: 'absolute',top: 10, right: 5}}
-                                        onPress={() => {Haptics.selectionAsync();setShowAds(false);onClaimAdReward();setCompleteAds(true)}}
+                                        onPress={() => {Haptics.selectionAsync();claimAdReward()}}
+                                        disabled={claimLoading}
                                     >
-                                        <AntDesign name="closecircle" size={24} color="white" />
+                                        <AntDesign name={claimLoading ? "clockcircle" : "closecircle"} size={24} color="white" />
                                     </TouchableOpacity>
                                 ) : (
                                     <CountdownCircleTimer

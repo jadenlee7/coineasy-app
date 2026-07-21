@@ -82,17 +82,58 @@ async function request(method, path, { body, query, auth = true, signal } = {}) 
 
 // ---------------------------------------------------------------------------
 // Public helpers (1:1 with backend route surface)
-// See backend/src/routes/{auth,orange,swap,telegram,profiles,posts,follows}.js
+// See backend/src/routes/{auth,me,orange,swap,telegram,profiles,posts,follows}.js
 // ---------------------------------------------------------------------------
 export const api = {
   // auth
   syncProfile: () => request('POST', '/auth/sync', {}),
   me: () => request('GET', '/auth/me'),
+  deleteAccount: () => request('DELETE', '/me/data', {
+    body: { confirmation: 'DELETE_MY_EASYGO_DATA' },
+  }),
+  siweNonce: (address) => request('POST', '/auth/siwe/nonce', { body: { address } }),
+  siweVerify: ({ message, signature }) =>
+    request('POST', '/auth/siwe/verify', { body: { message, signature } }),
+
+  // privacy + consent (Path C v2 S3)
+  consent: () => request('GET', '/me/consent'),
+  updateConsent: (body) => request('PUT', '/me/consent', { body }),
+  exportMyData: () => request('GET', '/me/data'),
+  exportMySocialData: () => request('GET', '/me/social-export'),
+  deleteMyData: () => request('DELETE', '/me/data', {
+    body: { confirmation: 'DELETE_MY_EASYGO_DATA' },
+  }),
+
+  // ENS identity (Path C v2 S4; backend flag remains off by default)
+  subnameStatus: () => request('GET', '/identity/subname'),
+  subnameChallenge: () => request('POST', '/identity/subname/challenge', {}),
+  issueSubname: ({ message, signature }) =>
+    request('POST', '/identity/issue-subname', { body: { message, signature } }),
+  segments: () => request('GET', '/segments'),
+
+  // quests (Path C v2 S6; backend flag remains off by default)
+  quests: () => request('GET', '/quests'),
+  startQuest: (questId, { walletSharingOptIn = false } = {}) =>
+    request('POST', `/quests/${encodeURIComponent(questId)}/start`, {
+      body: { walletSharingOptIn },
+    }),
+  completeQuest: (questId, proof) =>
+    request('POST', `/quests/${encodeURIComponent(questId)}/complete`, { body: proof }),
+
+  // staged social retirement metadata (S8; mode defaults to active)
+  socialStatus: () => request('GET', '/social/status', { auth: false }),
 
   // orange (🍊 hype point ledger)
-  orangeBalance: (address) => request('GET', `/orange/balance/${address}`),
-  orangeHistory: (address, { limit = 50 } = {}) =>
-    request('GET', `/orange/history/${address}`, { query: { limit } }),
+  orangeBalance: (_address) => request('GET', '/orange/balance'),
+  orangeHistory: (_address, { limit = 50 } = {}) =>
+    request('GET', '/orange/history', { query: { limit } }),
+  orangeRewardStatus: () => request('GET', '/orange/rewards/status'),
+  orangeClaimFirstReward: () => request('POST', '/orange/claims/first-reward'),
+  orangeClaimDailyCheckin: () => request('POST', '/orange/claims/daily-checkin'),
+  orangeClaimDailyActivity: () => request('POST', '/orange/claims/daily-activity'),
+  orangeClaimAdReward: () => request('POST', '/orange/claims/ad-reward'),
+  orangeClaimCourseQuiz: ({ courseId, sectionId }) =>
+    request('POST', '/orange/claims/course-quiz', { body: { courseId, sectionId } }),
 
   // swap (Squid via backend proxy)
   swapQuote: (params) => request('POST', '/swap/quote', { body: params }),
@@ -112,15 +153,18 @@ export const api = {
     // Public profile by username (URL-safe).
     byUsername: (username) =>
       request('GET', `/profiles/by-username/${encodeURIComponent(username)}`),
+    // Prefix/substring discovery across username and display name.
+    search: (query, { limit = 20 } = {}) =>
+      request('GET', '/profiles/search', { query: { q: query, limit } }),
   },
 
   posts: {
     // Reverse-chron home feed (cursor pagination).
-    feed: ({ cursor, limit = 20 } = {}) =>
-      request('GET', '/posts/feed', { query: { cursor, limit } }),
+    feed: ({ cursor, limit = 20, q, tag } = {}) =>
+      request('GET', '/posts', { query: { cursor, limit, q, tag } }),
     // A user's posts timeline (cursor pagination).
     timeline: (userId, { cursor, limit = 20 } = {}) =>
-      request('GET', `/posts/timeline/${encodeURIComponent(userId)}`, {
+      request('GET', `/posts/by-author/${encodeURIComponent(userId)}`, {
         query: { cursor, limit },
       }),
     // Single post by id.
@@ -131,8 +175,11 @@ export const api = {
         query: { cursor, limit },
       }),
     // Create a new post (top-level or reply if parentPostId set).
-    // body: { content, parentPostId?, mediaUrl? }
+    // body: { body, parentPostId?, mediaUrl? }
     create: (body) => request('POST', '/posts', { body }),
+    // Edit own post body/media.
+    update: (postId, body) =>
+      request('PUT', `/posts/${encodeURIComponent(postId)}`, { body }),
     // Soft-delete own post.
     remove: (postId) => request('DELETE', `/posts/${encodeURIComponent(postId)}`),
     // Like / unlike a post.
@@ -149,7 +196,7 @@ export const api = {
       request('DELETE', `/follows/${encodeURIComponent(targetUserId)}`),
     // Is the current viewer following targetUserId?
     status: (targetUserId) =>
-      request('GET', `/follows/status/${encodeURIComponent(targetUserId)}`),
+      request('GET', `/follows/${encodeURIComponent(targetUserId)}/status`),
     // Followers / following lists for a user (cursor pagination).
     followers: (userId, { cursor, limit = 20 } = {}) =>
       request('GET', `/profiles/${encodeURIComponent(userId)}/followers`, {
@@ -159,6 +206,12 @@ export const api = {
       request('GET', `/profiles/${encodeURIComponent(userId)}/following`, {
         query: { cursor, limit },
       }),
+  },
+
+  notifications: {
+    // Activity derived from follows, likes, and replies for the current user.
+    list: ({ limit = 50 } = {}) =>
+      request('GET', '/notifications', { query: { limit } }),
   },
 };
 

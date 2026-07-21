@@ -38,42 +38,96 @@ data (empty lists) but do not crash. Auth via Privy works end-to-end.
 
 ### PR #8 — Backend social models + REST API
 
-- [ ] Extend `backend/prisma/schema.prisma` with `Post`, `Reply`, `Profile`,
-      `Follow`, `Like` models. Wire Prisma migrations.
-- [ ] Add REST routes: `/api/posts`, `/api/replies`, `/api/profiles`,
-      `/api/follows`, `/api/likes`. All gated by Privy JWT verification.
-- [ ] Backfill seed data for local dev.
+- [x] Extend `backend/prisma/schema.prisma` with social profile fields plus
+      `Post`, `Follow`, and `Like` models. Replies use `Post.parentPostId`.
+      Wire the Prisma migration.
+- [x] Add REST routes under `/posts`, `/profiles`, and `/follows`. Mutations
+      require Privy JWT verification; public reads accept optional auth.
+- [x] Add deterministic, repeatable EasyGo demo seed data for local dev, with
+      a non-local database safety guard.
 
 ### PR #9..N — Wire screens off the orbisCompat shim
 
 One screen group per PR, smallest first:
 
-- [ ] `screens/Home.js` + `components/Feed.js` → `usePosts` + `useFeed`
-- [ ] `components/Postbox.js` → `usePosts.create` + `useReplies.create`
-- [ ] `screens/Profile.js` + `components/ProfileDetails.js` → `useSocialProfile`
-- [ ] `components/User.js` (follow button) → `useFollow`
-- [ ] `screens/Categories.js`, `screens/Search.js`, `screens/News.js` → `useFeed`
-- [ ] Notifications, modals (PostSettingsModal, RepostModal, etc.)
+- [x] `screens/Home.js` + `components/Feed.js` → `usePosts` + `useFeed`
+- [x] `components/Postbox.js` → `usePosts.create` + `useReplies.create`
+- [x] `screens/Profile.js` + `components/ProfileDetails.js` → `useSocialProfile`
+- [x] `components/User.js` (follow button) → `useFollow`
+- [x] `screens/Categories.js`, `screens/Search.js`, `screens/News.js` → `useFeed`
+- [x] Notifications, modals (PostSettingsModal, RepostModal, etc.)
 
 Each PR removes one or more `orbis.<x>(...)` callsites until the shim has
 no consumers.
 
+The profile migration also wires the root-post timeline, profile editing,
+follow status/mutations, follower/following/mutual lists, and mutual-follower
+counts to the EasyGo REST API. Authored-reply and repost timelines, social-link
+persistence, and media upload remain explicit unavailable states until their
+backend surfaces are added.
+
+Discovery now uses backend-filtered pagination rather than filtering a single
+client page: `GET /posts?q=&tag=` powers post search and hashtag categories,
+while `GET /profiles/search?q=` powers username/display-name discovery. The
+News screen combines EasyGo `#NEWS` posts with the existing curated RSS feed.
+Publishing from a selected category appends that category hashtag when it is
+not already present, so new posts immediately belong to the selected feed.
+
+The activity inbox is derived from the existing `Follow`, `Like`, and reply
+rows through `GET /notifications`, so it needs no additional database model.
+Likes, post editing/deletion, notification-to-thread navigation, Privy account
+settings, profile naming, and the first-reward ledger claim now use EasyGo
+APIs. All `components/modals` Orbis callsites are removed. Repost/quote,
+message media, profile-photo upload, and server-side Expo push-token
+registration remain honest unavailable states until those backend models ship.
+
 ### PR final — Drop the shim
 
-- [ ] Verify zero `orbis.` callsites remain (grep).
-- [ ] Delete `utils/orbisCompat.js`.
-- [ ] Remove `orbis` from `GlobalContext.Provider` value.
-- [ ] Remove `@orbisclub/orbis-sdk` and Ceramic packages from
+- [x] Verify zero `orbis.` callsites remain in application/backend source.
+- [x] Delete `utils/orbisCompat.js`.
+- [x] Remove `orbis` from `GlobalContext.Provider` value.
+- [x] Remove the legacy SDK, WalletConnect bridge, and Ceramic packages from
       `package.json` (and `resolutions`). Clean `babel.config.js` /
       `metro.config.js` polyfills that were Orbis-only.
+
+The final migration also moves check-in, daily activity, ad-slot, and quiz
+rewards to idempotent backend ledger claims. Course progress remains local to
+the device for Phase 1. Legacy chat is shown as unavailable, and the preview
+shop never deducts Orange until inventory and fulfillment are server-backed.
+
+### Path C v2 S8 — staged social retirement readiness
+
+The current `/posts`, `/profiles`, `/follows`, and `/notifications` endpoints
+are no longer Orbis shims; they are the live EasyGo social backend. S8 therefore
+does not immediately remove them. `LEGACY_SOCIAL_MODE` ships as `active`, with
+reviewed `read_only` and `retired` transitions available later. Both retirement
+modes return a self-service `/me/social-export` path, and `/social/status`
+allows a client release to discover capability changes before using a social
+screen. No social rows or tables are deleted by S8.
+
+### Path C v2 S2/S9 — staging migration and process readiness
+
+- [x] Generate and commit the additive Path C migration containing SIWE/ENS
+      User fields plus consent, quest, segment, advertiser, and campaign tables.
+- [x] Add a test that rejects destructive SQL and verifies all eight S2 tables.
+- [x] Split web/worker deployment contracts and add `/health` plus `/ready`.
+- [x] Add a secret-safe staging preflight and read-only post-deploy smoke runner.
+- [ ] Create or select a dedicated EasyGo staging Railway project. The current
+      local Railway context belongs to another project and must not be reused.
+- [ ] Configure backend secrets, take a staging DB backup, inspect migration
+      status, and apply `prisma migrate deploy` once from a controlled job.
+- [ ] Run real-device Privy login and core API QA against the staging URL.
 
 ## Owner action items (outside this PR)
 
 - [x] Revoke + rotate the previously-hardcoded Pinata API keys.
-- [ ] Set `EXPO_PUBLIC_PRIVY_APP_ID` in `.env` (local) and in EAS env
-      (build). The current EasyGo Privy app ID is known.
-- [ ] Confirm the backend `/auth/sync` endpoint validates Privy JWTs
-      (this should already be true from PR #5 — verify before PR #8).
+- [x] Set `EXPO_PUBLIC_PRIVY_APP_ID` and `EXPO_PUBLIC_PRIVY_CLIENT_ID` in the
+      local `.env` for the EasyGo mobile client.
+- [ ] Set the same public identifiers plus `EXPO_PUBLIC_BACKEND_URL` in EAS.
+- [ ] Add a local/staging `EXPO_PUBLIC_BACKEND_URL`; the current root `.env`
+      contains only the two public Privy identifiers.
+- [x] Confirm `/auth/sync` is guarded by `requireAuth`, which verifies the
+      Privy Bearer access token before profile sync.
 
 ## Privy + AuthBridge data flow (Phase 1)
 
@@ -86,16 +140,16 @@ no consumers.
                          |  AuthBridge     |  <----------------------------
                          |  (in App.js)    |
                          +--------+--------+
-                                  | setUser / setUserData (Orbis-shape)
+                                  | setUser / setUserData (presentation state)
                                   v
                          +-----------------+
                          |  GlobalContext  |  ←  consumed by every screen
                          +-----------------+
 ```
 
-## Why a shim instead of deleting Orbis calls now
+## Why a shim was used during migration
 
-The legacy Coineasy code has hundreds of `orbis.<x>(...)` callsites across
+The legacy Coineasy code had hundreds of `orbis.<x>(...)` callsites across
 screens, components, and modals. Deleting them all in a single PR would be
 unreviewable and high-risk. The shim lets us:
 
@@ -103,7 +157,7 @@ unreviewable and high-risk. The shim lets us:
    GlobalContext access).
 2. Migrate one feature at a time, with a clear PR boundary per area.
 3. Track progress: `grep "orbis\." | wc -l` is a real burndown counter.
-4. Delete the shim cleanly once the counter hits zero.
+4. Delete the shim cleanly once the counter hits zero (now complete).
 
 ## Out of scope (deferred to later phases)
 

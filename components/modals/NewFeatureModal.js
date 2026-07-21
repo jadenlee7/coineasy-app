@@ -1,11 +1,10 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Text, View, Image, TouchableOpacity, Animated, Easing, Platform, Dimensions, StyleSheet } from 'react-native';
+import { Alert, Text, View, Image, TouchableOpacity, Animated, Easing, Platform, Dimensions, StyleSheet } from 'react-native';
 
 import Modal from "../Modal";
 import Button from "../Button";
-import { context } from "../../utils/config"
 import { GlobalContext } from "../../contexts/GlobalContext";
-import { registerForPushNotificationsAsync } from "../../utils/push";
+import { api } from "../../utils/api";
 
 import moment from "moment";
 import Checkbox from 'expo-checkbox';
@@ -18,7 +17,7 @@ import { useNavigation } from "@react-navigation/core";
 const {width, height} = Dimensions.get('window')
 
 export default function NewFeatureModal() {
-    const { user, userData, setUserData, orbis, setNewFeatureVis, newFeatureAlertVis, setNewFeatureAlertVis } = useContext(GlobalContext);
+    const { setUserData, setNewFeatureVis, newFeatureAlertVis, setNewFeatureAlertVis } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const navigation = useNavigation()
@@ -95,51 +94,24 @@ export default function NewFeatureModal() {
             setNewFeatureVis(false)
             setNewFeatureAlertVis(false)
         }else{
-            const tempData = userData
-    
-            if(tempData){
-                tempData.numberOranges ? tempData.numberOranges += 50 : tempData.numberOranges = 50
-    
-                if(tempData.listClaimedOranges){
-                    const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                    if(index != -1){
-                        tempData.listClaimedOranges[index].listOranges.push({
-                            numberOranges: 50,
-                            type: 'First Orange Rewards'
-                        })
-                    }else{
-                        tempData.listClaimedOranges.push({
-                            date: moment().format('YYYY-MM-DD'),
-                            listOranges: [
-                                {
-                                    numberOranges: 50,
-                                    type: 'First Orange Rewards'
-                                },
-                            ]
-                        })
-                    }
-                }else{
-                    tempData.listClaimedOranges = [{
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: [
-                                {
-                                    numberOranges: 50,
-                                    type: 'First Orange Rewards'
-                                },
-                        ]
-                    }]
-                }
-    
-                userData.firstTime = 'done'
-                setUserData({...tempData})
-                
-                var tempProfile = user.profile
-                tempProfile.data = tempData
-
-                const res = await orbis.updateProfile(tempProfile);
+            try {
+                const result = await api.orangeClaimFirstReward();
+                if (!result) throw new Error('backend_not_configured');
+                setUserData((current) => ({
+                    ...(current || {}),
+                    numberOranges: result.balance,
+                    firstTime: 'done',
+                }));
                 await AsyncStorage.setItem('FirstTimeReward', 'false')
-
+                if (!result.claimed) {
+                    setNewFeatureVis(false)
+                    setNewFeatureAlertVis(false)
+                    Alert.alert('Reward already claimed', `Your EasyGo balance is ${result.balance} Oranges.`);
+                    return;
+                }
                 setShowOrangesAdded(true)
+            } catch {
+                Alert.alert('Could not claim reward', 'Connect the EasyGo backend and try again.');
             }
         }
     }

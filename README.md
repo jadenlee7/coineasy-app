@@ -1,25 +1,50 @@
-# Template to use Orbis on mobile with Expo and React Native
+# EasyGo mobile app
 
-To start using download this repository and install the required packages with `yarn install`. To get it to work we had to force some specific versions of Ceramic packages which can be viewed in the `resolutions` object in `package.json` as well as modified the `babel.config.js` and `metro.config.js`while also using the polyfills provided by the Orbis SDK.
+EasyGo is the CoinEasy social onboarding app: Privy authentication, an EasyGo
+social feed, Base-first swaps, education, and the server-backed Orange reward
+ledger. The mobile client uses Expo / React Native; the API lives in
+[`backend/`](./backend/README.md).
 
-## Orbis SDK
+## Local setup
 
-To get it to work, you will notice that we are initializing the Orbis object with some parameters:
-
+```bash
+npm install
+cp .env.example .env
+npm run preflight
+npm start
 ```
-let orbis = new Orbis({
-  useLit: false,
-  store: AsyncStorage,
-  storeAsync: true
-});
+
+Required public mobile configuration:
+
+```env
+EXPO_PUBLIC_PRIVY_APP_ID=your-privy-app-id
+EXPO_PUBLIC_PRIVY_CLIENT_ID=your-privy-mobile-client-id
+EXPO_PUBLIC_BACKEND_URL=http://localhost:3000
 ```
 
-This is used to avoid using Lit which isn't fully working in this template right now as well as to use an Async storage instead of the browser based `localStorage`.
+The app can boot and authenticate with only the Privy identifiers. Feed,
+profile, notifications, and Orange mutations require a reachable EasyGo
+backend URL. See [`backend/.env.example`](./backend/.env.example) for private
+server configuration; never place server secrets in the Expo `.env` file.
 
-## Connecting
+The current local `.env` has both Privy identifiers but no backend URL, so
+`npm run preflight` reports a disconnected-API warning. For staging, use
+`npm run preflight:staging`; it fails until an HTTPS backend URL is configured.
+The Privy mobile client must allow both native identifiers—iOS
+`com.coineasy.coineasysocial` and Android `com.coineasy.coineasy`—plus the
+`coineasyapp` URL scheme.
 
-The connection to the Orbis account is managed with a QR code scanning from app.orbis.club (but this can be replicated on any website) which simply passes the `ceramic-session` object from localStorage to the mobile app. It's then being read by the `isConnected` function to automatically connect the user.
+## Commands
 
-## Tailwind RN
+```bash
+npm start       # Expo dev client
+npm run ios     # native iOS run
+npm run android # native Android run
+npm run preflight         # local config check
+npm run preflight:staging # staging config gate
+npm run test:preflight    # config-check unit tests
+```
 
-This project is using `tailwind-rn` for the styles. The documentation can be access [here](https://github.com/vadimdemedes/tailwind-rn).
+The project uses `tailwind-rn` for existing presentation styles. The legacy
+social-service shim and its mobile polyfills have been removed; identity is
+owned by Privy and application data is owned by the EasyGo API.

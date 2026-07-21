@@ -15,6 +15,7 @@ export function useOrange(address) {
   const [balance, setBalance] = useState(0);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState(null);
 
   const refresh = useCallback(async () => {
@@ -26,15 +27,17 @@ export function useOrange(address) {
         api.orangeBalance(address),
         api.orangeHistory(address, { limit: 50 }),
       ]);
-      // balRes shape (Phase 1 backend): { address, balance: number }
-      setBalance(balRes?.balance ?? 0);
-      // histRes shape: { entries: [{ amount, reason, createdAt }, ...] }
-      setHistory(histRes?.entries ?? []);
+      // balRes shape (Phase 1 backend): { balance: number }
+      if (balRes) setBalance(balRes.balance ?? 0);
+      // histRes shape: { rows: [{ delta, reason, createdAt }, ...] }
+      if (histRes) setHistory(histRes.rows ?? []);
+      setReady(Boolean(balRes || histRes));
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) {
         // New user not yet synced — treat as zero balance, not an error
         setBalance(0);
         setHistory([]);
+        setReady(true);
       } else {
         setError(e);
       }
@@ -58,6 +61,7 @@ export function useOrange(address) {
     balance,
     history,
     loading,
+    ready,
     error,
     refresh,
     earn,

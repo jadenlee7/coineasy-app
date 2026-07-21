@@ -1,5 +1,5 @@
 import React, { useState, useContext, useRef } from "react";
-import { Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity, Animated, Dimensions, Platform, StyleSheet, TouchableHighlight } from 'react-native';
+import { Alert, Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity, Animated, Dimensions, Platform, StyleSheet, TouchableHighlight } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -14,7 +14,7 @@ import { SuccessIcon } from "../Icons";
 import { UserPfp } from "../User";
 import useDidToAddress from "../../hooks/useDidToAddress";
 import useGetUsername from "../../hooks/useGetUsername";
-import moment from "moment";
+import usePosts from "../../hooks/usePosts";
 
 const list_report = [
     {label: 'It\'s spam'},
@@ -28,7 +28,6 @@ const list_report = [
 
 export default function PostSettingsModal() {    
     const { 
-        orbis,
         user,
         showPostbox,
         postboxVis,
@@ -43,8 +42,6 @@ export default function PostSettingsModal() {
         modalPostSettingsRef,
         showReportBack,
         setShowReportBack,
-        userData,
-        setUserData
     } = useContext(GlobalContext);
 
     const windowSize = Dimensions.get('window')
@@ -59,6 +56,7 @@ export default function PostSettingsModal() {
     const [showMuteBack, setShowMuteBack] = useState(false)
 
     const [loader, setLoader] = useState(false)
+    const { remove: removePost, backendConfigured } = usePosts({ autoLoad: false });
 
     const moveAnimation1 = useRef(new Animated.Value(0)).current;
     const moveAnimation2 = useRef(new Animated.Value(windowSize.width)).current;
@@ -71,6 +69,7 @@ export default function PostSettingsModal() {
 
     function hide() {
         setEditedPost(null);
+        setSuccess(false);
         Keyboard.dismiss()
         Haptics.selectionAsync();
         modalPostSettingsRef.current?.close()
@@ -82,62 +81,30 @@ export default function PostSettingsModal() {
     }
 
     async function deletePost() {
-
-        // if post newer than 06/09/2024 16:36:01
-        // remove 15 oranges awarded during creation
-        if(editedPost?.value.timestamp > 1725633361){
-            const tempData = userData ?? {}
-
-            if(tempData.listClaimedOranges){
-                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                if(index != -1){
-                    tempData.listClaimedOranges[index].listOranges.push({
-                        numberOranges: -15,
-                        type: 'Post Deletion'
-                    })
-                }else{
-                    tempData.listClaimedOranges.push({
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: [
-                            {
-                                numberOranges: -15,
-                                type: 'Post Deletion'
-                            },
-                        ]
-                    })
-                }
-            }else{
-                tempData.listClaimedOranges = [{
-                    date: moment().format('YYYY-MM-DD'),
-                    listOranges: [
-                        {
-                            numberOranges: -15,
-                            type: 'Post Deletion'
-                        },
-                    ]
-                }]
-            }
-
-            tempData.numberOranges ? tempData.numberOranges -= 15 : tempData.numberOranges = 0
-
-            setUserData({...tempData})
-            console.log(JSON.stringify(tempData));
-            
-
-            var tempProfile = user.profile
-            tempProfile.data = tempData
-            const res = await orbis.updateProfile(tempProfile);
+        const postId = editedPost?.value?.easygo?.postId || editedPost?.value?.stream_id;
+        if (!backendConfigured) {
+            Alert.alert('Backend not connected', 'Add EXPO_PUBLIC_BACKEND_URL to .env before deleting.');
+            return;
         }
-        
+        if (!postId) {
+            Alert.alert('Post unavailable', 'Close this menu and reopen the post.');
+            return;
+        }
+
         setLoading(true);
-        let res = await orbis.deletePost(editedPost?.value.stream_id);
+        const removed = await removePost(postId);
         setLoading(false);
-        setSuccess(true);
-        if(editPost.type != 'notCreatorReposted'){
-            editedPost.callbackDelete();
+        if (!removed) {
+            Alert.alert('Could not delete post', 'Check the backend connection and try again.');
+            return;
         }
+
+        setSuccess(true);
+        editedPost?.callbackDelete?.();
         await sleep(1500);
         setEditedPost(null);
+        setSuccess(false);
+        modalPostSettingsRef.current?.close();
     }
 
     const doAnimation = (ref1, ref2, value1, value2, return_function) => {

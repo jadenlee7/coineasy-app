@@ -14,11 +14,12 @@
  *   - Returns { rows, nextCursor }. nextCursor === null means end.
  *
  * Endpoints
- *   GET    /posts                  feed (global, newest first)
+ *   GET    /posts                  feed (global, newest first; optional q/tag)
  *   GET    /posts/by-author/:userId  user timeline (root posts only)
  *   GET    /posts/:id              single post + author summary
  *   GET    /posts/:id/replies      replies to a post (cursor)
  *   POST   /posts                  create root post or reply (auth)
+ *   PUT    /posts/:id              edit own post (auth)
  *   DELETE /posts/:id              delete own post (auth)
  *   POST   /posts/:id/like         like (auth, idempotent)
  *   DELETE /posts/:id/like         unlike (auth, idempotent)
@@ -97,13 +98,25 @@ async function paginate({ where, limit, cursor }) {
   return { page, nextCursor: hasMore ? page[page.length - 1].id : null };
 }
 
-// --- GET /posts (global feed) ---------------------------------------
+function optionalTextQuery(value, maxLength = 100) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim();
+  return normalized ? normalized.slice(0, maxLength) : null;
+}
+
+// --- GET /posts (global feed / text and hashtag discovery) ----------
 postsRouter.get('/', async (req, res) => {
   const limit = parseLimit(req.query);
   const cursor = req.query.cursor ? String(req.query.cursor) : null;
+  const query = optionalTextQuery(req.query.q);
+  const tag = optionalTextQuery(req.query.tag, 50);
   const viewer = await viewerUserId(req);
   const { page, nextCursor } = await paginate({
-    where: { parentPostId: null },
+    where: {
+      parentPostId: null,
+      ...(query ? { body: { contains: query, mode: 'insensitive' } } : {}),
+      ...(tag ? { AND: [{ body: { contains: tag, mode: 'insensitive' } }] } : {}),
+    },
     limit,
     cursor,
   });
@@ -182,6 +195,37 @@ postsRouter.post('/', requireAuth, async (req, res) => {
   res.status(201).json({ post: await shapePost(created, user.id) });
 });
 
+// --- PUT /posts/:id (edit own post) --------------------------------
+const updateSchema = z.object({
+  body: z.string().min(1).max(2000),
+  mediaUrl: z.string().url().max(500).optional().nullable(),
+});
+
+postsRouter.put('/:id', requireAuth, async (req, res) => {
+  const parsed = updateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'bad_input', details: parsed.error.issues });
+  }
+
+  const user = await prisma.user.findUnique({ where: { privyDid: req.user.privyDid } });
+  if (!user) return res.status(404).json({ error: 'user_not_found' });
+  const post = await prisma.post.findUnique({ where: { id: req.params.id } });
+  if (!post) return res.status(404).json({ error: 'not_found' });
+  if (post.authorId !== user.id) return res.status(403).json({ error: 'forbidden' });
+
+  const updated = await prisma.post.update({
+    where: { id: post.id },
+    data: {
+      body: parsed.data.body,
+      ...(Object.prototype.hasOwnProperty.call(parsed.data, 'mediaUrl')
+        ? { mediaUrl: parsed.data.mediaUrl ?? null }
+        : {}),
+    },
+    include: { author: { select: authorSummary } },
+  });
+  res.json({ post: await shapePost(updated, user.id) });
+});
+
 // --- DELETE /posts/:id ----------------------------------------------
 postsRouter.delete('/:id', requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { privyDid: req.user.privyDid } });
@@ -189,7 +233,10 @@ postsRouter.delete('/:id', requireAuth, async (req, res) => {
   const post = await prisma.post.findUnique({ where: { id: req.params.id } });
   if (!post) return res.status(404).json({ error: 'not_found' });
   if (post.authorId !== user.id) return res.status(403).json({ error: 'forbidden' });
-  await prisma.post.delete({ where: { id: post.id } });
+  await prisma.$transaction([
+    prisma.post.deleteMany({ where: { parentPostId: post.id } }),
+    prisma.post.delete({ where: { id: post.id } }),
+  ]);
   res.json({ ok: true });
 });
 

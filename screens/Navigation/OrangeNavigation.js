@@ -1,8 +1,7 @@
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Dimensions, Easing, Image, ImageBackground, Modal, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
+import { Alert, Dimensions, Image, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { ScrollView } from 'react-native-gesture-handler';
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 
 import { GlobalContext } from '../../contexts/GlobalContext';
@@ -14,9 +13,10 @@ import useStatusBarHeight from '../../hooks/useStatusBarHeight';
 import OrangeReward from './Oranges/OrangeReward';
 import ShopScreen from './Oranges/ShopScreen';
 import GiftScreen from './Oranges/GiftScreen';
-import moment from 'moment';
 import ClaimOrangesModal from '../../components/modals/ClaimOrangesModal';
 import Header from '../../components/Header';
+import { api, ApiError } from '../../utils/api';
+import { useOrange } from '../../hooks/useOrange';
 
 
 const TabBarHeight = 50;
@@ -26,7 +26,6 @@ const windowSize = Dimensions.get('window')
 
 const OrangeNavigation = ({navigation, route}) => {
     const { 
-        orbis,
         user,
         userData,
         setUserData,
@@ -38,17 +37,10 @@ const OrangeNavigation = ({navigation, route}) => {
     const statusBarHeight = useStatusBarHeight();
 
     const showBack = route.params?.back
+    const { balance, history, ready: orangeReady, refresh: refreshOrange } = useOrange(user?.id);
     
     const [openDailyCheckinModal, setOpenDailyCheckinModal] = useState(false)
     const [openDailyActivityModal, setOpenDailyActivityModal] = useState(false)
-
-    const [selectedShopItem, setSelectedShopItem] = useState(null)
-
-
-    const modalShopRef = useRef(null); 
-    const snapPoints = useMemo(() => ['65%','65%'], []);
-    const handleShopModalPress = useCallback(() => modalShopRef.current?.present(), []);
-
 
     const [tabIndex, setIndex] = useState(0);
     const routes = [
@@ -75,235 +67,123 @@ const OrangeNavigation = ({navigation, route}) => {
         );
     };
 
+    const rewardTypeLabel = useCallback((reason) => ({
+        DAILY_CHECKIN: 'Check-in reward',
+        DAILY_ACTIVITY: 'Daily activity reward',
+        AD_REWARD: 'AD reward',
+        COURSE_QUIZ: 'Quiz completed',
+        FIRST_REWARD: 'First reward bonus',
+        WELCOME: 'Welcome bonus',
+        SWAP: 'Swap reward',
+    }[reason] || reason.replaceAll('_', ' ')), []);
+
+    const groupedHistory = useCallback((rows) => {
+        const grouped = new Map();
+        rows.forEach((row) => {
+            const date = new Date(row.createdAt).toISOString().slice(0, 10);
+            if (!grouped.has(date)) grouped.set(date, []);
+            grouped.get(date).push({
+                numberOranges: row.delta,
+                type: rewardTypeLabel(row.reason),
+            });
+        });
+        return [...grouped.entries()].map(([date, listOranges]) => ({ date, listOranges }));
+    }, [rewardTypeLabel]);
+
+    useEffect(() => {
+        if (!orangeReady) return;
+        setUserData((current) => ({
+            ...(current || {}),
+            numberOranges: balance,
+            listClaimedOranges: groupedHistory(history),
+        }));
+    }, [balance, groupedHistory, history, orangeReady, setUserData]);
+
+    const loadRewardStatus = useCallback(async () => {
+        try {
+            const status = await api.orangeRewardStatus();
+            if (!status) return;
+            setUserData((current) => ({
+                ...(current || {}),
+                numberOranges: status.balance,
+                todayActivities: status.todayActivities,
+                dailyCheckin: status.dailyCheckin,
+                dailyActivity: status.dailyActivity,
+                adReward: { nextReset: status.adReward?.nextAvailable || null },
+            }));
+        } catch (error) {
+            console.warn('[orange] unable to load reward status', error);
+        }
+    }, [setUserData]);
+
+    useEffect(() => {
+        if (user?.id) loadRewardStatus();
+    }, [loadRewardStatus, user?.id]);
+
+    const syncClaim = useCallback(async (claim, stateKey) => {
+        const result = await claim();
+        if (!result) {
+            Alert.alert('Backend not connected', 'Set EXPO_PUBLIC_BACKEND_URL to claim Orange rewards.');
+            return null;
+        }
+        setUserData((current) => ({
+            ...(current || {}),
+            numberOranges: result.balance,
+            ...(stateKey ? {
+                [stateKey]: stateKey === 'adReward'
+                    ? { nextReset: result.nextAvailable }
+                    : { claimed: true, nextAvailable: result.nextAvailable },
+            } : {}),
+        }));
+        await Promise.all([refreshOrange(), loadRewardStatus()]);
+        return result;
+    }, [loadRewardStatus, refreshOrange, setUserData]);
+
     const onClaimDailyCheckin = async () => {
         Haptics.selectionAsync();
-        const tempData = userData ?? {}
-        
-        if(tempData){
-            let addNumber = 20
-            tempData.numberOranges ? tempData.numberOranges += addNumber : tempData.numberOranges = addNumber
-
-            if(tempData.listClaimedOranges){
-                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                if(index != -1){
-                    tempData.listClaimedOranges[index].listOranges.push({
-                        numberOranges: addNumber,
-                        type: 'Check-in reward'
-                    })
-                }else{
-                    tempData.listClaimedOranges.push({
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: [
-                            {
-                                numberOranges: addNumber,
-                                type: 'Check-in reward'
-                            },
-                        ]
-                    })
-                }
-            }else{
-                tempData.listClaimedOranges = [{
-                    date: moment().format('YYYY-MM-DD'),
-                    listOranges: [
-                        {
-                            numberOranges: addNumber,
-                            type: 'Check-in reward'
-                        },
-                    ]
-                }]
-            }
-
-            const now = new Date();
-            const tomorrow = new Date();
-            tomorrow.setHours(24, 0, 0, 0); // reset to midnight
-
-            var currentData = {
-                ...tempData,
-                dailyCheckin: {
-                    lastClaim: now.toISOString(),
-                    nextAvailable: tomorrow.toISOString(),
-                },
-            }
-
-            var tempProfile = user.profile
-            tempProfile.data = currentData
-
-            delete tempProfile.data.listClaimedOranges;
-
-            orbis.updateProfile(tempProfile)
-            .then(res => {
-                console.log('aquqiqiuj');
-                console.log(res);
-                console.log(tempProfile);
-                
-                
-                
-                setOpenDailyCheckinModal(true)
-
-                setUserData({
-                    ...tempData,
-                    dailyCheckin: {
-                        lastClaim: now.toISOString(),
-                        nextAvailable: tomorrow.toISOString(),
-                    },
-                });
-            })
+        try {
+            const result = await syncClaim(api.orangeClaimDailyCheckin, 'dailyCheckin');
+            if (result?.claimed) setOpenDailyCheckinModal(true);
+            else if (result) Alert.alert('Already claimed', 'Daily check-in will reset at the next UTC day.');
+        } catch (error) {
+            Alert.alert('Claim failed', 'Please try again in a moment.');
         }
-        
-    }
+    };
 
     const handleClaimDailyActivity = async () => {
         Haptics.selectionAsync();
-        const tempData = userData ?? {}
-        
-        if(tempData){
-            let addNumber = 30
-            tempData.numberOranges ? tempData.numberOranges += addNumber : tempData.numberOranges = addNumber
-
-            if(tempData.listClaimedOranges){
-                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                if(index != -1){
-                    tempData.listClaimedOranges[index].listOranges.push({
-                        numberOranges: addNumber,
-                        type: 'Complete daily task'
-                    })
-                }else{
-                    tempData.listClaimedOranges.push({
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: [
-                            {
-                                numberOranges: addNumber,
-                                type: 'Complete daily task'
-                            },
-                        ]
-                    })
-                }
-            }else{
-                tempData.listClaimedOranges = [{
-                    date: moment().format('YYYY-MM-DD'),
-                    listOranges: [
-                            {
-                                numberOranges: addNumber,
-                                type: 'Complete daily task'
-                            },
-                    ]
-                }]
+        try {
+            const result = await syncClaim(api.orangeClaimDailyActivity, 'dailyActivity');
+            if (result?.claimed) setOpenDailyActivityModal(true);
+            else if (result) Alert.alert('Already claimed', 'The daily activity reward has already been collected.');
+        } catch (error) {
+            if (error instanceof ApiError && error.status === 409) {
+                const progress = error.body?.progress || {};
+                const targets = error.body?.targets || {};
+                setUserData((current) => ({ ...(current || {}), todayActivities: progress }));
+                Alert.alert(
+                    'Tasks not complete',
+                    `Post ${progress.posts || 0}/${targets.posts || 1} · Comments ${progress.comments || 0}/${targets.comments || 2} · Likes ${progress.likes || 0}/${targets.likes || 10}`,
+                );
+                return;
             }
-
-            const now = new Date();
-            const tomorrow = new Date();
-            tomorrow.setHours(24, 0, 0, 0); // reset to midnight
-
-            var currentData = {
-                ...tempData,
-                dailyActivity: {
-                    lastClaim: now.toISOString(),
-                    nextAvailable: tomorrow.toISOString(),
-                },
-            }
-
-            var tempProfile = user.profile
-            tempProfile.data = currentData
-            orbis.updateProfile(tempProfile)
-            .then(res => {
-                setOpenDailyActivityModal(true)
-
-                setUserData({
-                    ...tempData,
-                    dailyActivity: {
-                        lastClaim: now.toISOString(),
-                        nextAvailable: tomorrow.toISOString(),
-                    },
-                });
-            })
+            Alert.alert('Claim failed', 'Please try again in a moment.');
         }
-        
-    }
-
-    const getNextSlotDate = () => {
-        const now = new Date();
-        const next = new Date(now);
-
-        const currentHour = now.getHours();
-
-        if (currentHour < 8) {
-            next.setHours(8, 0, 0, 0);     // Prochain = 08h
-        } else if (currentHour < 16) {
-            next.setHours(16, 0, 0, 0);    // Prochain = 16h
-        } else {
-            next.setDate(next.getDate() + 1);
-            next.setHours(0, 0, 0, 0);     // Prochain = minuit
-        }
-
-        return next;
-    };
-
-    const getCurrentSlot = () => {
-        const hour = new Date().getHours();
-        if (hour < 8) return "slot_0_8";
-        if (hour < 16) return "slot_8_16";
-        return "slot_16_0";
     };
 
     const onClaimAdReward = async () => {
         Haptics.selectionAsync();
-        const tempData = userData ?? {}
-        const currentSlot = getCurrentSlot();
-        const nextReset = getNextSlotDate();
-
-        let claims = tempData?.adReward?.claims ?? {};
-        
-        if(tempData){
-            let addNumber = 10
-            tempData.numberOranges ? tempData.numberOranges += addNumber : tempData.numberOranges = addNumber
-
-            if(tempData.listClaimedOranges){
-                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                if(index != -1){
-                    tempData.listClaimedOranges[index].listOranges.push({
-                        numberOranges: addNumber,
-                        type: 'Watch AD'
-                    })
-                }else{
-                    tempData.listClaimedOranges.push({
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: [
-                            {
-                                numberOranges: addNumber,
-                                type: 'Watch AD'
-                            },
-                        ]
-                    })
-                }
-            }else{
-                tempData.listClaimedOranges = [{
-                    date: moment().format('YYYY-MM-DD'),
-                    listOranges: [
-                            {
-                                numberOranges: addNumber,
-                                type: 'Watch AD'
-                            },
-                    ]
-                }]
+        try {
+            const result = await syncClaim(api.orangeClaimAdReward, 'adReward');
+            if (!result?.claimed && result) {
+                Alert.alert('Already claimed', 'The next ad reward will unlock in the next reward slot.');
             }
-
-            const updatedReward = {
-                claims: { ...claims, [currentSlot]: true },
-                nextReset: nextReset.toISOString(),
-            };
-
-            setUserData({
-                ...tempData,
-                adReward: updatedReward,
-            });
-
-            const tempProfile = user.profile;
-            tempProfile.data = { ...tempData, adReward: updatedReward };
-
-            await orbis.updateProfile(tempProfile);
+            return Boolean(result?.claimed);
+        } catch (error) {
+            Alert.alert('Claim failed', 'Please try again in a moment.');
+            return false;
         }
-        
-    }
+    };
 
 
     const renderScene = ({route}) => {
@@ -317,10 +197,7 @@ const OrangeNavigation = ({navigation, route}) => {
         )
         if(route.key == 1 ) return (
             <ScrollView>
-                <ShopScreen 
-                    setSelectedShopItem={setSelectedShopItem}
-                    handleModalPress={handleShopModalPress}
-                />
+                <ShopScreen />
             </ScrollView>
         )
         if(route.key == 2 ) return (
@@ -426,82 +303,6 @@ const OrangeNavigation = ({navigation, route}) => {
                     onClaimAdReward={onClaimAdReward}
                 />
             }
-
-            {selectedShopItem && (
-                <BottomSheetModalProvider>
-                    <BottomSheetModal
-                        ref={modalShopRef}
-                        index={1}
-                        snapPoints={snapPoints}
-                        handleIndicatorStyle={{backgroundColor: 'black',}}
-                        handleStyle={{height: 30,justifyContent: 'center',}}
-                        backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
-                    >
-                        <View style={{justifyContent: 'space-between',}}>
-                            <View style={{}}>
-                                <Text style={{textAlign: 'center',fontFamily: 'GmarketBold',fontSize: Platform.OS == 'ios' ? 20 : 16}}>
-                                    Congratulations
-                                </Text>
-                                <Text style={{
-                                    textAlign: 'center',
-                                    fontFamily: 'GmarketMedium',
-                                    fontSize: Platform.OS == 'ios' ? 15 : 13,
-                                    marginVertical: 15,
-                                    color: '#FF6B17'
-                                }}>
-                                    {selectedShopItem.successText}
-                                </Text>
-
-                                <Image
-                                    style={{width: 140, height: 140, alignSelf:'center', margin: 40, marginTop: 15,}}
-                                    resizeMode='contain'
-                                    source={selectedShopItem.image}
-                                /> 
-                            </View>
-
-                            <View style={{}}>
-                                <TouchableOpacity
-                                    style={{
-                                        backgroundColor: 'white',
-                                        borderWidth: 1,
-                                        borderColor: 'black',
-                                        alignSelf:'center',
-                                        width: windowSize.width*0.9,
-                                        paddingVertical: 17,
-                                        justifyContent:'center',
-                                        alignItems:'center',
-                                        borderRadius: 30,
-                                        marginBottom: 20
-                                    }}
-                                    onPress={() => {onIndexChange(2);modalShopRef.current?.close();}}
-                                >
-                                    <Text style={{textAlign: 'center', fontFamily: 'GmarketBold', fontSize: 12,}}>Go to Gift Box</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={{
-                                        backgroundColor: '#FF6B17',
-                                        alignSelf:'center',
-                                        width: windowSize.width*0.9,
-                                        paddingVertical: 17,
-                                        justifyContent:'center',
-                                        alignItems:'center',
-                                        borderRadius: 30
-                                    }}
-                                    onPress={() => {modalShopRef.current?.close();}}
-                                >
-                                    <Text style={{textAlign: 'center', color:'white', fontFamily: 'GmarketBold', fontSize: 12,}}>Ok</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-
-                    </BottomSheetModal>
-                </BottomSheetModalProvider>
-            )}
-
-
-
-
 
         </View>
     )
