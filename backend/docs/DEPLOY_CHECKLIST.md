@@ -79,6 +79,10 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   `QUESTS_ENABLED`, and `ADVERTISER_ADMIN_ENABLED` false for the first deploy.
 - [x] Keep `LEGACY_SOCIAL_MODE=active`.
 - [ ] Verify published privacy/terms version equals `EASYGO_CONSENT_VERSION`.
+  The linked privacy PDF is an old ThePivot policy effective 2023-08-26, the
+  linked terms PDF has no explicit effective date, and the deployed consent
+  version does not match that privacy date. Publish matched, EasyGo-branded
+  policy documents before enabling any consent-gated Path C feature.
 - [ ] Approve or remediate the known Squid, Telegram, and Privy/Solana audit
   findings; never use `npm audit fix --force` during release.
 - [x] Document release SHA `f252761a217094942bc18e57e09467c01a8bc8ba`
@@ -96,8 +100,10 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Deploy the worker service with `SEGMENTS_ENABLED=false` and confirm one
   dormant/start-stop log sequence without a public domain.
 - [ ] Exercise `SIGTERM` for web and worker and confirm graceful cleanup.
-- [ ] Monitor readiness, 5xx rate, latency, Sentry, and Better Stack for at
+- [x] Monitor Railway readiness, 5xx responses, and request latency for at
   least 15 minutes.
+- [ ] Activate and monitor Sentry and Better Stack before production traffic;
+  both remain intentionally unset pending vendor/privacy approval.
 - [ ] Only after the baseline is stable, enable one Path C feature in a separate
   reviewed rollout.
 
@@ -106,7 +112,7 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Confirm `/health`, `/ready`, and `/social/status` remain nominal.
 - [x] Confirm the deployed release matches `EXPECTED_RELEASE`.
 - [x] Confirm database migration status reports no pending migration.
-- [ ] Confirm logs contain request IDs but no auth header, email, Privy ID,
+- [x] Confirm logs contain request IDs but no auth header, email, Privy ID,
   wallet, signature, quiz answer, or query string.
 - [x] Record staging evidence and exceptions here. Railway recorded one
   transient `/health` 502 at `2026-07-21T20:03:02Z`; there were no further

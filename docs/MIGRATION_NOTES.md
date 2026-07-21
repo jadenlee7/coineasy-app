@@ -131,6 +131,9 @@ screen. No social rows or tables are deleted by S8.
 - [x] Add the staging `EXPO_PUBLIC_BACKEND_URL` to the local root `.env`.
 - [x] Confirm `/auth/sync` is guarded by `requireAuth`, which verifies the
       Privy Bearer access token before profile sync.
+- [ ] Replace the legacy ThePivot terms/privacy PDFs linked from `Login.js`
+      with EasyGo-branded documents that share an explicit effective version,
+      then set `EASYGO_CONSENT_VERSION` to that exact published version.
 
 ## Privy + AuthBridge data flow (Phase 1)
 

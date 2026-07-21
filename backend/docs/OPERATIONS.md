@@ -1,9 +1,9 @@
 # EasyGo backend operations runbook
 
-Status: S9 implementation and additive S2 migration SQL are complete. The
-dedicated Railway staging project, Postgres, and empty web/worker service
-shells are provisioned; remaining credentials, source connection, migration
-application, and deployment remain operator-controlled gates.
+Status: S9 implementation, additive S2 migration, and the first staging deploy
+are complete. The remaining gates are the database backup, matched published
+privacy/terms version, security exceptions, real-device login, and rollback
+drills.
 
 ## Railway staging target
 
@@ -15,17 +15,17 @@ The verified target is project `easygo-app-staging`
 - Web: `518ba3f5-486b-42a4-ad0c-27fb56e63b00`
 - Worker: `0ffb8648-fe59-4fb7-926f-3cc9445c133d`
 
-Postgres is running with a ready persistent volume. Web and worker intentionally
-remain empty and undeployed until an exact reviewed revision is selected. The
-project's default `production` environment is empty; do not add services or
-variables there during staging work.
+Postgres is running with a ready persistent volume and both migrations applied.
+Web is deployed from the reviewed staging branch and serves the public staging
+domain with `/ready` healthy. Worker is deployed from the same revision and
+exits successfully while `SEGMENTS_ENABLED=false`. The project's default
+`production` environment remains empty; do not add services or variables there
+during staging work.
 
-Non-secret staging defaults have been applied with deploy triggers disabled.
-Both services resolve the managed Postgres reference and pass those checks.
-Current value-safe preflight blockers are `PRIVY_APP_SECRET`,
-`SQUID_INTEGRATOR_ID`, `ADMIN_SECRET`, `RELEASE_SHA`, and
-`EASYGO_CONSENT_VERSION`. Never record their values in this document or CLI
-output.
+Required staging configuration is present and the value-safe deployed preflight
+passes with zero failures. Optional Sentry, Better Stack, and Telegram values
+remain intentionally unset pending vendor/privacy approval. Never record secret
+values in this document or CLI output.
 
 ## Process topology
 
