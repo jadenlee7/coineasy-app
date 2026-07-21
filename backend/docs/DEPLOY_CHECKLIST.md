@@ -32,7 +32,11 @@ no repository source, deployment, public domain, or active replica yet.
 - [x] Path C migration SQL is generated from the committed social schema and
   statically checked to contain all eight S2 tables and no destructive SQL.
 - [x] Read-only `/health`, `/ready`, and `/social/status` smoke runner exists.
-- [ ] Changes are committed to a release branch, reviewed, and approved.
+- [x] Changes are committed to `agent/easygo-path-c-staging-release` and
+  published in draft PR #17.
+- [x] GitHub Actions is configured to run backend tests, Prisma validation,
+  local preflights, Expo Doctor, and Android/iOS static exports on the PR.
+- [ ] Draft PR #17 is reviewed and approved.
 - [ ] CI checks run and pass on that exact revision.
 
 ## Pre-Deploy
