@@ -1,6 +1,6 @@
 # EasyGo staging device QA
 
-Use this checklist for the crash-fix TestFlight build `2.0.0 (87)` and Android
+Use this checklist for the crash-containment TestFlight build `2.0.0 (88)` and Android
 preview build `versionCode 64`. Both clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
@@ -8,13 +8,13 @@ wallet private key, or login code.
 
 ## iOS readiness
 
-- [x] EAS crash-fix build `ed444075-8f44-44b8-aec6-856c58212d05` completed on
-  Xcode 26. App Store Connect submission
-  `0f2c073b-79f8-429e-8c10-60b995c7e4e4` completed successfully.
-- [x] App Store Connect build `2.0.0 (87)` is `VALID`, unexpired, and available
+- [x] EAS crash-containment build `940e49e1-4c36-4151-90a6-2766e1dad9fa`
+  completed on Xcode 26. App Store Connect submission
+  `39c0b031-98e0-44e6-8dd5-7ada02bdd6fa` completed successfully.
+- [x] App Store Connect build `2.0.0 (88)` is `VALID`, unexpired, and available
   to the six-tester `Internal testing` group.
-- [ ] Install build 87 from TestFlight on a physical iPhone. Build 86 is
-  superseded because the same startup state-provider defect was present.
+- [ ] Install build 88 from TestFlight on the iPhone 16 Pro Max where build 87
+  still terminated during startup. Builds 86 and 87 are superseded.
 
 ## Android readiness
 
@@ -29,7 +29,8 @@ wallet private key, or login code.
 ## Core flow
 
 - [ ] Cold-launch EasyGo twice; the splash and login/feed screen render without
-  a crash, blank screen, or configuration warning.
+  a crash, blank screen, configuration warning, or `STARTUP-JS-01` safe-mode
+  screen.
 - [ ] Complete one configured Privy sign-in. Returning to EasyGo through the
   `coineasyapp` scheme succeeds and the session survives an app restart.
 - [ ] Confirm the signed-in profile loads. For a brand-new staging user, confirm
@@ -56,6 +57,9 @@ wallet private key, or login code.
   in an on-screen error or application log.
 - [ ] Record failures with build number, device/OS, UTC time, screen, exact user
   action, and screenshot. Do not include credentials or private wallet data.
+- [ ] If build 88 shows `STARTUP-JS-01`, capture the visible message and
+  screenshot. If it terminates before that screen appears, export the newest
+  EasyGo analytics `.ips` file from the iPhone because the failure is native.
 - [ ] After the checklist passes, mark the matching items in
   `backend/docs/DEPLOY_CHECKLIST.md`; keep all Path C feature flags off until
   the privacy and security gates are separately approved.

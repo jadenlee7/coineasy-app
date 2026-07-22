@@ -145,6 +145,15 @@ screen. No social rows or tables are deleted by S8.
       `868e27b8-65e2-4b25-81cb-ecd0a955d55f` completed with a verified APK;
       iOS EAS build `ed444075-8f44-44b8-aec6-856c58212d05` was accepted as
       `VALID` by App Store Connect and is available to the internal group.
+- [x] Contain the remaining iOS startup failure reproduced on an iPhone 16 Pro
+      Max with build 87. Authenticated-only modals now mount only after login,
+      startup render failures fall back to the `STARTUP-JS-01` diagnostic
+      screen, splash promises are guarded, and the unconfigured passkey module
+      is no longer imported on the login path. EAS build
+      `940e49e1-4c36-4151-90a6-2766e1dad9fa` and submission
+      `39c0b031-98e0-44e6-8dd5-7ada02bdd6fa` completed successfully. App Store
+      Connect build `2.0.0 (88)` (`ed5e95a3-f023-4ba6-88c4-c90c805be4a4`) is
+      `VALID`, unexpired, and available to the internal TestFlight group.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before
