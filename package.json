@@ -1,7 +1,7 @@
 {
   "name": "coineasy-app",
   "version": "2.0.0",
-  "main": "expo/AppEntry.js",
+  "main": "entrypoint.js",
   "scripts": {
     "start": "expo start --dev-client",
     "android": "expo run:android",

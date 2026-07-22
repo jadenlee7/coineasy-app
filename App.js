@@ -1,5 +1,3 @@
-import 'react-native-reanimated';
-
 import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from "react";
 import { StyleSheet, View, Keyboard, Platform, Animated, Image, Dimensions } from 'react-native';
 
@@ -24,11 +22,8 @@ import NicknameModal from "./components/modals/NicknameModal";
 import StartupErrorBoundary from './components/StartupErrorBoundary';
 import { SOCIAL_CATEGORIES } from './data/socialCategories';
 
-// Privy integration (Phase 1: Base chain only; EasyChain is Phase 2-gated)
-import 'fast-text-encoding';
-import 'react-native-get-random-values';
-import '@ethersproject/shims';
-
+// Privy integration (Phase 1: Base chain only; EasyChain is Phase 2-gated).
+// Required polyfills load before this module from entrypoint.js.
 import { PrivyProvider, usePrivy } from '@privy-io/expo';
 import useAuthSync from './hooks/useAuthSync';
 

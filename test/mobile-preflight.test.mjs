@@ -5,6 +5,7 @@ import {
   authenticatedUiIsGated,
   authBridgeHasProviderScope,
   parseEnvText,
+  privyPolyfillsLoadFirst,
   startupBoundaryProtectsApp,
   validateMobileEnvironment,
 } from '../scripts/mobile-preflight.mjs';
@@ -90,4 +91,16 @@ test('startup failures are contained and authenticated UI stays off the login pa
   assert.equal(authenticatedUiIsGated(appSource), true);
   assert.equal(startupBoundaryProtectsApp('<EasyGoApp />'), false);
   assert.equal(authenticatedUiIsGated('<Login /><PostboxModal />'), false);
+});
+
+test('Privy polyfills evaluate before the application module', () => {
+  const entrySource = readFileSync(new URL('../entrypoint.js', import.meta.url), 'utf8');
+  assert.equal(privyPolyfillsLoadFirst(entrySource), true);
+  assert.equal(privyPolyfillsLoadFirst(`
+    import App from './App';
+    import 'fast-text-encoding';
+    import 'react-native-get-random-values';
+    import '@ethersproject/shims';
+    registerRootComponent(App);
+  `), false);
 });

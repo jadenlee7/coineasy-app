@@ -59,6 +59,24 @@ export function authenticatedUiIsGated(appSource) {
   });
 }
 
+export function privyPolyfillsLoadFirst(entrySource) {
+  const source = String(entrySource || '');
+  const orderedImports = [
+    "import 'fast-text-encoding';",
+    "import 'react-native-get-random-values';",
+    "import '@ethersproject/shims';",
+  ];
+  let cursor = -1;
+  for (const statement of orderedImports) {
+    const index = source.indexOf(statement, cursor + 1);
+    if (index < 0) return false;
+    cursor = index;
+  }
+  const appImport = source.indexOf("import App from './App';", cursor + 1);
+  const registration = source.indexOf('registerRootComponent(App);', appImport + 1);
+  return appImport > cursor && registration > appImport;
+}
+
 function validBackendUrl(value, staged) {
   try {
     const url = new URL(value);
@@ -72,6 +90,7 @@ function validBackendUrl(value, staged) {
 export function validateMobileEnvironment(env, appConfig, {
   target = 'local',
   appSource,
+  entrySource,
 } = {}) {
   const checks = [];
   const add = (ok, name, failure, { warning = false } = {}) => {
@@ -125,6 +144,13 @@ export function validateMobileEnvironment(env, appConfig, {
       'authenticated modals must not render on the login path',
     );
   }
+  if (entrySource !== undefined) {
+    add(
+      privyPolyfillsLoadFirst(entrySource),
+      'Privy polyfill entry order',
+      'Privy polyfills must evaluate before the application imports @privy-io/expo',
+    );
+  }
 
   return {
     target,
@@ -145,9 +171,11 @@ function run() {
   const env = { ...fileEnv, ...process.env };
   const appConfig = JSON.parse(readFileSync(resolve('app.json'), 'utf8'));
   const appSource = readFileSync(resolve('App.js'), 'utf8');
+  const entrySource = readFileSync(resolve('entrypoint.js'), 'utf8');
   const result = validateMobileEnvironment(env, appConfig, {
     target: targetFromArgs(process.argv.slice(2)),
     appSource,
+    entrySource,
   });
 
   console.log(`EasyGo mobile preflight: ${result.target}`);
