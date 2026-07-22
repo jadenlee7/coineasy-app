@@ -154,6 +154,16 @@ screen. No social rows or tables are deleted by S8.
       `39c0b031-98e0-44e6-8dd5-7ada02bdd6fa` completed successfully. App Store
       Connect build `2.0.0 (88)` (`ed5e95a3-f023-4ba6-88c4-c90c805be4a4`) is
       `VALID`, unexpired, and available to the internal TestFlight group.
+- [x] Fix the pre-render startup failure that remained on build 88. The app
+      imported `Login` and therefore `@privy-io/expo` before Privy's required
+      text-encoding, random-value, and ethers polyfills evaluated, so a module
+      initialization error could terminate release builds before the React
+      error boundary mounted. A dedicated `entrypoint.js` now loads all three
+      polyfills before the application graph, and preflight enforces that
+      order. EAS build `e4f1a034-ff51-412d-a239-d49a18e3ac10` and submission
+      `990b8f6f-6632-4c9b-9029-0fe15a6c782a` completed successfully. App Store
+      Connect build `2.0.0 (89)` (`9e65abfa-dbdf-4a15-9b70-94fe0a0f82f3`) is
+      `VALID`, unexpired, and available to the internal TestFlight group.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before

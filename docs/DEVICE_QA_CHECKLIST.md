@@ -1,6 +1,6 @@
 # EasyGo staging device QA
 
-Use this checklist for the crash-containment TestFlight build `2.0.0 (88)` and Android
+Use this checklist for the startup-order TestFlight build `2.0.0 (89)` and Android
 preview build `versionCode 64`. Both clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
@@ -8,13 +8,13 @@ wallet private key, or login code.
 
 ## iOS readiness
 
-- [x] EAS crash-containment build `940e49e1-4c36-4151-90a6-2766e1dad9fa`
+- [x] EAS startup-order build `e4f1a034-ff51-412d-a239-d49a18e3ac10`
   completed on Xcode 26. App Store Connect submission
-  `39c0b031-98e0-44e6-8dd5-7ada02bdd6fa` completed successfully.
-- [x] App Store Connect build `2.0.0 (88)` is `VALID`, unexpired, and available
+  `990b8f6f-6632-4c9b-9029-0fe15a6c782a` completed successfully.
+- [x] App Store Connect build `2.0.0 (89)` is `VALID`, unexpired, and available
   to the six-tester `Internal testing` group.
-- [ ] Install build 88 from TestFlight on the iPhone 16 Pro Max where build 87
-  still terminated during startup. Builds 86 and 87 are superseded.
+- [ ] Install build 89 from TestFlight on the iPhone 16 Pro Max where builds 87
+  and 88 terminated during startup. Builds 86 through 88 are superseded.
 
 ## Android readiness
 
@@ -57,7 +57,7 @@ wallet private key, or login code.
   in an on-screen error or application log.
 - [ ] Record failures with build number, device/OS, UTC time, screen, exact user
   action, and screenshot. Do not include credentials or private wallet data.
-- [ ] If build 88 shows `STARTUP-JS-01`, capture the visible message and
+- [ ] If build 89 shows `STARTUP-JS-01`, capture the visible message and
   screenshot. If it terminates before that screen appears, export the newest
   EasyGo analytics `.ips` file from the iPhone because the failure is native.
 - [ ] After the checklist passes, mark the matching items in
