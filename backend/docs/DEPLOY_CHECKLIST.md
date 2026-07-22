@@ -46,12 +46,12 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Create `@coineasy/easygo`, link EAS project
       `2297c440-2ab1-46d8-8c60-29e74977ed9f`, and configure the public mobile
       variables in `development` and `preview`.
-- [ ] Complete an Android preview APK build. Build
+- [x] Complete an Android preview APK build. Build
       `cb8347ca-8462-4ea9-a38c-07deb29e8ad3` failed before compilation because
       its default Node 20.19.2 did not satisfy the locked `expo-doctor 1.20.1`
       engine requirement of Node 20.19.4 or newer. The preview profile now pins
-      Node 20.19.4; replacement build
-      `d3e60d71-484d-4c1e-bbde-bc7074c90bbb` is in progress.
+      Node 20.19.4; replacement APK build
+      `d3e60d71-484d-4c1e-bbde-bc7074c90bbb` completed successfully.
 - [x] Confirm TestFlight build `2.0.0 (86)` is `VALID` and available to the
       six-member `Internal testing` group. Use
       [`../../docs/DEVICE_QA_CHECKLIST.md`](../../docs/DEVICE_QA_CHECKLIST.md)
@@ -121,7 +121,14 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   read paths without activating Path C flags.
 - [x] Deploy the worker service with `SEGMENTS_ENABLED=false` and confirm one
   dormant/start-stop log sequence without a public domain.
-- [ ] Exercise `SIGTERM` for web and worker and confirm graceful cleanup.
+- [x] Exercise `SIGTERM` for the web process and confirm graceful cleanup.
+  Deployment `b9cf11c0-8482-4405-98a2-5b2926af8f19` logged `stopping` and
+  `stopped` with reason `SIGTERM` and exit code zero before the replacement
+  passed all three read-only smoke checks.
+- [x] Confirm the flag-off worker starts dormant, disconnects dependencies, and
+  exits with code zero.
+- [ ] Exercise `SIGTERM` for an enabled worker only in an approved environment;
+  keep `SEGMENTS_ENABLED=false` until the privacy/security gates pass.
 - [x] Monitor Railway readiness, 5xx responses, and request latency for at
   least 15 minutes.
 - [ ] Activate and monitor Sentry and Better Stack before production traffic;

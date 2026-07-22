@@ -15,6 +15,16 @@ wallet private key, or login code.
   testers and has access to all builds.
 - [ ] Install build 86 from TestFlight on a physical iPhone.
 
+## Android readiness
+
+- [x] Preview build `d3e60d71-484d-4c1e-bbde-bc7074c90bbb` completed after
+  pinning the EAS builder to Node 20.19.4.
+- [x] The build produced an installable internal-distribution APK for package
+  `com.coineasy.coineasy`. The 112,415,363-byte archive passed a full ZIP
+  integrity check; SHA-256 is
+  `cbc0889b166ed952ce074f0765d7284f2b415cef8009f4d8a7dcc67f651c0695`.
+- [ ] Install the APK on a physical Android device.
+
 ## Core flow
 
 - [ ] Cold-launch EasyGo twice; the splash and login/feed screen render without

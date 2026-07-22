@@ -131,6 +131,15 @@ screen. No social rows or tables are deleted by S8.
       then completed on Xcode 26.0 and submission
       `091677ee-82c6-413f-9c09-af34092c3c12` finished successfully. Apple App
       Store Connect reports build `2.0.0 (86)` as `VALID` and not expired.
+      It is assigned to the six-tester internal group with access to all builds.
+- [x] Complete an Android internal preview APK. The first build failed because
+      the image's Node 20.19.2 did not satisfy the locked Expo Doctor engine;
+      the preview EAS profile now pins Node 20.19.4. Replacement build
+      `d3e60d71-484d-4c1e-bbde-bc7074c90bbb` completed successfully.
+- [x] Verify the Railway web shutdown contract in a real replacement deploy.
+      Production commands now launch Node directly, and the replaced web
+      process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before
+      the replacement passed `/health`, `/ready`, and `/social/status` smoke.
 - [x] Take and verify a recoverable staging DB backup before production
       approval. Railway's native backup/PITR UI is Pro-only, so the Hobby
       staging database was exported in PostgreSQL custom format and encrypted
