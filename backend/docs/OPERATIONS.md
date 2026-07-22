@@ -1,9 +1,9 @@
 # EasyGo backend operations runbook
 
 Status: S9 implementation, additive S2 migration, and the first staging deploy
-are complete. The remaining gates are the database backup, matched published
-privacy/terms version, security exceptions, real-device login, and rollback
-drills.
+are complete. The recoverable staging database backup is verified. The
+remaining gates are the matched published privacy/terms version, security
+exceptions, real-device login, and rollback drills.
 
 ## Railway staging target
 
@@ -86,6 +86,37 @@ After deploy, set `EASYGO_BASE_URL` and `EXPECTED_RELEASE` in the operator shell
 and run `npm run smoke`. The smoke runner performs GET requests only against
 `/health`, `/ready`, and `/social/status`, requires HTTPS for remote targets,
 and verifies request correlation and active social mode.
+
+## Staging backup and recovery
+
+Railway native volume backups and point-in-time recovery require the Pro plan;
+the EasyGo staging project currently uses Hobby. From `backend/`, run:
+
+```bash
+npm run backup:staging
+```
+
+The script refuses to run unless the linked Railway project, `staging`
+environment, Postgres service, ready volume, and mount path match the IDs in
+this runbook. It streams a PostgreSQL custom-format dump through AES-256-CBC
+encryption, stores the random passphrase in macOS Keychain, and never writes a
+plaintext dump. It then decrypts in memory to verify the `PGDMP` header and
+exact byte count. Encrypted files and metadata live in the Git-ignored
+`.secure-backups/` directory with owner-only permissions.
+
+The verified 2026-07-22 recovery point is
+`easygo-staging-20260722T090134Z.dump.enc`, SHA-256
+`5817cfafb9a661934de0107362cf59afd25647ee1ba5eb4bc2085708acc78a55`.
+Its Keychain account is `coineasy` and service is
+`easygo-staging-postgres-backup-20260722T090134Z`. Keep the encrypted file and
+its adjacent JSON metadata together. Never paste or commit the passphrase.
+
+For a recovery drill, retrieve the passphrase privately from macOS Keychain,
+verify the encrypted file's SHA-256 against its metadata, and decrypt directly
+into PostgreSQL 18 `pg_restore`. Restore into a new isolated database—not the
+live staging database—then verify migrations and representative row counts.
+Only after that drill passes should a separate reviewed incident procedure be
+allowed to replace live data.
 
 ## Optional telemetry activation
 

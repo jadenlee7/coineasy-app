@@ -15,6 +15,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:status": "prisma migrate status",
     "prisma:seed": "prisma db seed",
+    "backup:staging": "node scripts/backup-staging.mjs",
     "preflight": "node scripts/preflight.js",
     "preflight:staging": "node scripts/preflight.js --target=staging",
     "smoke": "node scripts/smoke.js",

@@ -72,7 +72,13 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   `coineasyapp`.
 - [x] Review the additive SQL in
   `prisma/migrations/20260721143000_path_c_v2/migration.sql`.
-- [ ] Take or verify a recoverable database backup.
+- [x] Take and verify a recoverable database backup. Railway native backups
+  are unavailable on the Hobby plan, so `npm run backup:staging` created the
+  encrypted PostgreSQL custom-format backup
+  `easygo-staging-20260722T090134Z.dump.enc`. The passphrase is held only in
+  macOS Keychain, the file is excluded from Git, and an in-memory decrypt
+  verified the header and exact byte count. SHA-256:
+  `5817cfafb9a661934de0107362cf59afd25647ee1ba5eb4bc2085708acc78a55`.
 - [x] Run `npm run prisma:status` against staging and record existing migration
   state.
 - [x] Apply `npm run prisma:deploy` once from a controlled release job, not from

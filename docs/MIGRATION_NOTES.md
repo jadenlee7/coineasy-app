@@ -131,7 +131,15 @@ screen. No social rows or tables are deleted by S8.
       then completed on Xcode 26.0 and submission
       `091677ee-82c6-413f-9c09-af34092c3c12` finished successfully. Apple App
       Store Connect reports build `2.0.0 (86)` as `VALID` and not expired.
-- [ ] Take or verify a recoverable staging DB backup before production approval.
+- [x] Take and verify a recoverable staging DB backup before production
+      approval. Railway's native backup/PITR UI is Pro-only, so the Hobby
+      staging database was exported in PostgreSQL custom format and encrypted
+      locally without persisting plaintext. Backup
+      `easygo-staging-20260722T090134Z.dump.enc` has SHA-256
+      `5817cfafb9a661934de0107362cf59afd25647ee1ba5eb4bc2085708acc78a55`;
+      its AES-256 passphrase is stored in macOS Keychain service
+      `easygo-staging-postgres-backup-20260722T090134Z`. An in-memory decrypt
+      verified the `PGDMP` header and exact 41,032-byte round trip.
 - [ ] Run real-device Privy login and core API QA against the staging URL.
 
 ## Owner action items (outside this PR)
