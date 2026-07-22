@@ -21,14 +21,14 @@
       "channel": "preview",
       "environment": "preview",
       "ios": {
-        "image": "macos-sequoia-15.3-xcode-16.2"
+        "image": "macos-sequoia-15.6-xcode-26.0"
       }
     },
     "production": {
       "channel": "production",
       "environment": "production",
       "ios": {
-        "image": "macos-sequoia-15.3-xcode-16.2"
+        "image": "macos-sequoia-15.6-xcode-26.0"
       }
     }
   },

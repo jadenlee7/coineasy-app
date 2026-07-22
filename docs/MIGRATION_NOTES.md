@@ -120,8 +120,10 @@ screen. No social rows or tables are deleted by S8.
       a controlled release step, and verify both migrations are up to date.
 - [x] Create an Apple Distribution certificate and App Store provisioning
       profile for `com.coineasy.coineasysocial`, then store both in EAS.
-- [ ] Complete the first iOS TestFlight staging build (`2.0.0` build `85`;
-      EAS build `4e1791dd-2905-4eb0-acd9-0d622155dcf5`, queued 2026-07-21).
+- [ ] Complete the first iOS TestFlight staging build. Build `85` (EAS build
+      `4e1791dd-2905-4eb0-acd9-0d622155dcf5`) compiled successfully but Apple
+      rejected its upload with `90725` because its Xcode 16.2 image used the
+      iOS 18.2 SDK. Build `86` uses the EAS Xcode 26.0 image required by Apple.
 - [ ] Take or verify a recoverable staging DB backup before production approval.
 - [ ] Run real-device Privy login and core API QA against the staging URL.
 
