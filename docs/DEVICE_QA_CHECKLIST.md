@@ -1,29 +1,30 @@
 # EasyGo staging device QA
 
-Use this checklist for TestFlight build `2.0.0 (86)` and the replacement
-Android preview build. Both clients must target
+Use this checklist for the crash-fix TestFlight build `2.0.0 (87)` and Android
+preview build `versionCode 64`. Both clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
 
 ## iOS readiness
 
-- [x] EAS build `8d659012-a326-4cd9-9777-8053e0c1e504` completed on Xcode 26.
-- [x] App Store Connect build `2.0.0 (86)` is `VALID`, unexpired, and declares
-  no non-exempt encryption.
-- [x] Build 86 is available to the `Internal testing` group, which contains six
-  testers and has access to all builds.
-- [ ] Install build 86 from TestFlight on a physical iPhone.
+- [x] EAS crash-fix build `ed444075-8f44-44b8-aec6-856c58212d05` completed on
+  Xcode 26. App Store Connect submission
+  `0f2c073b-79f8-429e-8c10-60b995c7e4e4` completed successfully.
+- [x] App Store Connect build `2.0.0 (87)` is `VALID`, unexpired, and available
+  to the six-tester `Internal testing` group.
+- [ ] Install build 87 from TestFlight on a physical iPhone. Build 86 is
+  superseded because the same startup state-provider defect was present.
 
 ## Android readiness
 
-- [x] Preview build `d3e60d71-484d-4c1e-bbde-bc7074c90bbb` completed after
-  pinning the EAS builder to Node 20.19.4.
-- [x] The build produced an installable internal-distribution APK for package
-  `com.coineasy.coineasy`. The 112,415,363-byte archive passed a full ZIP
-  integrity check; SHA-256 is
-  `cbc0889b166ed952ce074f0765d7284f2b415cef8009f4d8a7dcc67f651c0695`.
-- [ ] Install the APK on a physical Android device.
+- [x] Crash-fix preview build `868e27b8-65e2-4b25-81cb-ecd0a955d55f`
+  (`versionCode 64`) completed with Node 20.19.4. Its 112,415,230-byte APK
+  passed full archive integrity verification; SHA-256 is
+  `fa8fe54e1889378db4872ed12857e92ef454997eefcbfa3890bee2923f61ab82`.
+- [ ] Install versionCode 64 on a physical Android device. Do not test the
+  superseded versionCode 63 APK: it packaged successfully but crashed at
+  startup when `AuthBridge` wrote through a context outside its provider.
 
 ## Core flow
 

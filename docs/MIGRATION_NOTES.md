@@ -136,6 +136,15 @@ screen. No social rows or tables are deleted by S8.
       the image's Node 20.19.2 did not satisfy the locked Expo Doctor engine;
       the preview EAS profile now pins Node 20.19.4. Replacement build
       `d3e60d71-484d-4c1e-bbde-bc7074c90bbb` completed successfully.
+- [x] Fix the startup crash found during physical-device installation. The
+      Privy `AuthBridge` consumed `GlobalContext` after rendering outside its
+      provider, so its first authenticated state sync called missing setter
+      functions. It now renders inside the provider, and mobile preflight has
+      a regression check for this scope contract. Android versionCode 64 and
+      iOS build 87 are the replacements. Android EAS build
+      `868e27b8-65e2-4b25-81cb-ecd0a955d55f` completed with a verified APK;
+      iOS EAS build `ed444075-8f44-44b8-aec6-856c58212d05` was accepted as
+      `VALID` by App Store Connect and is available to the internal group.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before
