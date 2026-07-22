@@ -123,9 +123,11 @@ screen. No social rows or tables are deleted by S8.
 - [ ] Complete the first iOS TestFlight staging build. Build `85` (EAS build
       `4e1791dd-2905-4eb0-acd9-0d622155dcf5`) compiled successfully but Apple
       rejected its upload with `90725` because its Xcode 16.2 image used the
-      iOS 18.2 SDK. The first Xcode 26 build then exposed Expo SDK 51's legacy
-      `expo-device` simulator macro, so installs now apply the narrow upstream
-      compatibility fix before build `86` is retried on Xcode 26.0.
+      iOS 18.2 SDK. The first Xcode 26 builds then exposed Expo SDK 51's legacy
+      `expo-device` and `expo-dev-menu` simulator macros, so installs now apply
+      narrow compatibility patches for both. The app also uses Expo's standard
+      `expo/AppEntry.js` entry point to avoid the SDK 51 Metro SHA-1 entry-file
+      bug before build `86` is retried on Xcode 26.0.
 - [ ] Take or verify a recoverable staging DB backup before production approval.
 - [ ] Run real-device Privy login and core API QA against the staging URL.
 
