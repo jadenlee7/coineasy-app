@@ -1,3 +1,6 @@
+import 'react-native-gesture-handler';
+import 'react-native-reanimated';
+
 import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from "react";
 import { StyleSheet, View, Keyboard, Platform, Animated, Image, Dimensions } from 'react-native';
 

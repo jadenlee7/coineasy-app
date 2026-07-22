@@ -59,12 +59,12 @@ export function authenticatedUiIsGated(appSource) {
   });
 }
 
-export function privyPolyfillsLoadFirst(entrySource) {
-  const source = String(entrySource || '');
+export function privyPolyfillsLoadFirst(bootstrapSource) {
+  const source = String(bootstrapSource || '');
   const orderedImports = [
-    "import 'fast-text-encoding';",
-    "import 'react-native-get-random-values';",
-    "import '@ethersproject/shims';",
+    "await import('fast-text-encoding');",
+    "await import('react-native-get-random-values');",
+    "await import('@ethersproject/shims');",
   ];
   let cursor = -1;
   for (const statement of orderedImports) {
@@ -72,9 +72,8 @@ export function privyPolyfillsLoadFirst(entrySource) {
     if (index < 0) return false;
     cursor = index;
   }
-  const appImport = source.indexOf("import App from './App';", cursor + 1);
-  const registration = source.indexOf('registerRootComponent(App);', appImport + 1);
-  return appImport > cursor && registration > appImport;
+  const appImport = source.indexOf("await import('./App');", cursor + 1);
+  return appImport > cursor;
 }
 
 function validBackendUrl(value, staged) {
@@ -90,7 +89,7 @@ function validBackendUrl(value, staged) {
 export function validateMobileEnvironment(env, appConfig, {
   target = 'local',
   appSource,
-  entrySource,
+  bootstrapSource,
 } = {}) {
   const checks = [];
   const add = (ok, name, failure, { warning = false } = {}) => {
@@ -144,9 +143,9 @@ export function validateMobileEnvironment(env, appConfig, {
       'authenticated modals must not render on the login path',
     );
   }
-  if (entrySource !== undefined) {
+  if (bootstrapSource !== undefined) {
     add(
-      privyPolyfillsLoadFirst(entrySource),
+      privyPolyfillsLoadFirst(bootstrapSource),
       'Privy polyfill entry order',
       'Privy polyfills must evaluate before the application imports @privy-io/expo',
     );
@@ -171,11 +170,11 @@ function run() {
   const env = { ...fileEnv, ...process.env };
   const appConfig = JSON.parse(readFileSync(resolve('app.json'), 'utf8'));
   const appSource = readFileSync(resolve('App.js'), 'utf8');
-  const entrySource = readFileSync(resolve('entrypoint.js'), 'utf8');
+  const bootstrapSource = readFileSync(resolve('BootstrapApp.js'), 'utf8');
   const result = validateMobileEnvironment(env, appConfig, {
     target: targetFromArgs(process.argv.slice(2)),
     appSource,
-    entrySource,
+    bootstrapSource,
   });
 
   console.log(`EasyGo mobile preflight: ${result.target}`);
