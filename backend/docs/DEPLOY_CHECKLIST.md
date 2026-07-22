@@ -46,8 +46,11 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Create `@coineasy/easygo`, link EAS project
       `2297c440-2ab1-46d8-8c60-29e74977ed9f`, and configure the public mobile
       variables in `development` and `preview`.
-- [ ] Complete Android preview APK build
-      `cb8347ca-8462-4ea9-a38c-07deb29e8ad3`; it is currently in the Expo queue.
+- [ ] Complete an Android preview APK build. Build
+      `cb8347ca-8462-4ea9-a38c-07deb29e8ad3` failed before compilation because
+      its default Node 20.19.2 did not satisfy the locked `expo-doctor 1.20.1`
+      engine requirement of Node 20.19.4 or newer. The preview profile now pins
+      Node 20.19.4; verify the replacement build below.
 
 ## Pre-Deploy
 
