@@ -31,8 +31,8 @@ values in this document or CLI output.
 
 | Process | Command | Public traffic | Safe default |
 | --- | --- | --- | --- |
-| Web | `npm start` | Express API, `/health`, `/ready` | Starts with all existing feature defaults |
-| Segment worker | `npm run worker:segments` | None | Starts then stays dormant when `SEGMENTS_ENABLED=false` |
+| Web | `node src/index.js` | Express API, `/health`, `/ready` | Starts with all existing feature defaults |
+| Segment worker | `node src/worker.js` | None | Starts then stays dormant when `SEGMENTS_ENABLED=false` |
 
 `Procfile` records the same contracts. On Railway, create two services from the
 same commit and `backend/` root. Set the web service config path to
@@ -40,6 +40,12 @@ same commit and `backend/` root. Set the web service config path to
 `/backend/railway.worker.json`. Only the web service receives a public domain;
 its health-check path is `/ready`. Scale and roll back the two services
 independently.
+
+Railway and the Procfile launch the Node entry points directly. Do not wrap
+these production commands in `npm start` or `npm run`: Railway sends `SIGTERM`
+to the top-level process during replacement, and the direct process contract is
+what lets the web and worker lifecycle handlers finish cleanup and emit their
+`stopping`/`stopped` evidence.
 
 Do not run the segment loop inside the web process. More than one enabled
 worker may duplicate provider reads even though membership reconciliation is

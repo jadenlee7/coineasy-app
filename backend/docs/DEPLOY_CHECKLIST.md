@@ -50,7 +50,12 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
       `cb8347ca-8462-4ea9-a38c-07deb29e8ad3` failed before compilation because
       its default Node 20.19.2 did not satisfy the locked `expo-doctor 1.20.1`
       engine requirement of Node 20.19.4 or newer. The preview profile now pins
-      Node 20.19.4; verify the replacement build below.
+      Node 20.19.4; replacement build
+      `d3e60d71-484d-4c1e-bbde-bc7074c90bbb` is in progress.
+- [x] Confirm TestFlight build `2.0.0 (86)` is `VALID` and available to the
+      six-member `Internal testing` group. Use
+      [`../../docs/DEVICE_QA_CHECKLIST.md`](../../docs/DEVICE_QA_CHECKLIST.md)
+      for the physical-device pass.
 
 ## Pre-Deploy
 
@@ -135,7 +140,8 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   transient `/health` 502 at `2026-07-21T20:03:02Z`; there were no further
   web 5xx responses or application error logs in the latest 30-minute review,
   and the current read-only smoke passes all three endpoints.
-- [ ] Notify the product/support owner that staging is ready for device QA.
+- [x] Notify the product/support owner that staging is ready for device QA and
+  provide the exact TestFlight/device checklist.
 - [ ] Close the release only after the monitoring window completes.
 
 ## Rollback Triggers

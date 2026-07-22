@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import pino from 'pino';
 import {
@@ -13,6 +14,24 @@ import { createLogger } from '../src/lib/logger.js';
 import { createNoopTelemetry, sanitizeSentryEvent } from '../src/lib/telemetry.js';
 
 const silentLogger = pino({ level: 'silent' });
+
+test('deployment contracts launch Node directly so lifecycle signals reach the app', () => {
+  const web = JSON.parse(readFileSync(
+    new URL('../railway.web.json', import.meta.url),
+    'utf8',
+  ));
+  const worker = JSON.parse(readFileSync(
+    new URL('../railway.worker.json', import.meta.url),
+    'utf8',
+  ));
+  const procfile = readFileSync(new URL('../Procfile', import.meta.url), 'utf8');
+
+  assert.equal(web.deploy.startCommand, 'node src/index.js');
+  assert.equal(worker.deploy.startCommand, 'node src/worker.js');
+  assert.match(procfile, /^web: node src\/index\.js$/m);
+  assert.match(procfile, /^worker: node src\/worker\.js$/m);
+  assert.equal(procfile.includes('npm '), false);
+});
 
 function response() {
   return {
