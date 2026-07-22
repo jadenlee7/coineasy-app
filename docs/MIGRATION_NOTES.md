@@ -164,6 +164,17 @@ screen. No social rows or tables are deleted by S8.
       `990b8f6f-6632-4c9b-9029-0fe15a6c782a` completed successfully. App Store
       Connect build `2.0.0 (89)` (`9e65abfa-dbdf-4a15-9b70-94fe0a0f82f3`) is
       `VALID`, unexpired, and available to the internal TestFlight group.
+- [x] Ship a controlled diagnostic after build 89 still terminated on the
+      iPhone 16 Pro Max. Build 90 initially registers a minimal React Native
+      screen without importing the application graph. `EasyGo 시작` then loads
+      the required polyfills and the app in explicit stages, rendering
+      `STARTUP-MODULE-02` for module-load failures while retaining
+      `STARTUP-JS-01` for render failures. This separates a native/Expo startup
+      crash from the application/Privy module path before the next structural
+      change. EAS build `fe4ab796-b7cd-4323-9bbc-96e2af4bc0bc` and submission
+      `bc3bd439-6eb0-403f-b9f9-c2d57b78dcd1` completed successfully. App Store
+      Connect build `2.0.0 (90)` (`29e08ff6-68dd-4403-a39e-ba3f8e4321ff`) is
+      `VALID`, unexpired, and available to the internal TestFlight group.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before

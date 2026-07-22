@@ -1,20 +1,24 @@
 # EasyGo staging device QA
 
-Use this checklist for the startup-order TestFlight build `2.0.0 (89)` and Android
-preview build `versionCode 64`. Both clients must target
+Use this checklist for the staged-startup diagnostic TestFlight build `2.0.0
+(90)` and Android preview build `versionCode 64`. Both clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
 
 ## iOS readiness
 
-- [x] EAS startup-order build `e4f1a034-ff51-412d-a239-d49a18e3ac10`
+- [x] EAS diagnostic build `fe4ab796-b7cd-4323-9bbc-96e2af4bc0bc`
   completed on Xcode 26. App Store Connect submission
-  `990b8f6f-6632-4c9b-9029-0fe15a6c782a` completed successfully.
-- [x] App Store Connect build `2.0.0 (89)` is `VALID`, unexpired, and available
-  to the six-tester `Internal testing` group.
-- [ ] Install build 89 from TestFlight on the iPhone 16 Pro Max where builds 87
-  and 88 terminated during startup. Builds 86 through 88 are superseded.
+  `bc3bd439-6eb0-403f-b9f9-c2d57b78dcd1` completed successfully.
+- [x] App Store Connect build `2.0.0 (90)`
+  (`29e08ff6-68dd-4403-a39e-ba3f8e4321ff`) is `VALID`, unexpired, and
+  available to the six-tester `Internal testing` group.
+- [ ] Install build 90 from TestFlight on the iPhone 16 Pro Max where builds 87
+  through 89 terminated during startup. Builds 86 through 89 are superseded.
+- [ ] Confirm `STARTUP DIAGNOSTIC · BUILD 90` appears before tapping anything.
+- [ ] Tap `EasyGo 시작` once and record exactly one result: the normal EasyGo
+  app, `STARTUP-MODULE-02`, `STARTUP-JS-01`, or an immediate termination.
 
 ## Android readiness
 
@@ -57,9 +61,10 @@ wallet private key, or login code.
   in an on-screen error or application log.
 - [ ] Record failures with build number, device/OS, UTC time, screen, exact user
   action, and screenshot. Do not include credentials or private wallet data.
-- [ ] If build 89 shows `STARTUP-JS-01`, capture the visible message and
-  screenshot. If it terminates before that screen appears, export the newest
-  EasyGo analytics `.ips` file from the iPhone because the failure is native.
+- [ ] If build 90 shows `STARTUP-MODULE-02` or `STARTUP-JS-01`, capture the full
+  visible message and a screenshot. If it terminates before the diagnostic
+  screen appears, or terminates after `EasyGo 시작` without a visible error,
+  export the newest EasyGo analytics `.ips` file from the iPhone.
 - [ ] After the checklist passes, mark the matching items in
   `backend/docs/DEPLOY_CHECKLIST.md`; keep all Path C feature flags off until
   the privacy and security gates are separately approved.
