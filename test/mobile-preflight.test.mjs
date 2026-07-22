@@ -2,15 +2,17 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
+  authenticatedUiIsGated,
   authBridgeHasProviderScope,
   parseEnvText,
+  startupBoundaryProtectsApp,
   validateMobileEnvironment,
 } from '../scripts/mobile-preflight.mjs';
 
 const appConfig = {
   expo: {
     scheme: 'coineasyapp',
-    ios: { bundleIdentifier: 'com.coineasy.coineasysocial' },
+    ios: { bundleIdentifier: 'com.coineasy.coineasysocial', usesAppleSignIn: true },
     android: { package: 'com.coineasy.coineasy' },
   },
 };
@@ -80,4 +82,12 @@ test('AuthBridge stays inside the state provider it writes to', () => {
     <GlobalContext.Provider value={{}} />
     <AuthBridge />
   `), false);
+});
+
+test('startup failures are contained and authenticated UI stays off the login path', () => {
+  const appSource = readFileSync(new URL('../App.js', import.meta.url), 'utf8');
+  assert.equal(startupBoundaryProtectsApp(appSource), true);
+  assert.equal(authenticatedUiIsGated(appSource), true);
+  assert.equal(startupBoundaryProtectsApp('<EasyGoApp />'), false);
+  assert.equal(authenticatedUiIsGated('<Login /><PostboxModal />'), false);
 });

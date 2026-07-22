@@ -19,7 +19,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { usePrivy, useLoginWithOAuth } from '@privy-io/expo';
-import { useLoginWithPasskey } from '@privy-io/expo/passkey';
 
 import AppleIcon from '../assets/easygo/apple.svg';
 import GoogleIcon from '../assets/easygo/google.svg';
@@ -33,7 +32,6 @@ const BRAND = {
   sheet: '#FFFEFC',
 };
 
-const PASSKEY_RELYING_PARTY = process.env.EXPO_PUBLIC_PRIVY_RELYING_PARTY;
 const TERMS_URL = 'https://drive.google.com/file/d/17_d1L3-qBYKk3vAK9_P-zd2PKW3fNDiX/view?usp=sharing';
 const PRIVACY_URL = 'https://drive.google.com/file/d/1Dhijs_O61shJEKNy6Sga16Iu3vgqwc8I/view?usp=sharing';
 
@@ -59,14 +57,12 @@ export default function Login() {
   const { height } = useWindowDimensions();
   const { isReady } = usePrivy();
   const { login: loginWithOAuth, state: oauthState } = useLoginWithOAuth();
-  const { loginWithPasskey, state: passkeyState } = useLoginWithPasskey();
   const [pendingProvider, setPendingProvider] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   const compact = height < 780;
   const oauthLoading = oauthState.status === 'loading';
-  const passkeyLoading = !['initial', 'done', 'error'].includes(passkeyState.status);
-  const disabled = !isReady || oauthLoading || passkeyLoading;
+  const disabled = !isReady || oauthLoading;
 
   async function runAuth(provider, action) {
     if (!isReady) return;
@@ -87,21 +83,6 @@ export default function Login() {
 
   function handleOAuth(provider) {
     return runAuth(provider, () => loginWithOAuth({ provider }));
-  }
-
-  function handlePasskey() {
-    if (!PASSKEY_RELYING_PARTY) {
-      Haptics.selectionAsync();
-      Alert.alert(
-        'Passkey 설정 필요',
-        'EXPO_PUBLIC_PRIVY_RELYING_PARTY를 설정하면 Passkey 로그인을 사용할 수 있어요.'
-      );
-      return;
-    }
-
-    return runAuth('passkey', () =>
-      loginWithPasskey({ relyingParty: PASSKEY_RELYING_PARTY })
-    );
   }
 
   function handleWallet() {
@@ -162,14 +143,13 @@ export default function Login() {
         />
         <LoginOption
           Icon={PasskeyIcon}
-          disabled={!isReady || oauthLoading}
-          label="Sign up with Passkey"
-          loading={pendingProvider === 'passkey'}
-          onPress={handlePasskey}
+          disabled
+          label="Passkey · 준비 중"
+          onPress={() => {}}
         />
         <LoginOption
           Icon={WalletIcon}
-          disabled={!isReady || oauthLoading || passkeyLoading}
+          disabled={!isReady || oauthLoading}
           label="Sign up with Wallet"
           onPress={handleWallet}
         />

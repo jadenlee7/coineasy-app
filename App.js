@@ -21,6 +21,7 @@ import PostSettingsModal from "./components/modals/PostSettingsModal";
 import UpdateProfileModal from "./components/modals/UpdateProfileModal";
 import PushNotificationsModal from "./components/modals/PushNotificationsModal";
 import NicknameModal from "./components/modals/NicknameModal";
+import StartupErrorBoundary from './components/StartupErrorBoundary';
 import { SOCIAL_CATEGORIES } from './data/socialCategories';
 
 // Privy integration (Phase 1: Base chain only; EasyChain is Phase 2-gated)
@@ -132,11 +133,21 @@ function AuthBridge() {
 }
 
 // Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch((error) => {
+  console.warn('[startup] unable to retain splash screen', error);
+});
 
 let callbackPostShared;
 let page = 0;
 export default function App() {
+  return (
+    <StartupErrorBoundary>
+      <EasyGoApp />
+    </StartupErrorBoundary>
+  );
+}
+
+function EasyGoApp() {
   const [user, setUser] = useState();
   const [userData, setUserData] = useState();
   const [userConnecting, setUserConnecting] = useState(false);
@@ -256,7 +267,11 @@ export default function App() {
 
     const onLayoutRootView = useCallback(async () => {
         if (isLayoutReady) {
-            await SplashScreen.hideAsync();
+            try {
+                await SplashScreen.hideAsync();
+            } catch (error) {
+                console.warn('[startup] unable to hide splash screen', error);
+            }
         }
     }, [isLayoutReady]);
     
@@ -808,58 +823,60 @@ export default function App() {
                     <AuthBridge />
 
                     <TailwindProvider utilities={utilities}>
-                        {user ?
-                            <AppNavigator />
-                        :
+                        {user ? (
+                            <>
+                                <AppNavigator />
+
+                                {/** Display the edit profile details modal */}
+                                <UpdateProfileModal />
+
+                                {/** Display push notifications pane */}
+                                {pushNotifsVis &&
+                                    <PushNotificationsModal />
+                                }
+
+                                {/** Display nickname pane */}
+                                <NicknameModal />
+
+                                {/** Render repost modal */}
+                                {repost !== false &&
+                                    <RepostModal />
+                                }
+
+                                {/** Share post container */}
+                                <PostboxModal />
+
+                                {/** Show post settings modal */}
+                                <BottomSheetModalProvider>
+                                    <BottomSheetModal
+                                        ref={modalPostSettingsRef}
+                                        index={1}
+                                        snapPoints={showReportBack ? snapPointsLarge : snapPoints}
+                                        handleIndicatorStyle={{backgroundColor: 'black',}}
+                                        handleStyle={{height: 40,justifyContent: 'center',}}
+                                        backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
+                                    >
+                                        <PostSettingsModal />
+                                    </BottomSheetModal>
+                                </BottomSheetModalProvider>
+
+                                {/** QR modal container */}
+                                {shareProfileVis &&
+                                    <QR hide={() => setShareProfileVis(false)} />
+                                }
+
+                                {addressCopied && (
+                                    <View style={{backgroundColor: 'rgba(0,0,0,0.5)',width: '100%', height: '100%',position: 'absolute',justifyContent:'center',alignItems:'center',}}>
+                                        <Image
+                                            style={{width: 150, height: 150,alignSelf:'center',}}
+                                            resizeMode='contain'
+                                            source={require('./assets/link_copied.png')}
+                                        />
+                                    </View>
+                                )}
+                            </>
+                        ) : (
                             <Login />
-                        }
-
-                        {/** Display the edit profile details modal */}
-                        <UpdateProfileModal />
-
-                        {/** Display push notifications pane */}
-                        {pushNotifsVis &&
-                            <PushNotificationsModal />
-                        }
-
-                        {/** Display nickname pane */}
-                        <NicknameModal />
-
-                        {/** Render repost modal */}
-                        {repost !== false &&
-                            <RepostModal />
-                        }
-
-                        {/** Share post container */}
-                        <PostboxModal />
-
-                        {/** Show post settings modal */}
-                        <BottomSheetModalProvider>
-                            <BottomSheetModal
-                                ref={modalPostSettingsRef}
-                                index={1}
-                                snapPoints={showReportBack ? snapPointsLarge : snapPoints}
-                                handleIndicatorStyle={{backgroundColor: 'black',}}
-                                handleStyle={{height: 40,justifyContent: 'center',}}
-                                backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
-                            >
-                                <PostSettingsModal />
-                            </BottomSheetModal>
-                        </BottomSheetModalProvider>
-
-                        {/** QR modal container */}
-                        {shareProfileVis &&
-                            <QR hide={() => setShareProfileVis(false)} />
-                        }
-
-                        {addressCopied && (
-                            <View style={{backgroundColor: 'rgba(0,0,0,0.5)',width: '100%', height: '100%',position: 'absolute',justifyContent:'center',alignItems:'center',}}>
-                                <Image
-                                    style={{width: 150, height: 150,alignSelf:'center',}}
-                                    resizeMode='contain'
-                                    source={require('./assets/link_copied.png')}
-                                />
-                            </View>
                         )}
 
                         {/* <Confetti confetti={confetti}/> */}

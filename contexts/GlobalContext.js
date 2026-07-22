@@ -2,4 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 
 export const GlobalContext = React.createContext({
   user: null,
+  setUser: () => {},
+  userData: null,
+  setUserData: () => {},
 });

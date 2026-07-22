@@ -35,6 +35,30 @@ export function authBridgeHasProviderScope(appSource) {
     && providerClose > bridge;
 }
 
+export function startupBoundaryProtectsApp(appSource) {
+  const source = String(appSource || '');
+  const boundaryOpen = source.indexOf('<StartupErrorBoundary>');
+  const app = source.indexOf('<EasyGoApp />', boundaryOpen);
+  const boundaryClose = source.indexOf('</StartupErrorBoundary>', app);
+  return boundaryOpen >= 0 && app > boundaryOpen && boundaryClose > app;
+}
+
+export function authenticatedUiIsGated(appSource) {
+  const source = String(appSource || '');
+  const branchOpen = source.indexOf('{user ? (');
+  const loginBranch = source.indexOf(') : (', branchOpen);
+  if (branchOpen < 0 || loginBranch < 0) return false;
+  return [
+    '<AppNavigator />',
+    '<UpdateProfileModal />',
+    '<NicknameModal />',
+    '<PostboxModal />',
+  ].every((component) => {
+    const index = source.indexOf(component, branchOpen);
+    return index > branchOpen && index < loginBranch;
+  });
+}
+
 function validBackendUrl(value, staged) {
   try {
     const url = new URL(value);
@@ -76,6 +100,7 @@ export function validateMobileEnvironment(env, appConfig, {
     'iOS bundle identifier',
     'iOS bundle identifier must match the configured Privy mobile client',
   );
+  add(expo.ios?.usesAppleSignIn === true, 'Sign in with Apple capability', 'Expo iOS config must enable usesAppleSignIn');
   add(Boolean(clean(expo.android?.package)), 'Android package', 'Expo Android package is required');
   add(
     false,
@@ -88,6 +113,16 @@ export function validateMobileEnvironment(env, appConfig, {
       authBridgeHasProviderScope(appSource),
       'AuthBridge context scope',
       'AuthBridge must render inside GlobalContext.Provider',
+    );
+    add(
+      startupBoundaryProtectsApp(appSource),
+      'startup error boundary',
+      'EasyGoApp must render inside StartupErrorBoundary',
+    );
+    add(
+      authenticatedUiIsGated(appSource),
+      'authenticated UI gating',
+      'authenticated modals must not render on the login path',
     );
   }
 
