@@ -29,7 +29,7 @@
       }
     },
     "android": {
-      "versionCode": 63,
+      "versionCode": 64,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo_easygo_1024.png",
         "backgroundColor": "#FFF8F0"

@@ -25,6 +25,16 @@ export function parseEnvText(text) {
   return result;
 }
 
+export function authBridgeHasProviderScope(appSource) {
+  const source = String(appSource || '');
+  const providerOpen = source.indexOf('<GlobalContext.Provider');
+  const bridge = source.indexOf('<AuthBridge');
+  const providerClose = source.indexOf('</GlobalContext.Provider>');
+  return providerOpen >= 0
+    && bridge > providerOpen
+    && providerClose > bridge;
+}
+
 function validBackendUrl(value, staged) {
   try {
     const url = new URL(value);
@@ -35,7 +45,10 @@ function validBackendUrl(value, staged) {
   }
 }
 
-export function validateMobileEnvironment(env, appConfig, { target = 'local' } = {}) {
+export function validateMobileEnvironment(env, appConfig, {
+  target = 'local',
+  appSource,
+} = {}) {
   const checks = [];
   const add = (ok, name, failure, { warning = false } = {}) => {
     checks.push({ ok: Boolean(ok), name, failure, warning });
@@ -70,6 +83,13 @@ export function validateMobileEnvironment(env, appConfig, { target = 'local' } =
     `confirm Privy allows iOS ${expo.ios?.bundleIdentifier || '(missing)'}, Android ${expo.android?.package || '(missing)'}, and scheme ${expo.scheme || '(missing)'}`,
     { warning: true },
   );
+  if (appSource !== undefined) {
+    add(
+      authBridgeHasProviderScope(appSource),
+      'AuthBridge context scope',
+      'AuthBridge must render inside GlobalContext.Provider',
+    );
+  }
 
   return {
     target,
@@ -89,8 +109,10 @@ function run() {
   const fileEnv = existsSync(envPath) ? parseEnvText(readFileSync(envPath, 'utf8')) : {};
   const env = { ...fileEnv, ...process.env };
   const appConfig = JSON.parse(readFileSync(resolve('app.json'), 'utf8'));
+  const appSource = readFileSync(resolve('App.js'), 'utf8');
   const result = validateMobileEnvironment(env, appConfig, {
     target: targetFromArgs(process.argv.slice(2)),
+    appSource,
   });
 
   console.log(`EasyGo mobile preflight: ${result.target}`);

@@ -805,6 +805,7 @@ export default function App() {
                         adAlreadyClaimed, setAdAlreadyClaimed,
                     }}
                 >
+                    <AuthBridge />
 
                     <TailwindProvider utilities={utilities}>
                         {user ?
@@ -865,7 +866,6 @@ export default function App() {
                     </TailwindProvider>
                 </GlobalContext.Provider>
             </GestureHandlerRootView>
-          <AuthBridge />
         </>
       </PrivyProvider>
     );

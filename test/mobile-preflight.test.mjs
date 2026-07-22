@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { parseEnvText, validateMobileEnvironment } from '../scripts/mobile-preflight.mjs';
+import {
+  authBridgeHasProviderScope,
+  parseEnvText,
+  validateMobileEnvironment,
+} from '../scripts/mobile-preflight.mjs';
 
 const appConfig = {
   expo: {
@@ -66,4 +71,13 @@ test('native identifiers and scheme fail if the configured app identity drifts',
   assert.equal(result.errors.some((item) => item.name === 'URL scheme'), true);
   assert.equal(result.errors.some((item) => item.name === 'iOS bundle identifier'), true);
   assert.equal(result.errors.some((item) => item.name === 'Android package'), true);
+});
+
+test('AuthBridge stays inside the state provider it writes to', () => {
+  const appSource = readFileSync(new URL('../App.js', import.meta.url), 'utf8');
+  assert.equal(authBridgeHasProviderScope(appSource), true);
+  assert.equal(authBridgeHasProviderScope(`
+    <GlobalContext.Provider value={{}} />
+    <AuthBridge />
+  `), false);
 });
