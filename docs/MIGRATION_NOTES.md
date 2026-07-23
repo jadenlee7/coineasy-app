@@ -210,6 +210,18 @@ screen. No social rows or tables are deleted by S8.
       Privy ID in the release bundle is a prime candidate for a
       release-only startup failure. Presence booleans only — values never
       render.
+- [x] Confirm the root cause on the expo.dev dashboard: the EAS `production`
+      environment holds zero project environment variables; all three
+      `EXPO_PUBLIC_*` values exist only in `development` and `preview`. Every
+      TestFlight build inlined `undefined` Privy identifiers, and
+      `PrivyProvider`'s async init failure lands outside the React error
+      boundary, terminating release builds with no visible error — matching
+      builds 86 through 89 exactly, and matching build 91 (no app JS)
+      surviving. Two fixes: the owner adds the three variables to the
+      `production` environment, and `App` now renders a visible
+      `STARTUP-CONFIG-01` screen instead of mounting `PrivyProvider` when
+      either Privy identifier is missing, so this failure class can never
+      again present as a silent termination.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before

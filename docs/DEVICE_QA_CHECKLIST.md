@@ -15,9 +15,21 @@ token, wallet private key, or login code.
   and the A18 Pro device class — is therefore cleared. The remaining crash
   site is the JS application graph that builds 86 through 89 evaluated at
   startup. Builds 86 through 91 are superseded.
+- [x] Root cause candidate confirmed on the expo.dev dashboard: the EAS
+  `production` environment contains no project environment variables at
+  all — `EXPO_PUBLIC_PRIVY_APP_ID`, `EXPO_PUBLIC_PRIVY_CLIENT_ID`, and
+  `EXPO_PUBLIC_BACKEND_URL` exist only in `development` and `preview`.
+  Every TestFlight build (production profile) therefore inlined
+  `undefined` for all three, and `PrivyProvider` fails its async init
+  outside the error boundary, which terminates release builds silently.
+- [ ] Owner: add the three variables above to the EAS `production`
+  environment (same values as `preview`, staging backend URL) before any
+  further iOS build. `EXPO_PUBLIC_*` values are client-side public, so
+  plain-text visibility is fine.
 - [ ] Trigger EAS build 92 (staged `BootstrapApp` entry restored, with
-  per-stage failure labels and an env-presence line) and submit it to
-  TestFlight.
+  per-stage failure labels and an env-presence line; `App` now renders a
+  visible `STARTUP-CONFIG-01` screen instead of mounting `PrivyProvider`
+  when the Privy identifiers are absent) and submit it to TestFlight.
 - [ ] Confirm App Store Connect lists build `2.0.0 (92)` as `VALID`,
   unexpired, and available to the six-tester `Internal testing` group.
 - [ ] Install build 92 from TestFlight on the same iPhone 16 Pro Max.
