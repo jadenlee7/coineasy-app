@@ -175,6 +175,25 @@ screen. No social rows or tables are deleted by S8.
       `bc3bd439-6eb0-403f-b9f9-c2d57b78dcd1` completed successfully. App Store
       Connect build `2.0.0 (90)` (`29e08ff6-68dd-4403-a39e-ba3f8e4321ff`) is
       `VALID`, unexpired, and available to the internal TestFlight group.
+- [x] Escalate the startup isolation after build 90. Build 91 registers a
+      static minimal screen directly from `entrypoint.js` without importing
+      `BootstrapApp`, so no application JS beyond React Native itself
+      evaluates at launch. EAS build `2ec8447d-e3b3-4fc0-abf3-93e79330b68e`
+      and submission `fef7561f-78f4-41ff-8f60-36a2b97b3e45` were triggered.
+      Recorded analysis for the native branch of the diagnosis: every
+      crashing iOS build (86 through 90) was necessarily built with Xcode 26
+      because Apple rejects iOS 18 SDK uploads (build 85, error `90725`),
+      while Expo SDK 51 predates Xcode 26 support and needed source patches
+      just to compile. The crash device is an iPhone 16 Pro Max (A18 Pro),
+      matching a known class of production-only launch crashes on A18 Pro +
+      iOS 26 in which development builds run normally (expo/expo#44680).
+      Native modules initialize through autolinking regardless of the JS
+      entry, so if build 91 still terminates the JS bisection is exhausted:
+      capture the `.ips` crash log, cross-test build 91 on a non-A18 iPhone
+      and a dev-client build on the A18 device, and plan the Expo SDK
+      upgrade off SDK 51 as the structural fix instead of further
+      entrypoint changes. The full procedure lives in
+      `docs/DEVICE_QA_CHECKLIST.md` under `Build 91 decision tree`.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before
