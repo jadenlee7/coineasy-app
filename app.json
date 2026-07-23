@@ -20,7 +20,7 @@
       "icon": "./assets/logo_easygo_ios_1024.png",
       "supportsTablet": false,
       "usesAppleSignIn": true,
-      "buildNumber": "90",
+      "buildNumber": "91",
       "bundleIdentifier": "com.coineasy.coineasysocial",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "EasyGo uses your photo library when you choose a profile image or attach media to a post.",
