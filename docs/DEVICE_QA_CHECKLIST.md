@@ -1,53 +1,34 @@
 # EasyGo staging device QA
 
-Use this checklist for the minimal-entrypoint diagnostic TestFlight build
-`2.0.0 (91)` and Android preview build `versionCode 64`. Both clients must
+Use this checklist for the staged-startup diagnostic TestFlight build
+`2.0.0 (92)` and Android preview build `versionCode 64`. Both clients must
 target `https://easygo-web-staging-staging.up.railway.app`. Record the device
 model, OS version, tester account type, and test time; never record an access
 token, wallet private key, or login code.
 
 ## iOS readiness
 
-- [x] EAS minimal-entrypoint build `2ec8447d-e3b3-4fc0-abf3-93e79330b68e`
-  (build 91) completed on Xcode 26 and App Store Connect submission
-  `fef7561f-78f4-41ff-8f60-36a2b97b3e45` was triggered.
-- [ ] Confirm App Store Connect lists build `2.0.0 (91)` as `VALID`,
+- [x] Build 91 (minimal static entrypoint, EAS build
+  `2ec8447d-e3b3-4fc0-abf3-93e79330b68e`) rendered `최소 부팅 화면 · BUILD 91`
+  on the iPhone 16 Pro Max where builds 86 through 90 terminated. The native
+  layer — RN 0.74.5 under Xcode 26, every autolinked native module's init,
+  and the A18 Pro device class — is therefore cleared. The remaining crash
+  site is the JS application graph that builds 86 through 89 evaluated at
+  startup. Builds 86 through 91 are superseded.
+- [ ] Trigger EAS build 92 (staged `BootstrapApp` entry restored, with
+  per-stage failure labels and an env-presence line) and submit it to
+  TestFlight.
+- [ ] Confirm App Store Connect lists build `2.0.0 (92)` as `VALID`,
   unexpired, and available to the six-tester `Internal testing` group.
-- [ ] Install build 91 from TestFlight on the iPhone 16 Pro Max where builds 86
-  through 90 terminated during startup. Builds 86 through 90 are superseded.
-- [ ] Record exactly one result: (1) the `최소 부팅 화면 · BUILD 91` screen
-  renders, or (2) the app terminates before any screen appears. Build 91
-  registers a static React Native screen straight from `entrypoint.js`, so no
-  application JS beyond React Native itself evaluates at launch.
-
-## Build 91 decision tree
-
-Native modules initialize at launch through Expo autolinking regardless of
-what the JS entry imports, so the two results separate cleanly:
-
-- Result (1) — the minimal screen renders: the launch crash lives in the JS
-  application graph that builds 86 through 89 evaluated at startup. Next
-  build restores the staged `BootstrapApp` entry (build 90 shape) and then
-  re-adds the polyfills and `App` modules one stage at a time through
-  `EasyGo 시작`, watching for `STARTUP-MODULE-02`.
-- Result (2) — still terminates with no screen: the JS bisection is
-  exhausted; the failure is in native initialization. In priority order:
-  - Export the newest EasyGo `.ips` file from Settings ▸ Privacy & Security ▸
-    Analytics & Improvements ▸ Analytics Data and attach it. The crashing
-    frame (Hermes, TurboModule, EXUpdates, or an autolinked pod) selects the
-    fix; this is the single most valuable artifact.
-  - Install the same build 91 on a non-A18 iPhone from the tester group. The
-    crash device is an iPhone 16 Pro Max (A18 Pro), and there is a known
-    class of production-only launch crashes on A18 Pro + iOS 26 where
-    development builds run normally (expo/expo#44680).
-  - Build the `development` profile dev client for the same iPhone 16 Pro
-    Max. If it launches, the failure matches the production-only A18 Pro
-    signature above.
-  - Plan the structural fix: upgrade Expo SDK 51 to the current SDK line
-    with first-class Xcode 26 support. Apple rejects pre-iOS-26-SDK uploads
-    (build 85 failed with `90725`), so returning to Xcode 16.2 is not an
-    option, and SDK 51 predates Xcode 26; further entrypoint changes cannot
-    fix a native-level incompatibility.
+- [ ] Install build 92 from TestFlight on the same iPhone 16 Pro Max.
+- [ ] Confirm `STARTUP DIAGNOSTIC · BUILD 92` appears, then record the `ENV`
+  line exactly as shown (it reports `O`/`X` presence for
+  `PRIVY_APP_ID`, `PRIVY_CLIENT_ID`, and `BACKEND_URL` as inlined into this
+  bundle — an `X` means the EAS `production` environment did not carry that
+  variable at build time, itself a prime crash candidate).
+- [ ] Tap `EasyGo 시작` once and record exactly one result: the normal EasyGo
+  app, `STARTUP-MODULE-02` (include the `stage` label naming the module that
+  failed), `STARTUP-JS-01`, or an immediate termination.
 
 ## Android readiness
 
@@ -90,9 +71,12 @@ what the JS entry imports, so the two results separate cleanly:
   in an on-screen error or application log.
 - [ ] Record failures with build number, device/OS, UTC time, screen, exact user
   action, and screenshot. Do not include credentials or private wallet data.
-- [ ] If build 91 terminates before the minimal screen appears, export the
-  newest EasyGo analytics `.ips` file from the iPhone and follow the
-  `Build 91 decision tree` above before requesting any further build.
+- [ ] If build 92 shows `STARTUP-MODULE-02`, the `stage` label names the
+  failing module; capture the full visible message and a screenshot. If it
+  terminates after `EasyGo 시작` without a visible error, export the newest
+  EasyGo analytics `.ips` file from the iPhone. Termination before the
+  diagnostic screen would contradict the build 91 result and warrants a
+  re-test of build 91 first.
 - [ ] After the checklist passes, mark the matching items in
   `backend/docs/DEPLOY_CHECKLIST.md`; keep all Path C feature flags off until
   the privacy and security gates are separately approved.

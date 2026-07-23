@@ -192,8 +192,24 @@ screen. No social rows or tables are deleted by S8.
       capture the `.ips` crash log, cross-test build 91 on a non-A18 iPhone
       and a dev-client build on the A18 device, and plan the Expo SDK
       upgrade off SDK 51 as the structural fix instead of further
-      entrypoint changes. The full procedure lives in
-      `docs/DEVICE_QA_CHECKLIST.md` under `Build 91 decision tree`.
+      entrypoint changes.
+- [x] Build 91 rendered its minimal screen on the iPhone 16 Pro Max that
+      terminated builds 86 through 90, clearing the native layer (Xcode 26
+      binary, autolinked native module init, and the A18 Pro device class).
+      The crash therefore lives in the JS application graph evaluated at
+      startup by builds 86 through 89. Build 92 restores the staged
+      `BootstrapApp` entry and adds two diagnostics: the `STARTUP-MODULE-02`
+      error now carries a `stage` label naming the exact module that failed
+      (polyfills, gesture-handler, reanimated, or `./App`), and the safe
+      screen shows an `ENV` presence line for `EXPO_PUBLIC_PRIVY_APP_ID`,
+      `EXPO_PUBLIC_PRIVY_CLIENT_ID`, and `EXPO_PUBLIC_BACKEND_URL` as
+      inlined at bundle time. The env line matters because the owner
+      checklist only records those variables being set in the EAS
+      `development` and `preview` environments, while TestFlight builds use
+      the `production` profile and its `production` environment; a missing
+      Privy ID in the release bundle is a prime candidate for a
+      release-only startup failure. Presence booleans only — values never
+      render.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before
