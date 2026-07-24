@@ -222,6 +222,13 @@ screen. No social rows or tables are deleted by S8.
       `STARTUP-CONFIG-01` screen instead of mounting `PrivyProvider` when
       either Privy identifier is missing, so this failure class can never
       again present as a silent termination.
+- [x] Populate the EAS `production` environment with all three
+      `EXPO_PUBLIC_*` variables and build 92 from that environment. EAS build
+      `7b7e9dee` (`2.0.0 (92)`, `production` profile, commit `47c817a`)
+      completed in 6m27s. It is the first iOS build whose bundle inlines the
+      Privy identifiers. Submission to TestFlight runs through
+      `eas submit --platform ios`; the expo.dev web UI offers no submit
+      control.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before
