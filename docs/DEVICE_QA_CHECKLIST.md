@@ -31,9 +31,10 @@ token, wallet private key, or login code.
   Privy identifiers, and it restores the staged `BootstrapApp` entry with
   per-stage failure labels, an env-presence line, and the
   `STARTUP-CONFIG-01` guard that replaces a silent `PrivyProvider` crash.
-- [ ] Submit build 92 to TestFlight with `eas submit --platform ios`, which
-  picks up the latest finished production build. The expo.dev web UI has no
-  submit control; submission is CLI-only.
+- [ ] Submit build 92 to TestFlight. The expo.dev web UI has no submit
+  control, so either run `eas submit --platform ios` locally, or use the
+  `EAS iOS Release` GitHub Actions workflow (`mode: submit-latest`), which
+  runs the same CLI from CI and needs the repository secret `EXPO_TOKEN`.
 - [ ] Confirm App Store Connect lists build `2.0.0 (92)` as `VALID`,
   unexpired, and available to the six-tester `Internal testing` group.
 - [ ] Install build 92 from TestFlight on the same iPhone 16 Pro Max.

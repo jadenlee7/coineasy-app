@@ -228,7 +228,12 @@ screen. No social rows or tables are deleted by S8.
       completed in 6m27s. It is the first iOS build whose bundle inlines the
       Privy identifiers. Submission to TestFlight runs through
       `eas submit --platform ios`; the expo.dev web UI offers no submit
-      control.
+      control. Because this project is driven without a local terminal, the
+      `EAS iOS Release` workflow (`.github/workflows/eas-ios-release.yml`)
+      runs that CLI from CI on manual dispatch, in either `submit-latest` or
+      `build-and-submit` mode. It needs one repository secret, `EXPO_TOKEN`,
+      created at expo.dev under Account settings. Apple credentials stay in
+      EAS and never enter the repository.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before
