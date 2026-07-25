@@ -175,6 +175,65 @@ screen. No social rows or tables are deleted by S8.
       `bc3bd439-6eb0-403f-b9f9-c2d57b78dcd1` completed successfully. App Store
       Connect build `2.0.0 (90)` (`29e08ff6-68dd-4403-a39e-ba3f8e4321ff`) is
       `VALID`, unexpired, and available to the internal TestFlight group.
+- [x] Escalate the startup isolation after build 90. Build 91 registers a
+      static minimal screen directly from `entrypoint.js` without importing
+      `BootstrapApp`, so no application JS beyond React Native itself
+      evaluates at launch. EAS build `2ec8447d-e3b3-4fc0-abf3-93e79330b68e`
+      and submission `fef7561f-78f4-41ff-8f60-36a2b97b3e45` were triggered.
+      Recorded analysis for the native branch of the diagnosis: every
+      crashing iOS build (86 through 90) was necessarily built with Xcode 26
+      because Apple rejects iOS 18 SDK uploads (build 85, error `90725`),
+      while Expo SDK 51 predates Xcode 26 support and needed source patches
+      just to compile. The crash device is an iPhone 16 Pro Max (A18 Pro),
+      matching a known class of production-only launch crashes on A18 Pro +
+      iOS 26 in which development builds run normally (expo/expo#44680).
+      Native modules initialize through autolinking regardless of the JS
+      entry, so if build 91 still terminates the JS bisection is exhausted:
+      capture the `.ips` crash log, cross-test build 91 on a non-A18 iPhone
+      and a dev-client build on the A18 device, and plan the Expo SDK
+      upgrade off SDK 51 as the structural fix instead of further
+      entrypoint changes.
+- [x] Build 91 rendered its minimal screen on the iPhone 16 Pro Max that
+      terminated builds 86 through 90, clearing the native layer (Xcode 26
+      binary, autolinked native module init, and the A18 Pro device class).
+      The crash therefore lives in the JS application graph evaluated at
+      startup by builds 86 through 89. Build 92 restores the staged
+      `BootstrapApp` entry and adds two diagnostics: the `STARTUP-MODULE-02`
+      error now carries a `stage` label naming the exact module that failed
+      (polyfills, gesture-handler, reanimated, or `./App`), and the safe
+      screen shows an `ENV` presence line for `EXPO_PUBLIC_PRIVY_APP_ID`,
+      `EXPO_PUBLIC_PRIVY_CLIENT_ID`, and `EXPO_PUBLIC_BACKEND_URL` as
+      inlined at bundle time. The env line matters because the owner
+      checklist only records those variables being set in the EAS
+      `development` and `preview` environments, while TestFlight builds use
+      the `production` profile and its `production` environment; a missing
+      Privy ID in the release bundle is a prime candidate for a
+      release-only startup failure. Presence booleans only — values never
+      render.
+- [x] Confirm the root cause on the expo.dev dashboard: the EAS `production`
+      environment holds zero project environment variables; all three
+      `EXPO_PUBLIC_*` values exist only in `development` and `preview`. Every
+      TestFlight build inlined `undefined` Privy identifiers, and
+      `PrivyProvider`'s async init failure lands outside the React error
+      boundary, terminating release builds with no visible error — matching
+      builds 86 through 89 exactly, and matching build 91 (no app JS)
+      surviving. Two fixes: the owner adds the three variables to the
+      `production` environment, and `App` now renders a visible
+      `STARTUP-CONFIG-01` screen instead of mounting `PrivyProvider` when
+      either Privy identifier is missing, so this failure class can never
+      again present as a silent termination.
+- [x] Populate the EAS `production` environment with all three
+      `EXPO_PUBLIC_*` variables and build 92 from that environment. EAS build
+      `7b7e9dee` (`2.0.0 (92)`, `production` profile, commit `47c817a`)
+      completed in 6m27s. It is the first iOS build whose bundle inlines the
+      Privy identifiers. Submission to TestFlight runs through
+      `eas submit --platform ios`; the expo.dev web UI offers no submit
+      control. Because this project is driven without a local terminal, the
+      `EAS iOS Release` workflow (`.github/workflows/eas-ios-release.yml`)
+      runs that CLI from CI on manual dispatch, in either `submit-latest` or
+      `build-and-submit` mode. It needs one repository secret, `EXPO_TOKEN`,
+      created at expo.dev under Account settings. Apple credentials stay in
+      EAS and never enter the repository.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before

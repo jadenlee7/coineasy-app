@@ -1,24 +1,51 @@
 # EasyGo staging device QA
 
-Use this checklist for the staged-startup diagnostic TestFlight build `2.0.0
-(90)` and Android preview build `versionCode 64`. Both clients must target
-`https://easygo-web-staging-staging.up.railway.app`. Record the device model,
-OS version, tester account type, and test time; never record an access token,
-wallet private key, or login code.
+Use this checklist for the staged-startup diagnostic TestFlight build
+`2.0.0 (92)` and Android preview build `versionCode 64`. Both clients must
+target `https://easygo-web-staging-staging.up.railway.app`. Record the device
+model, OS version, tester account type, and test time; never record an access
+token, wallet private key, or login code.
 
 ## iOS readiness
 
-- [x] EAS diagnostic build `fe4ab796-b7cd-4323-9bbc-96e2af4bc0bc`
-  completed on Xcode 26. App Store Connect submission
-  `bc3bd439-6eb0-403f-b9f9-c2d57b78dcd1` completed successfully.
-- [x] App Store Connect build `2.0.0 (90)`
-  (`29e08ff6-68dd-4403-a39e-ba3f8e4321ff`) is `VALID`, unexpired, and
-  available to the six-tester `Internal testing` group.
-- [ ] Install build 90 from TestFlight on the iPhone 16 Pro Max where builds 87
-  through 89 terminated during startup. Builds 86 through 89 are superseded.
-- [ ] Confirm `STARTUP DIAGNOSTIC · BUILD 90` appears before tapping anything.
+- [x] Build 91 (minimal static entrypoint, EAS build
+  `2ec8447d-e3b3-4fc0-abf3-93e79330b68e`) rendered `최소 부팅 화면 · BUILD 91`
+  on the iPhone 16 Pro Max where builds 86 through 90 terminated. The native
+  layer — RN 0.74.5 under Xcode 26, every autolinked native module's init,
+  and the A18 Pro device class — is therefore cleared. The remaining crash
+  site is the JS application graph that builds 86 through 89 evaluated at
+  startup. Builds 86 through 91 are superseded.
+- [x] Root cause candidate confirmed on the expo.dev dashboard: the EAS
+  `production` environment contains no project environment variables at
+  all — `EXPO_PUBLIC_PRIVY_APP_ID`, `EXPO_PUBLIC_PRIVY_CLIENT_ID`, and
+  `EXPO_PUBLIC_BACKEND_URL` exist only in `development` and `preview`.
+  Every TestFlight build (production profile) therefore inlined
+  `undefined` for all three, and `PrivyProvider` fails its async init
+  outside the error boundary, which terminates release builds silently.
+- [x] Owner: added `EXPO_PUBLIC_PRIVY_APP_ID`, `EXPO_PUBLIC_PRIVY_CLIENT_ID`,
+  and `EXPO_PUBLIC_BACKEND_URL` to the EAS `production` environment, keeping
+  the existing `development`/`preview` values. All three now list all three
+  environments.
+- [x] EAS build 92 (`7b7e9dee`, `2.0.0 (92)`, `production` profile, commit
+  `47c817a`) completed. It is the first iOS build whose bundle inlines the
+  Privy identifiers, and it restores the staged `BootstrapApp` entry with
+  per-stage failure labels, an env-presence line, and the
+  `STARTUP-CONFIG-01` guard that replaces a silent `PrivyProvider` crash.
+- [ ] Submit build 92 to TestFlight. The expo.dev web UI has no submit
+  control, so either run `eas submit --platform ios` locally, or use the
+  `EAS iOS Release` GitHub Actions workflow (`mode: submit-latest`), which
+  runs the same CLI from CI and needs the repository secret `EXPO_TOKEN`.
+- [ ] Confirm App Store Connect lists build `2.0.0 (92)` as `VALID`,
+  unexpired, and available to the six-tester `Internal testing` group.
+- [ ] Install build 92 from TestFlight on the same iPhone 16 Pro Max.
+- [ ] Confirm `STARTUP DIAGNOSTIC · BUILD 92` appears, then record the `ENV`
+  line exactly as shown (it reports `O`/`X` presence for
+  `PRIVY_APP_ID`, `PRIVY_CLIENT_ID`, and `BACKEND_URL` as inlined into this
+  bundle — an `X` means the EAS `production` environment did not carry that
+  variable at build time, itself a prime crash candidate).
 - [ ] Tap `EasyGo 시작` once and record exactly one result: the normal EasyGo
-  app, `STARTUP-MODULE-02`, `STARTUP-JS-01`, or an immediate termination.
+  app, `STARTUP-MODULE-02` (include the `stage` label naming the module that
+  failed), `STARTUP-JS-01`, or an immediate termination.
 
 ## Android readiness
 
@@ -61,10 +88,12 @@ wallet private key, or login code.
   in an on-screen error or application log.
 - [ ] Record failures with build number, device/OS, UTC time, screen, exact user
   action, and screenshot. Do not include credentials or private wallet data.
-- [ ] If build 90 shows `STARTUP-MODULE-02` or `STARTUP-JS-01`, capture the full
-  visible message and a screenshot. If it terminates before the diagnostic
-  screen appears, or terminates after `EasyGo 시작` without a visible error,
-  export the newest EasyGo analytics `.ips` file from the iPhone.
+- [ ] If build 92 shows `STARTUP-MODULE-02`, the `stage` label names the
+  failing module; capture the full visible message and a screenshot. If it
+  terminates after `EasyGo 시작` without a visible error, export the newest
+  EasyGo analytics `.ips` file from the iPhone. Termination before the
+  diagnostic screen would contradict the build 91 result and warrants a
+  re-test of build 91 first.
 - [ ] After the checklist passes, mark the matching items in
   `backend/docs/DEPLOY_CHECKLIST.md`; keep all Path C feature flags off until
   the privacy and security gates are separately approved.

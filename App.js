@@ -2,7 +2,7 @@ import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from "react";
-import { StyleSheet, View, Keyboard, Platform, Animated, Image, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, Keyboard, Platform, Animated, Image, Dimensions } from 'react-native';
 
 import { StatusBar } from 'expo-status-bar';
 import { TailwindProvider } from 'tailwind-rn';
@@ -717,6 +717,31 @@ function EasyGoApp() {
     /** Wait for app to be ready before rendering it */
     if (!isLayoutReady) {
         return null;
+    }
+
+    // Never mount PrivyProvider without its identifiers: an undefined appId
+    // fails inside Privy's async init, outside the error boundary, which
+    // terminates release builds with no visible error. Builds get these
+    // values inlined from the EAS environment of their build profile, so a
+    // missing value here means that environment lacks the variable.
+    if (!PRIVY_APP_ID || !PRIVY_CLIENT_ID) {
+        return (
+            <View
+                onLayout={onLayoutRootView}
+                style={{ flex: 1, backgroundColor: '#FFF8F0', justifyContent: 'center', padding: 28 }}
+            >
+                <Text selectable style={{ color: '#C2410C', fontSize: 12, fontWeight: '700' }}>
+                    STARTUP-CONFIG-01
+                </Text>
+                <Text style={{ color: '#0F172A', fontSize: 22, fontWeight: '700', marginTop: 12 }}>
+                    앱 구성 오류
+                </Text>
+                <Text style={{ color: '#475569', fontSize: 15, lineHeight: 23, marginTop: 12 }}>
+                    이 빌드에는 Privy 로그인 설정이 포함되지 않았습니다. 이 빌드 프로파일의 EAS 환경에
+                    EXPO_PUBLIC_PRIVY_APP_ID와 EXPO_PUBLIC_PRIVY_CLIENT_ID를 설정한 뒤 다시 빌드해 주세요.
+                </Text>
+            </View>
+        );
     }
 
     return (
