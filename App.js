@@ -2,7 +2,7 @@ import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from "react";
-import { StyleSheet, View, Keyboard, Platform, Animated, Image, Dimensions } from 'react-native';
+import { StyleSheet, View, Keyboard, Platform, Animated, Image, Dimensions, Text, SafeAreaView } from 'react-native';
 
 import { StatusBar } from 'expo-status-bar';
 import { TailwindProvider } from 'tailwind-rn';
@@ -43,6 +43,21 @@ const baseChain = {
 const PRIVY_APP_ID = process.env.EXPO_PUBLIC_PRIVY_APP_ID;
 const PRIVY_CLIENT_ID = process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID;
 const COURSE_PROGRESS_KEY = 'easygo_course_progress';
+const STARTUP_CONFIG_CODE = 'STARTUP-CONFIG-01';
+const isSet = (value) => typeof value === 'string' && value.trim().length > 0;
+const collectMissingPrivyEnvVars = () => {
+  const missing = [];
+
+  if (!isSet(PRIVY_APP_ID)) {
+    missing.push('EXPO_PUBLIC_PRIVY_APP_ID');
+  }
+
+  if (!isSet(PRIVY_CLIENT_ID)) {
+    missing.push('EXPO_PUBLIC_PRIVY_CLIENT_ID');
+  }
+
+  return missing;
+};
 
 /** Expo */
 import { useFonts } from 'expo-font';
@@ -146,6 +161,7 @@ export default function App() {
 }
 
 function EasyGoApp() {
+  const missingPrivyEnv = collectMissingPrivyEnvVars();
   const [user, setUser] = useState();
   const [userData, setUserData] = useState();
   const [userConnecting, setUserConnecting] = useState(false);
@@ -713,6 +729,22 @@ function EasyGoApp() {
         return null
     }
 
+    if (missingPrivyEnv.length > 0) {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <View style={styles.configContainer}>
+                    <Text style={styles.brand}>EasyGo</Text>
+                    <Text style={styles.configCode}>{STARTUP_CONFIG_CODE}</Text>
+                    <Text style={styles.configTitle}>필수 환경변수가 설정되지 않았습니다.</Text>
+                    <Text style={styles.configText}>
+                        앱이 즉시 종료되지 않도록 부팅을 중단했습니다. 아래 값이 EAS Production 환경에 설정되어야 합니다.
+                    </Text>
+                    <Text style={styles.configBullets}>- {missingPrivyEnv.join('\n- ')}</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
 
     /** Wait for app to be ready before rendering it */
     if (!isLayoutReady) {
@@ -892,4 +924,48 @@ const Confetti = ({confetti}) => {
     )
 }
 
-const styles = StyleSheet.create();
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFF8F0',
+  },
+  configContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 28,
+  },
+  brand: {
+    color: '#FF6813',
+    fontSize: 40,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  configCode: {
+    color: '#C2410C',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  configTitle: {
+    color: '#0F172A',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  configText: {
+    color: '#334155',
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  configBullets: {
+    color: '#334155',
+    fontSize: 13,
+    lineHeight: 22,
+    textAlign: 'left',
+  },
+});
