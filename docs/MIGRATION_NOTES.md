@@ -175,6 +175,22 @@ screen. No social rows or tables are deleted by S8.
       `bc3bd439-6eb0-403f-b9f9-c2d57b78dcd1` completed successfully. App Store
       Connect build `2.0.0 (90)` (`29e08ff6-68dd-4403-a39e-ba3f8e4321ff`) is
       `VALID`, unexpired, and available to the internal TestFlight group.
+- [x] Correct the release-environment diagnosis exposed by build 92. The
+      protected `STARTUP-CONFIG-01` screen proved the app graph rendered, while
+      the release bundle lacked `EXPO_PUBLIC_PRIVY_APP_ID` and
+      `EXPO_PUBLIC_PRIVY_CLIENT_ID`. Metro now uses `babel-preset-expo`; the
+      downloaded build 93 IPA contains both public IDs and the staging backend
+      URL. EAS build `281c72d3-e232-4202-8e11-92a58498c2d3` and submission
+      `7ed1bbba-35f1-4200-9df8-b5b90f7d0d55` completed successfully. App Store
+      Connect reports build `2.0.0 (93)`
+      (`e285c8cd-5df9-4e3c-a3d5-593076921db8`) as `VALID`.
+- [ ] Ship build 94 after build 93 still terminated in the configured Privy
+      path. Build 94 records every risky startup phase in AsyncStorage, verifies
+      SecureStore and the Privy client before Provider mount, reports
+      `usePrivy().error`, disables automatic wallet migration, and keeps one
+      Privy client/Provider alive while switching from the probe to EasyGo.
+      Privy authentication stays in SecureStore under the versioned
+      `easygo-privy-v2-` namespace; wallet recovery storage is not deleted.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before

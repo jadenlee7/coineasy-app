@@ -29,17 +29,11 @@ import { SOCIAL_CATEGORIES } from './data/socialCategories';
 // Required polyfills load before this module from entrypoint.js.
 import { PrivyProvider, usePrivy } from '@privy-io/expo';
 import useAuthSync from './hooks/useAuthSync';
+import { EASYGO_BASE_CHAIN, getEasyGoPrivyClient } from './utils/privyClient';
+import { easyGoPrivyStorage } from './utils/privyStorage';
 
 // Phase 1 chain: Base mainnet (chainId 8453). EasyChain is gated by
 // PHASE.EASYCHAIN_ENABLED in EASYGO_BUILD_PLAN.md and added in Phase 2.
-const baseChain = {
-  id: 8453,
-  name: 'Base',
-  rpcUrls: { default: { http: ['https://mainnet.base.org'] } },
-  blockExplorers: { default: { name: 'BaseScan', url: 'https://basescan.org' } },
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-};
-
 const PRIVY_APP_ID = process.env.EXPO_PUBLIC_PRIVY_APP_ID;
 const PRIVY_CLIENT_ID = process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID;
 const COURSE_PROGRESS_KEY = 'easygo_course_progress';
@@ -145,6 +139,53 @@ function AuthBridge() {
   return null;
 }
 
+function FullStartupSignal({ onStartupStatus }) {
+  const privy = usePrivy();
+  const readyRef = useRef(Boolean(privy?.isReady));
+  readyRef.current = Boolean(privy?.isReady);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      await onStartupStatus?.({ step: 'full-provider-child', status: 'passed' });
+      if (active) {
+        await onStartupStatus?.({
+          step: 'full-provider-ready',
+          status: readyRef.current ? 'passed' : 'pending',
+        });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [onStartupStatus]);
+
+  useEffect(() => {
+    if (privy?.isReady) {
+      onStartupStatus?.({ step: 'full-provider-ready', status: 'passed' });
+    }
+  }, [onStartupStatus, privy?.isReady]);
+
+  return null;
+}
+
+function EasyGoPrivyBoundary({ alreadyMounted, children }) {
+  if (alreadyMounted) return children;
+
+  return (
+    <PrivyProvider
+      appId={PRIVY_APP_ID}
+      client={getEasyGoPrivyClient()}
+      clientId={PRIVY_CLIENT_ID}
+      config={{ embedded: { disableAutomaticMigration: true } }}
+      storage={easyGoPrivyStorage}
+      supportedChains={[EASYGO_BASE_CHAIN]}
+    >
+      {children}
+    </PrivyProvider>
+  );
+}
+
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync().catch((error) => {
   console.warn('[startup] unable to retain splash screen', error);
@@ -152,15 +193,18 @@ SplashScreen.preventAutoHideAsync().catch((error) => {
 
 let callbackPostShared;
 let page = 0;
-export default function App() {
+export default function App({ onStartupStatus, privyAlreadyMounted = false }) {
   return (
     <StartupErrorBoundary>
-      <EasyGoApp />
+      <EasyGoApp
+        onStartupStatus={onStartupStatus}
+        privyAlreadyMounted={privyAlreadyMounted}
+      />
     </StartupErrorBoundary>
   );
 }
 
-function EasyGoApp() {
+function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
   const missingPrivyEnv = collectMissingPrivyEnvVars();
   const [user, setUser] = useState();
   const [userData, setUserData] = useState();
@@ -752,11 +796,7 @@ function EasyGoApp() {
     }
 
     return (
-        <PrivyProvider
-          appId={PRIVY_APP_ID}
-          clientId={PRIVY_CLIENT_ID}
-          supportedChains={[baseChain]}
-        >
+        <EasyGoPrivyBoundary alreadyMounted={privyAlreadyMounted}>
         <>
             <StatusBar translucent={true} backgroundColor="#00000000" style="black"/>
             <GestureHandlerRootView onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
@@ -850,6 +890,7 @@ function EasyGoApp() {
                         adAlreadyClaimed, setAdAlreadyClaimed,
                     }}
                 >
+                    <FullStartupSignal onStartupStatus={onStartupStatus} />
                     <AuthBridge />
 
                     <TailwindProvider utilities={utilities}>
@@ -914,7 +955,7 @@ function EasyGoApp() {
                 </GlobalContext.Provider>
             </GestureHandlerRootView>
         </>
-      </PrivyProvider>
+      </EasyGoPrivyBoundary>
     );
 }
 

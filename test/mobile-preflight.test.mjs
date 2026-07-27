@@ -6,9 +6,15 @@ import {
   authBridgeHasProviderScope,
   expoPublicEnvInliningIsConfigured,
   parseEnvText,
+  privyAutomaticMigrationIsDisabled,
+  privyProviderUsesVersionedStorage,
   privyPolyfillsLoadFirst,
+  singletonPrivyClientIsConfigured,
+  startupDiagnosticPersistsPhases,
   startupBoundaryProtectsApp,
+  startupKeepsOnePrivyProvider,
   validateMobileEnvironment,
+  versionedPrivyStorageIsSafe,
 } from '../scripts/mobile-preflight.mjs';
 
 const appConfig = {
@@ -98,10 +104,32 @@ test('Privy polyfills evaluate before the application module', () => {
   const bootstrapSource = readFileSync(new URL('../BootstrapApp.js', import.meta.url), 'utf8');
   assert.equal(privyPolyfillsLoadFirst(bootstrapSource), true);
   assert.equal(privyPolyfillsLoadFirst(`
-    await import('./App');
-    await import('fast-text-encoding');
-    await import('react-native-get-random-values');
-    await import('@ethersproject/shims');
+    import('./App');
+    import('fast-text-encoding');
+    import('react-native-get-random-values');
+    import('@ethersproject/shims');
+  `), false);
+});
+
+test('build 94 persists risky startup phases and disables automatic wallet migration', () => {
+  const bootstrapSource = readFileSync(new URL('../BootstrapApp.js', import.meta.url), 'utf8');
+  const appSource = readFileSync(new URL('../App.js', import.meta.url), 'utf8');
+  const probeSource = readFileSync(new URL('../PrivyStartupProbe.js', import.meta.url), 'utf8');
+  const clientSource = readFileSync(new URL('../utils/privyClient.js', import.meta.url), 'utf8');
+  const storageSource = readFileSync(new URL('../utils/privyStorage.js', import.meta.url), 'utf8');
+
+  assert.equal(startupDiagnosticPersistsPhases(bootstrapSource), true);
+  assert.equal(privyAutomaticMigrationIsDisabled(appSource), true);
+  assert.equal(privyAutomaticMigrationIsDisabled(probeSource), true);
+  assert.equal(privyProviderUsesVersionedStorage(appSource), true);
+  assert.equal(privyProviderUsesVersionedStorage(probeSource), true);
+  assert.equal(singletonPrivyClientIsConfigured(clientSource), true);
+  assert.equal(versionedPrivyStorageIsSafe(storageSource), true);
+  assert.equal(startupKeepsOnePrivyProvider(bootstrapSource, probeSource, appSource), true);
+  assert.equal(privyAutomaticMigrationIsDisabled(`
+    <PrivyProvider appId="example">
+      <App />
+    </PrivyProvider>
   `), false);
 });
 

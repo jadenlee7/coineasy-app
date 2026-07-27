@@ -1,4 +1,5 @@
 import React from 'react';
+import * as Application from 'expo-application';
 import {
   Pressable,
   SafeAreaView,
@@ -7,6 +8,8 @@ import {
   Text,
   View,
 } from 'react-native';
+
+const BUILD_NUMBER = Application.nativeBuildVersion || 'unknown';
 
 export default class StartupErrorBoundary extends React.Component {
   state = { error: null };
@@ -36,7 +39,9 @@ export default class StartupErrorBoundary extends React.Component {
             시작 중 오류를 감지해 앱 종료를 막았습니다. 아래 오류 문구를 캡처해 주세요.
           </Text>
           <View style={styles.errorBox}>
-            <Text selectable style={styles.errorCode}>STARTUP-JS-01 · build 90</Text>
+            <Text selectable style={styles.errorCode}>
+              STARTUP-JS-01 · build {BUILD_NUMBER}
+            </Text>
             <Text selectable style={styles.errorMessage}>
               {error?.message || String(error)}
             </Text>

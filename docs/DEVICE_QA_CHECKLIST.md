@@ -1,24 +1,35 @@
 # EasyGo staging device QA
 
 Use this checklist for the staged-startup diagnostic TestFlight build `2.0.0
-(90)` and Android preview build `versionCode 64`. Both clients must target
+(94)` and Android preview build `versionCode 64`. Both clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
 
 ## iOS readiness
 
-- [x] EAS diagnostic build `fe4ab796-b7cd-4323-9bbc-96e2af4bc0bc`
-  completed on Xcode 26. App Store Connect submission
-  `bc3bd439-6eb0-403f-b9f9-c2d57b78dcd1` completed successfully.
-- [x] App Store Connect build `2.0.0 (90)`
-  (`29e08ff6-68dd-4403-a39e-ba3f8e4321ff`) is `VALID`, unexpired, and
-  available to the six-tester `Internal testing` group.
-- [ ] Install build 90 from TestFlight on the iPhone 16 Pro Max where builds 87
-  through 89 terminated during startup. Builds 86 through 89 are superseded.
-- [ ] Confirm `STARTUP DIAGNOSTIC · BUILD 90` appears before tapping anything.
-- [ ] Tap `EasyGo 시작` once and record exactly one result: the normal EasyGo
-  app, `STARTUP-MODULE-02`, `STARTUP-JS-01`, or an immediate termination.
+- [x] Build 92 reached the protected configuration screen on the affected
+  iPhone, proving the minimal React Native boot and application module graph
+  could render. Its release bundle did not inline the two public Privy IDs.
+- [x] EAS build 93 `281c72d3-e232-4202-8e11-92a58498c2d3` switched Metro to
+  `babel-preset-expo`; its IPA contains the public Privy IDs and backend URL.
+  Submission `7ed1bbba-35f1-4200-9df8-b5b90f7d0d55` finished successfully,
+  and App Store Connect reports `2.0.0 (93)`
+  (`e285c8cd-5df9-4e3c-a3d5-593076921db8`) as `VALID`.
+- [x] Build 93 still terminated on the iPhone 16 Pro Max after advancing into
+  the configured Privy startup path. App Store Connect currently has no
+  tester-submitted crash log for that build.
+- [ ] Confirm the replacement build 94 EAS build and App Store Connect
+  submission IDs are recorded here before device testing.
+- [ ] Install build 94 from TestFlight on the affected iPhone 16 Pro Max.
+- [ ] Confirm `STARTUP DIAGNOSTIC · BUILD 94` appears before tapping anything.
+- [ ] Tap `Privy 단계 진단 시작` once. If the app terminates, reopen it and
+  capture the `마지막 기록` row before tapping again.
+- [ ] If `PRIVY PROBE · BUILD 94` reaches `Privy 준비 완료`, tap
+  `EasyGo 본체 열기` and confirm the EasyGo login screen remains open.
+- [ ] Expect one signed-out session on build 94. Authentication stays in iOS
+  SecureStore but uses a new versioned EasyGo namespace so a stale pre-fix
+  Privy session is not restored.
 
 ## Android readiness
 
@@ -61,10 +72,10 @@ wallet private key, or login code.
   in an on-screen error or application log.
 - [ ] Record failures with build number, device/OS, UTC time, screen, exact user
   action, and screenshot. Do not include credentials or private wallet data.
-- [ ] If build 90 shows `STARTUP-MODULE-02` or `STARTUP-JS-01`, capture the full
-  visible message and a screenshot. If it terminates before the diagnostic
-  screen appears, or terminates after `EasyGo 시작` without a visible error,
-  export the newest EasyGo analytics `.ips` file from the iPhone.
+- [ ] If build 94 shows `STARTUP-STAGE-03`, `STARTUP-PRIVY-04`, or
+  `STARTUP-JS-01`, capture the full visible message and a screenshot. If it
+  terminates, reopen once and capture `마지막 기록`; also export the newest
+  EasyGo analytics `.ips` file from the iPhone when available.
 - [ ] After the checklist passes, mark the matching items in
   `backend/docs/DEPLOY_CHECKLIST.md`; keep all Path C feature flags off until
   the privacy and security gates are separately approved.

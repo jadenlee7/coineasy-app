@@ -26,7 +26,10 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 ## Current automated evidence
 
 - [x] Backend tests pass locally (86 pass, one DB-backed SIWE test skipped).
-- [x] Expo Doctor passes 17/17 checks.
+- [ ] Expo Doctor currently passes 15/17 checks. The remaining findings are
+      the locally installed EAS CLI and transitive Expo config-package version
+      drift; neither is newly introduced by build 94, but both remain explicit
+      framework-maintenance debt.
 - [x] Android and iOS static exports complete.
 - [x] Mobile preflight tests pass and detect a disconnected backend URL.
 - [x] Default-off segment worker starts dormant and exits cleanly.
@@ -52,8 +55,8 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
       engine requirement of Node 20.19.4 or newer. The preview profile now pins
       Node 20.19.4; replacement APK build
       `d3e60d71-484d-4c1e-bbde-bc7074c90bbb` completed successfully.
-- [x] Confirm TestFlight build `2.0.0 (86)` is `VALID` and available to the
-      six-member `Internal testing` group. Use
+- [x] Confirm TestFlight build `2.0.0 (93)` is `VALID`. Build 94 is the current
+      Privy startup replacement and must complete device QA before release. Use
       [`../../docs/DEVICE_QA_CHECKLIST.md`](../../docs/DEVICE_QA_CHECKLIST.md)
       for the physical-device pass.
 

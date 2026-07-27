@@ -38,7 +38,7 @@ export function authBridgeHasProviderScope(appSource) {
 export function startupBoundaryProtectsApp(appSource) {
   const source = String(appSource || '');
   const boundaryOpen = source.indexOf('<StartupErrorBoundary>');
-  const app = source.indexOf('<EasyGoApp />', boundaryOpen);
+  const app = source.indexOf('<EasyGoApp', boundaryOpen);
   const boundaryClose = source.indexOf('</StartupErrorBoundary>', app);
   return boundaryOpen >= 0 && app > boundaryOpen && boundaryClose > app;
 }
@@ -62,9 +62,9 @@ export function authenticatedUiIsGated(appSource) {
 export function privyPolyfillsLoadFirst(bootstrapSource) {
   const source = String(bootstrapSource || '');
   const orderedImports = [
-    "await import('fast-text-encoding');",
-    "await import('react-native-get-random-values');",
-    "await import('@ethersproject/shims');",
+    "import('fast-text-encoding')",
+    "import('react-native-get-random-values')",
+    "import('@ethersproject/shims')",
   ];
   let cursor = -1;
   for (const statement of orderedImports) {
@@ -72,8 +72,72 @@ export function privyPolyfillsLoadFirst(bootstrapSource) {
     if (index < 0) return false;
     cursor = index;
   }
-  const appImport = source.indexOf("await import('./App');", cursor + 1);
+  const appImport = source.indexOf("import('./App')", cursor + 1);
   return appImport > cursor;
+}
+
+export function startupDiagnosticPersistsPhases(bootstrapSource) {
+  const source = String(bootstrapSource || '');
+  return [
+    'easygo.startup-probe.v94',
+    'AsyncStorage.setItem(STARTUP_STATE_KEY',
+    "'secure-store-roundtrip'",
+    "'privy-client-initialize'",
+    "'privy-provider-mount'",
+    "'privy-provider-ready'",
+    "'full-app-render'",
+  ].every((token) => source.includes(token));
+}
+
+export function privyProviderUsesVersionedStorage(sourceText) {
+  const source = String(sourceText || '');
+  const providerTags = (source.match(/<PrivyProvider\b[\s\S]*?>/g) || [])
+    .filter((tag) => tag.includes('appId='));
+  return providerTags.length > 0 && providerTags.every((tag) => (
+    tag.includes('client={getEasyGoPrivyClient()}')
+    && tag.includes('storage={easyGoPrivyStorage}')
+  ));
+}
+
+export function versionedPrivyStorageIsSafe(storageSource) {
+  const source = String(storageSource || '');
+  const prefix = source.match(/EASYGO_PRIVY_STORAGE_PREFIX\s*=\s*['"]([^'"]+)['"]/)?.[1];
+  return Boolean(prefix)
+    && /^[A-Za-z0-9._-]+$/.test(prefix)
+    && source.includes("import { SecureStorageAdapter } from '@privy-io/expo'")
+    && source.includes('SecureStorageAdapter.get(')
+    && source.includes('SecureStorageAdapter.put(')
+    && source.includes('SecureStorageAdapter.del(')
+    && !source.includes('AsyncStorage');
+}
+
+export function singletonPrivyClientIsConfigured(clientSource) {
+  const source = String(clientSource || '');
+  return source.includes('let easyGoPrivyClient = null')
+    && source.includes('easyGoPrivyClient = createPrivyClient({')
+    && source.includes('await client.initialize()')
+    && source.includes('storage: easyGoPrivyStorage');
+}
+
+export function startupKeepsOnePrivyProvider(bootstrapSource, probeSource, appSource) {
+  const bootstrap = String(bootstrapSource || '');
+  const probe = String(probeSource || '');
+  const app = String(appSource || '');
+  return bootstrap.includes('AppRoot={AppRoot}')
+    && !bootstrap.includes('setProbeRoot(null)')
+    && probe.includes('<PrivyProvider')
+    && probe.includes('<AppRoot')
+    && probe.includes('privyAlreadyMounted')
+    && app.includes('if (alreadyMounted) return children');
+}
+
+export function privyAutomaticMigrationIsDisabled(sourceText) {
+  const source = String(sourceText || '');
+  const providerTags = source.match(/<PrivyProvider\b[\s\S]*?>/g) || [];
+  return providerTags.some((openingTag) => (
+    /config=\{\{\s*embedded:\s*\{\s*disableAutomaticMigration:\s*true\s*\}\s*\}\}/
+      .test(openingTag)
+  ));
 }
 
 export function expoPublicEnvInliningIsConfigured(babelSource) {
@@ -95,6 +159,9 @@ export function validateMobileEnvironment(env, appConfig, {
   appSource,
   bootstrapSource,
   babelSource,
+  clientSource,
+  probeSource,
+  storageSource,
 } = {}) {
   const checks = [];
   const add = (ok, name, failure, { warning = false } = {}) => {
@@ -147,12 +214,60 @@ export function validateMobileEnvironment(env, appConfig, {
       'authenticated UI gating',
       'authenticated modals must not render on the login path',
     );
+    add(
+      privyAutomaticMigrationIsDisabled(appSource),
+      'full app Privy migration safety',
+      'automatic embedded-wallet migration must remain disabled during iOS startup isolation',
+    );
+    add(
+      privyProviderUsesVersionedStorage(appSource),
+      'full app Privy session storage',
+      'the full app fallback provider must use the versioned SecureStore client',
+    );
   }
   if (bootstrapSource !== undefined) {
     add(
       privyPolyfillsLoadFirst(bootstrapSource),
       'Privy polyfill entry order',
       'Privy polyfills must evaluate before the application imports @privy-io/expo',
+    );
+    add(
+      startupDiagnosticPersistsPhases(bootstrapSource),
+      'persistent startup diagnostics',
+      'startup diagnostics must persist every risky iOS initialization phase',
+    );
+  }
+  if (probeSource !== undefined) {
+    add(
+      privyAutomaticMigrationIsDisabled(probeSource),
+      'Privy probe migration safety',
+      'the Privy startup probe must not run automatic embedded-wallet migration',
+    );
+    add(
+      privyProviderUsesVersionedStorage(probeSource),
+      'Privy probe session storage',
+      'the startup probe must use the versioned SecureStore client',
+    );
+  }
+  if (storageSource !== undefined) {
+    add(
+      versionedPrivyStorageIsSafe(storageSource),
+      'versioned Privy SecureStore',
+      'Privy auth state must remain in a valid, versioned SecureStore namespace',
+    );
+  }
+  if (clientSource !== undefined) {
+    add(
+      singletonPrivyClientIsConfigured(clientSource),
+      'singleton Privy client',
+      'Privy client initialization must reuse one module-level client',
+    );
+  }
+  if (appSource !== undefined && bootstrapSource !== undefined && probeSource !== undefined) {
+    add(
+      startupKeepsOnePrivyProvider(bootstrapSource, probeSource, appSource),
+      'single Privy provider lifetime',
+      'the diagnostic probe and EasyGo shell must share one mounted Privy provider',
     );
   }
   if (babelSource !== undefined) {
@@ -183,12 +298,18 @@ function run() {
   const appConfig = JSON.parse(readFileSync(resolve('app.json'), 'utf8'));
   const appSource = readFileSync(resolve('App.js'), 'utf8');
   const bootstrapSource = readFileSync(resolve('BootstrapApp.js'), 'utf8');
+  const probeSource = readFileSync(resolve('PrivyStartupProbe.js'), 'utf8');
+  const clientSource = readFileSync(resolve('utils/privyClient.js'), 'utf8');
+  const storageSource = readFileSync(resolve('utils/privyStorage.js'), 'utf8');
   const babelSource = readFileSync(resolve('babel.config.js'), 'utf8');
   const result = validateMobileEnvironment(env, appConfig, {
     target: targetFromArgs(process.argv.slice(2)),
     appSource,
     bootstrapSource,
     babelSource,
+    clientSource,
+    probeSource,
+    storageSource,
   });
 
   console.log(`EasyGo mobile preflight: ${result.target}`);
