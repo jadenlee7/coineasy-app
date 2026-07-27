@@ -737,7 +737,7 @@ function EasyGoApp() {
                     <Text style={styles.configCode}>{STARTUP_CONFIG_CODE}</Text>
                     <Text style={styles.configTitle}>필수 환경변수가 설정되지 않았습니다.</Text>
                     <Text style={styles.configText}>
-                        앱이 즉시 종료되지 않도록 부팅을 중단했습니다. 아래 값이 EAS Production 환경에 설정되어야 합니다.
+                        앱이 즉시 종료되지 않도록 부팅을 중단했습니다. 아래 값이 현재 EAS 빌드 환경과 앱 번들에 포함되어야 합니다.
                     </Text>
                     <Text style={styles.configBullets}>- {missingPrivyEnv.join('\n- ')}</Text>
                 </View>

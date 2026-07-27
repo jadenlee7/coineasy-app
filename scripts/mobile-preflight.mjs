@@ -76,6 +76,10 @@ export function privyPolyfillsLoadFirst(bootstrapSource) {
   return appImport > cursor;
 }
 
+export function expoPublicEnvInliningIsConfigured(babelSource) {
+  return /['"]babel-preset-expo['"]/.test(String(babelSource || ''));
+}
+
 function validBackendUrl(value, staged) {
   try {
     const url = new URL(value);
@@ -90,6 +94,7 @@ export function validateMobileEnvironment(env, appConfig, {
   target = 'local',
   appSource,
   bootstrapSource,
+  babelSource,
 } = {}) {
   const checks = [];
   const add = (ok, name, failure, { warning = false } = {}) => {
@@ -150,6 +155,13 @@ export function validateMobileEnvironment(env, appConfig, {
       'Privy polyfills must evaluate before the application imports @privy-io/expo',
     );
   }
+  if (babelSource !== undefined) {
+    add(
+      expoPublicEnvInliningIsConfigured(babelSource),
+      'Expo public environment inlining',
+      'babel.config.js must use babel-preset-expo so EXPO_PUBLIC_* values are embedded in release bundles',
+    );
+  }
 
   return {
     target,
@@ -171,10 +183,12 @@ function run() {
   const appConfig = JSON.parse(readFileSync(resolve('app.json'), 'utf8'));
   const appSource = readFileSync(resolve('App.js'), 'utf8');
   const bootstrapSource = readFileSync(resolve('BootstrapApp.js'), 'utf8');
+  const babelSource = readFileSync(resolve('babel.config.js'), 'utf8');
   const result = validateMobileEnvironment(env, appConfig, {
     target: targetFromArgs(process.argv.slice(2)),
     appSource,
     bootstrapSource,
+    babelSource,
   });
 
   console.log(`EasyGo mobile preflight: ${result.target}`);

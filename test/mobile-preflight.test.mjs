@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   authenticatedUiIsGated,
   authBridgeHasProviderScope,
+  expoPublicEnvInliningIsConfigured,
   parseEnvText,
   privyPolyfillsLoadFirst,
   startupBoundaryProtectsApp,
@@ -101,5 +102,13 @@ test('Privy polyfills evaluate before the application module', () => {
     await import('fast-text-encoding');
     await import('react-native-get-random-values');
     await import('@ethersproject/shims');
+  `), false);
+});
+
+test('release bundling uses the Expo preset that inlines EXPO_PUBLIC values', () => {
+  const babelSource = readFileSync(new URL('../babel.config.js', import.meta.url), 'utf8');
+  assert.equal(expoPublicEnvInliningIsConfigured(babelSource), true);
+  assert.equal(expoPublicEnvInliningIsConfigured(`
+    module.exports = { presets: ['module:metro-react-native-babel-preset'] };
   `), false);
 });

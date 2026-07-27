@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import * as Application from 'expo-application';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,7 +10,7 @@ import {
   View,
 } from 'react-native';
 
-const BUILD_NUMBER = '90';
+const BUILD_NUMBER = Application.nativeBuildVersion || 'unknown';
 
 export default function BootstrapApp() {
   const [AppRoot, setAppRoot] = useState(null);
