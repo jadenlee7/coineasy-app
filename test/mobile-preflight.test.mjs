@@ -5,13 +5,16 @@ import {
   authenticatedUiIsGated,
   authBridgeHasProviderScope,
   expoPublicEnvInliningIsConfigured,
+  iosReleaseUsesIsolatedJscRuntime,
   parseEnvText,
   privyAutomaticMigrationIsDisabled,
   privyIsolationStagesAreGuarded,
   privyProviderUsesVersionedStorage,
   privyPolyfillsLoadFirst,
+  releaseBufferAvoidsUnsupportedNativeBase64,
   singletonPrivyClientIsConfigured,
   startupDiagnosticPersistsPhases,
+  startupDiagnosticReportsRuntime,
   startupBoundaryProtectsApp,
   startupKeepsOnePrivyProvider,
   validateMobileEnvironment,
@@ -20,9 +23,16 @@ import {
 
 const appConfig = {
   expo: {
+    version: '2.0.1',
     scheme: 'coineasyapp',
-    ios: { bundleIdentifier: 'com.coineasy.coineasysocial', usesAppleSignIn: true },
+    ios: {
+      bundleIdentifier: 'com.coineasy.coineasysocial',
+      buildNumber: '96',
+      jsEngine: 'jsc',
+      usesAppleSignIn: true,
+    },
     android: { package: 'com.coineasy.coineasy' },
+    runtimeVersion: { policy: 'appVersion' },
   },
 };
 
@@ -66,6 +76,30 @@ test('staging preflight requires an HTTPS backend and preserves native identity'
     EXPO_PUBLIC_BACKEND_URL: 'https://api.easygo.example',
   }, appConfig, { target: 'staging' });
   assert.deepEqual(ready.errors, []);
+});
+
+test('staging preflight keeps the iOS JSC build on an isolated OTA runtime', () => {
+  assert.equal(iosReleaseUsesIsolatedJscRuntime(appConfig), true);
+  const result = validateMobileEnvironment({
+    EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
+    EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
+    EXPO_PUBLIC_BACKEND_URL: 'https://api.easygo.example',
+  }, {
+    expo: {
+      ...appConfig.expo,
+      ios: { ...appConfig.expo.ios, jsEngine: 'hermes' },
+    },
+  }, { target: 'staging' });
+  assert.equal(
+    result.errors.some((item) => item.name === 'iOS build 96 JSC runtime isolation'),
+    true,
+  );
+  assert.equal(iosReleaseUsesIsolatedJscRuntime({
+    expo: {
+      ...appConfig.expo,
+      ios: { ...appConfig.expo.ios, buildNumber: '95' },
+    },
+  }), false);
 });
 
 test('native identifiers and scheme fail if the configured app identity drifts', () => {
@@ -112,7 +146,7 @@ test('Privy polyfills evaluate before the application module', () => {
   `), false);
 });
 
-test('build 95 persists and user-gates every risky Privy startup phase', () => {
+test('build 96 persists and user-gates every risky Privy startup phase', () => {
   const bootstrapSource = readFileSync(new URL('../BootstrapApp.js', import.meta.url), 'utf8');
   const appSource = readFileSync(new URL('../App.js', import.meta.url), 'utf8');
   const probeSource = readFileSync(new URL('../PrivyStartupProbe.js', import.meta.url), 'utf8');
@@ -120,6 +154,7 @@ test('build 95 persists and user-gates every risky Privy startup phase', () => {
   const storageSource = readFileSync(new URL('../utils/privyStorage.js', import.meta.url), 'utf8');
 
   assert.equal(startupDiagnosticPersistsPhases(bootstrapSource, probeSource), true);
+  assert.equal(startupDiagnosticReportsRuntime(bootstrapSource, probeSource), true);
   assert.equal(probeSource.includes("setStage('client-create')"), false);
   assert.equal(probeSource.includes("stage === 'client-create'"), true);
   assert.equal(probeSource.includes("stage === 'client-initialize'"), true);
@@ -146,8 +181,24 @@ test('build 95 persists and user-gates every risky Privy startup phase', () => {
 
 test('release bundling uses the Expo preset that inlines EXPO_PUBLIC values', () => {
   const babelSource = readFileSync(new URL('../babel.config.js', import.meta.url), 'utf8');
+  const packageConfig = JSON.parse(
+    readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+  );
   assert.equal(expoPublicEnvInliningIsConfigured(babelSource), true);
+  assert.equal(
+    releaseBufferAvoidsUnsupportedNativeBase64(babelSource, packageConfig),
+    true,
+  );
   assert.equal(expoPublicEnvInliningIsConfigured(`
     module.exports = { presets: ['module:metro-react-native-babel-preset'] };
   `), false);
+  assert.equal(releaseBufferAvoidsUnsupportedNativeBase64(`
+    module.exports = {
+      plugins: [['module-resolver', {
+        alias: { buffer: '@craftzdog/react-native-buffer' },
+      }]],
+    };
+  `, {
+    dependencies: { '@craftzdog/react-native-buffer': '^6.0.5' },
+  }), false);
 });

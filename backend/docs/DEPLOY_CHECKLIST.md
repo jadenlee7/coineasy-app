@@ -69,6 +69,15 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Confirm EAS submission `f9106ab4-5459-4ec9-86de-8aa0caf7bebf`
       finished without an error and App Store Connect reports build 95
       (`586e5396-157a-43a6-a5c5-41e930e3ba1b`) as `VALID`.
+- [x] Reproduce build 95 on the affected iPhone 16 Pro Max. The process exits
+      after tapping `client.initialize()`; SecureStore roundtrip and Privy
+      client construction are the last passed gated steps, and WebView and
+      Provider have not yet been mounted.
+- [ ] Complete and inspect iOS compatibility build `2.0.1 (96)`. Confirm the
+      IPA uses JavaScriptCore rather than Hermes, preserves all public release
+      values and v96 diagnostic markers, uses a separate app-version OTA
+      runtime, and contains no `QuickBase64` module before submitting it to
+      TestFlight.
 
 ## Pre-Deploy
 

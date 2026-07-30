@@ -4,7 +4,7 @@
     "slug": "easygo",
     "scheme": "coineasyapp",
     "owner": "coineasy",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "orientation": "portrait",
     "icon": "./assets/logo_easygo_1024.png",
     "userInterfaceStyle": "light",
@@ -18,9 +18,10 @@
     ],
     "ios": {
       "icon": "./assets/logo_easygo_ios_1024.png",
+      "jsEngine": "jsc",
       "supportsTablet": false,
       "usesAppleSignIn": true,
-      "buildNumber": "95",
+      "buildNumber": "96",
       "bundleIdentifier": "com.coineasy.coineasysocial",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "EasyGo uses your photo library when you choose a profile image or attach media to a post.",

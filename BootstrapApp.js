@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -12,7 +13,9 @@ import {
 } from 'react-native';
 
 const BUILD_NUMBER = Application.nativeBuildVersion || 'unknown';
-const STARTUP_STATE_KEY = 'easygo.startup-probe.v95';
+const STARTUP_STATE_KEY = 'easygo.startup-probe.v96';
+const JS_ENGINE = global.HermesInternal ? 'HERMES' : 'JSC';
+const RUNTIME_LABEL = `${JS_ENGINE} · ${Platform.OS.toUpperCase()} ${Platform.Version}`;
 
 const STEP_LABELS = {
   'polyfill-text': 'Text 인코딩 준비',
@@ -196,7 +199,9 @@ export default function BootstrapApp() {
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.brand}>EasyGo</Text>
-        <Text style={styles.eyebrow}>STARTUP DIAGNOSTIC · BUILD {BUILD_NUMBER}</Text>
+        <Text style={styles.eyebrow}>
+          STARTUP DIAGNOSTIC · BUILD {BUILD_NUMBER} · {RUNTIME_LABEL}
+        </Text>
         <Text style={styles.title}>단계별 안전 부팅</Text>
         <Text style={styles.body}>
           아래 버튼은 진단 화면만 준비합니다. 다음 화면에서 저장소, client 생성,
@@ -244,7 +249,9 @@ export default function BootstrapApp() {
             </View>
           ) : (
             <Text style={styles.buttonText}>
-              {phase === 'error' ? '진단 준비 다시 시도' : 'Build 95 단계 진단 열기'}
+              {phase === 'error'
+                ? '진단 준비 다시 시도'
+                : `Build ${BUILD_NUMBER} 단계 진단 열기`}
             </Text>
           )}
         </Pressable>

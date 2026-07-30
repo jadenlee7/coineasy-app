@@ -213,6 +213,38 @@ screen. No social rows or tables are deleted by S8.
       (`586e5396-157a-43a6-a5c5-41e930e3ba1b`) as `VALID`; Apple currently
       reports zero matching beta crash-feedback submissions and no diagnostic
       signature.
+- [x] Physical-device build 95 testing shows that the process exits after the
+      third user-gated action, `client.initialize()`, on the affected iPhone 16
+      Pro Max. The exact EasyGo SecureStore adapter and client construction are
+      the last passed steps; neither the standalone WebView nor `PrivyProvider`
+      is mounted.
+      A repeat App Store Connect query still returned no matching crash feedback
+      or diagnostic signature. The public Privy app-config endpoint returns
+      HTTP 200 and allows `com.coineasy.coineasysocial`, ruling out missing
+      release identifiers and the mobile-client allowlist.
+- [x] Build 96 moves the iOS JavaScript engine from Hermes to JavaScriptCore
+      while keeping Android on Hermes and retaining the same five-stage Privy
+      isolation. It also removes the unused Babel `buffer` alias and
+      `@craftzdog/react-native-buffer` dependency: the resolved native buffer
+      package pulled `react-native-quick-base64@3`, which requires the New
+      Architecture and is not valid for this Expo SDK 51 old-architecture app.
+      A clean iOS export dropped from 2,681 to 2,679 modules and contains no
+      `QuickBase64` code. The app version moves to `2.0.1`, build number to
+      `96`, and startup key to `easygo.startup-probe.v96`; the app-version
+      runtime policy separates this binary from the existing `2.0.0` Hermes
+      updates. Preview updates must still be audited so no Hermes bundle is
+      later published for runtime `2.0.1`. The diagnostic screen also reports
+      the actual engine and OS.
+- [x] Treat Build 96 as a compatibility build rather than a single-variable
+      A/B. It removes both known release risks: the release-only A18 Pro/iOS 26
+      Hermes pattern tracked in
+      [Expo issue 44680](https://github.com/expo/expo/issues/44680), and the
+      unsupported QuickBase64 v3 path documented by
+      [react-native-quick-base64](https://github.com/craftzdog/react-native-quick-base64#installation).
+      A successful device run will prove the combined fix, but not which risk
+      caused Build 95 without an Apple `.ips` stack.
+- [ ] Complete, inspect, submit, and process EAS iOS build `2.0.1 (96)`, then
+      rerun all five steps on the affected device.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before

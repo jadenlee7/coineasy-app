@@ -7,6 +7,7 @@ import React, {
 import * as SecureStore from 'expo-secure-store';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -27,7 +28,9 @@ import { easyGoPrivyStorage } from './utils/privyStorage';
 
 const PRIVY_APP_ID = process.env.EXPO_PUBLIC_PRIVY_APP_ID;
 const PRIVY_CLIENT_ID = process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID;
-const PRIVY_STORAGE_PROBE_KEY = 'startup-probe-v95';
+const PRIVY_STORAGE_PROBE_KEY = 'startup-probe-v96';
+const JS_ENGINE = global.HermesInternal ? 'HERMES' : 'JSC';
+const RUNTIME_LABEL = `${JS_ENGINE} · ${Platform.OS.toUpperCase()} ${Platform.Version}`;
 const RAW_WEBVIEW_INJECTED_OBJECT = Object.freeze({
   shouldUseAppBackedStorage: true,
 });
@@ -183,7 +186,9 @@ function DiagnosticScreen({
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.brand}>EasyGo</Text>
-        <Text style={styles.eyebrow}>PRIVY ISOLATION · BUILD {buildNumber}</Text>
+        <Text style={styles.eyebrow}>
+          PRIVY ISOLATION · BUILD {buildNumber} · {RUNTIME_LABEL}
+        </Text>
         <Text style={styles.title}>{currentTitle}</Text>
         <Text style={styles.body}>{description}</Text>
 

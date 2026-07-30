@@ -6,8 +6,7 @@ module.exports = {
       {
         alias: {
           'crypto': 'expo-crypto',
-          'stream': 'stream-browserify',
-          'buffer': '@craftzdog/react-native-buffer'
+          'stream': 'stream-browserify'
         },
       },
     ],

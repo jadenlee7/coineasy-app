@@ -1,7 +1,7 @@
 # EasyGo staging device QA
 
-Use this checklist for the staged-startup diagnostic TestFlight build `2.0.0
-(95)` and Android preview build `versionCode 64`. Both clients must target
+Use this checklist for the staged-startup diagnostic TestFlight build `2.0.1
+(96)` and Android preview build `versionCode 64`. Both clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
@@ -40,19 +40,30 @@ wallet private key, or login code.
   without an error. App Store Connect marks build 95
   (`586e5396-157a-43a6-a5c5-41e930e3ba1b`) `VALID`; Apple currently reports
   zero matching beta crash-feedback submissions and no diagnostic signature.
-- [ ] Install build 95 from TestFlight on the affected iPhone 16 Pro Max.
-- [ ] Confirm `STARTUP DIAGNOSTIC · BUILD 95` appears before tapping anything,
+- [x] Install build 95 from TestFlight on the affected iPhone 16 Pro Max.
+- [x] Confirm `STARTUP DIAGNOSTIC · BUILD 95` appears before tapping anything,
   then tap `Build 95 단계 진단 열기`.
-- [ ] Run the five buttons one at a time: storage roundtrip, client creation,
-  client initialize, standalone WebView, and Provider mount. Wait for the next
-  numbered screen after each tap.
-- [ ] If the app terminates after any tap, reopen it and capture the
-  `마지막 기록` row before tapping again.
+- [x] The storage roundtrip and client construction steps pass. On the
+  affected device, tapping `3단계 · initialize만 실행` terminates build 95
+  before the standalone WebView or Provider is mounted. The supplied screen
+  records `Privy client 객체 생성 · 통과` at `2026-07-30T20:57:51.609Z`.
+- [x] Recheck App Store Connect after the build 95 reproduction. Apple still
+  reports zero matching beta crash-feedback submissions and no diagnostic
+  signature, so no `.ips` termination stack is remotely available.
+- [ ] Complete, inspect, submit, and process iOS compatibility build `2.0.1
+  (96)`.
+  This build must use `ios.jsEngine: jsc`, a new app-version OTA runtime,
+  persistent key `easygo.startup-probe.v96`, and display `JSC` plus the actual
+  iOS version in its diagnostic eyebrow. Its bundle must not contain the
+  unsupported `QuickBase64` native-module path.
+- [ ] Install build 96 from TestFlight on the affected iPhone 16 Pro Max and
+  rerun storage, client creation, initialize, standalone WebView, and Provider
+  one button at a time.
 - [ ] After `5/5 · Provider 준비 완료`, tap `EasyGo 본체 열기` and confirm
   the EasyGo login screen remains open.
-- [ ] Expect one signed-out session on build 95. Authentication stays in iOS
-  SecureStore but uses a new versioned EasyGo namespace so a stale pre-fix
-  Privy session is not restored.
+- [ ] Confirm the expected session state. Build 95 to 96 preserves the same
+  versioned `easygo-privy-v2-` SecureStore namespace; only upgrades from a
+  pre-build-94 client should require the one-time sign-in again.
 
 ## Android readiness
 
@@ -95,7 +106,7 @@ wallet private key, or login code.
   in an on-screen error or application log.
 - [ ] Record failures with build number, device/OS, UTC time, screen, exact user
   action, and screenshot. Do not include credentials or private wallet data.
-- [ ] If build 95 shows `STARTUP-STAGE-03`, `STARTUP-PRIVY-05`, or
+- [ ] If build 96 shows `STARTUP-STAGE-03`, `STARTUP-PRIVY-05`, or
   `STARTUP-JS-01`, capture the full visible message and a screenshot. If it
   terminates, reopen once and capture `마지막 기록`; also export the newest
   EasyGo analytics `.ips` file from the iPhone when available.

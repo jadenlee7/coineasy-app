@@ -80,7 +80,7 @@ export function startupDiagnosticPersistsPhases(bootstrapSource, probeSource) {
   const bootstrap = String(bootstrapSource || '');
   const source = `${bootstrap}\n${String(probeSource || '')}`;
   return [
-    'easygo.startup-probe.v95',
+    'easygo.startup-probe.v96',
     'AsyncStorage.setItem(STARTUP_STATE_KEY',
     "'privy-storage-roundtrip'",
     "'privy-client-create'",
@@ -94,6 +94,23 @@ export function startupDiagnosticPersistsPhases(bootstrapSource, probeSource) {
       ? bootstrap.includes(token)
       : source.includes(token)
   ));
+}
+
+export function startupDiagnosticReportsRuntime(bootstrapSource, probeSource) {
+  const bootstrap = String(bootstrapSource || '');
+  const probe = String(probeSource || '');
+  return [
+    'global.HermesInternal',
+    'Platform.Version',
+    'RUNTIME_LABEL',
+    'STARTUP DIAGNOSTIC · BUILD',
+  ].every((token) => bootstrap.includes(token))
+    && [
+      'global.HermesInternal',
+      'Platform.Version',
+      'RUNTIME_LABEL',
+      'PRIVY ISOLATION · BUILD',
+    ].every((token) => probe.includes(token));
 }
 
 export function privyIsolationStagesAreGuarded(probeSource) {
@@ -176,6 +193,24 @@ export function expoPublicEnvInliningIsConfigured(babelSource) {
   return /['"]babel-preset-expo['"]/.test(String(babelSource || ''));
 }
 
+export function releaseBufferAvoidsUnsupportedNativeBase64(
+  babelSource,
+  packageConfig,
+) {
+  const dependencies = packageConfig?.dependencies || {};
+  return !String(babelSource || '').includes('@craftzdog/react-native-buffer')
+    && !dependencies['@craftzdog/react-native-buffer']
+    && !dependencies['react-native-quick-base64'];
+}
+
+export function iosReleaseUsesIsolatedJscRuntime(appConfig) {
+  const expo = appConfig?.expo || {};
+  return expo.ios?.jsEngine === 'jsc'
+    && expo.runtimeVersion?.policy === 'appVersion'
+    && expo.version === '2.0.1'
+    && String(expo.ios?.buildNumber || '') === '96';
+}
+
 function validBackendUrl(value, staged) {
   try {
     const url = new URL(value);
@@ -192,6 +227,7 @@ export function validateMobileEnvironment(env, appConfig, {
   bootstrapSource,
   babelSource,
   clientSource,
+  packageConfig,
   probeSource,
   storageSource,
 } = {}) {
@@ -223,6 +259,13 @@ export function validateMobileEnvironment(env, appConfig, {
     'iOS bundle identifier must match the configured Privy mobile client',
   );
   add(expo.ios?.usesAppleSignIn === true, 'Sign in with Apple capability', 'Expo iOS config must enable usesAppleSignIn');
+  if (staged) {
+    add(
+      iosReleaseUsesIsolatedJscRuntime(appConfig),
+      'iOS build 96 JSC runtime isolation',
+      'staged iOS release must be build 96 on JSC with a new app-version runtime boundary',
+    );
+  }
   add(Boolean(clean(expo.android?.package)), 'Android package', 'Expo Android package is required');
   add(
     false,
@@ -314,6 +357,13 @@ export function validateMobileEnvironment(env, appConfig, {
       'babel.config.js must use babel-preset-expo so EXPO_PUBLIC_* values are embedded in release bundles',
     );
   }
+  if (babelSource !== undefined && packageConfig !== undefined) {
+    add(
+      releaseBufferAvoidsUnsupportedNativeBase64(babelSource, packageConfig),
+      'portable release Buffer implementation',
+      'release bundling must not load the New-Architecture-only react-native-quick-base64 v3 module',
+    );
+  }
 
   return {
     target,
@@ -339,12 +389,14 @@ function run() {
   const clientSource = readFileSync(resolve('utils/privyClient.js'), 'utf8');
   const storageSource = readFileSync(resolve('utils/privyStorage.js'), 'utf8');
   const babelSource = readFileSync(resolve('babel.config.js'), 'utf8');
+  const packageConfig = JSON.parse(readFileSync(resolve('package.json'), 'utf8'));
   const result = validateMobileEnvironment(env, appConfig, {
     target: targetFromArgs(process.argv.slice(2)),
     appSource,
     bootstrapSource,
     babelSource,
     clientSource,
+    packageConfig,
     probeSource,
     storageSource,
   });
