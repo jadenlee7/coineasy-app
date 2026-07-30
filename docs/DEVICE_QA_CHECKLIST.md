@@ -1,7 +1,7 @@
 # EasyGo staging device QA
 
 Use this checklist for the staged-startup diagnostic TestFlight build `2.0.0
-(94)` and Android preview build `versionCode 64`. Both clients must target
+(95)` and Android preview build `versionCode 64`. Both clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
@@ -19,15 +19,38 @@ wallet private key, or login code.
 - [x] Build 93 still terminated on the iPhone 16 Pro Max after advancing into
   the configured Privy startup path. App Store Connect currently has no
   tester-submitted crash log for that build.
-- [ ] Confirm the replacement build 94 EAS build and App Store Connect
-  submission IDs are recorded here before device testing.
-- [ ] Install build 94 from TestFlight on the affected iPhone 16 Pro Max.
-- [ ] Confirm `STARTUP DIAGNOSTIC · BUILD 94` appears before tapping anything.
-- [ ] Tap `Privy 단계 진단 시작` once. If the app terminates, reopen it and
-  capture the `마지막 기록` row before tapping again.
-- [ ] If `PRIVY PROBE · BUILD 94` reaches `Privy 준비 완료`, tap
-  `EasyGo 본체 열기` and confirm the EasyGo login screen remains open.
-- [ ] Expect one signed-out session on build 94. Authentication stays in iOS
+- [x] EAS build 94 `97a86043-1a61-4857-a39d-c6482481a013` completed from
+  commit `38106ce` on Xcode 26. The downloaded 29,991,195-byte IPA reports
+  `2.0.0 (94)`, the expected bundle ID and URL scheme, and contains all public
+  release values plus the persistent startup probe. SHA-256 is
+  `57b091207f3bc92eed8b27fd55d397d40828a6c15a51e05295b9b6af309dec71`.
+- [x] EAS submission `ce442d06-f1f0-4371-9506-226472516582` finished
+  without an error. App Store Connect marks build 94
+  (`f7d1a1ed-24b0-473c-82ac-2aaec98328c3`) `VALID`; Apple currently reports
+  zero matching beta crash-feedback submissions and no diagnostic signature.
+- [x] The affected iPhone 16 Pro Max still terminates while using build 94.
+  Apple has not received a matching tester crash report, and the exact
+  persisted startup marker was not captured before build 95 was prepared.
+- [x] EAS build 95 `8c0a204c-36c8-4f27-8f01-6e9c5966de2b` completed from
+  commit `a4fd7be` on Xcode 26. The downloaded 29,997,235-byte IPA reports
+  `2.0.0 (95)`, the expected identifier and URL scheme, contains all three
+  public release values and every v95 diagnostic marker, and has SHA-256
+  `96bedd0695266e88049d29e0f01ea26c74f92b29e6586a67e8d47ec57255005c`.
+- [x] EAS submission `f9106ab4-5459-4ec9-86de-8aa0caf7bebf` finished
+  without an error. App Store Connect marks build 95
+  (`586e5396-157a-43a6-a5c5-41e930e3ba1b`) `VALID`; Apple currently reports
+  zero matching beta crash-feedback submissions and no diagnostic signature.
+- [ ] Install build 95 from TestFlight on the affected iPhone 16 Pro Max.
+- [ ] Confirm `STARTUP DIAGNOSTIC · BUILD 95` appears before tapping anything,
+  then tap `Build 95 단계 진단 열기`.
+- [ ] Run the five buttons one at a time: storage roundtrip, client creation,
+  client initialize, standalone WebView, and Provider mount. Wait for the next
+  numbered screen after each tap.
+- [ ] If the app terminates after any tap, reopen it and capture the
+  `마지막 기록` row before tapping again.
+- [ ] After `5/5 · Provider 준비 완료`, tap `EasyGo 본체 열기` and confirm
+  the EasyGo login screen remains open.
+- [ ] Expect one signed-out session on build 95. Authentication stays in iOS
   SecureStore but uses a new versioned EasyGo namespace so a stale pre-fix
   Privy session is not restored.
 
@@ -72,7 +95,7 @@ wallet private key, or login code.
   in an on-screen error or application log.
 - [ ] Record failures with build number, device/OS, UTC time, screen, exact user
   action, and screenshot. Do not include credentials or private wallet data.
-- [ ] If build 94 shows `STARTUP-STAGE-03`, `STARTUP-PRIVY-04`, or
+- [ ] If build 95 shows `STARTUP-STAGE-03`, `STARTUP-PRIVY-05`, or
   `STARTUP-JS-01`, capture the full visible message and a screenshot. If it
   terminates, reopen once and capture `마지막 기록`; also export the newest
   EasyGo analytics `.ips` file from the iPhone when available.

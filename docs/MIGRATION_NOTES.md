@@ -184,13 +184,35 @@ screen. No social rows or tables are deleted by S8.
       `7ed1bbba-35f1-4200-9df8-b5b90f7d0d55` completed successfully. App Store
       Connect reports build `2.0.0 (93)`
       (`e285c8cd-5df9-4e3c-a3d5-593076921db8`) as `VALID`.
-- [ ] Ship build 94 after build 93 still terminated in the configured Privy
-      path. Build 94 records every risky startup phase in AsyncStorage, verifies
+- [x] Complete build 94 after build 93 continued to terminate in the configured
+      Privy path. Build 94 records every risky startup phase in AsyncStorage, verifies
       SecureStore and the Privy client before Provider mount, reports
       `usePrivy().error`, disables automatic wallet migration, and keeps one
       Privy client/Provider alive while switching from the probe to EasyGo.
       Privy authentication stays in SecureStore under the versioned
-      `easygo-privy-v2-` namespace; wallet recovery storage is not deleted.
+      `easygo-privy-v2-` namespace; wallet recovery storage is not deleted. EAS
+      build `97a86043-1a61-4857-a39d-c6482481a013` completed from commit
+      `38106ce`; the downloaded IPA passed build-number, identifier, scheme,
+      release-value, and diagnostic-marker inspection.
+- [x] EAS submission `ce442d06-f1f0-4371-9506-226472516582` finished without
+      an error. App Store Connect marks build `2.0.0 (94)`
+      (`f7d1a1ed-24b0-473c-82ac-2aaec98328c3`) as `VALID`. Apple currently
+      reports no matching beta crash-feedback submission or diagnostic
+      signature for build 94.
+- [x] Build 95 isolates the remaining native termination boundary behind five
+      user-gated steps: the real Privy SecureStore adapter, client construction,
+      `client.initialize()`, the SDK-equivalent standalone WebView, and
+      `PrivyProvider`. Every pending/passed/failed transition is persisted under
+      the v95 startup key, WebView retries use attempt guards, and a missing
+      load event fails visibly after 15 seconds. EAS build
+      `8c0a204c-36c8-4f27-8f01-6e9c5966de2b` completed from commit `a4fd7be`;
+      the downloaded IPA passed archive, identity, version, URL-scheme,
+      release-value, and diagnostic-marker inspection.
+- [x] EAS submission `f9106ab4-5459-4ec9-86de-8aa0caf7bebf` finished without
+      an error. App Store Connect marks build `2.0.0 (95)`
+      (`586e5396-157a-43a6-a5c5-41e930e3ba1b`) as `VALID`; Apple currently
+      reports zero matching beta crash-feedback submissions and no diagnostic
+      signature.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before

@@ -59,6 +59,16 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
       Privy startup replacement and must complete device QA before release. Use
       [`../../docs/DEVICE_QA_CHECKLIST.md`](../../docs/DEVICE_QA_CHECKLIST.md)
       for the physical-device pass.
+- [x] Complete and inspect EAS iOS build 94
+      `97a86043-1a61-4857-a39d-c6482481a013` from commit `38106ce`.
+- [x] Confirm EAS submission `ce442d06-f1f0-4371-9506-226472516582`
+      finished without an error and App Store Connect reports build 94
+      (`f7d1a1ed-24b0-473c-82ac-2aaec98328c3`) as `VALID`.
+- [x] Complete and inspect the five-stage EAS iOS build 95
+      `8c0a204c-36c8-4f27-8f01-6e9c5966de2b` from commit `a4fd7be`.
+- [x] Confirm EAS submission `f9106ab4-5459-4ec9-86de-8aa0caf7bebf`
+      finished without an error and App Store Connect reports build 95
+      (`586e5396-157a-43a6-a5c5-41e930e3ba1b`) as `VALID`.
 
 ## Pre-Deploy
 
