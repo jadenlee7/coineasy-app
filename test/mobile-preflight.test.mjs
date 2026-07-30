@@ -7,6 +7,7 @@ import {
   expoPublicEnvInliningIsConfigured,
   parseEnvText,
   privyAutomaticMigrationIsDisabled,
+  privyIsolationStagesAreGuarded,
   privyProviderUsesVersionedStorage,
   privyPolyfillsLoadFirst,
   singletonPrivyClientIsConfigured,
@@ -111,14 +112,24 @@ test('Privy polyfills evaluate before the application module', () => {
   `), false);
 });
 
-test('build 94 persists risky startup phases and disables automatic wallet migration', () => {
+test('build 95 persists and user-gates every risky Privy startup phase', () => {
   const bootstrapSource = readFileSync(new URL('../BootstrapApp.js', import.meta.url), 'utf8');
   const appSource = readFileSync(new URL('../App.js', import.meta.url), 'utf8');
   const probeSource = readFileSync(new URL('../PrivyStartupProbe.js', import.meta.url), 'utf8');
   const clientSource = readFileSync(new URL('../utils/privyClient.js', import.meta.url), 'utf8');
   const storageSource = readFileSync(new URL('../utils/privyStorage.js', import.meta.url), 'utf8');
 
-  assert.equal(startupDiagnosticPersistsPhases(bootstrapSource), true);
+  assert.equal(startupDiagnosticPersistsPhases(bootstrapSource, probeSource), true);
+  assert.equal(probeSource.includes("setStage('client-create')"), false);
+  assert.equal(probeSource.includes("stage === 'client-create'"), true);
+  assert.equal(probeSource.includes("stage === 'client-initialize'"), true);
+  assert.equal(probeSource.includes("stage === 'raw-webview'"), true);
+  assert.equal(probeSource.includes("stage === 'provider-mount'"), true);
+  assert.equal(privyIsolationStagesAreGuarded(probeSource), true);
+  assert.equal(privyIsolationStagesAreGuarded(`
+    useEffect(() => initializeEasyGoPrivyClient(), []);
+    <WebView source={{ uri }} />
+  `), false);
   assert.equal(privyAutomaticMigrationIsDisabled(appSource), true);
   assert.equal(privyAutomaticMigrationIsDisabled(probeSource), true);
   assert.equal(privyProviderUsesVersionedStorage(appSource), true);

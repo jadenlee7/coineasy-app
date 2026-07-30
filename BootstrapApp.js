@@ -12,8 +12,7 @@ import {
 } from 'react-native';
 
 const BUILD_NUMBER = Application.nativeBuildVersion || 'unknown';
-const STARTUP_STATE_KEY = 'easygo.startup-probe.v94';
-const SECURE_STORE_PROBE_KEY = 'easygo_startup_probe_v94';
+const STARTUP_STATE_KEY = 'easygo.startup-probe.v95';
 
 const STEP_LABELS = {
   'polyfill-text': 'Text 인코딩 준비',
@@ -21,10 +20,11 @@ const STEP_LABELS = {
   'polyfill-ethers': '지갑 호환 계층 준비',
   'gesture-handler': '제스처 엔진 준비',
   reanimated: '애니메이션 엔진 준비',
-  'secure-store-module': 'iOS 보안 저장소 연결',
-  'secure-store-roundtrip': 'iOS 보안 저장소 읽기/쓰기',
   'privy-probe-module': 'Privy 진단 모듈 로드',
-  'privy-client-initialize': 'Privy 앱 설정 및 세션 확인',
+  'privy-storage-roundtrip': 'Privy 보안 저장소 읽기/쓰기/삭제',
+  'privy-client-create': 'Privy client 객체 생성',
+  'privy-client-initialize': 'Privy client 앱 설정 및 세션 확인',
+  'privy-raw-webview': 'standalone Privy WebView',
   'privy-provider-mount': 'Privy Provider 마운트',
   'privy-provider-child': 'Privy Provider 내부 렌더',
   'privy-provider-ready': 'Privy 세션 초기화',
@@ -147,28 +147,10 @@ export default function BootstrapApp() {
       await runStep('gesture-handler', () => import('react-native-gesture-handler'));
       await runStep('reanimated', () => import('react-native-reanimated'));
 
-      const secureStore = await runStep(
-        'secure-store-module',
-        () => import('expo-secure-store'),
-      );
-      await runStep('secure-store-roundtrip', async () => {
-        await secureStore.setItemAsync(SECURE_STORE_PROBE_KEY, BUILD_NUMBER);
-        const storedBuild = await secureStore.getItemAsync(SECURE_STORE_PROBE_KEY);
-        await secureStore.deleteItemAsync(SECURE_STORE_PROBE_KEY);
-        if (storedBuild !== BUILD_NUMBER) {
-          throw new Error('SecureStore round-trip returned an unexpected value');
-        }
-      });
-
       const probeModule = await runStep(
         'privy-probe-module',
         () => import('./PrivyStartupProbe'),
       );
-      await runStep(
-        'privy-client-initialize',
-        () => probeModule.initializeEasyGoPrivyClient(),
-      );
-      await recordMarker('privy-provider-mount', 'pending');
       setProbeRoot(() => probeModule.default);
       setPhase('probe');
     } catch (startupError) {
@@ -217,8 +199,8 @@ export default function BootstrapApp() {
         <Text style={styles.eyebrow}>STARTUP DIAGNOSTIC · BUILD {BUILD_NUMBER}</Text>
         <Text style={styles.title}>단계별 안전 부팅</Text>
         <Text style={styles.body}>
-          아래 버튼을 누르면 iOS 보안 저장소와 Privy를 먼저 점검한 뒤 EasyGo 본체를 엽니다.
-          도중에 앱이 종료되어도 마지막 단계가 이 화면에 남습니다.
+          아래 버튼은 진단 화면만 준비합니다. 다음 화면에서 저장소, client 생성,
+          initialize, WebView, Provider를 버튼으로 하나씩 실행합니다.
         </Text>
 
         <View style={styles.markerBox}>
@@ -262,7 +244,7 @@ export default function BootstrapApp() {
             </View>
           ) : (
             <Text style={styles.buttonText}>
-              {phase === 'error' ? '처음부터 다시 점검' : 'Privy 단계 진단 시작'}
+              {phase === 'error' ? '진단 준비 다시 시도' : 'Build 95 단계 진단 열기'}
             </Text>
           )}
         </Pressable>

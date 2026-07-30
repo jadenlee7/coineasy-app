@@ -31,8 +31,24 @@ export function getEasyGoPrivyClient() {
   return easyGoPrivyClient;
 }
 
+// Kept separate from initialize so build 95 can prove whether constructing the
+// JS client alone is safe before any network, Provider, or WebView work begins.
+export function createEasyGoPrivyClient() {
+  return getEasyGoPrivyClient();
+}
+
 export async function initializeEasyGoPrivyClient() {
-  const client = getEasyGoPrivyClient();
+  const client = createEasyGoPrivyClient();
   await client.initialize();
   return client;
+}
+
+// Use the URL assembled by Privy's own client after initialize() has applied
+// any server-provided base URL. The diagnostic UI never renders or persists it.
+export function getEasyGoPrivyWebViewUrl() {
+  const url = getEasyGoPrivyClient().embeddedWallet?.getURL?.();
+  if (typeof url !== 'string' || !url.startsWith('https://')) {
+    throw new Error('Privy client did not provide a secure embedded-wallet URL');
+  }
+  return url;
 }

@@ -76,17 +76,49 @@ export function privyPolyfillsLoadFirst(bootstrapSource) {
   return appImport > cursor;
 }
 
-export function startupDiagnosticPersistsPhases(bootstrapSource) {
-  const source = String(bootstrapSource || '');
+export function startupDiagnosticPersistsPhases(bootstrapSource, probeSource) {
+  const bootstrap = String(bootstrapSource || '');
+  const source = `${bootstrap}\n${String(probeSource || '')}`;
   return [
-    'easygo.startup-probe.v94',
+    'easygo.startup-probe.v95',
     'AsyncStorage.setItem(STARTUP_STATE_KEY',
-    "'secure-store-roundtrip'",
+    "'privy-storage-roundtrip'",
+    "'privy-client-create'",
     "'privy-client-initialize'",
+    "'privy-raw-webview'",
     "'privy-provider-mount'",
     "'privy-provider-ready'",
     "'full-app-render'",
-  ].every((token) => source.includes(token));
+  ].every((token) => (
+    token === 'AsyncStorage.setItem(STARTUP_STATE_KEY'
+      ? bootstrap.includes(token)
+      : source.includes(token)
+  ));
+}
+
+export function privyIsolationStagesAreGuarded(probeSource) {
+  const source = String(probeSource || '');
+  const pendingWrite = source.indexOf(
+    "await props.onStatus({ step, status: 'pending' });",
+  );
+  const action = source.indexOf('await action();', pendingWrite + 1);
+  return pendingWrite >= 0
+    && action > pendingWrite
+    && [
+      "stage === 'client-create'",
+      "stage === 'client-initialize'",
+      "stage === 'raw-webview'",
+      "stage === 'provider-mount'",
+      'rawAttemptRef.current',
+      'attempt !== rawAttemptRef.current',
+      'clearRawWebViewTimeout',
+      'setRawWebViewMounted(false)',
+      'cacheEnabled={false}',
+      'cacheMode="LOAD_NO_CACHE"',
+      'injectedJavaScriptObject={RAW_WEBVIEW_INJECTED_OBJECT}',
+      'answerSecureStorageMessage(message)',
+      'getEasyGoPrivyClient().setMessagePoster(instance)',
+    ].every((token) => source.includes(token));
 }
 
 export function privyProviderUsesVersionedStorage(sourceText) {
@@ -232,12 +264,17 @@ export function validateMobileEnvironment(env, appConfig, {
       'Privy polyfills must evaluate before the application imports @privy-io/expo',
     );
     add(
-      startupDiagnosticPersistsPhases(bootstrapSource),
+      startupDiagnosticPersistsPhases(bootstrapSource, probeSource),
       'persistent startup diagnostics',
       'startup diagnostics must persist every risky iOS initialization phase',
     );
   }
   if (probeSource !== undefined) {
+    add(
+      privyIsolationStagesAreGuarded(probeSource),
+      'Privy isolation stage guards',
+      'Privy storage, client, WebView, and Provider probes must remain user-gated and race-safe',
+    );
     add(
       privyAutomaticMigrationIsDisabled(probeSource),
       'Privy probe migration safety',
