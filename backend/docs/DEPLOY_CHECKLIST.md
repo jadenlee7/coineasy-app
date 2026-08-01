@@ -88,9 +88,14 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
       standalone WebView native load. The visible `STARTUP-PRIVY-05` is caused
       by the diagnostic's blocking `ping(5000)`, which the official Privy
       WebView does not use for initial readiness.
-- [ ] Complete, inspect, submit, and device-test iOS build `2.0.2 (97)`. It
-      keeps JSC and the staged probe while matching Privy's initial WebView
-      `onLoad` contract; the official Provider remains the final readiness gate.
+- [x] Complete, inspect, and submit iOS build `2.0.2 (97)`. EAS build
+      `53e28492-108b-455d-bd3f-ca38b6f3909c` came from exact commit `216763a`;
+      submission `d5f0bebc-7156-41ef-a2c6-cfe463146d7a` succeeded, and App
+      Store Connect build `51d84fef-c246-4f72-b4a7-b74b718dacd6` is `VALID`.
+      The inspected IPA links JavaScriptCore, matches the clean exported bundle,
+      and contains neither Hermes nor QuickBase64.
+- [ ] Device-test build 97 through the official Provider readiness gate and
+      keep the EasyGo login screen open on the affected iPhone 16 Pro Max.
 
 ## Pre-Deploy
 

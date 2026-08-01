@@ -268,8 +268,22 @@ screen. No social rows or tables are deleted by S8.
       app-version runtime boundary and v97 diagnostic keys. Stage 4 now follows
       the SDK load contract without a blocking initial ping; step 5's official
       `PrivyProvider` and `usePrivy().isReady` remain the readiness authority.
-- [ ] Complete, inspect, submit, and run build 97 through all five user-gated
-      steps before opening the full EasyGo app.
+- [x] Complete EAS iOS build `53e28492-108b-455d-bd3f-ca38b6f3909c`
+      (`2.0.2 (97)`) from exact commit `216763a`. The downloaded 27,023,271-byte
+      IPA has SHA-256
+      `8edfa5829ee78a22e853ce9181fdcbc528e1e08c066822c93dbf9e5055fd9447`.
+      Its executable links JavaScriptCore, and neither Hermes nor QuickBase64
+      is present. The plain-JavaScript bundle exactly matches the clean local
+      export at SHA-256
+      `c6f5b0dfe152ff6812ee3de81cf2eb7b713622cd5c4ad917ad49830f2c23ba72`;
+      identity, scheme, runtime `2.0.2`, public release values, v97 markers,
+      and removal of the obsolete readiness error pass inspection.
+- [x] EAS submission `d5f0bebc-7156-41ef-a2c6-cfe463146d7a` finished without
+      an error. App Store Connect marks build 97
+      (`51d84fef-c246-4f72-b4a7-b74b718dacd6`) as `VALID`; matching crash
+      feedback is currently zero.
+- [ ] Install build 97 on the affected iPhone 16 Pro Max and run all five
+      user-gated steps before opening the full EasyGo app.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before

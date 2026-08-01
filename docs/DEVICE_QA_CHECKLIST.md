@@ -71,9 +71,20 @@ wallet private key, or login code.
   WebView marks the proxy loaded directly from `onLoad`; it does not require an
   initial ping. The SDK uses ping only after the app returns to the foreground,
   so the build 96 screen is a probe false negative rather than a process crash.
-- [ ] Complete, inspect, submit, and process iOS build `2.0.2 (97)`. It retains
-  JSC and the five user-gated steps, removes the blocking initial ping, and
-  leaves actual bridge/session readiness to the official Provider in step 5.
+- [x] Complete, inspect, submit, and process iOS build `2.0.2 (97)`. EAS build
+  `53e28492-108b-455d-bd3f-ca38b6f3909c` was created from exact commit
+  `216763a`; submission `d5f0bebc-7156-41ef-a2c6-cfe463146d7a` finished
+  without an error, and App Store Connect marks build resource
+  `51d84fef-c246-4f72-b4a7-b74b718dacd6` `VALID`.
+- [x] Verify the 27,023,271-byte Build 97 IPA with SHA-256
+  `8edfa5829ee78a22e853ce9181fdcbc528e1e08c066822c93dbf9e5055fd9447`.
+  Its plain-JavaScript bundle has SHA-256
+  `c6f5b0dfe152ff6812ee3de81cf2eb7b713622cd5c4ad917ad49830f2c23ba72`
+  and exactly matches the clean local export. The executable links
+  JavaScriptCore; Hermes, QuickBase64, and the obsolete blocking readiness
+  error are absent. Runtime `2.0.2`, all three public release values, both v97
+  keys, the expected identifier, URL scheme, and Apple Sign In entitlement are
+  present.
 - [ ] Install build 97 from TestFlight on the affected iPhone 16 Pro Max and
   rerun storage, client creation, initialize, standalone WebView, and Provider
   one button at a time.
