@@ -15,6 +15,7 @@ import { requirePhase } from '../middleware/phase.js';
 import { getUser, extractProfile } from '../lib/privy.js';
 import { prisma } from '../lib/db.js';
 import { deleteLocalUserData } from '../lib/account-data.js';
+import { awardWelcomeBonusOnce } from '../lib/auth-sync.js';
 import {
   createSiweChallenge,
   getSiweConfig,
@@ -26,7 +27,6 @@ import {
 
 export const authRouter = Router();
 
-const WELCOME_ORANGE = 100;
 const requireSiwe = requirePhase('SIWE_AUTH_ENABLED');
 
 const nonceSchema = z.object({
@@ -72,16 +72,10 @@ authRouter.post('/sync', requireAuth, async (req, res) => {
     create: { ...profile },
   });
 
-  // First-time welcome bonus.
-  if (!existing) {
-    await prisma.orangeLedger.create({
-      data: {
-        userId: user.id,
-        delta: WELCOME_ORANGE,
-        reason: 'WELCOME_BONUS',
-      },
-    });
-  }
+  await awardWelcomeBonusOnce(prisma, {
+    userId: user.id,
+    isNewUser: !existing,
+  });
 
   res.json({ user, isNew: !existing });
 });

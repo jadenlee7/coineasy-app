@@ -10,7 +10,7 @@
     "postinstall": "node scripts/patch-expo-sdk51-xcode26.mjs",
     "preflight": "node scripts/mobile-preflight.mjs",
     "preflight:staging": "node scripts/mobile-preflight.mjs --target=staging",
-    "test:preflight": "node --test test/mobile-preflight.test.mjs",
+    "test:preflight": "node --test test/*.test.mjs",
     "build:tailwind": "tailwindcss --input input.css --output tailwind.css --no-autoprefixer && tailwind-rn",
     "dev:tailwind": "concurrently \"tailwindcss --input input.css --output tailwind.css --no-autoprefixer --watch\" \"tailwind-rn --watch\""
   },

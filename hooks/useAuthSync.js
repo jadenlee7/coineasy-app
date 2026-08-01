@@ -6,6 +6,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { api, setApiTokenProvider, ApiError } from '../utils/api';
+import { apiTokenProviderFor, createAuthSyncLifecycle } from './authSyncLifecycle.mjs';
 
 // ---------------------------------------------------------------------------
 // useAuthSync(privy)
@@ -23,55 +24,102 @@ export function useAuthSync(privy) {
   const [profile, setProfile] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState(null);
-  const syncedForUserId = useRef(null);
+  const profileRef = useRef(null);
+  const syncedTransitionKey = useRef(null);
+  const inFlightSync = useRef(null);
+  const lifecycle = useRef(null);
+  if (!lifecycle.current) lifecycle.current = createAuthSyncLifecycle();
+
   const ready = privy?.isReady ?? privy?.ready ?? false;
   const authenticated = privy?.authenticated ?? Boolean(privy?.user);
+  const userId = privy?.user?.id ?? null;
+  const getAccessToken = privy?.getAccessToken;
 
-  // Wire token provider exactly once when getAccessToken becomes available
+  // Authentication and account identity are dependencies on purpose. Logout
+  // clears the global provider, so a same-function re-login must wire it again.
   useEffect(() => {
-    if (privy?.getAccessToken) {
-      setApiTokenProvider(() => privy.getAccessToken());
+    const tokenProvider = apiTokenProviderFor({ authenticated, userId, getAccessToken });
+    if (!tokenProvider) {
+      setApiTokenProvider(null);
+      return undefined;
     }
-  }, [privy?.getAccessToken]);
 
-  const sync = useCallback(async () => {
-    if (!authenticated || !privy?.user?.id) return null;
-    if (syncedForUserId.current === privy.user.id) return profile;
+    setApiTokenProvider(tokenProvider);
+    return () => setApiTokenProvider(null);
+  }, [authenticated, userId, getAccessToken]);
+
+  const syncTransition = useCallback((transitionKey) => {
+    if (!lifecycle.current.isCurrent(transitionKey)) return Promise.resolve(null);
+    if (syncedTransitionKey.current === transitionKey) {
+      return Promise.resolve(profileRef.current);
+    }
+
+    const existing = inFlightSync.current;
+    if (existing?.transitionKey === transitionKey) return existing.promise;
 
     setSyncing(true);
     setError(null);
-    try {
-      const result = await api.syncProfile();
-      const syncedProfile = result?.user ?? result ?? null;
-      if (syncedProfile) {
-        syncedForUserId.current = privy.user.id;
-        setProfile(syncedProfile);
-      }
-      return syncedProfile;
-    } catch (e) {
-      // Don't throw — fail soft so UI stays usable in dev before backend is reachable
-      if (!(e instanceof ApiError)) console.warn('[auth-sync] unexpected', e);
-      setError(e);
-      return null;
-    } finally {
+
+    let promise;
+    promise = Promise.resolve()
+      .then(() => api.syncProfile())
+      .then((result) => {
+        if (!lifecycle.current.isCurrent(transitionKey)) return null;
+
+        const syncedProfile = result?.user ?? result ?? null;
+        if (syncedProfile) {
+          syncedTransitionKey.current = transitionKey;
+          profileRef.current = syncedProfile;
+          setProfile(syncedProfile);
+        }
+        return syncedProfile;
+      })
+      .catch((e) => {
+        // Don't throw — fail soft so UI stays usable in dev before backend is reachable.
+        if (!(e instanceof ApiError)) console.warn('[auth-sync] unexpected', e);
+        if (lifecycle.current.isCurrent(transitionKey)) setError(e);
+        return null;
+      })
+      .finally(() => {
+        if (inFlightSync.current?.promise !== promise) return;
+        inFlightSync.current = null;
+        if (lifecycle.current.isCurrent(transitionKey)) setSyncing(false);
+      });
+
+    inFlightSync.current = { transitionKey, promise };
+    return promise;
+  }, []);
+
+  // Auto-sync once when Privy reaches an authenticated, ready transition.
+  // The attempt is claimed before the request starts, preventing rerender- or
+  // failure-driven retry loops. `resync` remains an explicit retry path.
+  useEffect(() => {
+    const observed = lifecycle.current.observe({ ready, authenticated, userId });
+
+    if (!observed.active || observed.sessionChanged) {
+      syncedTransitionKey.current = null;
+      profileRef.current = null;
+      setProfile(null);
+      setError(null);
       setSyncing(false);
     }
-  }, [authenticated, privy?.user?.id, profile]);
 
-  // Auto-sync when Privy reaches authenticated state
-  useEffect(() => {
-    if (ready && authenticated) {
-      sync();
+    if (
+      observed.canAutoSync &&
+      lifecycle.current.claimAutomaticSync(observed.transitionKey)
+    ) {
+      syncTransition(observed.transitionKey);
     }
-    if (ready && !authenticated) {
-      // Logged out — clear local cache + token provider
-      syncedForUserId.current = null;
-      setProfile(null);
-      setApiTokenProvider(null);
-    }
-  }, [ready, authenticated, sync]);
+  }, [ready, authenticated, userId, syncTransition]);
 
-  return { profile, syncing, error, resync: sync };
+  const resync = useCallback(() => {
+    if (!ready || !authenticated || !userId) return Promise.resolve(null);
+    const transitionKey = lifecycle.current.currentTransitionKey();
+    if (!transitionKey) return Promise.resolve(null);
+    return syncTransition(transitionKey);
+  }, [ready, authenticated, userId, syncTransition]);
+
+  return { profile, syncing, error, resync };
 }
 
 export default useAuthSync;

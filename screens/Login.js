@@ -25,6 +25,7 @@ import GoogleIcon from '../assets/easygo/google.svg';
 import LogoArrow from '../assets/easygo/logo-arrow.svg';
 import PasskeyIcon from '../assets/easygo/passkey.svg';
 import WalletIcon from '../assets/easygo/wallet.svg';
+import { getOAuthLoginErrorMessage } from '../utils/oauthLoginError.mjs';
 
 const BRAND = {
   background: '#FFF8F0',
@@ -74,8 +75,11 @@ export default function Login() {
     try {
       await action();
     } catch (error) {
-      console.warn(`[auth] ${provider} login failed`, error);
-      setErrorMessage('로그인을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      const message = getOAuthLoginErrorMessage(error);
+      if (message) {
+        console.warn(`[auth] ${provider} login failed`);
+        setErrorMessage(message);
+      }
     } finally {
       setPendingProvider(null);
     }
@@ -86,6 +90,7 @@ export default function Login() {
   }
 
   function handleWallet() {
+    setErrorMessage('');
     Haptics.selectionAsync();
     Alert.alert(
       'Wallet 로그인 준비 중',
