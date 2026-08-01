@@ -50,12 +50,17 @@ wallet private key, or login code.
 - [x] Recheck App Store Connect after the build 95 reproduction. Apple still
   reports zero matching beta crash-feedback submissions and no diagnostic
   signature, so no `.ips` termination stack is remotely available.
-- [ ] Complete, inspect, submit, and process iOS compatibility build `2.0.1
-  (96)`.
-  This build must use `ios.jsEngine: jsc`, a new app-version OTA runtime,
-  persistent key `easygo.startup-probe.v96`, and display `JSC` plus the actual
-  iOS version in its diagnostic eyebrow. Its bundle must not contain the
-  unsupported `QuickBase64` native-module path.
+- [x] Complete, inspect, submit, and process iOS compatibility build `2.0.1
+  (96)`. EAS build `d0a50681-01cf-4909-a5fc-d25f7026ba22` was created from
+  exact commit `5cf7a82`; submission
+  `4b2e3597-0466-46b7-bb02-ff77c292c605` finished without an error, and App
+  Store Connect marks build resource
+  `0af9db65-98b4-4200-adf1-a68b516adb1d` `VALID`.
+- [x] Verify the 27,023,318-byte IPA with SHA-256
+  `b492a3ca671118ed64f95e3df318d926a1ed3081741c2455e1681f6a66361ea9`.
+  The native executable links JavaScriptCore; no Hermes archive path or
+  `QuickBase64` code is present. Runtime `2.0.1`, all three public release
+  values, both v96 keys, the expected identifier, and URL scheme are present.
 - [ ] Install build 96 from TestFlight on the affected iPhone 16 Pro Max and
   rerun storage, client creation, initialize, standalone WebView, and Provider
   one button at a time.

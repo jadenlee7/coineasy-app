@@ -243,8 +243,19 @@ screen. No social rows or tables are deleted by S8.
       [react-native-quick-base64](https://github.com/craftzdog/react-native-quick-base64#installation).
       A successful device run will prove the combined fix, but not which risk
       caused Build 95 without an Apple `.ips` stack.
-- [ ] Complete, inspect, submit, and process EAS iOS build `2.0.1 (96)`, then
-      rerun all five steps on the affected device.
+- [x] Complete EAS iOS build `d0a50681-01cf-4909-a5fc-d25f7026ba22`
+      (`2.0.1 (96)`) from exact commit `5cf7a82`. The downloaded
+      27,023,318-byte IPA has SHA-256
+      `b492a3ca671118ed64f95e3df318d926a1ed3081741c2455e1681f6a66361ea9`.
+      Its executable links JavaScriptCore, its plain-JavaScript bundle exactly
+      matches the local export hash, and neither Hermes nor QuickBase64 is
+      present. Bundle identity, scheme, runtime `2.0.1`, all three public
+      release values, and v96 markers pass inspection.
+- [x] EAS submission `4b2e3597-0466-46b7-bb02-ff77c292c605` finished without
+      an error. App Store Connect marks build 96
+      (`0af9db65-98b4-4200-adf1-a68b516adb1d`) as `VALID`.
+- [ ] Install build 96 on the affected iPhone 16 Pro Max and rerun all five
+      user-gated steps before opening the full EasyGo app.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before

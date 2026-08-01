@@ -73,11 +73,16 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
       after tapping `client.initialize()`; SecureStore roundtrip and Privy
       client construction are the last passed gated steps, and WebView and
       Provider have not yet been mounted.
-- [ ] Complete and inspect iOS compatibility build `2.0.1 (96)`. Confirm the
-      IPA uses JavaScriptCore rather than Hermes, preserves all public release
-      values and v96 diagnostic markers, uses a separate app-version OTA
-      runtime, and contains no `QuickBase64` module before submitting it to
-      TestFlight.
+- [x] Complete and inspect iOS compatibility build `2.0.1 (96)`
+      `d0a50681-01cf-4909-a5fc-d25f7026ba22` from exact commit `5cf7a82`.
+      The 27,023,318-byte IPA has SHA-256
+      `b492a3ca671118ed64f95e3df318d926a1ed3081741c2455e1681f6a66361ea9`;
+      its executable links JavaScriptCore, contains no Hermes archive path or
+      `QuickBase64` code, and preserves the three public release values, v96
+      markers, URL scheme, and isolated runtime `2.0.1`.
+- [x] Confirm EAS submission `4b2e3597-0466-46b7-bb02-ff77c292c605`
+      finished without an error and App Store Connect reports build 96
+      (`0af9db65-98b4-4200-adf1-a68b516adb1d`) as `VALID`.
 
 ## Pre-Deploy
 
