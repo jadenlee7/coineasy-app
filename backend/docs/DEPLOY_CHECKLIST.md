@@ -94,8 +94,11 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
       Store Connect build `51d84fef-c246-4f72-b4a7-b74b718dacd6` is `VALID`.
       The inspected IPA links JavaScriptCore, matches the clean exported bundle,
       and contains neither Hermes nor QuickBase64.
-- [ ] Device-test build 97 through the official Provider readiness gate and
-      keep the EasyGo login screen open on the affected iPhone 16 Pro Max.
+- [x] Device-test build 97 through the official Provider readiness gate and
+      keep the EasyGo login screen open on the affected iPhone 16 Pro Max. All
+      five startup gates pass on JSC/iOS 26.5 and the branded login UI renders
+      without a process exit. Real OAuth and `/auth/sync` remain unchecked
+      below.
 
 ## Pre-Deploy
 

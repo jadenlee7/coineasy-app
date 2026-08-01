@@ -282,8 +282,13 @@ screen. No social rows or tables are deleted by S8.
       an error. App Store Connect marks build 97
       (`51d84fef-c246-4f72-b4a7-b74b718dacd6`) as `VALID`; matching crash
       feedback is currently zero.
-- [ ] Install build 97 on the affected iPhone 16 Pro Max and run all five
-      user-gated steps before opening the full EasyGo app.
+- [x] Install build 97 on the affected iPhone 16 Pro Max and run all five
+      user-gated steps before opening the full EasyGo app. On JSC and iOS 26.5,
+      the standalone WebView passes at `2026-08-01T20:26:58.793Z`, official
+      Provider/session readiness passes at `2026-08-01T20:27:07.378Z`, and the
+      branded login screen remains open. This closes the startup-termination
+      investigation; real OAuth, session restoration, and core API QA remain
+      separate release gates.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before

@@ -85,11 +85,16 @@ wallet private key, or login code.
   error are absent. Runtime `2.0.2`, all three public release values, both v97
   keys, the expected identifier, URL scheme, and Apple Sign In entitlement are
   present.
-- [ ] Install build 97 from TestFlight on the affected iPhone 16 Pro Max and
+- [x] Install build 97 from TestFlight on the affected iPhone 16 Pro Max and
   rerun storage, client creation, initialize, standalone WebView, and Provider
-  one button at a time.
-- [ ] After `5/5 · Provider 준비 완료`, tap `EasyGo 본체 열기` and confirm
-  the EasyGo login screen remains open.
+  one button at a time. JSC on iOS 26.5 remains alive through all five gates;
+  the standalone WebView passes at `2026-08-01T20:26:58.793Z` and Privy
+  session initialization passes at `2026-08-01T20:27:07.378Z`.
+- [x] After `5/5 · Provider 준비 완료`, tap `EasyGo 본체 열기` and confirm
+  the EasyGo login screen remains open. The supplied device evidence shows the
+  branded Apple, Google, disabled passkey, and Wallet entry screen rendered
+  without a process exit. The Wallet button is still an intentional
+  SIWE/WalletConnect placeholder and is not evidence of a completed sign-in.
 - [ ] Confirm the expected session state. Builds 95 through 97 preserve the same
   versioned `easygo-privy-v2-` SecureStore namespace; only upgrades from a
   pre-build-94 client should require the one-time sign-in again.
