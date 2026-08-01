@@ -1,7 +1,7 @@
 # EasyGo staging device QA
 
-Use this checklist for the staged-startup diagnostic TestFlight build `2.0.1
-(96)` and Android preview build `versionCode 64`. Both clients must target
+Use this checklist for the staged-startup diagnostic TestFlight build `2.0.2
+(97)` and Android preview build `versionCode 64`. Both clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
@@ -61,12 +61,25 @@ wallet private key, or login code.
   The native executable links JavaScriptCore; no Hermes archive path or
   `QuickBase64` code is present. Runtime `2.0.1`, all three public release
   values, both v96 keys, the expected identifier, and URL scheme are present.
-- [ ] Install build 96 from TestFlight on the affected iPhone 16 Pro Max and
+- [x] Install build 96 from TestFlight on the affected iPhone 16 Pro Max and
+  rerun the gated startup. The screen reports `JSC · IOS 26.5`; SecureStore,
+  client construction, and `client.initialize()` all pass without terminating
+  the process. The standalone WebView also reaches native `onLoad`, then the
+  diagnostic-only immediate ping returns false at
+  `2026-08-01T19:37:23.229Z` and shows `STARTUP-PRIVY-05`.
+- [x] Compare that result with installed Privy Expo 0.59.6. Its internal
+  WebView marks the proxy loaded directly from `onLoad`; it does not require an
+  initial ping. The SDK uses ping only after the app returns to the foreground,
+  so the build 96 screen is a probe false negative rather than a process crash.
+- [ ] Complete, inspect, submit, and process iOS build `2.0.2 (97)`. It retains
+  JSC and the five user-gated steps, removes the blocking initial ping, and
+  leaves actual bridge/session readiness to the official Provider in step 5.
+- [ ] Install build 97 from TestFlight on the affected iPhone 16 Pro Max and
   rerun storage, client creation, initialize, standalone WebView, and Provider
   one button at a time.
 - [ ] After `5/5 · Provider 준비 완료`, tap `EasyGo 본체 열기` and confirm
   the EasyGo login screen remains open.
-- [ ] Confirm the expected session state. Build 95 to 96 preserves the same
+- [ ] Confirm the expected session state. Builds 95 through 97 preserve the same
   versioned `easygo-privy-v2-` SecureStore namespace; only upgrades from a
   pre-build-94 client should require the one-time sign-in again.
 
@@ -111,7 +124,7 @@ wallet private key, or login code.
   in an on-screen error or application log.
 - [ ] Record failures with build number, device/OS, UTC time, screen, exact user
   action, and screenshot. Do not include credentials or private wallet data.
-- [ ] If build 96 shows `STARTUP-STAGE-03`, `STARTUP-PRIVY-05`, or
+- [ ] If build 97 shows `STARTUP-STAGE-03`, `STARTUP-PRIVY-05`, or
   `STARTUP-JS-01`, capture the full visible message and a screenshot. If it
   terminates, reopen once and capture `마지막 기록`; also export the newest
   EasyGo analytics `.ips` file from the iPhone when available.

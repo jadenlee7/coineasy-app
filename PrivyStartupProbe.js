@@ -28,7 +28,7 @@ import { easyGoPrivyStorage } from './utils/privyStorage';
 
 const PRIVY_APP_ID = process.env.EXPO_PUBLIC_PRIVY_APP_ID;
 const PRIVY_CLIENT_ID = process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID;
-const PRIVY_STORAGE_PROBE_KEY = 'startup-probe-v96';
+const PRIVY_STORAGE_PROBE_KEY = 'startup-probe-v97';
 const JS_ENGINE = global.HermesInternal ? 'HERMES' : 'JSC';
 const RUNTIME_LABEL = `${JS_ENGINE} · ${Platform.OS.toUpperCase()} ${Platform.Version}`;
 const RAW_WEBVIEW_INJECTED_OBJECT = Object.freeze({
@@ -61,7 +61,7 @@ const STAGE_COPY = {
   },
   'raw-webview-loading': {
     title: '4/5 · standalone Privy WebView',
-    body: '숨은 WebView의 네이티브 로드와 JavaScript 메시지 브리지를 확인하고 있습니다.',
+    body: 'Privy SDK와 같은 기준으로 숨은 WebView의 네이티브 로드 완료를 확인하고 있습니다.',
     action: 'WebView 확인 중',
   },
   'provider-mount': {
@@ -454,20 +454,15 @@ export default function PrivyStartupProbe(props) {
     void (async () => {
       if (attempt !== rawAttemptRef.current) return;
       if (rawStageRef.current !== 'pending') return;
+      rawStageRef.current = 'loaded';
       clearRawWebViewTimeout();
       try {
-        const responsive = await getEasyGoPrivyClient().embeddedWallet.ping(5000);
-        if (attempt !== rawAttemptRef.current) return;
-        if (!responsive) {
-          throw new Error('Standalone Privy WebView did not answer its readiness probe');
-        }
-        if (rawStageRef.current !== 'pending') return;
         await props.onStatus({
           step: 'privy-raw-webview',
           status: 'passed',
         });
         if (attempt !== rawAttemptRef.current) return;
-        if (rawStageRef.current !== 'pending') return;
+        if (rawStageRef.current !== 'loaded') return;
         rawStageRef.current = 'passed';
         setStage('provider-mount');
         setLocalBusy(false);

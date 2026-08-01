@@ -31,8 +31,8 @@ export function getEasyGoPrivyClient() {
   return easyGoPrivyClient;
 }
 
-// Kept separate from initialize so build 95 can prove whether constructing the
-// JS client alone is safe before any network, Provider, or WebView work begins.
+// Kept separate from initialize so staged startup diagnostics can isolate client
+// construction from network, Provider, and WebView work.
 export function createEasyGoPrivyClient() {
   return getEasyGoPrivyClient();
 }

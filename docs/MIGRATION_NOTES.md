@@ -254,8 +254,22 @@ screen. No social rows or tables are deleted by S8.
 - [x] EAS submission `4b2e3597-0466-46b7-bb02-ff77c292c605` finished without
       an error. App Store Connect marks build 96
       (`0af9db65-98b4-4200-adf1-a68b516adb1d`) as `VALID`.
-- [ ] Install build 96 on the affected iPhone 16 Pro Max and rerun all five
-      user-gated steps before opening the full EasyGo app.
+- [x] Run build 96 on the affected iPhone 16 Pro Max. The screen confirms JSC
+      on iOS 26.5; SecureStore, client construction, and `client.initialize()`
+      pass and the process remains alive. Stage 4 reaches the standalone
+      WebView `onLoad`, but the diagnostic-only immediate `ping(5000)` returns
+      false at `2026-08-01T19:37:23.229Z`.
+- [x] Trace the stage-4 result against the installed Privy Expo 0.59.6 and core
+      0.56.1 sources. The official WebView treats native `onLoad` as loaded and
+      only pings when the app returns to the foreground. The build 96 gate was
+      therefore stricter than the SDK and could race the page's message-listener
+      setup; it does not show a WebView load failure or a new app crash.
+- [x] Prepare build 97 as `2.0.2` on the existing JSC engine with a new
+      app-version runtime boundary and v97 diagnostic keys. Stage 4 now follows
+      the SDK load contract without a blocking initial ping; step 5's official
+      `PrivyProvider` and `usePrivy().isReady` remain the readiness authority.
+- [ ] Complete, inspect, submit, and run build 97 through all five user-gated
+      steps before opening the full EasyGo app.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before

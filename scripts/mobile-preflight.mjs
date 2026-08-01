@@ -80,7 +80,7 @@ export function startupDiagnosticPersistsPhases(bootstrapSource, probeSource) {
   const bootstrap = String(bootstrapSource || '');
   const source = `${bootstrap}\n${String(probeSource || '')}`;
   return [
-    'easygo.startup-probe.v96',
+    'easygo.startup-probe.v97',
     'AsyncStorage.setItem(STARTUP_STATE_KEY',
     "'privy-storage-roundtrip'",
     "'privy-client-create'",
@@ -136,6 +136,23 @@ export function privyIsolationStagesAreGuarded(probeSource) {
       'answerSecureStorageMessage(message)',
       'getEasyGoPrivyClient().setMessagePoster(instance)',
     ].every((token) => source.includes(token));
+}
+
+export function privyWebViewUsesSdkLoadContract(probeSource) {
+  const source = String(probeSource || '');
+  const handlerStart = source.indexOf('const handleRawWebViewLoad');
+  if (handlerStart < 0) return false;
+  const nextHandler = source.indexOf('const handleRawWebViewMount', handlerStart);
+  const handler = source.slice(
+    handlerStart,
+    nextHandler < 0 ? source.length : nextHandler,
+  );
+  return handler.includes("rawStageRef.current = 'loaded'")
+    && handler.includes("step: 'privy-raw-webview'")
+    && handler.includes("status: 'passed'")
+    && handler.includes("setStage('provider-mount')")
+    && !handler.includes('.embeddedWallet.ping(')
+    && source.includes('onLoad={() => handleRawWebViewLoad');
 }
 
 export function privyProviderUsesVersionedStorage(sourceText) {
@@ -207,8 +224,8 @@ export function iosReleaseUsesIsolatedJscRuntime(appConfig) {
   const expo = appConfig?.expo || {};
   return expo.ios?.jsEngine === 'jsc'
     && expo.runtimeVersion?.policy === 'appVersion'
-    && expo.version === '2.0.1'
-    && String(expo.ios?.buildNumber || '') === '96';
+    && expo.version === '2.0.2'
+    && String(expo.ios?.buildNumber || '') === '97';
 }
 
 function validBackendUrl(value, staged) {
@@ -262,8 +279,8 @@ export function validateMobileEnvironment(env, appConfig, {
   if (staged) {
     add(
       iosReleaseUsesIsolatedJscRuntime(appConfig),
-      'iOS build 96 JSC runtime isolation',
-      'staged iOS release must be build 96 on JSC with a new app-version runtime boundary',
+      'iOS build 97 JSC runtime isolation',
+      'staged iOS release must be build 97 on JSC with a new app-version runtime boundary',
     );
   }
   add(Boolean(clean(expo.android?.package)), 'Android package', 'Expo Android package is required');
@@ -317,6 +334,11 @@ export function validateMobileEnvironment(env, appConfig, {
       privyIsolationStagesAreGuarded(probeSource),
       'Privy isolation stage guards',
       'Privy storage, client, WebView, and Provider probes must remain user-gated and race-safe',
+    );
+    add(
+      privyWebViewUsesSdkLoadContract(probeSource),
+      'Privy WebView load contract',
+      'the standalone WebView must follow the SDK onLoad contract without a blocking initial ping',
     );
     add(
       privyAutomaticMigrationIsDisabled(probeSource),

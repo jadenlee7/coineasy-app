@@ -83,6 +83,14 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Confirm EAS submission `4b2e3597-0466-46b7-bb02-ff77c292c605`
       finished without an error and App Store Connect reports build 96
       (`0af9db65-98b4-4200-adf1-a68b516adb1d`) as `VALID`.
+- [x] Reproduce build 96 through stage 4 on the affected iPhone 16 Pro Max.
+      JSC on iOS 26.5 remains alive through `client.initialize()` and the
+      standalone WebView native load. The visible `STARTUP-PRIVY-05` is caused
+      by the diagnostic's blocking `ping(5000)`, which the official Privy
+      WebView does not use for initial readiness.
+- [ ] Complete, inspect, submit, and device-test iOS build `2.0.2 (97)`. It
+      keeps JSC and the staged probe while matching Privy's initial WebView
+      `onLoad` contract; the official Provider remains the final readiness gate.
 
 ## Pre-Deploy
 

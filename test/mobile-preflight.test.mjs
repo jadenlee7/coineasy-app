@@ -10,6 +10,7 @@ import {
   privyAutomaticMigrationIsDisabled,
   privyIsolationStagesAreGuarded,
   privyProviderUsesVersionedStorage,
+  privyWebViewUsesSdkLoadContract,
   privyPolyfillsLoadFirst,
   releaseBufferAvoidsUnsupportedNativeBase64,
   singletonPrivyClientIsConfigured,
@@ -23,11 +24,11 @@ import {
 
 const appConfig = {
   expo: {
-    version: '2.0.1',
+    version: '2.0.2',
     scheme: 'coineasyapp',
     ios: {
       bundleIdentifier: 'com.coineasy.coineasysocial',
-      buildNumber: '96',
+      buildNumber: '97',
       jsEngine: 'jsc',
       usesAppleSignIn: true,
     },
@@ -91,13 +92,13 @@ test('staging preflight keeps the iOS JSC build on an isolated OTA runtime', () 
     },
   }, { target: 'staging' });
   assert.equal(
-    result.errors.some((item) => item.name === 'iOS build 96 JSC runtime isolation'),
+    result.errors.some((item) => item.name === 'iOS build 97 JSC runtime isolation'),
     true,
   );
   assert.equal(iosReleaseUsesIsolatedJscRuntime({
     expo: {
       ...appConfig.expo,
-      ios: { ...appConfig.expo.ios, buildNumber: '95' },
+      ios: { ...appConfig.expo.ios, buildNumber: '96' },
     },
   }), false);
 });
@@ -146,7 +147,7 @@ test('Privy polyfills evaluate before the application module', () => {
   `), false);
 });
 
-test('build 96 persists and user-gates every risky Privy startup phase', () => {
+test('build 97 persists and user-gates every risky Privy startup phase', () => {
   const bootstrapSource = readFileSync(new URL('../BootstrapApp.js', import.meta.url), 'utf8');
   const appSource = readFileSync(new URL('../App.js', import.meta.url), 'utf8');
   const probeSource = readFileSync(new URL('../PrivyStartupProbe.js', import.meta.url), 'utf8');
@@ -161,9 +162,19 @@ test('build 96 persists and user-gates every risky Privy startup phase', () => {
   assert.equal(probeSource.includes("stage === 'raw-webview'"), true);
   assert.equal(probeSource.includes("stage === 'provider-mount'"), true);
   assert.equal(privyIsolationStagesAreGuarded(probeSource), true);
+  assert.equal(privyWebViewUsesSdkLoadContract(probeSource), true);
   assert.equal(privyIsolationStagesAreGuarded(`
     useEffect(() => initializeEasyGoPrivyClient(), []);
     <WebView source={{ uri }} />
+  `), false);
+  assert.equal(privyWebViewUsesSdkLoadContract(`
+    const handleRawWebViewLoad = async () => {
+      rawStageRef.current = 'loaded';
+      await client.embeddedWallet.ping(5000);
+      await props.onStatus({ step: 'privy-raw-webview', status: 'passed' });
+      setStage('provider-mount');
+    };
+    <WebView onLoad={() => handleRawWebViewLoad(attempt)} />
   `), false);
   assert.equal(privyAutomaticMigrationIsDisabled(appSource), true);
   assert.equal(privyAutomaticMigrationIsDisabled(probeSource), true);

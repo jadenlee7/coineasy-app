@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 
 const BUILD_NUMBER = Application.nativeBuildVersion || 'unknown';
-const STARTUP_STATE_KEY = 'easygo.startup-probe.v96';
+const STARTUP_STATE_KEY = 'easygo.startup-probe.v97';
 const JS_ENGINE = global.HermesInternal ? 'HERMES' : 'JSC';
 const RUNTIME_LABEL = `${JS_ENGINE} · ${Platform.OS.toUpperCase()} ${Platform.Version}`;
 
