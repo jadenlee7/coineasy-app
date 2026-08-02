@@ -236,12 +236,16 @@ wallet private key, or login code.
   `NOT_APPLICABLE`. This binary must
   remain unavailable to external TestFlight groups and the App Store review
   build picker; absence of the label is a release stop.
-- [ ] Open Settings after backend profile sync. It shows the server consent
+- [x] Open Settings after backend profile sync. It shows the server consent
   version and keeps personalization/marketing off without exposing raw API data.
-- [ ] Until versioned EasyGo Terms and Privacy HTTPS documents are configured,
+- [x] Until versioned EasyGo Terms and Privacy HTTPS documents are configured,
   consent editing stays locked and the app clearly reports that policy
   publication is pending. Railway `CONSENT_GRANTS_ENABLED` remains `false`;
   a previously stored opt-in can still be revoked.
+- [x] On 2026-08-02, the owner completed both the full EasyGo JSON and legacy
+  social JSON export/share actions from Build 101 on the affected iPhone 16 Pro
+  Max. Both returned without a crash or visible error; no exported file,
+  account identifier, or payload content was retained in this checklist.
 - [ ] Export the full EasyGo JSON on iOS, inspect `schemaVersion`,
   `scope=easygo_local_database`, and `exportedAt`, then confirm the temporary
   cache file is gone after success, cancellation, and share failure.
@@ -252,7 +256,7 @@ wallet private key, or login code.
   never copies JSON to the clipboard or logs the response/error body.
 - [ ] On Android, verify the Storage Access Framework folder picker saves both
   JSON files and cancelling the picker creates no file.
-- [ ] Confirm account deletion is visibly unavailable while Railway
+- [x] Confirm account deletion is visibly unavailable while Railway
   `ACCOUNT_DELETION_ENABLED=false`; full/social exports and sign-out must remain
   usable. Do not execute deletion on the primary tester account.
 
