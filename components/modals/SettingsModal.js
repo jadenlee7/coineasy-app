@@ -6,6 +6,7 @@ import {
   Share,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -19,6 +20,15 @@ import { useTailwind } from 'tailwind-rn';
 import { GlobalContext } from '../../contexts/GlobalContext';
 import useConsent from '../../hooks/useConsent';
 import { api } from '../../utils/api';
+import {
+  canConfirmAccountDeletion,
+  submitAccountDeletionRequest,
+} from '../../utils/accountDeletionFlow.mjs';
+import { purgeAccountDeletionLocalData } from '../../utils/accountDeletionLocalData.mjs';
+import {
+  accountDeletionMarkerStore,
+  createAccountDeletionClientRequestId,
+} from '../../utils/accountDeletionStorage';
 import {
   EXPORT_SCOPE,
   buildExportFilename,
@@ -57,6 +67,8 @@ export default function SettingsModal() {
   const {
     user,
     setUser,
+    setUserData,
+    setPosts,
     setSettingsVis,
     setPushNotifsVis,
     listBlockedUser,
@@ -67,11 +79,22 @@ export default function SettingsModal() {
     setListHiddenPost,
     modalSettingsRef,
   } = useContext(GlobalContext);
-  const { logout } = usePrivy();
+  const privy = usePrivy();
+  const { logout } = privy;
   const tailwind = useTailwind();
   const [loadingAction, setLoadingAction] = useState(null);
+  const [deletionStage, setDeletionStage] = useState('idle');
+  const [deletionCapability, setDeletionCapability] = useState(null);
+  const [walletRiskAcknowledged, setWalletRiskAcknowledged] = useState(false);
+  const [deletionConfirmation, setDeletionConfirmation] = useState('');
+  const deletionRequestRef = useRef(false);
+  const currentPrivyUserIdRef = useRef(privy?.user?.id || null);
+  currentPrivyUserIdRef.current = privy?.user?.id || null;
   const exportRequestRef = useRef({ controller: null, generation: 0, ownerKey: null });
   const syncedAccountKey = user?.profile?.data?.easygoUserId || null;
+  const courseProgressOwner = user?.profile?.data?.courseProgressOwner
+    || privy?.user?.id
+    || null;
   const consentState = useConsent({
     accountKey: syncedAccountKey,
     enabled: Boolean(syncedAccountKey),
@@ -115,6 +138,14 @@ export default function SettingsModal() {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    deletionRequestRef.current = false;
+    setDeletionStage('idle');
+    setDeletionCapability(null);
+    setWalletRiskAcknowledged(false);
+    setDeletionConfirmation('');
+  }, [privy?.user?.id]);
+
   const close = () => {
     modalSettingsRef.current?.close();
     setSettingsVis?.(false);
@@ -136,6 +167,7 @@ export default function SettingsModal() {
   };
 
   const signOut = async () => {
+    if (deletionRequestRef.current) return;
     Haptics.selectionAsync();
     setLoadingAction('logout');
     try {
@@ -144,6 +176,138 @@ export default function SettingsModal() {
       close();
     } catch {
       Alert.alert('Could not sign out', 'Please try again.');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const purgeDeletedAccountFromDevice = async () => {
+    let purgeError = null;
+    try {
+      await purgeAccountDeletionLocalData({
+        courseProgressOwner,
+        removeMany: (keys) => AsyncStorage.multiRemove(keys),
+      });
+      if (FileSystem.cacheDirectory) {
+        const cleanup = await cleanupStaleExportFiles({
+          directory: FileSystem.cacheDirectory,
+          list: FileSystem.readDirectoryAsync,
+          remove: (uri) => FileSystem.deleteAsync(uri, { idempotent: true }),
+        });
+        if (cleanup.failed > 0) throw new Error('account_deletion_export_cleanup_failed');
+      }
+    } catch (error) {
+      purgeError = error;
+    }
+    setUser(null);
+    setUserData?.(null);
+    setPosts?.([]);
+    setListBlockedUser?.([]);
+    setListMutedUsers?.([]);
+    setListHiddenPost?.([]);
+    if (purgeError) throw purgeError;
+  };
+
+  const prepareAccountDeletion = async () => {
+    const ownerUserId = currentPrivyUserIdRef.current;
+    if (!ownerUserId || loadingAction || deletionRequestRef.current) return;
+
+    deletionRequestRef.current = true;
+    Haptics.selectionAsync();
+    setLoadingAction('deletion-status');
+    try {
+      const status = await api.accountDeletionStatus({
+        expectedAuthUserId: ownerUserId,
+      });
+      if (currentPrivyUserIdRef.current !== ownerUserId) {
+        throw new Error('account_session_changed');
+      }
+
+      if (status?.state) {
+        const clientRequestId = createAccountDeletionClientRequestId();
+        await accountDeletionMarkerStore.begin({
+          userId: ownerUserId,
+          clientRequestId,
+          phase: 'accepted',
+          requestId: status.requestId || null,
+        });
+        await purgeDeletedAccountFromDevice();
+        try { await logout(); } catch {}
+        close();
+        return;
+      }
+
+      if (status?.available !== true) {
+        setDeletionCapability(null);
+        setDeletionStage('idle');
+        Alert.alert(
+          '계정 삭제 준비 중',
+          '현재 내부 안전 검토가 진행 중입니다. 데이터 내보내기는 위 메뉴에서 계속 사용할 수 있습니다.',
+        );
+        return;
+      }
+
+      setDeletionCapability({ available: true, ownerUserId });
+      setWalletRiskAcknowledged(false);
+      setDeletionConfirmation('');
+      setDeletionStage('confirm');
+    } catch {
+      Alert.alert(
+        '삭제 가능 여부를 확인하지 못했습니다',
+        '계정이나 데이터를 변경하지 않았습니다. 연결 상태를 확인하고 다시 시도해 주세요.',
+      );
+    } finally {
+      deletionRequestRef.current = false;
+      setLoadingAction(null);
+    }
+  };
+
+  const deletionReady = canConfirmAccountDeletion({
+    available: deletionCapability?.available,
+    walletRiskAcknowledged,
+    confirmationText: deletionConfirmation,
+    expectedUserId: deletionCapability?.ownerUserId,
+    currentUserId: currentPrivyUserIdRef.current,
+  });
+
+  const confirmAccountDeletion = async () => {
+    const ownerUserId = deletionCapability?.ownerUserId;
+    if (!deletionReady || !ownerUserId || deletionRequestRef.current) return;
+
+    deletionRequestRef.current = true;
+    setLoadingAction('account-deletion');
+    try {
+      const outcome = await submitAccountDeletionRequest({
+        markerStore: accountDeletionMarkerStore,
+        userId: ownerUserId,
+        clientRequestId: createAccountDeletionClientRequestId(),
+        walletRiskAcknowledged: true,
+        request: (clientRequestId) => api.requestAccountDeletion({
+          clientRequestId,
+          walletRiskAcknowledged: true,
+          expectedAuthUserId: ownerUserId,
+        }),
+        purgeLocalData: purgeDeletedAccountFromDevice,
+        logout,
+      });
+
+      if (outcome.status === 'rejected') {
+        deletionRequestRef.current = false;
+        setDeletionStage('idle');
+        setDeletionCapability(null);
+        Alert.alert(
+          '앱 업데이트가 필요합니다',
+          '삭제 확인 형식을 서버가 받아들이지 않았습니다. 계정과 데이터는 변경되지 않았습니다.',
+        );
+      } else {
+        close();
+      }
+    } catch {
+      deletionRequestRef.current = false;
+      Alert.alert(
+        '안전 잠금을 저장하지 못했습니다',
+        '삭제 요청은 전송하지 않았습니다. 기기의 보안 저장소를 확인한 뒤 다시 시도해 주세요.',
+      );
     } finally {
       setLoadingAction(null);
     }
@@ -434,15 +598,115 @@ export default function SettingsModal() {
           onPress={signOut}
           style={{ marginBottom: 10 }}
         />
-        <Button
-          color="disabled"
-          title="Account deletion safety review"
-          onPress={() => {}}
-          style={{ marginBottom: 12 }}
-        />
-        <Text style={{ color: '#64748B', fontSize: 10, lineHeight: 15, textAlign: 'center' }}>
-          Deletion is temporarily paused while EasyGo finalizes thread ownership and prevents automatic account recreation after Privy sign-out failures. Data export remains available above.
-        </Text>
+
+        {deletionStage !== 'confirm' ? (
+          <>
+            <TouchableOpacity
+              accessibilityHint="서버 안전 상태를 확인한 뒤 계정 삭제 안내를 엽니다."
+              accessibilityLabel="EasyGo 계정 삭제"
+              accessibilityRole="button"
+              disabled={Boolean(loadingAction)}
+              onPress={prepareAccountDeletion}
+              style={{
+                alignItems: 'center',
+                backgroundColor: '#F1F5F9',
+                borderRadius: 28,
+                marginBottom: 12,
+                opacity: loadingAction ? 0.55 : 1,
+                paddingHorizontal: 28,
+                paddingVertical: 16,
+              }}
+            >
+              <Text style={{ color: '#B42318', fontFamily: 'GmarketBold', fontSize: 14 }}>
+                {loadingAction === 'deletion-status' ? '안전 상태 확인 중…' : 'Delete EasyGo account'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={{ color: '#64748B', fontSize: 10, lineHeight: 15, textAlign: 'center' }}>
+              신규 삭제 요청은 서버·지갑·재로그인 안전 조건이 모두 통과한 경우에만 열립니다. 데이터 내보내기는 위 메뉴에서 계속 사용할 수 있습니다.
+            </Text>
+          </>
+        ) : (
+          <View style={{ backgroundColor: '#FFF1F2', borderRadius: 18, padding: 16 }}>
+            <Text style={{ color: '#881337', fontFamily: 'GmarketBold', fontSize: 16 }}>
+              EasyGo 계정을 영구 삭제할까요?
+            </Text>
+            <Text style={{ color: '#4C0519', fontSize: 11, lineHeight: 18, marginTop: 10 }}>
+              EasyGo 프로필·활동·게시물 내용은 제거됩니다. 다른 사용자의 답글은 유지되며 “Deleted account” 표시가 남을 수 있습니다.{"\n\n"}
+              Base 체인의 거래 기록은 블록체인에서 삭제할 수 없습니다. Embedded wallet 접근과 복구가 영구적으로 불가능해질 수 있으므로 먼저 자산을 다른 지갑으로 옮기세요.{"\n\n"}
+              Apple·Privy 연결 정리는 추가 시간이 걸릴 수 있으며, 사용자가 내보낸 JSON 파일은 EasyGo가 회수할 수 없습니다.
+            </Text>
+
+            <View style={{ alignItems: 'center', flexDirection: 'row', marginTop: 16 }}>
+              <Switch
+                accessibilityLabel="지갑 자산 이전 또는 영구 손실 위험 동의"
+                onValueChange={setWalletRiskAcknowledged}
+                trackColor={{ false: '#CBD5E1', true: '#FDA4AF' }}
+                thumbColor={walletRiskAcknowledged ? '#BE123C' : '#F8FAFC'}
+                value={walletRiskAcknowledged}
+              />
+              <Text style={{ color: '#4C0519', flex: 1, fontSize: 11, lineHeight: 17, marginLeft: 10 }}>
+                지갑 자산을 이전했거나, 접근 권한을 영구적으로 잃을 수 있음을 이해합니다.
+              </Text>
+            </View>
+
+            <Text style={{ color: '#881337', fontFamily: 'GmarketBold', fontSize: 11, marginTop: 16 }}>
+              계속하려면 DELETE를 정확히 입력하세요.
+            </Text>
+            <TextInput
+              accessibilityLabel="계정 삭제 확인 문구"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              editable={loadingAction !== 'account-deletion'}
+              onChangeText={setDeletionConfirmation}
+              placeholder="DELETE"
+              style={{
+                backgroundColor: '#FFF',
+                borderColor: '#FDA4AF',
+                borderRadius: 12,
+                borderWidth: 1,
+                color: '#0F172A',
+                fontSize: 14,
+                marginTop: 8,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+              }}
+              value={deletionConfirmation}
+            />
+
+            <TouchableOpacity
+              accessibilityLabel="EasyGo 계정 영구 삭제 확인"
+              accessibilityRole="button"
+              disabled={!deletionReady || loadingAction === 'account-deletion'}
+              onPress={confirmAccountDeletion}
+              style={{
+                alignItems: 'center',
+                backgroundColor: deletionReady ? '#BE123C' : '#CBD5E1',
+                borderRadius: 24,
+                marginTop: 14,
+                paddingVertical: 14,
+              }}
+            >
+              <Text style={{ color: '#FFF', fontFamily: 'GmarketBold', fontSize: 13 }}>
+                {loadingAction === 'account-deletion' ? '삭제 요청 보호 중…' : 'Permanently delete account'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityRole="button"
+              disabled={loadingAction === 'account-deletion'}
+              onPress={() => {
+                setDeletionStage('idle');
+                setDeletionCapability(null);
+                setWalletRiskAcknowledged(false);
+                setDeletionConfirmation('');
+              }}
+              style={{ alignItems: 'center', marginTop: 14 }}
+            >
+              <Text style={{ color: '#475569', fontFamily: 'GmarketBold', fontSize: 12 }}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </ScrollView>
   );

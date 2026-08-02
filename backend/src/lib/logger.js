@@ -15,6 +15,7 @@ export const LOGGER_REDACT_PATHS = Object.freeze([
   'req.body.signature',
   'req.body.answer',
   'req.body.correctAnswer',
+  'req.body.expectedPrivyDid',
   'email',
   'privyId',
   'privyDid',

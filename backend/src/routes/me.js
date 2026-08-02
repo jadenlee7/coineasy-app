@@ -45,6 +45,7 @@ const deleteDataSchema = z.object({
 const accountDeletionSchema = z.object({
   confirmation: z.literal(DELETE_ACCOUNT_CONFIRMATION),
   clientRequestId: z.string().uuid(),
+  expectedPrivyDid: z.string().trim().min(1).max(255),
   walletRiskAcknowledged: z.literal(true),
 }).strict();
 
@@ -169,14 +170,12 @@ meRouter.get('/social-export', requireAuth, async (req, res) => {
 
 meRouter.get('/account-deletion', requireAuth, express4AsyncHandler(async (req, res) => {
   res.set('Cache-Control', 'no-store');
-  if (!accountDeletionEnabled()) {
-    return res.json({ available: false, state: null });
-  }
-
   try {
     const request = await findAccountDeletionRequest(prisma, req.user.privyDid);
     return res.json({
-      available: !request,
+      // Disabling new requests must never hide an existing tombstone. Mobile
+      // recovery relies on this read path after a rollout brake is reapplied.
+      available: accountDeletionEnabled() && !request,
       state: request?.state || null,
       requestId: request?.id || null,
       localDataDeleted: Boolean(request?.localPurgedAt),
@@ -199,6 +198,9 @@ meRouter.post('/account-deletion', requireAuth, express4AsyncHandler(async (req,
       error: 'confirmation_required',
       confirmation: DELETE_ACCOUNT_CONFIRMATION,
     });
+  }
+  if (parsed.data.expectedPrivyDid !== req.user.privyDid) {
+    return res.status(409).json({ error: 'account_deletion_session_changed' });
   }
   if (!accountDeletionEnabled()) {
     return res.status(503).json({ error: 'account_deletion_disabled' });

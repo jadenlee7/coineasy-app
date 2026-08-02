@@ -22,14 +22,43 @@ test('authenticated fallback UI waits for sync and never opens for a deletion gu
   const app = readFileSync(new URL('../App.js', import.meta.url), 'utf8');
   const hook = readFileSync(new URL('../hooks/useAuthSync.js', import.meta.url), 'utf8');
 
-  assert.match(app, /profile, canUseFallback, deletionBlocked/);
-  assert.match(app, /privyReady && \(!privyUserId \|\| deletionBlocked\)/);
+  assert.match(app, /canUseFallback,[\s\S]*deletionBlocked,[\s\S]*error,/);
+  assert.match(app, /markerBlocked \|\| \(privyReady && \(!privyUserId \|\| deletionBlocked\)\)/);
   assert.match(app, /privyReady && privyUserId && canUseFallback/);
+  assert.match(app, /accountDeletionGuard\.status !== 'clear'/);
+  assert.match(app, /<AccountDeletionPending guard=\{accountDeletionGuard\}/);
+  assert.match(app, /retry: retryDeletionGuard/);
+  assert.match(hook, /useAuthSync\(privy, \{ enabled = true \} = \{\}\)/);
+  assert.match(hook, /syncAllowedRef\.current && lifecycle\.current\.isCurrent/);
+  assert.match(hook, /canUseFallback: Boolean\(enabled\)/);
   assert.match(hook, /status: outcome\.error\.deletionBlocked \? 'deletion-blocked' : 'failed'/);
-  assert.match(hook, /canUseFallback: currentResolution\?\.status === 'failed'/);
   const lifecycle = readFileSync(
     new URL('../hooks/authSyncLifecycle.mjs', import.meta.url),
     'utf8',
   );
   assert.match(lifecycle, /account_deletion_guard_unavailable/);
+});
+
+test('account deletion is capability-gated and binds the destructive request to one owner', () => {
+  const settings = readFileSync(
+    new URL('../components/modals/SettingsModal.js', import.meta.url),
+    'utf8',
+  );
+  const api = readFileSync(new URL('../utils/api.js', import.meta.url), 'utf8');
+  const pending = readFileSync(
+    new URL('../screens/AccountDeletionPending.js', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(settings, /status\?\.available !== true/);
+  assert.match(settings, /walletRiskAcknowledged/);
+  assert.match(settings, /confirmationText: deletionConfirmation/);
+  assert.match(settings, /submitAccountDeletionRequest/);
+  assert.match(settings, /expectedAuthUserId: ownerUserId/);
+  assert.match(api, /boundAuth: true/);
+  assert.match(api, /expectedAuthUserId/);
+  assert.match(api, /expectedPrivyDid: expectedAuthUserId/);
+  assert.match(pending, /guard\.marker\.clientRequestId/);
+  assert.match(pending, /accountDeletionStatus\(\{/);
+  assert.match(pending, /'server-error', 'server-blocked'/);
 });

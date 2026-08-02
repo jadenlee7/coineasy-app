@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { DELETE_ACCOUNT_CONFIRMATION } from '../src/lib/account-deletion.js';
 import { DELETE_DATA_CONFIRMATION, meRouter } from '../src/routes/me.js';
 
 function routeTable() {
@@ -15,6 +16,9 @@ function responseDouble() {
     body: null,
     status(code) {
       this.statusCode = code;
+      return this;
+    },
+    set() {
       return this;
     },
     json(body) {
@@ -65,4 +69,26 @@ test('confirmed legacy data deletion is retired without deleting anything', asyn
     error: 'account_deletion_endpoint_moved',
     path: '/me/account-deletion',
   });
+});
+
+test('account deletion rejects a confirmed request when the verified token owner changed', async () => {
+  const layer = meRouter.stack.find((item) => item.route?.path === '/account-deletion'
+    && item.route.methods.post);
+  const handler = layer.route.stack.at(-1).handle;
+  const response = responseDouble();
+  let forwardedError = null;
+
+  await handler({
+    body: {
+      confirmation: DELETE_ACCOUNT_CONFIRMATION,
+      clientRequestId: '11111111-1111-4111-8111-111111111111',
+      expectedPrivyDid: 'did:privy:owner-a',
+      walletRiskAcknowledged: true,
+    },
+    user: { privyDid: 'did:privy:owner-b' },
+  }, response, (error) => { forwardedError = error; });
+
+  assert.equal(forwardedError, null);
+  assert.equal(response.statusCode, 409);
+  assert.deepEqual(response.body, { error: 'account_deletion_session_changed' });
 });

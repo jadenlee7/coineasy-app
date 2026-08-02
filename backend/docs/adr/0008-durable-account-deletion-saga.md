@@ -91,6 +91,30 @@ means only that the local purge is
 durably recorded; it must not claim that Apple, Privy, the embedded wallet, or
 public blockchain history has been deleted.
 
+The mobile app stores a separate versioned marker in SecureStore under a key
+derived from SHA-256 of the current Privy DID. The raw DID is not stored in the
+key or marker. Marker states are monotonic (`requesting` to `accepted`) and are
+loaded before `/auth/sync` is allowed to run. A corrupt marker, SecureStore
+failure, or in-flight marker write blocks both authenticated fallback and the
+main navigator. Other Privy accounts use different keys and remain available.
+
+The marker write is the first side effect of a deletion request. A write
+failure means the destructive HTTP request is never sent. Network failures,
+5xx responses, malformed success responses, and account changes preserve the
+marker and bearer session so the dedicated pending screen can retry with the
+same client request ID. Logout happens automatically only after a confirmed
+`202` or deletion tombstone. Destructive status and request calls bind the
+Bearer token provider to the expected Privy DID and reject before `fetch` if
+that owner changes while the token is being resolved. The client also requires
+the access-token `sub` claim to equal that DID; the backend remains responsible
+for cryptographic token verification and rejects the destructive request unless
+the verified token DID exactly matches the client's confirmed expected DID.
+
+`GET /me/account-deletion` always reports an existing request even if the
+activation brake is reapplied; `available` controls only creation of a new
+request. The settings UI enters its wallet warning and typed `DELETE`
+confirmation only after that endpoint explicitly returns `available: true`.
+
 ## Options Considered
 
 ### Option A: Keep the current cascading hard delete
@@ -165,6 +189,10 @@ both facts clear before activation.
   unavailable; startup does not rely on a manually run preflight.
 - Build 101 stays an internal privacy-center QA build and is not an App Store
   review candidate.
+- The mobile marker, owner-bound destructive authentication, session gate,
+  pending screen, wallet acknowledgement, typed confirmation, and targeted
+  cache purge are implemented but remain unreachable for new requests while
+  the server capability is off.
 - Posts gain nullable authors and an explicit deletion timestamp; clients must
   tolerate `author: null`.
 - Provider cleanup can be retried without restoring a deleted `User`.
@@ -195,8 +223,9 @@ both facts clear before activation.
 
 ## Action Items
 
-1. [ ] Ship and test the additive schema and local tombstone foundation.
-2. [ ] Prevent `/auth/sync` from recreating a tombstoned subject.
+1. [x] Implement and test the additive schema and local tombstone foundation
+   on the isolated branch; production deployment remains deferred.
+2. [x] Prevent `/auth/sync` from recreating a tombstoned Privy DID.
 3. [ ] Add provider worker leases, retry/backoff, and redacted diagnostics.
 4. [ ] Obtain written confirmation of Apple-token revocation ownership or add
    EasyGo's own Apple token-exchange/revocation flow.
@@ -204,6 +233,8 @@ both facts clear before activation.
    recreate the deleted account.
 6. [ ] Approve wallet, blockchain, backup, Telegram/AMA, and telemetry copy and
    retention behavior.
-7. [ ] Add the mobile deletion marker, session gate, reauthentication, and
-   targeted cache purge.
-8. [ ] Run destructive QA only with a disposable staging account.
+7. [x] Add the mobile deletion marker, session gate, owner-bound request,
+   two-step warning/confirmation UI, pending recovery screen, and targeted
+   cache purge.
+8. [ ] Add recent reauthentication and stable Apple-subject protection.
+9. [ ] Run destructive QA only with a disposable staging account.

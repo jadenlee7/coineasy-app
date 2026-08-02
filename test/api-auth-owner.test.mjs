@@ -1,0 +1,156 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import {
+  API_AUTH_ERROR_CODES,
+  ApiAuthBindingError,
+  createApiAuthRegistry,
+} from '../utils/apiAuth.mjs';
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+function hasCode(code) {
+  return (error) => {
+    assert.equal(error instanceof ApiAuthBindingError, true);
+    assert.equal(error.code, code);
+    return true;
+  };
+}
+
+function accessTokenFor(subject) {
+  const payload = Buffer.from(JSON.stringify({ sub: subject }), 'utf8').toString('base64url');
+  return `header.${payload}.signature`;
+}
+
+test('ordinary auth remains backward-compatible and fail-soft without a bound owner', async () => {
+  const diagnostics = [];
+  const registry = createApiAuthRegistry({
+    onOptionalProviderError: (error) => diagnostics.push(error.message),
+  });
+
+  assert.deepEqual(await registry.resolveOptionalAuthHeader(), {});
+
+  registry.setTokenProvider(async () => 'ordinary-token');
+  assert.deepEqual(await registry.resolveOptionalAuthHeader(), {
+    Authorization: 'Bearer ordinary-token',
+  });
+  assert.equal(registry.bindingSnapshot().ownerUserId, null);
+
+  registry.setTokenProvider(async () => null);
+  assert.deepEqual(await registry.resolveOptionalAuthHeader(), {});
+
+  registry.setTokenProvider(async () => {
+    throw new Error('provider offline');
+  });
+  assert.deepEqual(await registry.resolveOptionalAuthHeader(), {});
+  assert.deepEqual(diagnostics, ['provider offline']);
+});
+
+test('a destructive request receives a token only from its explicitly bound owner', async () => {
+  const registry = createApiAuthRegistry();
+  const ownerToken = accessTokenFor('privy:owner-a');
+  registry.setTokenProvider(async () => ownerToken, 'privy:owner-a');
+
+  assert.deepEqual(
+    await registry.resolveBoundAuthHeader('privy:owner-a'),
+    { Authorization: `Bearer ${ownerToken}` },
+  );
+
+  registry.setTokenProvider(async () => ownerToken, { userId: 'privy:owner-a' });
+  assert.deepEqual(
+    await registry.resolveBoundAuthHeader('privy:owner-a'),
+    { Authorization: `Bearer ${ownerToken}` },
+  );
+});
+
+test('an initial owner mismatch aborts before provider resolution or request dispatch', async () => {
+  const registry = createApiAuthRegistry();
+  let providerCalls = 0;
+  let fetchCalls = 0;
+  registry.setTokenProvider(async () => {
+    providerCalls += 1;
+    return 'wrong-owner-token';
+  }, 'privy:owner-b');
+
+  const destructiveDispatch = registry
+    .resolveBoundAuthHeader('privy:owner-a')
+    .then(() => {
+      fetchCalls += 1;
+    });
+
+  await assert.rejects(
+    destructiveDispatch,
+    hasCode(API_AUTH_ERROR_CODES.OWNER_MISMATCH),
+  );
+  assert.equal(providerCalls, 0);
+  assert.equal(fetchCalls, 0);
+});
+
+test('an account switch during token resolution aborts before request dispatch', async () => {
+  const registry = createApiAuthRegistry();
+  const tokenRead = deferred();
+  let fetchCalls = 0;
+  const provider = () => tokenRead.promise;
+
+  registry.setTokenProvider(provider, 'privy:owner-a');
+  const destructiveDispatch = registry
+    .resolveBoundAuthHeader('privy:owner-a')
+    .then(() => {
+      fetchCalls += 1;
+    });
+
+  // Rebinding even the same provider changes its authenticated owner snapshot.
+  registry.setTokenProvider(provider, 'privy:owner-b');
+  tokenRead.resolve(accessTokenFor('privy:owner-a'));
+
+  await assert.rejects(
+    destructiveDispatch,
+    hasCode(API_AUTH_ERROR_CODES.SESSION_CHANGED),
+  );
+  assert.equal(fetchCalls, 0);
+});
+
+test('destructive auth never degrades to an unauthenticated request', async () => {
+  const registry = createApiAuthRegistry();
+
+  await assert.rejects(
+    registry.resolveBoundAuthHeader(),
+    hasCode(API_AUTH_ERROR_CODES.EXPECTED_USER_REQUIRED),
+  );
+
+  await assert.rejects(
+    registry.resolveBoundAuthHeader('privy:owner-a'),
+    hasCode(API_AUTH_ERROR_CODES.PROVIDER_UNAVAILABLE),
+  );
+
+  registry.setTokenProvider(async () => null, 'privy:owner-a');
+  await assert.rejects(
+    registry.resolveBoundAuthHeader('privy:owner-a'),
+    hasCode(API_AUTH_ERROR_CODES.TOKEN_UNAVAILABLE),
+  );
+
+  registry.setTokenProvider(async () => {
+    throw new Error('token read failed');
+  }, 'privy:owner-a');
+  await assert.rejects(
+    registry.resolveBoundAuthHeader('privy:owner-a'),
+    hasCode(API_AUTH_ERROR_CODES.TOKEN_UNAVAILABLE),
+  );
+
+  registry.setTokenProvider(
+    async () => accessTokenFor('privy:owner-b'),
+    'privy:owner-a',
+  );
+  await assert.rejects(
+    registry.resolveBoundAuthHeader('privy:owner-a'),
+    hasCode(API_AUTH_ERROR_CODES.TOKEN_OWNER_MISMATCH),
+  );
+});

@@ -4,27 +4,27 @@
 // See backend/src/middleware/auth.js (server-side requireAuth) and EASYGO_BUILD_PLAN.md §11.
 // All endpoints return parsed JSON on 2xx, throw ApiError otherwise.
 
+import { createApiAuthRegistry } from './apiAuth.mjs';
+
+export { ApiAuthBindingError } from './apiAuth.mjs';
+
 const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 // ---------------------------------------------------------------------------
 // Token provider — set once at app boot via Privy hook (see hooks/useAuthSync.js)
 // ---------------------------------------------------------------------------
-let _getAccessToken = null;
+const apiAuth = createApiAuthRegistry({
+  onOptionalProviderError: () => console.warn('[api] token provider failed'),
+});
 
-export function setApiTokenProvider(fn) {
-  // fn: () => Promise<string | null>
-  _getAccessToken = fn;
+export function setApiTokenProvider(fn, ownerUserId) {
+  // Backward-compatible: existing callers may still provide only fn.
+  // Destructive endpoints additionally require an explicit ownerUserId binding.
+  apiAuth.setTokenProvider(fn, ownerUserId);
 }
 
 async function _resolveAuthHeader() {
-  if (!_getAccessToken) return {};
-  try {
-    const token = await _getAccessToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch {
-    console.warn('[api] token provider failed');
-    return {};
-  }
+  return apiAuth.resolveOptionalAuthHeader();
 }
 
 // ---------------------------------------------------------------------------
@@ -42,7 +42,11 @@ export class ApiError extends Error {
 // ---------------------------------------------------------------------------
 // Core request
 // ---------------------------------------------------------------------------
-async function request(method, path, { body, query, auth = true, signal } = {}) {
+async function request(
+  method,
+  path,
+  { body, query, auth = true, signal, boundAuth = false, expectedAuthUserId } = {},
+) {
   if (!BASE_URL) {
     // In Phase 1 dev before BACKEND_URL is set, fail soft (callers should treat null as "not wired")
     console.warn('[api] EXPO_PUBLIC_BACKEND_URL not set; skipping', method, path);
@@ -58,7 +62,14 @@ async function request(method, path, { body, query, auth = true, signal } = {}) 
 
   const headers = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (auth) Object.assign(headers, await _resolveAuthHeader());
+  if (auth) {
+    Object.assign(
+      headers,
+      boundAuth
+        ? await apiAuth.resolveBoundAuthHeader(expectedAuthUserId)
+        : await _resolveAuthHeader(),
+    );
+  }
 
   const res = await fetch(url.toString(), {
     method,
@@ -97,14 +108,29 @@ export const api = {
   updateConsent: (body, { signal } = {}) => request('PUT', '/me/consent', { body, signal }),
   exportMyData: ({ signal } = {}) => request('GET', '/me/data', { signal }),
   exportMySocialData: ({ signal } = {}) => request('GET', '/me/social-export', { signal }),
-  accountDeletionStatus: ({ signal } = {}) => request('GET', '/me/account-deletion', { signal }),
-  requestAccountDeletion: ({ clientRequestId, walletRiskAcknowledged }) => (
+  accountDeletionStatus: ({ signal, expectedAuthUserId } = {}) => (
+    request('GET', '/me/account-deletion', {
+      signal,
+      boundAuth: true,
+      expectedAuthUserId,
+    })
+  ),
+  requestAccountDeletion: ({
+    clientRequestId,
+    walletRiskAcknowledged,
+    expectedAuthUserId,
+    signal,
+  }) => (
     request('POST', '/me/account-deletion', {
       body: {
         confirmation: 'DELETE_MY_EASYGO_ACCOUNT',
         clientRequestId,
+        expectedPrivyDid: expectedAuthUserId,
         walletRiskAcknowledged: walletRiskAcknowledged === true,
       },
+      signal,
+      boundAuth: true,
+      expectedAuthUserId,
     })
   ),
 

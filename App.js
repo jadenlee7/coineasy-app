@@ -12,6 +12,7 @@ import ConfettiCannon from 'react-native-confetti-cannon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Login from "./screens/Login";
+import AccountDeletionPending from './screens/AccountDeletionPending';
 import utilities from './tailwind.json';
 import QR from "./components/modals/QR.js";
 import AppNavigator from './navigation/AppNavigator';
@@ -29,6 +30,7 @@ import { SOCIAL_CATEGORIES } from './data/socialCategories';
 // Required polyfills load before this module from entrypoint.js.
 import { PrivyProvider, usePrivy } from '@privy-io/expo';
 import useAuthSync from './hooks/useAuthSync';
+import useAccountDeletionSessionGate from './hooks/useAccountDeletionSessionGate';
 import {
   fallbackPresentationData,
   profilePresentationData,
@@ -39,6 +41,10 @@ import {
   getEasyGoPrivyClient,
 } from './utils/privyClient';
 import { easyGoPrivyStorage } from './utils/privyStorage';
+import {
+  accountDeletionMarkerStore,
+  createAccountDeletionClientRequestId,
+} from './utils/accountDeletionStorage';
 
 // Phase 1 chain: Base mainnet (chainId 8453). EasyChain is gated by
 // PHASE.EASYCHAIN_ENABLED in EASYGO_BUILD_PLAN.md and added in Phase 2.
@@ -81,12 +87,90 @@ import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
  * Watches Privy auth state, syncs to backend via useAuthSync, and writes
  * the resulting profile into the shared presentation state.
  */
-function AuthBridge() {
+function AccountDeletionSessionGate({ children }) {
   const privy = usePrivy();
-  const { profile, canUseFallback, deletionBlocked } = useAuthSync(privy);
+  const privyUserId = privy?.user?.id || null;
+  const markerGuard = useAccountDeletionSessionGate(privyUserId);
+  const [serverBlock, setServerBlock] = useState(null);
+
+  useEffect(() => {
+    setServerBlock((current) => (
+      current?.ownerUserId === privyUserId ? current : null
+    ));
+  }, [privyUserId]);
+
+  const reportDeletionBlock = useCallback((code) => {
+    if (!privyUserId || ![
+      'account_deletion_in_progress',
+      'account_deletion_guard_unavailable',
+    ].includes(code)) return;
+
+    setServerBlock({ ownerUserId: privyUserId, code });
+    if (code === 'account_deletion_in_progress') {
+      void accountDeletionMarkerStore.begin({
+        userId: privyUserId,
+        clientRequestId: createAccountDeletionClientRequestId(),
+        phase: 'accepted',
+      }).catch(() => {
+        // The in-memory server block remains fail-closed if SecureStore fails.
+      });
+    }
+  }, [privyUserId]);
+
+  const activeServerBlock = serverBlock?.ownerUserId === privyUserId
+    ? serverBlock
+    : null;
+  const retryDeletionGuard = useCallback(() => {
+    markerGuard.retry?.();
+    if (!activeServerBlock) return;
+
+    if (activeServerBlock.code === 'account_deletion_in_progress' && privyUserId) {
+      void accountDeletionMarkerStore.begin({
+        userId: privyUserId,
+        clientRequestId: createAccountDeletionClientRequestId(),
+        phase: 'accepted',
+      }).catch(() => {
+        // Keep the in-memory tombstone block until SecureStore recovers.
+      });
+      return;
+    }
+
+    setServerBlock((current) => (
+      current?.ownerUserId === privyUserId ? null : current
+    ));
+  }, [activeServerBlock, markerGuard.retry, privyUserId]);
+  const effectiveGuard = markerGuard.status === 'clear' && activeServerBlock
+    ? {
+        ...markerGuard,
+        status: activeServerBlock.code === 'account_deletion_in_progress'
+          ? 'server-blocked'
+          : 'server-error',
+        errorCode: activeServerBlock.code,
+        retry: retryDeletionGuard,
+      }
+    : markerGuard;
+
+  return children(effectiveGuard, reportDeletionBlock);
+}
+
+function AuthBridge({ accountDeletionGuard, onDeletionBlocked }) {
+  const privy = usePrivy();
+  const privyUserId = privy?.user?.id ?? null;
+  const markerBlocked = Boolean(
+    privyUserId && accountDeletionGuard?.status !== 'clear',
+  );
+  const {
+    profile,
+    canUseFallback,
+    deletionBlocked,
+    error,
+  } = useAuthSync(privy, { enabled: !markerBlocked });
   const { setUser, setUserData } = useContext(GlobalContext);
   const privyReady = Boolean(privy?.isReady);
-  const privyUserId = privy?.user?.id ?? null;
+
+  useEffect(() => {
+    if (deletionBlocked && error?.code) onDeletionBlocked?.(error.code);
+  }, [deletionBlocked, error?.code, onDeletionBlocked]);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,7 +183,7 @@ function AuthBridge() {
       || activeProfile?.id
       || 'device';
 
-    if (privyReady && (!privyUserId || deletionBlocked)) {
+    if (markerBlocked || (privyReady && (!privyUserId || deletionBlocked))) {
       setUser(null);
       setUserData(null);
       return () => { cancelled = true; };
@@ -178,7 +262,7 @@ function AuthBridge() {
 
     hydrateLocalCourses();
     return () => { cancelled = true; };
-  }, [canUseFallback, deletionBlocked, profile, privyReady, privyUserId, setUser, setUserData]);
+  }, [canUseFallback, deletionBlocked, markerBlocked, profile, privyReady, privyUserId, setUser, setUserData]);
 
   return null;
 }
@@ -841,6 +925,8 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
 
     return (
         <EasyGoPrivyBoundary alreadyMounted={privyAlreadyMounted}>
+        <AccountDeletionSessionGate>
+        {(accountDeletionGuard, reportDeletionBlock) => (
         <>
             <StatusBar translucent={true} backgroundColor="#00000000" style="black"/>
             <GestureHandlerRootView onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
@@ -935,10 +1021,15 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
                     }}
                 >
                     <FullStartupSignal onStartupStatus={onStartupStatus} />
-                    <AuthBridge />
+                    <AuthBridge
+                      accountDeletionGuard={accountDeletionGuard}
+                      onDeletionBlocked={reportDeletionBlock}
+                    />
 
                     <TailwindProvider utilities={utilities}>
-                        {user ? (
+                        {accountDeletionGuard.status !== 'clear' ? (
+                            <AccountDeletionPending guard={accountDeletionGuard} />
+                        ) : user ? (
                             <>
                                 <AppNavigator />
 
@@ -999,6 +1090,8 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
                 </GlobalContext.Provider>
             </GestureHandlerRootView>
         </>
+        )}
+        </AccountDeletionSessionGate>
       </EasyGoPrivyBoundary>
     );
 }

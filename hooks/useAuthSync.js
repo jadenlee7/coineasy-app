@@ -27,13 +27,15 @@ import {
 // hook stays SDK-agnostic and easier to mock in Phase 1 before the real Privy
 // app ID is provisioned.
 // ---------------------------------------------------------------------------
-export function useAuthSync(privy) {
+export function useAuthSync(privy, { enabled = true } = {}) {
   const [profile, setProfile] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState(null);
   const [resolution, setResolution] = useState(null);
   const lifecycle = useRef(null);
   const singleFlight = useRef(null);
+  const syncAllowedRef = useRef(Boolean(enabled));
+  syncAllowedRef.current = Boolean(enabled);
   if (!lifecycle.current) lifecycle.current = createAuthSyncLifecycle();
   if (!singleFlight.current) singleFlight.current = createTransitionSingleFlight();
 
@@ -51,12 +53,14 @@ export function useAuthSync(privy) {
       return undefined;
     }
 
-    setApiTokenProvider(tokenProvider);
+    setApiTokenProvider(tokenProvider, userId);
     return () => setApiTokenProvider(null);
   }, [authenticated, userId, getAccessToken]);
 
   const syncTransition = useCallback((transitionKey, ownerUserId) => {
-    if (!lifecycle.current.isCurrent(transitionKey)) return Promise.resolve(null);
+    if (!syncAllowedRef.current || !lifecycle.current.isCurrent(transitionKey)) {
+      return Promise.resolve(null);
+    }
 
     return singleFlight.current.run(transitionKey, () => {
       setSyncing(true);
@@ -65,11 +69,17 @@ export function useAuthSync(privy) {
 
       return runAuthSyncWithRetries({
         transitionKey,
-        isCurrent: (candidate) => lifecycle.current.isCurrent(candidate),
+        isCurrent: (candidate) => (
+          syncAllowedRef.current && lifecycle.current.isCurrent(candidate)
+        ),
         syncProfile: () => api.syncProfile(),
       })
         .then((outcome) => {
-          if (outcome.status === 'stale' || !lifecycle.current.isCurrent(transitionKey)) {
+          if (
+            outcome.status === 'stale'
+            || !syncAllowedRef.current
+            || !lifecycle.current.isCurrent(transitionKey)
+          ) {
             return null;
           }
 
@@ -99,7 +109,7 @@ export function useAuthSync(privy) {
         .catch(() => {
           // Don't throw — fail soft and never surface raw SDK/network errors.
           const safeError = safeAuthSyncError(null);
-          if (lifecycle.current.isCurrent(transitionKey)) {
+          if (syncAllowedRef.current && lifecycle.current.isCurrent(transitionKey)) {
             setError(safeError);
             setProfile(null);
             setResolution({ userId: ownerUserId, status: 'failed' });
@@ -108,7 +118,9 @@ export function useAuthSync(privy) {
           return null;
         })
         .finally(() => {
-          if (lifecycle.current.isCurrent(transitionKey)) setSyncing(false);
+          if (syncAllowedRef.current && lifecycle.current.isCurrent(transitionKey)) {
+            setSyncing(false);
+          }
         });
     });
   }, []);
@@ -120,7 +132,12 @@ export function useAuthSync(privy) {
   // budget. `resync` joins in-flight work, reuses a successful result, or starts
   // one fresh bounded operation after a failed attempt.
   useEffect(() => {
-    const observed = lifecycle.current.observe({ ready, authenticated, userId });
+    const syncAllowed = Boolean(enabled);
+    const observed = lifecycle.current.observe({
+      ready: ready && syncAllowed,
+      authenticated: authenticated && syncAllowed,
+      userId: syncAllowed ? userId : null,
+    });
 
     if (!observed.active || observed.sessionChanged) {
       singleFlight.current.reset();
@@ -136,14 +153,14 @@ export function useAuthSync(privy) {
     ) {
       syncTransition(observed.transitionKey, userId);
     }
-  }, [ready, authenticated, userId, syncTransition]);
+  }, [ready, authenticated, userId, enabled, syncTransition]);
 
   const resync = useCallback(() => {
-    if (!ready || !authenticated || !userId) return Promise.resolve(null);
+    if (!enabled || !ready || !authenticated || !userId) return Promise.resolve(null);
     const transitionKey = lifecycle.current.currentTransitionKey();
     if (!transitionKey) return Promise.resolve(null);
     return syncTransition(transitionKey, userId);
-  }, [ready, authenticated, userId, syncTransition]);
+  }, [enabled, ready, authenticated, userId, syncTransition]);
 
   const currentResolution = resolution?.userId === userId ? resolution : null;
   return {
@@ -151,9 +168,11 @@ export function useAuthSync(privy) {
     syncing,
     error,
     resync,
-    status: currentResolution?.status || (authenticated && userId ? 'pending' : 'idle'),
+    status: !enabled
+      ? 'blocked'
+      : currentResolution?.status || (authenticated && userId ? 'pending' : 'idle'),
     deletionBlocked: currentResolution?.status === 'deletion-blocked',
-    canUseFallback: currentResolution?.status === 'failed',
+    canUseFallback: Boolean(enabled) && currentResolution?.status === 'failed',
   };
 }
 

@@ -30,6 +30,19 @@ test('the foundation release brake keeps destructive deletion disabled', () => {
   assert.equal(accountDeletionEnabled({ ACCOUNT_DELETION_ENABLED: 'TRUE' }), false);
 });
 
+test('the status route never hides a tombstone behind the activation brake', () => {
+  const route = readFileSync(
+    new URL('../src/routes/me.js', import.meta.url),
+    'utf8',
+  );
+  const handler = route.match(
+    /meRouter\.get\('\/account-deletion'[\s\S]*?\n\}\)\);/u,
+  )?.[0] || '';
+  assert.match(handler, /findAccountDeletionRequest\(prisma, req\.user\.privyDid\)/u);
+  assert.match(handler, /available: accountDeletionEnabled\(\) && !request/u);
+  assert.doesNotMatch(handler, /if \(!accountDeletionEnabled\(\)\)/u);
+});
+
 test('subject lookup is deterministic and provider identity encryption is authenticated', () => {
   const subjectHash = accountDeletionSubjectHash(PRIVY_DID, TEST_ENV);
   assert.match(subjectHash, /^[a-f0-9]{64}$/);

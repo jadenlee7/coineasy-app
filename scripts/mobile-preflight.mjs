@@ -45,9 +45,17 @@ export function startupBoundaryProtectsApp(appSource) {
 
 export function authenticatedUiIsGated(appSource) {
   const source = String(appSource || '');
-  const branchOpen = source.indexOf('{user ? (');
+  const deletionGate = source.indexOf("accountDeletionGuard.status !== 'clear' ? (");
+  const pendingScreen = source.indexOf('<AccountDeletionPending', deletionGate);
+  const branchOpen = deletionGate >= 0
+    ? source.indexOf(': user ? (', pendingScreen)
+    : source.indexOf('{user ? (');
   const loginBranch = source.indexOf(') : (', branchOpen);
-  if (branchOpen < 0 || loginBranch < 0) return false;
+  if (
+    branchOpen < 0
+    || loginBranch < 0
+    || (deletionGate >= 0 && !(pendingScreen > deletionGate && pendingScreen < branchOpen))
+  ) return false;
   return [
     '<AppNavigator />',
     '<UpdateProfileModal />',
