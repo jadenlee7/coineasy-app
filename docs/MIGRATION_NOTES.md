@@ -387,6 +387,20 @@ screen. No social rows or tables are deleted by S8.
       release commit, and remove the general production build/submit profiles.
       App Store Connect must show the `Internal` label before device QA; this
       candidate cannot be promoted to external testing or App Review.
+- [x] Build, inspect, upload, and process internal-only iOS `2.0.3 (101)` from
+      exact commit `df34fa58c47478827ad9686155c15f2c1a1dd3fa`. EAS build
+      `23cdccca-7197-4594-8bd6-971e8ce792ea` and submission
+      `301453fd-7c95-4db0-8308-a78cae7cc558` finished without an error. App
+      Store Connect build `351afe98-4bc8-482c-87c8-386cc10d6f98` is `VALID`,
+      `READY_FOR_BETA_TESTING`, and `INTERNAL_ONLY`; external testing is
+      `NOT_APPLICABLE`.
+- [x] Verify the 27,032,891-byte Build 101 IPA at SHA-256
+      `88e162b2dae3ef9bdaf58c39597f355ece3bbf05c2ff3e38b3df52a9a900f4a6`.
+      Its identity, JSC linkage, Apple Sign-In entitlement, public staging
+      configuration, and both privacy export scopes are present. The
+      6,067,878-byte JavaScript bundle has SHA-256
+      `3836d8004117de3242a13e844533d7847a396592c27acb9f2ea0ba71c7c88a7c`
+      and no complete private-key block.
 
 ## Owner action items (outside this PR)
 

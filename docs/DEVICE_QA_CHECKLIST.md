@@ -1,8 +1,8 @@
 # EasyGo staging device QA
 
-Use this checklist for the staged Base-runtime TestFlight build
-`2.0.3 (100)` and the existing Android preview build `versionCode 64`. Both
-clients must target
+Use this checklist for the internal-only privacy-center TestFlight build
+`2.0.3 (101)`, its staged Base-runtime predecessor `2.0.3 (100)`, and the
+existing Android preview build `versionCode 64`. All clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
@@ -157,9 +157,24 @@ wallet private key, or login code.
   copies the own-wallet address from the address control, opens the same address
   on BaseScan from the separate Base badge, and does not expose a wallet address
   on another user's profile. No address or account identifier was recorded.
+- [x] Complete, inspect, submit, and process privacy-center build `2.0.3 (101)`
+  from exact commit `df34fa58c47478827ad9686155c15f2c1a1dd3fa`.
+  EAS build `23cdccca-7197-4594-8bd6-971e8ce792ea` and submission
+  `301453fd-7c95-4db0-8308-a78cae7cc558` finished without an error. App Store
+  Connect marks build `351afe98-4bc8-482c-87c8-386cc10d6f98` `VALID`,
+  `READY_FOR_BETA_TESTING`, and `INTERNAL_ONLY`; external state is
+  `NOT_APPLICABLE`.
+- [x] Verify the 27,032,891-byte Build 101 IPA with SHA-256
+  `88e162b2dae3ef9bdaf58c39597f355ece3bbf05c2ff3e38b3df52a9a900f4a6`.
+  It reports the expected version, build number, identifier, URL scheme,
+  Apple Sign-In entitlement, production push entitlement, and JSC linkage.
+  Its 6,067,878-byte JavaScript bundle has SHA-256
+  `3836d8004117de3242a13e844533d7847a396592c27acb9f2ea0ba71c7c88a7c`,
+  includes both privacy export scopes, and contains no complete private-key
+  block.
 - [ ] Complete one new Google sign-in. Its OAuth return through `coineasyapp`
   must succeed without showing a raw Privy error.
-- [ ] Confirm the expected session state. Builds 95 through 100 preserve the same
+- [ ] Confirm the expected session state. Builds 95 through 101 preserve the same
   versioned `easygo-privy-v2-` SecureStore namespace; only upgrades from a
   pre-build-94 client should require the one-time sign-in again.
 
@@ -216,7 +231,9 @@ wallet private key, or login code.
 
 ## Build 101 privacy-center candidate
 
-- [ ] Confirm App Store Connect labels Build 101 `Internal`. This binary must
+- [x] Confirm App Store Connect labels Build 101 `Internal`. The authoritative
+  API reports `buildAudienceType=INTERNAL_ONLY` and external state
+  `NOT_APPLICABLE`. This binary must
   remain unavailable to external TestFlight groups and the App Store review
   build picker; absence of the label is a release stop.
 - [ ] Open Settings after backend profile sync. It shows the server consent
