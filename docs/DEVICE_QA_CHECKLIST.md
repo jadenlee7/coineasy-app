@@ -151,8 +151,12 @@ wallet private key, or login code.
   SHA-256 `b8efcf91a378fae63b59681ba2ed06a137545745250a450932943f3a705fba3a`
   and exactly matches the clean local iOS export; it contains the Base runtime
   probe and no complete private-key block or App Secret.
-- [ ] Install Build 100 from TestFlight on the affected iPhone 16 Pro Max and
+- [x] Install Build 100 from TestFlight on the affected iPhone 16 Pro Max and
   confirm two cold launches reach the signed-in EasyGo profile without a crash.
+- [x] On 2026-08-02, the owner confirmed Build 100 shows `Base · Connected`,
+  copies the own-wallet address from the address control, opens the same address
+  on BaseScan from the separate Base badge, and does not expose a wallet address
+  on another user's profile. No address or account identifier was recorded.
 - [ ] Complete one new Google sign-in. Its OAuth return through `coineasyapp`
   must succeed without showing a raw Privy error.
 - [ ] Confirm the expected session state. Builds 95 through 100 preserve the same
@@ -171,7 +175,7 @@ wallet private key, or login code.
 
 ## Core flow
 
-- [ ] Cold-launch EasyGo twice; the splash and login/feed screen render without
+- [x] Cold-launch EasyGo twice; the splash and login/feed screen render without
   a crash, blank screen, configuration warning, or `STARTUP-JS-01` safe-mode
   screen.
 - [ ] Complete one configured Privy sign-in. Returning to EasyGo through the
@@ -182,8 +186,10 @@ wallet private key, or login code.
   profile must show `Base · Connected`; tapping the address still copies it,
   while tapping the separate Base badge opens that address on BaseScan. Logout
   and relogin must not create a second address.
-- [ ] Open another user's profile and search result; neither public response nor
-  selected-profile UI may expose that user's wallet address.
+- [x] Open another user's profile; its public response and selected-profile UI
+  do not expose that user's wallet address.
+- [ ] Open another user's search result and confirm its public response and UI
+  do not expose that user's wallet address.
 - [x] Confirm the signed-in profile loads after the Build 98 Apple OAuth return.
 - [x] Complete the post-secret authenticated device retry. Railway recorded one
   `/auth/sync` request with HTTP 200 and no corresponding fatal, unhandled, or
@@ -207,6 +213,28 @@ wallet private key, or login code.
   route render. Stop before signing or broadcasting a transaction.
 - [ ] Open `coineasyapp://` from Safari or Notes and confirm EasyGo foregrounds.
 - [ ] Sign out, sign in again, and confirm profile/feed/Orange data persist.
+
+## Build 101 privacy-center candidate
+
+- [ ] Open Settings after backend profile sync. It shows the server consent
+  version and keeps personalization/marketing off without exposing raw API data.
+- [ ] Until versioned EasyGo Terms and Privacy HTTPS documents are configured,
+  consent editing stays locked and the app clearly reports that policy
+  publication is pending. Railway `CONSENT_GRANTS_ENABLED` remains `false`;
+  a previously stored opt-in can still be revoked.
+- [ ] Export the full EasyGo JSON on iOS, inspect `schemaVersion`,
+  `scope=easygo_local_database`, and `exportedAt`, then confirm the temporary
+  cache file is gone after success, cancellation, and share failure.
+- [ ] Export the social JSON and confirm
+  `scope=easygo_legacy_social`; it must omit Privy IDs, wallet addresses,
+  consent, Orange history, swaps, quests, and segment records.
+- [ ] Repeat both exports offline. The UI shows fixed PII-free retry copy and
+  never copies JSON to the clipboard or logs the response/error body.
+- [ ] On Android, verify the Storage Access Framework folder picker saves both
+  JSON files and cancelling the picker creates no file.
+- [ ] Confirm account deletion is visibly unavailable while Railway
+  `ACCOUNT_DELETION_ENABLED=false`; full/social exports and sign-out must remain
+  usable. Do not execute deletion on the primary tester account.
 
 ## Pass and failure handling
 

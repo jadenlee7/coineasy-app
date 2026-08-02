@@ -216,14 +216,20 @@ review.
 - `GET /me/consent` returns the effective current-version consent. Missing,
   incomplete, or stale consent always reports optional processing as disabled.
 - `PUT /me/consent` accepts a complete replacement and writes the current row
-  plus an immutable audit snapshot in one transaction.
+  plus an immutable audit snapshot in one transaction. It returns `503` unless
+  a request adds any permission and the independent, default-off
+  `CONSENT_GRANTS_ENABLED` release gate has not been enabled after the
+  legal-document review. Revocation remains available while the gate is off.
 - `GET /me/data` returns a no-store, versioned export of records held in the
   EasyGo database. Ephemeral SIWE nonce hashes are excluded.
 - `DELETE /me/data` requires the literal confirmation
   `DELETE_MY_EASYGO_DATA`, then deletes the local user and cascaded records.
-  It does not claim to delete the separate Privy identity.
-- Production consent routes return `503` until
-  `EASYGO_CONSENT_VERSION` is set to the approved, published policy version.
+  It does not claim to delete the separate Privy identity. The route remains
+  `503` behind default-off `ACCOUNT_DELETION_ENABLED` until cross-user reply
+  ownership and post-deletion Privy session recreation are resolved.
+- Production consent reads return `503` until `EASYGO_CONSENT_VERSION` is set
+  to the approved, published policy version. That version alone never enables
+  mutation; the separate gate above is also required.
 
 ## 10. S4 ENS subname issuance
 

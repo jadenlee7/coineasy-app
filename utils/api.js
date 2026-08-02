@@ -21,8 +21,8 @@ async function _resolveAuthHeader() {
   try {
     const token = await _getAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch (e) {
-    console.warn('[api] token provider failed', e);
+  } catch {
+    console.warn('[api] token provider failed');
     return {};
   }
 }
@@ -96,10 +96,10 @@ export const api = {
     request('POST', '/auth/siwe/verify', { body: { message, signature } }),
 
   // privacy + consent (Path C v2 S3)
-  consent: () => request('GET', '/me/consent'),
-  updateConsent: (body) => request('PUT', '/me/consent', { body }),
-  exportMyData: () => request('GET', '/me/data'),
-  exportMySocialData: () => request('GET', '/me/social-export'),
+  consent: ({ signal } = {}) => request('GET', '/me/consent', { signal }),
+  updateConsent: (body, { signal } = {}) => request('PUT', '/me/consent', { body, signal }),
+  exportMyData: ({ signal } = {}) => request('GET', '/me/data', { signal }),
+  exportMySocialData: ({ signal } = {}) => request('GET', '/me/social-export', { signal }),
   deleteMyData: () => request('DELETE', '/me/data', {
     body: { confirmation: 'DELETE_MY_EASYGO_DATA' },
   }),

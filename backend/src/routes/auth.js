@@ -4,7 +4,7 @@
  * POST /auth/sync   - upsert User row from a verified Privy session.
  *                     Ensures the one-time 100 🍊 Orange welcome bonus.
  * GET  /auth/me     - return profile for the bearer token holder.
- * DELETE /auth/me   - permanently delete the bearer user and cascaded data.
+ * DELETE /auth/me   - retired unconfirmed deletion alias (always 410).
  */
 
 import { Router } from 'express';
@@ -18,7 +18,6 @@ import {
   PrivyConfigurationError,
 } from '../lib/privy.js';
 import { prisma } from '../lib/db.js';
-import { deleteLocalUserData } from '../lib/account-data.js';
 import { awardWelcomeBonusOnce, getOrangeBalance } from '../lib/auth-sync.js';
 import {
   createSiweChallenge,
@@ -263,7 +262,8 @@ authRouter.get('/me', requireAuth, async (req, res) => {
 });
 
 authRouter.delete('/me', requireAuth, async (req, res) => {
-  const deleted = await deleteLocalUserData(prisma, req.user.privyDid);
-  if (!deleted) return res.status(404).json({ error: 'not_found' });
-  res.json({ ok: true, scope: 'easygo_local_database', privyAccountDeleted: false });
+  res.status(410).json({
+    error: 'confirmed_deletion_required',
+    path: '/me/data',
+  });
 });

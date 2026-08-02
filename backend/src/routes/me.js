@@ -14,11 +14,14 @@ import { prisma } from '../lib/db.js';
 import { requireAuth } from '../middleware/auth.js';
 import {
   buildConsentMutation,
+  consentGrantsEnabled,
+  consentUpdateAddsPermission,
   consentUpdateSchema,
   consentView,
   getCurrentConsentVersion,
 } from '../lib/consent.js';
 import {
+  accountDeletionEnabled,
   deleteLocalUserData,
   exportLegacySocialData,
   exportLocalUserData,
@@ -42,6 +45,7 @@ function currentVersionOr503(req, res) {
 }
 
 meRouter.get('/consent', requireAuth, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   const currentVersion = currentVersionOr503(req, res);
   if (!currentVersion) return;
 
@@ -55,6 +59,7 @@ meRouter.get('/consent', requireAuth, async (req, res) => {
 });
 
 meRouter.put('/consent', requireAuth, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   const parsed = consentUpdateSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'bad_input', details: parsed.error.issues });
@@ -77,6 +82,16 @@ meRouter.put('/consent', requireAuth, async (req, res) => {
         input: parsed.data,
         currentVersion,
       });
+      if (!consentGrantsEnabled()
+        && consentUpdateAddsPermission({
+          existing,
+          input: parsed.data,
+          currentVersion,
+        })) {
+        const error = new Error('consent grants are disabled');
+        error.code = 'consent_grants_disabled';
+        throw error;
+      }
 
       const updated = await tx.userConsent.upsert({
         where: { userId: user.id },
@@ -114,6 +129,9 @@ meRouter.put('/consent', requireAuth, async (req, res) => {
     if (error?.code === 'base_consent_required') {
       return res.status(400).json({ error: error.code });
     }
+    if (error?.code === 'consent_grants_disabled') {
+      return res.status(503).json({ error: error.code });
+    }
     throw error;
   }
 });
@@ -142,6 +160,9 @@ meRouter.delete('/data', requireAuth, async (req, res) => {
       error: 'confirmation_required',
       confirmation: DELETE_DATA_CONFIRMATION,
     });
+  }
+  if (!accountDeletionEnabled()) {
+    return res.status(503).json({ error: 'account_deletion_disabled' });
   }
 
   const deleted = await deleteLocalUserData(prisma, req.user.privyDid);

@@ -269,6 +269,28 @@ function validBackendUrl(value, staged) {
   }
 }
 
+function validHttpsUrl(value) {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+export function versionedLegalEnvironment(env = {}) {
+  const consentVersion = clean(env.EXPO_PUBLIC_EASYGO_CONSENT_VERSION);
+  const privacyUrl = clean(env.EXPO_PUBLIC_EASYGO_PRIVACY_URL);
+  const termsUrl = clean(env.EXPO_PUBLIC_EASYGO_TERMS_URL);
+  return {
+    consentVersion,
+    privacyUrl,
+    termsUrl,
+    versionValid: /^[A-Za-z0-9._-]{1,50}$/.test(consentVersion),
+    privacyUrlValid: Boolean(privacyUrl) && validHttpsUrl(privacyUrl),
+    termsUrlValid: Boolean(termsUrl) && validHttpsUrl(termsUrl),
+  };
+}
+
 export function validateMobileEnvironment(env, appConfig, {
   target = 'local',
   appSource,
@@ -299,6 +321,27 @@ export function validateMobileEnvironment(env, appConfig, {
   if (backendUrl) {
     add(validBackendUrl(backendUrl, staged), 'backend URL format', 'remote backend URLs must use HTTPS');
   }
+
+  const legal = versionedLegalEnvironment(env);
+  const legalMayRemainDormant = target !== 'production';
+  add(
+    legal.versionValid,
+    'EasyGo consent document version',
+    'EXPO_PUBLIC_EASYGO_CONSENT_VERSION must match the published EasyGo policy version',
+    { warning: !legal.consentVersion && legalMayRemainDormant },
+  );
+  add(
+    legal.privacyUrlValid,
+    'EasyGo privacy policy URL',
+    'EXPO_PUBLIC_EASYGO_PRIVACY_URL must be the versioned HTTPS EasyGo privacy policy',
+    { warning: !legal.privacyUrl && legalMayRemainDormant },
+  );
+  add(
+    legal.termsUrlValid,
+    'EasyGo terms URL',
+    'EXPO_PUBLIC_EASYGO_TERMS_URL must be the versioned HTTPS EasyGo terms of service',
+    { warning: !legal.termsUrl && legalMayRemainDormant },
+  );
 
   add(expo.scheme === 'coineasyapp', 'URL scheme', 'Expo scheme must remain coineasyapp for the configured Privy client');
   add(
@@ -436,9 +479,13 @@ export function validateMobileEnvironment(env, appConfig, {
   };
 }
 
-function targetFromArgs(argv) {
+export function targetFromArgs(argv, env = process.env) {
   const argument = argv.find((item) => item.startsWith('--target='));
-  return clean(argument?.slice('--target='.length) || 'local');
+  return clean(
+    argument?.slice('--target='.length)
+    || env.EASYGO_DEPLOY_TARGET
+    || 'local',
+  );
 }
 
 function run() {
@@ -454,7 +501,7 @@ function run() {
   const babelSource = readFileSync(resolve('babel.config.js'), 'utf8');
   const packageConfig = JSON.parse(readFileSync(resolve('package.json'), 'utf8'));
   const result = validateMobileEnvironment(env, appConfig, {
-    target: targetFromArgs(process.argv.slice(2)),
+    target: targetFromArgs(process.argv.slice(2), process.env),
     appSource,
     bootstrapSource,
     babelSource,

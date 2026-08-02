@@ -19,7 +19,9 @@ import {
   startupDiagnosticReportsRuntime,
   startupBoundaryProtectsApp,
   startupKeepsOnePrivyProvider,
+  targetFromArgs,
   validateMobileEnvironment,
+  versionedLegalEnvironment,
   versionedPrivyStorageIsSafe,
 } from '../scripts/mobile-preflight.mjs';
 
@@ -47,6 +49,15 @@ EXPO_PUBLIC_PRIVY_CLIENT_ID="client-id"
     EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
     EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
   });
+});
+
+test('EAS profiles cannot bypass the intended preflight target', () => {
+  assert.equal(targetFromArgs([], {}), 'local');
+  assert.equal(targetFromArgs([], { EASYGO_DEPLOY_TARGET: 'production' }), 'production');
+  assert.equal(
+    targetFromArgs(['--target=staging'], { EASYGO_DEPLOY_TARGET: 'production' }),
+    'staging',
+  );
 });
 
 test('local preflight accepts Privy IDs but warns while backend is disconnected', () => {
@@ -78,6 +89,54 @@ test('staging preflight requires an HTTPS backend and preserves native identity'
     EXPO_PUBLIC_BACKEND_URL: 'https://api.easygo.example',
   }, appConfig, { target: 'staging' });
   assert.deepEqual(ready.errors, []);
+  assert.equal(
+    ready.warnings.some((item) => item.name === 'EasyGo privacy policy URL'),
+    true,
+  );
+});
+
+test('legal policy configuration is fail-closed and mandatory for production', () => {
+  assert.deepEqual(versionedLegalEnvironment({}), {
+    consentVersion: '',
+    privacyUrl: '',
+    termsUrl: '',
+    versionValid: false,
+    privacyUrlValid: false,
+    termsUrlValid: false,
+  });
+
+  const baseEnv = {
+    EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
+    EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
+    EXPO_PUBLIC_BACKEND_URL: 'https://api.easygo.example',
+  };
+  const missing = validateMobileEnvironment(baseEnv, appConfig, { target: 'production' });
+  assert.equal(
+    missing.errors.some((item) => item.name === 'EasyGo consent document version'),
+    true,
+  );
+
+  const insecure = validateMobileEnvironment({
+    ...baseEnv,
+    EXPO_PUBLIC_EASYGO_CONSENT_VERSION: '2026-08-02-v1',
+    EXPO_PUBLIC_EASYGO_PRIVACY_URL: 'http://easygo.example/privacy',
+    EXPO_PUBLIC_EASYGO_TERMS_URL: 'https://easygo.example/terms',
+  }, appConfig, { target: 'staging' });
+  assert.equal(
+    insecure.errors.some((item) => item.name === 'EasyGo privacy policy URL'),
+    true,
+  );
+
+  const configured = validateMobileEnvironment({
+    ...baseEnv,
+    EXPO_PUBLIC_EASYGO_CONSENT_VERSION: '2026-08-02-v1',
+    EXPO_PUBLIC_EASYGO_PRIVACY_URL: 'https://easygo.example/privacy/2026-08-02-v1',
+    EXPO_PUBLIC_EASYGO_TERMS_URL: 'https://easygo.example/terms/2026-08-02-v1',
+  }, appConfig, { target: 'production' });
+  assert.equal(
+    configured.errors.some((item) => item.name.startsWith('EasyGo ')),
+    false,
+  );
 });
 
 test('staging preflight keeps the iOS JSC build on an isolated OTA runtime', () => {

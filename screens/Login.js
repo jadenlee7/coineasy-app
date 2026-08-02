@@ -25,6 +25,7 @@ import GoogleIcon from '../assets/easygo/google.svg';
 import LogoArrow from '../assets/easygo/logo-arrow.svg';
 import PasskeyIcon from '../assets/easygo/passkey.svg';
 import WalletIcon from '../assets/easygo/wallet.svg';
+import { EASYGO_LEGAL_DOCUMENTS } from '../utils/legalDocuments.mjs';
 import { getOAuthLoginErrorMessage } from '../utils/oauthLoginError.mjs';
 
 const BRAND = {
@@ -32,9 +33,6 @@ const BRAND = {
   orange: '#FF6813',
   sheet: '#FFFEFC',
 };
-
-const TERMS_URL = 'https://drive.google.com/file/d/17_d1L3-qBYKk3vAK9_P-zd2PKW3fNDiX/view?usp=sharing';
-const PRIVACY_URL = 'https://drive.google.com/file/d/1Dhijs_O61shJEKNy6Sga16Iu3vgqwc8I/view?usp=sharing';
 
 function LoginOption({ Icon, label, onPress, disabled, loading }) {
   return (
@@ -163,16 +161,21 @@ export default function Login() {
         {!!errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 
         <Text style={styles.termsText}>
-          계속하면 EasyGo의{' '}
-          <Text onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)} style={styles.termsLink}>
+          계속하기 전에{' '}
+          <Text onPress={() => WebBrowser.openBrowserAsync(EASYGO_LEGAL_DOCUMENTS.terms.url)} style={styles.termsLink}>
             이용약관
           </Text>
           {' '}및{' '}
-          <Text onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)} style={styles.termsLink}>
+          <Text onPress={() => WebBrowser.openBrowserAsync(EASYGO_LEGAL_DOCUMENTS.privacy.url)} style={styles.termsLink}>
             개인정보 처리방침
           </Text>
-          에 동의하게 됩니다.
+          을 확인해 주세요. 동의 선택은 설정에서 별도로 관리됩니다.
         </Text>
+        {!EASYGO_LEGAL_DOCUMENTS.versioned && (
+          <Text style={styles.policyPendingText}>
+            EasyGo 전용 정책 문서는 정식 공개 준비 중입니다.
+          </Text>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -320,5 +323,12 @@ const styles = StyleSheet.create({
     color: '#000',
     fontFamily: 'GmarketBold',
     textDecorationLine: 'underline',
+  },
+  policyPendingText: {
+    color: '#B45309',
+    fontFamily: 'GmarketMedium',
+    fontSize: 9,
+    lineHeight: 13,
+    textAlign: 'center',
   },
 });

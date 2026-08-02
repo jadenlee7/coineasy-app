@@ -371,9 +371,18 @@ screen. No social rows or tables are deleted by S8.
       `c545d16a-7237-456c-8efe-53641e2a7286` and submission
       `370b5cb0-cf9f-4b7c-b572-4e03cc3018a9` finished successfully; App Store
       Connect reports build `c4dbfafd-b4ae-4bd5-8e9d-749a5a5ae0a7` as `VALID`.
-- [ ] Verify Build 100 cold-launch session restoration, the visible
-      `Base · Connected` result, BaseScan routing, Google OAuth, public wallet
-      privacy, and the remaining core API paths against staging.
+- [x] Verify Build 100 cold-launch session restoration, the visible
+      `Base · Connected` result, copy-only address control, BaseScan routing,
+      and public-profile wallet privacy on the affected iPhone 16 Pro Max.
+- [ ] Verify Google OAuth, logout/relogin wallet stability, and the remaining
+      core API paths against staging.
+- [x] Add the Build 101 mobile privacy-center candidate: authenticated
+      account-bound consent reads, version-bound fail-closed drafting,
+      full/social JSON export, temporary iOS file cleanup, Android SAF saving,
+      and a visible deletion safety gate. Static tests and iOS export pass;
+      runtime file/share behavior remains device-QA pending. Consent grants
+      remain independently default-off until matched EasyGo legal documents are
+      published; revocation remains allowed.
 
 ## Owner action items (outside this PR)
 
@@ -385,9 +394,10 @@ screen. No social rows or tables are deleted by S8.
 - [x] Add the staging `EXPO_PUBLIC_BACKEND_URL` to the local root `.env`.
 - [x] Confirm `/auth/sync` is guarded by `requireAuth`, which verifies the
       Privy Bearer access token before profile sync.
-- [ ] Replace the legacy ThePivot terms/privacy PDFs linked from `Login.js`
+- [ ] Replace the centralized legacy ThePivot terms/privacy fallbacks
       with EasyGo-branded documents that share an explicit effective version,
-      then set `EASYGO_CONSENT_VERSION` to that exact published version.
+      then set the backend and mobile consent versions to that exact published
+      version. Enable `CONSENT_GRANTS_ENABLED` only after that review.
 
 ## Privy + AuthBridge data flow (Phase 1)
 

@@ -1,10 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  accountDeletionEnabled,
   deleteLocalUserData,
   exportLegacySocialData,
   exportLocalUserData,
 } from '../src/lib/account-data.js';
+
+test('account deletion stays fail-closed until thread and re-auth semantics are approved', () => {
+  assert.equal(accountDeletionEnabled({}), false);
+  assert.equal(accountDeletionEnabled({ ACCOUNT_DELETION_ENABLED: 'false' }), false);
+  assert.equal(accountDeletionEnabled({ ACCOUNT_DELETION_ENABLED: 'TRUE' }), true);
+});
 
 test('local data export is versioned and excludes ephemeral SIWE secrets', async () => {
   let query;

@@ -47,3 +47,17 @@ test('data deletion rejects requests without the explicit confirmation phrase', 
     confirmation: DELETE_DATA_CONFIRMATION,
   });
 });
+
+test('confirmed data deletion remains gated during the safety review', async () => {
+  const layer = meRouter.stack.find((item) => item.route?.path === '/data'
+    && item.route.methods.delete);
+  const handler = layer.route.stack.at(-1).handle;
+  const response = responseDouble();
+
+  await handler({
+    body: { confirmation: DELETE_DATA_CONFIRMATION },
+    user: { privyDid: 'did:privy:test' },
+  }, response);
+  assert.equal(response.statusCode, 503);
+  assert.deepEqual(response.body, { error: 'account_deletion_disabled' });
+});

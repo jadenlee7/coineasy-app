@@ -10,7 +10,7 @@ See `EASYGO_BUILD_PLAN.md` §11 (data flow), §12 (backend endpoints), §13.2 (S
 | Client | Backend route | Purpose |
 | --- | --- | --- |
 | `useAuthSync(privy)` | `POST /auth/sync` | Upsert user on Privy login; awards 100 🍊 welcome bonus on first sync. |
-| Settings | `DELETE /me/data` | Confirm and permanently delete EasyGo-local account data; Privy identity remains separate. |
+| Settings | `DELETE /me/data` | Confirmed EasyGo-local deletion contract; UI and route remain safety-gated while thread ownership and Privy re-auth behavior are resolved. |
 | Privacy settings | `GET/PUT /me/consent` | Read effective consent and atomically update the current row plus audit history. |
 | Data access | `GET /me/data` | Fetch a no-store, versioned export of the authenticated user's EasyGo-local records. |
 | Social data export | `GET /me/social-export` | Download only the signed-in user's public profile fields, posts, likes, and follow graph. |
@@ -98,6 +98,12 @@ Already defined in repo-root `.env.example` (PR #4):
 - `EXPO_PUBLIC_PRIVY_CLIENT_ID` — EasyGo mobile client identifier for the app bundle and URL scheme.
 - `EXPO_PUBLIC_TG_BOT_USERNAME` / `EXPO_PUBLIC_TG_WEBAPP_URL` — for `getTelegramLoginUrl`.
 - `EXPO_PUBLIC_SQUID_INTEGRATOR_ID` / `EXPO_PUBLIC_SQUID_API_URL` — surfaced in client config but actual SDK runs server-side.
+- `EXPO_PUBLIC_EASYGO_CONSENT_VERSION` — exact version shared by the published
+  EasyGo Terms and Privacy documents.
+- `EXPO_PUBLIC_EASYGO_TERMS_URL` / `EXPO_PUBLIC_EASYGO_PRIVACY_URL` — versioned
+  HTTPS documents. Consent editing stays locked while either is missing or the
+  version differs from the backend.
+- `EXPO_PUBLIC_EASYGO_HELP_URL` — optional replacement for the current help link.
 
 Run `npm run preflight` before local builds and `npm run preflight:staging`
 before an EAS staging build. Privy's native app allowlist must contain the
@@ -110,6 +116,14 @@ mobile client if that client is used on both platforms.
 
 - **Backend URL unset**: `utils/api.js` returns `null` and logs a warning. Hooks expose an unconfigured empty state, so the UI stays usable.
 - **Consent policy version unset in production**: `/me/consent` returns `503` until the backend's `EASYGO_CONSENT_VERSION` matches the approved published policy version.
+- **Consent grant gate off**: `PUT /me/consent` rejects new grants or permission
+  expansion while `CONSENT_GRANTS_ENABLED` is false or missing, even if a
+  staging policy version exists. Revocation remains available. This is the
+  required state until the EasyGo documents and App Store privacy disclosures
+  are approved.
+- **Account deletion gate off**: Settings keeps deletion unavailable and
+  `DELETE /me/data` returns `503` while `ACCOUNT_DELETION_ENABLED` is false or
+  missing. The unconfirmed legacy `/auth/me` alias always returns `410`.
 - **Backend unreachable**: requests throw and feed screens expose a retry state while retaining any previously loaded rows.
 - **Quest flag off**: course completion receives `404` from `/quests` and falls back to the legacy reward route, so the current app remains usable during rollout.
 - **Social mode**: `active` preserves current behavior. A future `read_only` mode returns `410` only for writes; `retired` returns `410` for all social routes. Both responses include `/me/social-export`.
@@ -135,8 +149,10 @@ mobile client if that client is used on both platforms.
 - Transaction-quest start/proof UI after Base SIWE signing, reviewed quest
   content, and `QUESTS_ENABLED` approval. `api.quests()`, `startQuest()`, and
   `completeQuest()` are wired; course quizzes already prefer the new endpoint.
-- Explicit read-only/retired social screens and export download UI before any
-  production change from `LEGACY_SOCIAL_MODE=active`.
+- Explicit read-only/retired social screens before any production change from
+  `LEGACY_SOCIAL_MODE=active`. Authenticated, account-bound full/social JSON
+  export is wired in the Build 101 Settings candidate, with temporary iOS file
+  cleanup and Android SAF save; physical-device verification remains pending.
 
 ## Phase 2 transitions
 

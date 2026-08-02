@@ -327,15 +327,20 @@ for the decision record.
 S3 uses these tables at `/me/consent` and `/me/data`. Consent updates require
 the exact current policy version and complete terms/privacy acceptance before
 optional processing can be enabled. Set `EASYGO_CONSENT_VERSION` to the
-approved published version in production; consent routes fail closed with
-`503` when it is missing. Local data deletion requires this JSON body:
+approved published version in production; consent reads fail closed with
+`503` when it is missing. New grants or permission expansion through
+`PUT /me/consent` additionally require the default-off
+`CONSENT_GRANTS_ENABLED=true` release gate; revocation remains available while
+the gate is off. Local data deletion requires this JSON body:
 
 ```json
 { "confirmation": "DELETE_MY_EASYGO_DATA" }
 ```
 
-The older `DELETE /auth/me` remains as a mobile-client compatibility alias,
-but new clients use the confirmed `/me/data` endpoint.
+The older `DELETE /auth/me` now returns `410` and never deletes data. The
+confirmed `/me/data` endpoint additionally requires the default-off
+`ACCOUNT_DELETION_ENABLED=true` gate while cross-user thread ownership and
+post-deletion Privy session behavior are under review.
 
 ### Migration
 

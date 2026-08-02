@@ -22,6 +22,29 @@ export function getCurrentConsentVersion(env = process.env) {
   return version;
 }
 
+export function consentGrantsEnabled(env = process.env) {
+  return String(env.CONSENT_GRANTS_ENABLED || '').trim().toLowerCase() === 'true';
+}
+
+export function consentUpdateAddsPermission({ existing, input, currentVersion }) {
+  const sameVersion = existing?.consentVersion === currentVersion;
+  const existingTerms = sameVersion && Boolean(existing?.termsAcceptedAt);
+  const existingPrivacy = sameVersion && Boolean(existing?.privacyAcceptedAt);
+  const existingBase = existingTerms && existingPrivacy;
+  const current = {
+    termsAccepted: existingTerms,
+    privacyAccepted: existingPrivacy,
+    segmentingOptIn: existingBase && Boolean(existing?.segmentingOptIn),
+    marketingOptIn: existingBase && Boolean(existing?.marketingOptIn),
+  };
+  return [
+    'termsAccepted',
+    'privacyAccepted',
+    'segmentingOptIn',
+    'marketingOptIn',
+  ].some((field) => Boolean(input?.[field]) && !current[field]);
+}
+
 export function consentView(record, currentVersion = getCurrentConsentVersion()) {
   const termsAccepted = Boolean(record?.termsAcceptedAt);
   const privacyAccepted = Boolean(record?.privacyAcceptedAt);

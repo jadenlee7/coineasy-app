@@ -39,6 +39,10 @@ const userDataSelect = {
   },
 };
 
+export function accountDeletionEnabled(env = process.env) {
+  return String(env.ACCOUNT_DELETION_ENABLED || '').trim().toLowerCase() === 'true';
+}
+
 const publicSocialUserSelect = {
   id: true,
   username: true,

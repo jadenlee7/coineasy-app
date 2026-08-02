@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildConsentMutation,
+  consentGrantsEnabled,
+  consentUpdateAddsPermission,
   consentUpdateSchema,
   consentView,
   getCurrentConsentVersion,
@@ -139,4 +141,44 @@ test('consent payload is complete and strict', () => {
     () => getCurrentConsentVersion({ NODE_ENV: 'production' }),
     /required in production/,
   );
+});
+
+test('consent grants stay fail-closed until explicitly enabled', () => {
+  assert.equal(consentGrantsEnabled({}), false);
+  assert.equal(consentGrantsEnabled({ CONSENT_GRANTS_ENABLED: 'false' }), false);
+  assert.equal(consentGrantsEnabled({ CONSENT_GRANTS_ENABLED: 'TRUE' }), true);
+});
+
+test('the release gate blocks new permissions but never blocks revocation', () => {
+  const existing = acceptedRecord();
+  assert.equal(consentUpdateAddsPermission({
+    existing,
+    currentVersion: CURRENT_VERSION,
+    input: {
+      termsAccepted: true,
+      privacyAccepted: true,
+      segmentingOptIn: false,
+      marketingOptIn: false,
+    },
+  }), false);
+  assert.equal(consentUpdateAddsPermission({
+    existing: acceptedRecord({ marketingOptIn: false }),
+    currentVersion: CURRENT_VERSION,
+    input: {
+      termsAccepted: true,
+      privacyAccepted: true,
+      segmentingOptIn: true,
+      marketingOptIn: true,
+    },
+  }), true);
+  assert.equal(consentUpdateAddsPermission({
+    existing,
+    currentVersion: 'new-version',
+    input: {
+      termsAccepted: true,
+      privacyAccepted: true,
+      segmentingOptIn: false,
+      marketingOptIn: false,
+    },
+  }), true);
 });
