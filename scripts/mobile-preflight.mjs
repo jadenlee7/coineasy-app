@@ -242,10 +242,14 @@ export function releaseBufferAvoidsUnsupportedNativeBase64(
 
 export function iosReleaseUsesIsolatedJscRuntime(appConfig) {
   const expo = appConfig?.expo || {};
+  const buildNumberText = String(expo.ios?.buildNumber || '');
+  const buildNumber = Number(buildNumberText);
   return expo.ios?.jsEngine === 'jsc'
     && expo.runtimeVersion?.policy === 'appVersion'
     && expo.version === '2.0.2'
-    && String(expo.ios?.buildNumber || '') === '97';
+    && /^\d+$/.test(buildNumberText)
+    && Number.isInteger(buildNumber)
+    && buildNumber >= 97;
 }
 
 function validBackendUrl(value, staged) {
@@ -299,8 +303,8 @@ export function validateMobileEnvironment(env, appConfig, {
   if (staged) {
     add(
       iosReleaseUsesIsolatedJscRuntime(appConfig),
-      'iOS build 97 JSC runtime isolation',
-      'staged iOS release must be build 97 on JSC with a new app-version runtime boundary',
+      'iOS JSC runtime isolation',
+      'staged iOS releases from build 97 onward must stay on JSC and app-version runtime isolation',
     );
   }
   add(Boolean(clean(expo.android?.package)), 'Android package', 'Expo Android package is required');

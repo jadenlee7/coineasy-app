@@ -29,7 +29,7 @@ const appConfig = {
     scheme: 'coineasyapp',
     ios: {
       bundleIdentifier: 'com.coineasy.coineasysocial',
-      buildNumber: '97',
+      buildNumber: '98',
       jsEngine: 'jsc',
       usesAppleSignIn: true,
     },
@@ -93,13 +93,19 @@ test('staging preflight keeps the iOS JSC build on an isolated OTA runtime', () 
     },
   }, { target: 'staging' });
   assert.equal(
-    result.errors.some((item) => item.name === 'iOS build 97 JSC runtime isolation'),
+    result.errors.some((item) => item.name === 'iOS JSC runtime isolation'),
     true,
   );
   assert.equal(iosReleaseUsesIsolatedJscRuntime({
     expo: {
       ...appConfig.expo,
       ios: { ...appConfig.expo.ios, buildNumber: '96' },
+    },
+  }), false);
+  assert.equal(iosReleaseUsesIsolatedJscRuntime({
+    expo: {
+      ...appConfig.expo,
+      ios: { ...appConfig.expo.ios, buildNumber: '98beta' },
     },
   }), false);
 });
