@@ -20,6 +20,7 @@ import { PrivyProvider, usePrivy } from '@privy-io/expo';
 import {
   createEasyGoPrivyClient,
   EASYGO_BASE_CHAIN,
+  EASYGO_PRIVY_CONFIG,
   getEasyGoPrivyClient,
   getEasyGoPrivyWebViewUrl,
   initializeEasyGoPrivyClient,
@@ -555,7 +556,7 @@ export default function PrivyStartupProbe(props) {
           appId={PRIVY_APP_ID}
           client={getEasyGoPrivyClient()}
           clientId={PRIVY_CLIENT_ID}
-          config={{ embedded: { disableAutomaticMigration: true } }}
+          config={EASYGO_PRIVY_CONFIG}
           storage={easyGoPrivyStorage}
           supportedChains={[EASYGO_BASE_CHAIN]}
         >

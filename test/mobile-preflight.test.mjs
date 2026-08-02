@@ -8,6 +8,7 @@ import {
   iosReleaseUsesIsolatedJscRuntime,
   parseEnvText,
   privyAutomaticMigrationIsDisabled,
+  privyEmbeddedWalletCreationIsConfigured,
   privyIsolationStagesAreGuarded,
   privyProviderUsesVersionedStorage,
   privyWebViewUsesSdkLoadContract,
@@ -176,8 +177,10 @@ test('build 97 persists and user-gates every risky Privy startup phase', () => {
     };
     <WebView onLoad={() => handleRawWebViewLoad(attempt)} />
   `), false);
-  assert.equal(privyAutomaticMigrationIsDisabled(appSource), true);
-  assert.equal(privyAutomaticMigrationIsDisabled(probeSource), true);
+  assert.equal(privyAutomaticMigrationIsDisabled(appSource, clientSource), true);
+  assert.equal(privyAutomaticMigrationIsDisabled(probeSource, clientSource), true);
+  assert.equal(privyEmbeddedWalletCreationIsConfigured(appSource, clientSource), true);
+  assert.equal(privyEmbeddedWalletCreationIsConfigured(probeSource, clientSource), true);
   assert.equal(privyProviderUsesVersionedStorage(appSource), true);
   assert.equal(privyProviderUsesVersionedStorage(probeSource), true);
   assert.equal(singletonPrivyClientIsConfigured(clientSource), true);
@@ -187,6 +190,16 @@ test('build 97 persists and user-gates every risky Privy startup phase', () => {
     <PrivyProvider appId="example">
       <App />
     </PrivyProvider>
+  `), false);
+  assert.equal(privyEmbeddedWalletCreationIsConfigured(`
+    <PrivyProvider appId="example" config={EASYGO_PRIVY_CONFIG}>
+      <App />
+    </PrivyProvider>
+  `, `
+    export const EASYGO_BASE_CHAIN = { id: 8453 };
+    export const EASYGO_PRIVY_CONFIG = {
+      embedded: { ethereum: { createOnLogin: 'users-without-wallets' } },
+    };
   `), false);
 });
 

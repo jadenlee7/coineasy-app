@@ -197,13 +197,33 @@ export function startupKeepsOnePrivyProvider(bootstrapSource, probeSource, appSo
     && app.includes('if (alreadyMounted) return children');
 }
 
-export function privyAutomaticMigrationIsDisabled(sourceText) {
+export function privyAutomaticMigrationIsDisabled(sourceText, clientSource = '') {
   const source = String(sourceText || '');
-  const providerTags = source.match(/<PrivyProvider\b[\s\S]*?>/g) || [];
-  return providerTags.some((openingTag) => (
-    /config=\{\{\s*embedded:\s*\{\s*disableAutomaticMigration:\s*true\s*\}\s*\}\}/
-      .test(openingTag)
-  ));
+  const providerTags = (source.match(/<PrivyProvider\b[\s\S]*?>/g) || [])
+    .filter((openingTag) => openingTag.includes('appId='));
+  return providerTags.some((openingTag) => {
+    const inlineConfig = /config=\{\{\s*embedded:\s*\{\s*disableAutomaticMigration:\s*true\s*\}\s*\}\}/
+      .test(openingTag);
+    const sharedConfig = openingTag.includes('config={EASYGO_PRIVY_CONFIG}')
+      && /EASYGO_PRIVY_CONFIG\s*=\s*\{[\s\S]*?disableAutomaticMigration:\s*true/.test(
+        String(clientSource || ''),
+      );
+    return inlineConfig || sharedConfig;
+  });
+}
+
+export function privyEmbeddedWalletCreationIsConfigured(sourceText, clientSource = '') {
+  const source = String(sourceText || '');
+  const providerTags = (source.match(/<PrivyProvider\b[\s\S]*?>/g) || [])
+    .filter((openingTag) => openingTag.includes('appId='));
+  const config = String(clientSource || '');
+  return providerTags.length > 0
+    && providerTags.every((openingTag) => (
+      openingTag.includes('config={EASYGO_PRIVY_CONFIG}')
+    ))
+    && /EASYGO_PRIVY_CONFIG\s*=\s*\{[\s\S]*?ethereum:\s*\{[\s\S]*?createOnLogin:\s*['"]all-users['"]/.test(config)
+    && config.includes('EASYGO_BASE_CHAIN')
+    && /id:\s*8453/.test(config);
 }
 
 export function expoPublicEnvInliningIsConfigured(babelSource) {
@@ -307,9 +327,14 @@ export function validateMobileEnvironment(env, appConfig, {
       'authenticated modals must not render on the login path',
     );
     add(
-      privyAutomaticMigrationIsDisabled(appSource),
+      privyAutomaticMigrationIsDisabled(appSource, clientSource),
       'full app Privy migration safety',
       'automatic embedded-wallet migration must remain disabled during iOS startup isolation',
+    );
+    add(
+      privyEmbeddedWalletCreationIsConfigured(appSource, clientSource),
+      'full app Base embedded wallet creation',
+      'headless Privy login must create one EVM embedded wallet on Base',
     );
     add(
       privyProviderUsesVersionedStorage(appSource),
@@ -341,9 +366,14 @@ export function validateMobileEnvironment(env, appConfig, {
       'the standalone WebView must follow the SDK onLoad contract without a blocking initial ping',
     );
     add(
-      privyAutomaticMigrationIsDisabled(probeSource),
+      privyAutomaticMigrationIsDisabled(probeSource, clientSource),
       'Privy probe migration safety',
       'the Privy startup probe must not run automatic embedded-wallet migration',
+    );
+    add(
+      privyEmbeddedWalletCreationIsConfigured(probeSource, clientSource),
+      'Privy probe Base embedded wallet creation',
+      'the startup probe provider must share the production embedded-wallet config',
     );
     add(
       privyProviderUsesVersionedStorage(probeSource),

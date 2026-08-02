@@ -9,6 +9,18 @@ export const EASYGO_BASE_CHAIN = {
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
 };
 
+// EasyGo uses Privy's headless Expo OAuth hooks, so embedded-wallet creation
+// must be configured on the native Provider. The dashboard's automatic-wallet
+// switch only applies to Privy's modal login flow.
+export const EASYGO_PRIVY_CONFIG = {
+  embedded: {
+    ethereum: {
+      createOnLogin: 'all-users',
+    },
+    disableAutomaticMigration: true,
+  },
+};
+
 let easyGoPrivyClient = null;
 
 export function getEasyGoPrivyClient() {

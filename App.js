@@ -29,7 +29,11 @@ import { SOCIAL_CATEGORIES } from './data/socialCategories';
 // Required polyfills load before this module from entrypoint.js.
 import { PrivyProvider, usePrivy } from '@privy-io/expo';
 import useAuthSync from './hooks/useAuthSync';
-import { EASYGO_BASE_CHAIN, getEasyGoPrivyClient } from './utils/privyClient';
+import {
+  EASYGO_BASE_CHAIN,
+  EASYGO_PRIVY_CONFIG,
+  getEasyGoPrivyClient,
+} from './utils/privyClient';
 import { easyGoPrivyStorage } from './utils/privyStorage';
 
 // Phase 1 chain: Base mainnet (chainId 8453). EasyChain is gated by
@@ -177,7 +181,7 @@ function EasyGoPrivyBoundary({ alreadyMounted, children }) {
       appId={PRIVY_APP_ID}
       client={getEasyGoPrivyClient()}
       clientId={PRIVY_CLIENT_ID}
-      config={{ embedded: { disableAutomaticMigration: true } }}
+      config={EASYGO_PRIVY_CONFIG}
       storage={easyGoPrivyStorage}
       supportedChains={[EASYGO_BASE_CHAIN]}
     >
