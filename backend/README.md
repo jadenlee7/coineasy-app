@@ -108,14 +108,14 @@ default.
 | GET | `/ready` | — | Bounded database readiness probe; sanitized `503` on failure |
 | POST | `/auth/sync` | Bearer | Upsert User from Privy session, award welcome 100 🍊 on first creation |
 | GET | `/auth/me` | Bearer | Profile of bearer |
-| DELETE | `/auth/me` | Bearer | Permanently delete bearer account and cascaded data |
+| DELETE | `/auth/me` | Bearer | Retired alias; always returns `410`, use the confirmed `/me/data` flow |
 | POST | `/auth/siwe/nonce` | Bearer + flag | Issue a 10-minute Base SIWE challenge bound to user/address |
 | POST | `/auth/siwe/verify` | Bearer + flag | Consume nonce, verify EOA/smart-wallet signature, persist verified address |
 | GET | `/me/consent` | Bearer | Read effective current-version consent (deny by default) |
 | PUT | `/me/consent` | Bearer | Replace consent and append an audit snapshot atomically |
 | GET | `/me/data` | Bearer | Export versioned EasyGo-local user data with `no-store` |
 | GET | `/me/social-export` | Bearer | Download privacy-minimized social profile/content/graph data |
-| DELETE | `/me/data` | Bearer + confirmation | Delete EasyGo-local user data; does not delete the Privy identity |
+| DELETE | `/me/data` | Bearer + confirmation + flag | Safety-gated local deletion; stays disabled until thread ownership and Privy lifecycle are approved |
 | GET | `/identity/subname` | Bearer + flag | Read local ENS issuance state |
 | POST | `/identity/subname/challenge` | Bearer + flag | Request a two-minute JustaName SIWE challenge |
 | POST | `/identity/issue-subname` | Bearer + flag | Verify the signed challenge and issue `<handle>.coineasy.eth` |

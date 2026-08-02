@@ -383,6 +383,10 @@ screen. No social rows or tables are deleted by S8.
       runtime file/share behavior remains device-QA pending. Consent grants
       remain independently default-off until matched EasyGo legal documents are
       published; revocation remains allowed.
+- [x] Make the Build 101 path Apple TestFlight Internal Only, require a clean
+      release commit, and remove the general production build/submit profiles.
+      App Store Connect must show the `Internal` label before device QA; this
+      candidate cannot be promoted to external testing or App Review.
 
 ## Owner action items (outside this PR)
 

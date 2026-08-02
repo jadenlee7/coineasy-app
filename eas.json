@@ -1,6 +1,7 @@
 {
   "cli": {
-    "appVersionSource": "local"
+    "appVersionSource": "local",
+    "requireCommit": true
   },
   "build": {
     "development": {
@@ -31,22 +32,13 @@
         "EASYGO_DEPLOY_TARGET": "staging"
       },
       "ios": {
-        "image": "macos-sequoia-15.6-xcode-26.0"
-      }
-    },
-    "production": {
-      "channel": "production",
-      "environment": "production",
-      "env": {
-        "EASYGO_DEPLOY_TARGET": "production"
-      },
-      "ios": {
-        "image": "macos-sequoia-15.6-xcode-26.0"
+        "image": "macos-sequoia-15.6-xcode-26.0",
+        "config": "testflight-internal-ios.yml"
       }
     }
   },
   "submit": {
-    "production": {
+    "testflight": {
       "ios": {
         "appleId": "guillaume.lamboley@yahoo.com",
         "ascAppId": "6463145391",

@@ -216,6 +216,9 @@ wallet private key, or login code.
 
 ## Build 101 privacy-center candidate
 
+- [ ] Confirm App Store Connect labels Build 101 `Internal`. This binary must
+  remain unavailable to external TestFlight groups and the App Store review
+  build picker; absence of the label is a release stop.
 - [ ] Open Settings after backend profile sync. It shows the server consent
   version and keeps personalization/marketing off without exposing raw API data.
 - [ ] Until versioned EasyGo Terms and Privacy HTTPS documents are configured,
