@@ -108,14 +108,16 @@ default.
 | GET | `/ready` | — | Bounded database readiness probe; sanitized `503` on failure |
 | POST | `/auth/sync` | Bearer | Upsert User from Privy session, award welcome 100 🍊 on first creation |
 | GET | `/auth/me` | Bearer | Profile of bearer |
-| DELETE | `/auth/me` | Bearer | Retired alias; always returns `410`, use the confirmed `/me/data` flow |
+| DELETE | `/auth/me` | Bearer | Retired alias; always returns `410`, use the account-deletion saga |
 | POST | `/auth/siwe/nonce` | Bearer + flag | Issue a 10-minute Base SIWE challenge bound to user/address |
 | POST | `/auth/siwe/verify` | Bearer + flag | Consume nonce, verify EOA/smart-wallet signature, persist verified address |
 | GET | `/me/consent` | Bearer | Read effective current-version consent (deny by default) |
 | PUT | `/me/consent` | Bearer | Replace consent and append an audit snapshot atomically |
 | GET | `/me/data` | Bearer | Export versioned EasyGo-local user data with `no-store` |
 | GET | `/me/social-export` | Bearer | Download privacy-minimized social profile/content/graph data |
-| DELETE | `/me/data` | Bearer + confirmation + flag | Safety-gated local deletion; stays disabled until thread ownership and Privy lifecycle are approved |
+| GET | `/me/account-deletion` | Bearer | Read server-authoritative deletion capability and current saga state |
+| POST | `/me/account-deletion` | Bearer + confirmation + flag | Idempotently request the durable deletion saga; returns `202` after local purge |
+| DELETE | `/me/data` | Bearer | Retired unsafe local-only endpoint; always returns `410` after confirmation validation |
 | GET | `/identity/subname` | Bearer + flag | Read local ENS issuance state |
 | POST | `/identity/subname/challenge` | Bearer + flag | Request a two-minute JustaName SIWE challenge |
 | POST | `/identity/issue-subname` | Bearer + flag | Verify the signed challenge and issue `<handle>.coineasy.eth` |
@@ -300,7 +302,7 @@ thread model: every content unit is a `Post`; replies are Posts with
 ### Models added
 - `User` — extended with social profile fields plus dormant SIWE verification
   state (`verifiedAddress`, Base chain ID, verification time, hashed nonce).
-- `Post` — `(id, authorId, body, parentPostId, mediaUrl, createdAt, updatedAt)`.
+- `Post` — thread node with a nullable author and explicit redaction timestamp.
 - `Follow` — composite PK `(followerId, followeeId)`.
 - `Like` — composite PK `(postId, userId)`.
 
@@ -331,16 +333,33 @@ approved published version in production; consent reads fail closed with
 `503` when it is missing. New grants or permission expansion through
 `PUT /me/consent` additionally require the default-off
 `CONSENT_GRANTS_ENABLED=true` release gate; revocation remains available while
-the gate is off. Local data deletion requires this JSON body:
+the gate is off.
+
+Account deletion is a durable, asynchronous saga. The request body is:
 
 ```json
-{ "confirmation": "DELETE_MY_EASYGO_DATA" }
+{
+  "confirmation": "DELETE_MY_EASYGO_ACCOUNT",
+  "clientRequestId": "11111111-1111-4111-8111-111111111111",
+  "walletRiskAcknowledged": true
+}
 ```
 
-The older `DELETE /auth/me` now returns `410` and never deletes data. The
-confirmed `/me/data` endpoint additionally requires the default-off
-`ACCOUNT_DELETION_ENABLED=true` gate while cross-user thread ownership and
-post-deletion Privy session behavior are under review.
+Once a later reviewed release removes the activation brake,
+`POST /me/account-deletion` returns `202` only after the user row and owned
+content have been locally purged and a permanent HMAC tombstone prevents that
+same Privy DID from passing `/auth/sync`. Other users' replies remain attached
+to redacted thread placeholders. A new Privy DID for the same Apple identity is
+not covered by this foundation and is an activation blocker. Apple and Privy
+cleanup continue as later saga stages, so the response never claims that
+provider or blockchain data is gone.
+
+Both older delete endpoints return `410` and never perform deletion. The public
+request stays behind `ACCOUNT_DELETION_ENABLED=false`; this release also has a
+compile-time and preflight brake that rejects activation until the worker,
+stable Apple identity guard, and mobile marker exist. HMAC-key fingerprints
+make accidental key replacement fail closed. See
+[`docs/adr/0008-durable-account-deletion-saga.md`](./docs/adr/0008-durable-account-deletion-saga.md).
 
 ### Migration
 
@@ -464,7 +483,7 @@ sunset, support plan, and verified export flow are all in place.
 - Advertisers see **aggregate metrics only**. Wallet-address sharing requires
   an explicit, timestamped per-quest opt-in on `QuestCompletion`; verifier
   proof JSON is not treated as consent by itself.
-- `/me/data` (read), `/me/consent` (toggle), and `/me/data DELETE` (forget)
+- `/me/data` (read), `/me/consent` (toggle), and the account-deletion saga
   ship in S3, before any advertiser campaign goes live.
 
 See [`docs/BACKEND_ROADMAP.md`](./docs/BACKEND_ROADMAP.md) for the full

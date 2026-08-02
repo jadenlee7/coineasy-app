@@ -132,6 +132,8 @@ test('logger redacts authentication, signatures, identity, and wallet fields', (
     },
     email: 'private@example.com',
     walletAddress: '0x1234567890',
+    subjectHash: 'account-subject-hash',
+    privyDidCiphertext: 'encrypted-provider-id',
   }, 'redaction test');
 
   const output = chunks.join('');
@@ -143,6 +145,8 @@ test('logger redacts authentication, signatures, identity, and wallet fields', (
     'quiz-answer',
     'private@example.com',
     '0x1234567890',
+    'account-subject-hash',
+    'encrypted-provider-id',
   ]) {
     assert.equal(output.includes(secret), false);
   }

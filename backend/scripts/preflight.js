@@ -10,7 +10,13 @@ const BOOLEAN_FLAGS = [
   'ADVERTISER_ADMIN_ENABLED',
   'CONSENT_GRANTS_ENABLED',
   'ACCOUNT_DELETION_ENABLED',
+  'ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED',
 ];
+
+// Keep this independent from environment input. It moves to true only in the
+// reviewed release that includes provider cleanup and the mobile deletion
+// marker; until then no Railway flag combination may activate deletion.
+const ACCOUNT_DELETION_ACTIVATION_READY = false;
 
 function clean(value) {
   return String(value || '').trim();
@@ -29,6 +35,14 @@ function validUrl(value, { https = false, protocols = [] } = {}) {
   } catch {
     return false;
   }
+}
+
+function validBase64Key(value, byteLength) {
+  const encoded = clean(value);
+  if (!encoded || !/^[A-Za-z0-9+/]+={0,2}$/u.test(encoded)) return false;
+  const decoded = Buffer.from(encoded, 'base64');
+  return decoded.length === byteLength
+    && decoded.toString('base64').replace(/=+$/u, '') === encoded.replace(/=+$/u, '');
 }
 
 function parseTarget(argv = process.argv.slice(2), env = process.env) {
@@ -86,6 +100,8 @@ export function validateDeployEnvironment(
       'SERVICE_NAME',
       'RELEASE_SHA',
       'EASYGO_CONSENT_VERSION',
+      'ACCOUNT_DELETION_SUBJECT_HMAC_KEY',
+      'ACCOUNT_DELETION_ENCRYPTION_KEY',
     ]) requireValue(name);
     if (clean(env.DATABASE_URL)) {
       add(
@@ -142,6 +158,58 @@ export function validateDeployEnvironment(
     } catch {
       add(false, 'advertiser key digests', 'ADVERTISER_API_KEY_HASHES_JSON must be valid JSON');
     }
+  }
+
+  const deletionEnabled = enabled(env, 'ACCOUNT_DELETION_ENABLED');
+  const deletionCleanupEnabled = enabled(env, 'ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED');
+  const deletionHashKey = clean(env.ACCOUNT_DELETION_SUBJECT_HMAC_KEY);
+  const deletionEncryptionKey = clean(env.ACCOUNT_DELETION_ENCRYPTION_KEY);
+  const deletionKeysPresent = Boolean(deletionHashKey || deletionEncryptionKey);
+
+  if (deletionEnabled || deletionCleanupEnabled || deletionKeysPresent) {
+    requireValue('ACCOUNT_DELETION_SUBJECT_HMAC_KEY');
+    requireValue('ACCOUNT_DELETION_ENCRYPTION_KEY');
+    if (deletionHashKey) {
+      add(
+        Buffer.byteLength(deletionHashKey, 'utf8') >= 32,
+        'account deletion subject HMAC key strength',
+        'ACCOUNT_DELETION_SUBJECT_HMAC_KEY must be at least 32 bytes',
+      );
+    }
+    if (deletionEncryptionKey) {
+      add(
+        validBase64Key(deletionEncryptionKey, 32),
+        'account deletion encryption key format',
+        'ACCOUNT_DELETION_ENCRYPTION_KEY must be a base64-encoded 32-byte key',
+      );
+    }
+  }
+
+  if (deletionEnabled) {
+    add(
+      ACCOUNT_DELETION_ACTIVATION_READY,
+      'account deletion implementation readiness',
+      'ACCOUNT_DELETION_ENABLED cannot be true until provider cleanup and the mobile deletion marker are implemented',
+    );
+    add(
+      deletionCleanupEnabled,
+      'account deletion provider cleanup',
+      'ACCOUNT_DELETION_ENABLED requires ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED=true',
+    );
+  }
+
+  if (deletionCleanupEnabled) {
+    add(
+      ACCOUNT_DELETION_ACTIVATION_READY,
+      'account deletion provider implementation readiness',
+      'ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED cannot be true before the cleanup worker is implemented',
+    );
+    const appleMode = clean(env.ACCOUNT_DELETION_APPLE_REVOCATION_MODE);
+    add(
+      ['privy_confirmed', 'easygo_managed'].includes(appleMode),
+      'account deletion Apple revocation mode',
+      'provider cleanup requires an approved ACCOUNT_DELETION_APPLE_REVOCATION_MODE',
+    );
   }
 
   const betterToken = Boolean(clean(env.BETTER_STACK_SOURCE_TOKEN));

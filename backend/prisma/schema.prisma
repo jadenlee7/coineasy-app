@@ -75,6 +75,63 @@ model User {
   segments         UserSegment[]
 }
 
+enum AccountDeletionState {
+  REQUESTED
+  LOCAL_PURGED
+  APPLE_REVOKED
+  PRIVY_DELETED
+  COMPLETED
+  MANUAL_REVIEW
+}
+
+// Pins each HMAC key version to one non-secret keyed fingerprint. Concurrent
+// first users race through INSERT ... ON CONFLICT DO NOTHING, then compare the
+// winner, so an accidental secret replacement fails closed without globally
+// serializing every auth sync.
+model AccountDeletionKeyRegistry {
+  keyVersion       Int                      @id
+  fingerprint      String                   @unique @db.Char(64)
+  createdAt        DateTime                 @default(now())
+  deletionRequests AccountDeletionRequest[] @relation("AccountDeletionSubjectKey")
+
+  @@unique([keyVersion, fingerprint])
+}
+
+// Durable tombstone for the cross-provider account-deletion saga. This model
+// intentionally has no User relation: it must survive removal of the User row
+// to block stale Privy sessions from recreating the account.
+model AccountDeletionRequest {
+  id                        String               @id @default(cuid())
+  subjectHash               String               @unique @db.Char(64)
+  subjectHashKeyVersion     Int                  @default(1)
+  subjectHashKeyFingerprint String               @db.Char(64)
+  privyDidCiphertext        String?              @db.Text
+  encryptionKeyVersion      Int?
+  clientRequestId           String               @db.Uuid
+  state                     AccountDeletionState @default(REQUESTED)
+  stateVersion              Int                  @default(0)
+  attemptCount              Int                  @default(0)
+  nextAttemptAt             DateTime?
+  lastAttemptAt             DateTime?
+  lastErrorAt               DateTime?
+  lastErrorCode             String?              @db.VarChar(100)
+  leaseToken                String?              @db.VarChar(64)
+  leaseExpiresAt            DateTime?
+  requestedAt               DateTime             @default(now())
+  localPurgedAt             DateTime?
+  appleRevokedAt            DateTime?
+  privyDeletedAt            DateTime?
+  completedAt               DateTime?
+  manualReviewAt            DateTime?
+  updatedAt                 DateTime             @updatedAt
+
+  subjectKey AccountDeletionKeyRegistry @relation("AccountDeletionSubjectKey", fields: [subjectHashKeyVersion, subjectHashKeyFingerprint], references: [keyVersion, fingerprint], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([clientRequestId])
+  @@index([state, nextAttemptAt])
+  @@index([leaseExpiresAt])
+}
+
 model OrangeLedger {
   id        String   @id @default(cuid())
   userId    String
@@ -117,18 +174,19 @@ model SwapLog {
 // =====================================================================
 
 model Post {
-  id           String   @id @default(cuid())
-  authorId     String
-  body         String   @db.VarChar(2000)
+  id           String    @id @default(cuid())
+  authorId     String?
+  body         String    @db.VarChar(2000)
   // Self-join: null = root post, non-null = reply to that post.
   parentPostId String?
   // mediaUrl reserved for PR #10 (media upload). Kept now to avoid a
   // second migration when uploads land.
   mediaUrl     String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  author  User   @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  author  User?  @relation("PostAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   parent  Post?  @relation("PostReplies", fields: [parentPostId], references: [id], onDelete: SetNull)
   replies Post[] @relation("PostReplies")
   likes   Like[]

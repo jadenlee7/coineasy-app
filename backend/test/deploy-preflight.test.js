@@ -14,6 +14,8 @@ function stagingEnv(overrides = {}) {
     SERVICE_NAME: 'easygo-web',
     RELEASE_SHA: 'abcdef1234567890',
     EASYGO_CONSENT_VERSION: '2026-07-21',
+    ACCOUNT_DELETION_SUBJECT_HMAC_KEY: 'h'.repeat(32),
+    ACCOUNT_DELETION_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
     SIWE_AUTH_ENABLED: 'false',
     JUSTANAME_ENABLED: 'false',
     SEGMENTS_ENABLED: 'false',
@@ -62,6 +64,43 @@ test('enabled features require their server-only provider configuration', () => 
   }), { target: 'staging' });
   assert.equal(result.errors.some((item) => item.failure.includes('BASE_RPC_URL')), true);
   assert.equal(result.errors.some((item) => item.failure.includes('ETHERSCAN_API_KEY')), true);
+});
+
+test('account deletion cannot activate before the worker and mobile marker ship', () => {
+  const missing = validateDeployEnvironment(stagingEnv({
+    ACCOUNT_DELETION_ENABLED: 'true',
+    ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED: 'false',
+    ACCOUNT_DELETION_SUBJECT_HMAC_KEY: '',
+    ACCOUNT_DELETION_ENCRYPTION_KEY: '',
+  }), { target: 'staging' });
+  assert.equal(
+    missing.errors.some((item) => item.failure.includes('ACCOUNT_DELETION_SUBJECT_HMAC_KEY')),
+    true,
+  );
+  assert.equal(
+    missing.errors.some((item) => item.name === 'account deletion provider cleanup'),
+    true,
+  );
+
+  const otherwiseComplete = validateDeployEnvironment(stagingEnv({
+    ACCOUNT_DELETION_ENABLED: 'true',
+    ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED: 'true',
+    ACCOUNT_DELETION_SUBJECT_HMAC_KEY: 'h'.repeat(32),
+    ACCOUNT_DELETION_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
+    ACCOUNT_DELETION_APPLE_REVOCATION_MODE: 'privy_confirmed',
+  }), { target: 'staging' });
+  assert.equal(
+    otherwiseComplete.errors.some(
+      (item) => item.name === 'account deletion implementation readiness',
+    ),
+    true,
+  );
+  assert.equal(
+    otherwiseComplete.errors.some(
+      (item) => item.name === 'account deletion provider implementation readiness',
+    ),
+    true,
+  );
 });
 
 test('partial Better Stack configuration and malformed flags fail closed', () => {

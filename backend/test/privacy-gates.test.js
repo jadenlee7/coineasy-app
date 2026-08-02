@@ -14,6 +14,8 @@ const base = {
   SERVICE_NAME: 'easygo-web-staging',
   RELEASE_SHA: 'abcdef1',
   EASYGO_CONSENT_VERSION: '2026-07-21-staging-v1',
+  ACCOUNT_DELETION_SUBJECT_HMAC_KEY: 'h'.repeat(32),
+  ACCOUNT_DELETION_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
   LEGACY_SOCIAL_MODE: 'active',
   SIWE_AUTH_ENABLED: 'false',
   JUSTANAME_ENABLED: 'false',
@@ -38,4 +40,19 @@ test('privacy release gates accept only explicit boolean values', () => {
       true,
     );
   }
+});
+
+test('account deletion remains fail-closed when provider cleanup is unapproved', () => {
+  const result = validateDeployEnvironment({
+    ...base,
+    ACCOUNT_DELETION_ENABLED: 'true',
+    ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED: 'false',
+    ACCOUNT_DELETION_SUBJECT_HMAC_KEY: 'h'.repeat(32),
+    ACCOUNT_DELETION_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
+  }, { target: 'staging' });
+
+  assert.equal(
+    result.errors.some((item) => item.name === 'account deletion provider cleanup'),
+    true,
+  );
 });

@@ -19,6 +19,12 @@ import {
 } from '../lib/privy.js';
 import { prisma } from '../lib/db.js';
 import { awardWelcomeBonusOnce, getOrangeBalance } from '../lib/auth-sync.js';
+import { express4AsyncHandler } from '../lib/express-async.js';
+import {
+  AccountDeletionBlockedError,
+  findAccountDeletionRequest,
+  runWithAccountDeletionGuard,
+} from '../lib/account-deletion.js';
 import {
   createSiweChallenge,
   getSiweConfig,
@@ -58,12 +64,6 @@ async function addressLinkedToAnotherUser(address, userId) {
   });
 }
 
-export function express4AsyncHandler(handler) {
-  return function handleAsyncRoute(req, res, next) {
-    return Promise.resolve(handler(req, res, next)).catch(next);
-  };
-}
-
 function isPrivyConfigurationFailure(error) {
   const upstreamStatus = Number(
     error?.status ?? error?.statusCode ?? error?.response?.status,
@@ -73,8 +73,29 @@ function isPrivyConfigurationFailure(error) {
     || upstreamStatus === 403;
 }
 
-export function createAuthSyncHandler({ db = prisma, fetchPrivyUser = getUser } = {}) {
+export function createAuthSyncHandler({
+  db = prisma,
+  fetchPrivyUser = getUser,
+  env = process.env,
+} = {}) {
   return async function authSync(req, res) {
+    try {
+      const deletionRequest = await findAccountDeletionRequest(
+        db,
+        req.user.privyDid,
+        env,
+      );
+      if (deletionRequest) {
+        return res.status(410).json({ error: 'account_deletion_in_progress' });
+      }
+    } catch (error) {
+      req.log?.error?.(
+        { errorType: error?.name || 'Error' },
+        'account deletion guard unavailable during auth sync',
+      );
+      return res.status(503).json({ error: 'account_deletion_guard_unavailable' });
+    }
+
     let privyUser;
     try {
       privyUser = await fetchPrivyUser(req.user.privyDid);
@@ -101,29 +122,47 @@ export function createAuthSyncHandler({ db = prisma, fetchPrivyUser = getUser } 
       return res.status(502).json({ error: 'privy_unavailable' });
     }
 
-    const existing = await db.user.findUnique({
-      where: { privyDid: profile.privyDid },
-      select: { id: true },
-    });
+    try {
+      const result = await runWithAccountDeletionGuard({
+        prisma: db,
+        privyDid: profile.privyDid,
+        env,
+        operation: async (tx) => {
+          const existing = await tx.user.findUnique({
+            where: { privyDid: profile.privyDid },
+            select: { id: true },
+          });
 
-    const user = await db.user.upsert({
-      where: { privyDid: profile.privyDid },
-      update: {
-        telegramId: profile.telegramId,
-        telegramUsername: profile.telegramUsername,
-        kakaoId: profile.kakaoId,
-        walletAddress: profile.walletAddress,
-      },
-      create: { ...profile },
-    });
+          const user = await tx.user.upsert({
+            where: { privyDid: profile.privyDid },
+            update: {
+              telegramId: profile.telegramId,
+              telegramUsername: profile.telegramUsername,
+              kakaoId: profile.kakaoId,
+              walletAddress: profile.walletAddress,
+            },
+            create: { ...profile },
+          });
 
-    // This runs for every sync, not only first creation. A retry after a
-    // partial failure can therefore repair a missing welcome ledger row, while
-    // the existing (reason, refId) unique key prevents duplicate awards.
-    await awardWelcomeBonusOnce(db, { userId: user.id });
-    const orangeBalance = await getOrangeBalance(db, user.id);
-
-    return res.json({ user, isNew: !existing, orangeBalance });
+          // This runs for every sync, not only first creation. A retry after a
+          // partial failure can therefore repair a missing welcome ledger row,
+          // while the unique key prevents duplicate awards.
+          await awardWelcomeBonusOnce(tx, { userId: user.id });
+          const orangeBalance = await getOrangeBalance(tx, user.id);
+          return { user, isNew: !existing, orangeBalance };
+        },
+      });
+      return res.json(result);
+    } catch (error) {
+      if (error instanceof AccountDeletionBlockedError) {
+        return res.status(410).json({ error: error.code });
+      }
+      req.log?.error?.(
+        { errorType: error?.name || 'Error' },
+        'account deletion guard unavailable during auth sync transaction',
+      );
+      return res.status(503).json({ error: 'account_deletion_guard_unavailable' });
+    }
   };
 }
 
@@ -264,6 +303,6 @@ authRouter.get('/me', requireAuth, async (req, res) => {
 authRouter.delete('/me', requireAuth, async (req, res) => {
   res.status(410).json({
     error: 'confirmed_deletion_required',
-    path: '/me/data',
+    path: '/me/account-deletion',
   });
 });

@@ -5,25 +5,28 @@
  * risky, all-at-once rewrite of the card UI.
  */
 
+import { normalizeSocialAuthor } from './socialAuthor.mjs';
+
 function toUnixTimestamp(value) {
   const milliseconds = value ? new Date(value).getTime() : NaN;
   return Number.isFinite(milliseconds) ? Math.floor(milliseconds / 1000) : null;
 }
 
 export function adaptSocialAuthor(author = {}) {
-  const id = author.id || 'unknown';
-  const displayName = author.displayName || author.username || 'EasyGo user';
+  const safeAuthor = normalizeSocialAuthor(author);
+  const id = safeAuthor.id || 'deleted';
+  const displayName = safeAuthor.displayName || safeAuthor.username || 'Deleted account';
 
   return {
     did: `easygo:${id}`,
     profile: {
       username: displayName,
-      pfp: author.pfp || '',
+      pfp: safeAuthor.pfp || '',
       description: null,
       data: {
-        easygoUserId: author.id || null,
-        displayName: author.displayName || null,
-        handle: author.username || null,
+        easygoUserId: safeAuthor.id || null,
+        displayName: safeAuthor.displayName || null,
+        handle: safeAuthor.username || null,
       },
     },
   };
@@ -76,7 +79,7 @@ export function adaptSocialPost(row) {
 
   return {
     stream_id: row.id,
-    creator: `easygo:${row.author?.id || 'unknown'}`,
+    creator: `easygo:${row.author?.id || 'deleted'}`,
     creator_details: adaptSocialAuthor(row.author),
     timestamp: toUnixTimestamp(row.createdAt),
     content: {
@@ -94,6 +97,7 @@ export function adaptSocialPost(row) {
       postId: row.id,
       authorId: row.author?.id || null,
       parentPostId: row.parentPostId || null,
+      deleted: Boolean(row.deleted || row.deletedAt),
     },
   };
 }

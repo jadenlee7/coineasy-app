@@ -13,6 +13,13 @@ function httpStatusFor(error) {
   return Number.isInteger(status) && status >= 100 && status <= 599 ? status : null;
 }
 
+export function isAccountDeletionBlocked(error) {
+  const status = httpStatusFor(error);
+  const code = error?.body?.error;
+  return (status === 410 && code === 'account_deletion_in_progress')
+    || (status === 503 && code === 'account_deletion_guard_unavailable');
+}
+
 export function isTransientAuthSyncError(error) {
   const status = httpStatusFor(error);
   if (status !== null) {
@@ -31,10 +38,19 @@ export function isTransientAuthSyncError(error) {
 export function safeAuthSyncError(error) {
   const status = httpStatusFor(error);
   const retryable = isTransientAuthSyncError(error);
+  const deletionBlocked = isAccountDeletionBlocked(error);
+  const deletionCode = error?.body?.error === 'account_deletion_guard_unavailable'
+    ? 'account_deletion_guard_unavailable'
+    : 'account_deletion_in_progress';
   return Object.freeze({
-    code: status === null ? (retryable ? 'network_unavailable' : 'sync_failed') : `http_${status}`,
+    code: deletionBlocked
+      ? deletionCode
+      : status === null
+        ? (retryable ? 'network_unavailable' : 'sync_failed')
+        : `http_${status}`,
     status,
     retryable,
+    deletionBlocked,
   });
 }
 

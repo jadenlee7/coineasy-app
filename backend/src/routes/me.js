@@ -5,7 +5,9 @@
  * PUT    /me/consent  — full consent replacement + immutable audit snapshot
  * GET    /me/data     — export the user's EasyGo-local database records
  * GET    /me/social-export — privacy-minimized legacy social export
- * DELETE /me/data     — delete EasyGo-local records after explicit confirmation
+ * GET    /me/account-deletion  — server-authoritative deletion capability/state
+ * POST   /me/account-deletion  — idempotently request the deletion saga
+ * DELETE /me/data     — retired unsafe local-only deletion endpoint
  */
 
 import { Router } from 'express';
@@ -21,17 +23,29 @@ import {
   getCurrentConsentVersion,
 } from '../lib/consent.js';
 import {
-  accountDeletionEnabled,
-  deleteLocalUserData,
   exportLegacySocialData,
   exportLocalUserData,
 } from '../lib/account-data.js';
+import { express4AsyncHandler } from '../lib/express-async.js';
+import {
+  accountDeletionEnabled,
+  AccountDeletionConfigurationError,
+  DELETE_ACCOUNT_CONFIRMATION,
+  findAccountDeletionRequest,
+  requestAccountDeletion,
+} from '../lib/account-deletion.js';
 
 export const meRouter = Router();
 export const DELETE_DATA_CONFIRMATION = 'DELETE_MY_EASYGO_DATA';
 
 const deleteDataSchema = z.object({
   confirmation: z.literal(DELETE_DATA_CONFIRMATION),
+}).strict();
+
+const accountDeletionSchema = z.object({
+  confirmation: z.literal(DELETE_ACCOUNT_CONFIRMATION),
+  clientRequestId: z.string().uuid(),
+  walletRiskAcknowledged: z.literal(true),
 }).strict();
 
 function currentVersionOr503(req, res) {
@@ -153,6 +167,62 @@ meRouter.get('/social-export', requireAuth, async (req, res) => {
   return res.json(exported);
 });
 
+meRouter.get('/account-deletion', requireAuth, express4AsyncHandler(async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (!accountDeletionEnabled()) {
+    return res.json({ available: false, state: null });
+  }
+
+  try {
+    const request = await findAccountDeletionRequest(prisma, req.user.privyDid);
+    return res.json({
+      available: !request,
+      state: request?.state || null,
+      requestId: request?.id || null,
+      localDataDeleted: Boolean(request?.localPurgedAt),
+      completed: request?.state === 'COMPLETED',
+    });
+  } catch (error) {
+    if (error instanceof AccountDeletionConfigurationError) {
+      req.log?.error?.({ errorType: error.name }, 'account deletion guard is not configured');
+      return res.status(503).json({ error: 'account_deletion_not_configured' });
+    }
+    throw error;
+  }
+}));
+
+meRouter.post('/account-deletion', requireAuth, express4AsyncHandler(async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const parsed = accountDeletionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: 'confirmation_required',
+      confirmation: DELETE_ACCOUNT_CONFIRMATION,
+    });
+  }
+  if (!accountDeletionEnabled()) {
+    return res.status(503).json({ error: 'account_deletion_disabled' });
+  }
+
+  try {
+    const result = await requestAccountDeletion({
+      prisma,
+      privyDid: req.user.privyDid,
+      clientRequestId: parsed.data.clientRequestId,
+    });
+    return res.status(202).json(result);
+  } catch (error) {
+    if (error instanceof AccountDeletionConfigurationError) {
+      req.log?.error?.({ errorType: error.name }, 'account deletion request is not configured');
+      return res.status(503).json({ error: 'account_deletion_not_configured' });
+    }
+    if (error?.code === 'account_deletion_disabled') {
+      return res.status(503).json({ error: error.code });
+    }
+    throw error;
+  }
+}));
+
 meRouter.delete('/data', requireAuth, async (req, res) => {
   const parsed = deleteDataSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -161,16 +231,8 @@ meRouter.delete('/data', requireAuth, async (req, res) => {
       confirmation: DELETE_DATA_CONFIRMATION,
     });
   }
-  if (!accountDeletionEnabled()) {
-    return res.status(503).json({ error: 'account_deletion_disabled' });
-  }
-
-  const deleted = await deleteLocalUserData(prisma, req.user.privyDid);
-  if (!deleted) return res.status(404).json({ error: 'not_found' });
-
-  return res.json({
-    ok: true,
-    scope: 'easygo_local_database',
-    privyAccountDeleted: false,
+  return res.status(410).json({
+    error: 'account_deletion_endpoint_moved',
+    path: '/me/account-deletion',
   });
 });

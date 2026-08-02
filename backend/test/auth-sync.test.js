@@ -7,18 +7,28 @@ import {
   WELCOME_ORANGE,
 } from '../src/lib/auth-sync.js';
 import { PrivyConfigurationError } from '../src/lib/privy.js';
+import { accountDeletionSubjectKeyFingerprint } from '../src/lib/account-deletion.js';
+import { express4AsyncHandler } from '../src/lib/express-async.js';
 import {
   createAuthSyncHandler,
-  express4AsyncHandler,
 } from '../src/routes/auth.js';
+
+const DELETION_GUARD_ENV = Object.freeze({
+  ACCOUNT_DELETION_ENABLED: 'false',
+  ACCOUNT_DELETION_SUBJECT_HMAC_KEY: 'h'.repeat(32),
+});
+const DELETION_KEY_FINGERPRINT = accountDeletionSubjectKeyFingerprint(
+  DELETION_GUARD_ENV,
+  { required: true },
+);
 
 test('a new user receives one welcome bonus keyed by their user id', async () => {
   const creates = [];
   const prisma = {
     orangeLedger: {
-      create: async (input) => {
+      createMany: async (input) => {
         creates.push(input);
-        return input.data;
+        return { count: 1 };
       },
     },
   };
@@ -27,12 +37,13 @@ test('a new user receives one welcome bonus keyed by their user id', async () =>
     userId: 'user_1',
   }), true);
   assert.deepEqual(creates, [{
-    data: {
+    data: [{
       userId: 'user_1',
       delta: WELCOME_ORANGE,
       reason: WELCOME_BONUS_REASON,
       refId: 'user_1',
-    },
+    }],
+    skipDuplicates: true,
   }]);
 });
 
@@ -40,9 +51,9 @@ test('an existing user missing a welcome ledger row is repaired on sync', async 
   const creates = [];
   const prisma = {
     orangeLedger: {
-      create: async (input) => {
+      createMany: async (input) => {
         creates.push(input);
-        return input.data;
+        return { count: 1 };
       },
     },
   };
@@ -51,22 +62,21 @@ test('an existing user missing a welcome ledger row is repaired on sync', async 
     userId: 'user_existing',
   }), true);
   assert.equal(creates.length, 1);
-  assert.equal(creates[0].data.refId, 'user_existing');
+  assert.equal(creates[0].data[0].refId, 'user_existing');
 });
 
 test('concurrent first sync unique conflicts are idempotent successes', async () => {
   const rows = [];
   const prisma = {
     orangeLedger: {
-      create: async ({ data }) => {
+      createMany: async ({ data: [data], skipDuplicates }) => {
         await Promise.resolve();
         if (rows.some((row) => row.reason === data.reason && row.refId === data.refId)) {
-          const error = new Error('Unique constraint failed');
-          error.code = 'P2002';
-          throw error;
+          assert.equal(skipDuplicates, true);
+          return { count: 0 };
         }
         rows.push(data);
-        return data;
+        return { count: 1 };
       },
     },
   };
@@ -85,7 +95,7 @@ test('non-unique ledger failures still reject the sync operation', async () => {
   const failure = new Error('database unavailable');
   const prisma = {
     orangeLedger: {
-      create: async () => {
+      createMany: async () => {
         throw failure;
       },
     },
@@ -144,14 +154,12 @@ function authSyncDb({ failUpsert = null, existingUser = true } = {}) {
         },
       },
       orangeLedger: {
-        async create({ data }) {
+        async createMany({ data: [data] }) {
           if (ledger.some((row) => row.reason === data.reason && row.refId === data.refId)) {
-            const error = new Error('unique welcome bonus');
-            error.code = 'P2002';
-            throw error;
+            return { count: 0 };
           }
           ledger.push(data);
-          return data;
+          return { count: 1 };
         },
         async aggregate({ where }) {
           return {
@@ -220,6 +228,138 @@ test('auth sync preserves the additive isNew response contract', async () => {
   assert.equal(response.body.orangeBalance, WELCOME_ORANGE);
 });
 
+test('auth sync rejects a tombstoned subject before calling Privy', async () => {
+  let providerCalls = 0;
+  let tombstoneQuery;
+  const response = responseDouble();
+  const tx = {
+    async $queryRawUnsafe() {},
+    accountDeletionKeyRegistry: {
+      async createMany() { return { count: 0 }; },
+      async findUnique() {
+        return { fingerprint: DELETION_KEY_FINGERPRINT };
+      },
+    },
+    accountDeletionRequest: {
+      async findUnique(options) {
+        tombstoneQuery = options;
+        return {
+          id: 'deletion_1',
+          state: 'LOCAL_PURGED',
+          requestedAt: new Date(),
+          localPurgedAt: new Date(),
+          completedAt: null,
+        };
+      },
+    },
+  };
+  const handler = createAuthSyncHandler({
+    db: {
+      async $transaction(callback) { return callback(tx); },
+    },
+    fetchPrivyUser: async () => {
+      providerCalls += 1;
+      return privyAppleUser();
+    },
+    env: DELETION_GUARD_ENV,
+  });
+
+  await handler({
+    user: { privyDid: 'did:privy:apple-user' },
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 410);
+  assert.deepEqual(response.body, { error: 'account_deletion_in_progress' });
+  assert.equal(providerCalls, 0);
+  assert.match(tombstoneQuery.where.subjectHash, /^[a-f0-9]{64}$/);
+  assert.equal(JSON.stringify(tombstoneQuery).includes('did:privy'), false);
+});
+
+test('auth sync rechecks the tombstone under lock after the Privy lookup', async () => {
+  let operationCalls = 0;
+  let tombstoneChecks = 0;
+  const response = responseDouble();
+  const tx = {
+    async $queryRawUnsafe() {},
+    accountDeletionKeyRegistry: {
+      async createMany() { return { count: 0 }; },
+      async findUnique() {
+        return { fingerprint: DELETION_KEY_FINGERPRINT };
+      },
+    },
+    accountDeletionRequest: {
+      async findUnique() {
+        tombstoneChecks += 1;
+        return tombstoneChecks === 1
+          ? null
+          : { id: 'deletion_race', state: 'REQUESTED' };
+      },
+    },
+    user: {
+      async findUnique() { operationCalls += 1; },
+      async upsert() { operationCalls += 1; },
+    },
+  };
+  const db = {
+    async $transaction(callback) { return callback(tx); },
+  };
+
+  await createAuthSyncHandler({
+    db,
+    fetchPrivyUser: async () => privyAppleUser(),
+    env: DELETION_GUARD_ENV,
+  })({
+    user: { privyDid: 'did:privy:apple-user' },
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(tombstoneChecks, 2);
+  assert.equal(operationCalls, 0);
+  assert.equal(response.statusCode, 410);
+  assert.deepEqual(response.body, { error: 'account_deletion_in_progress' });
+});
+
+test('auth sync fails closed when deletion is enabled without its hash key', async () => {
+  let providerCalls = 0;
+  const response = responseDouble();
+  await createAuthSyncHandler({
+    db: {},
+    fetchPrivyUser: async () => {
+      providerCalls += 1;
+      return privyAppleUser();
+    },
+    env: { ACCOUNT_DELETION_ENABLED: 'true' },
+  })({
+    user: { privyDid: 'did:privy:apple-user' },
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 503);
+  assert.deepEqual(response.body, { error: 'account_deletion_guard_unavailable' });
+  assert.equal(providerCalls, 0);
+});
+
+test('production auth sync requires the deletion guard key even while deletion is off', async () => {
+  let providerCalls = 0;
+  const response = responseDouble();
+  await createAuthSyncHandler({
+    db: {},
+    fetchPrivyUser: async () => {
+      providerCalls += 1;
+      return privyAppleUser();
+    },
+    env: { NODE_ENV: 'production', ACCOUNT_DELETION_ENABLED: 'false' },
+  })({
+    user: { privyDid: 'did:privy:apple-user' },
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 503);
+  assert.deepEqual(response.body, { error: 'account_deletion_guard_unavailable' });
+  assert.equal(providerCalls, 0);
+});
+
 test('auth sync maps Privy lookup failures to safe 502 and 503 responses', async (t) => {
   const cases = [
     {
@@ -261,13 +401,9 @@ test('auth sync maps Privy lookup failures to safe 502 and 503 responses', async
   }
 });
 
-test('Express 4 wrapper forwards rejected auth sync work to error middleware', async () => {
+test('Express 4 wrapper forwards rejected asynchronous work to error middleware', async () => {
   const databaseFailure = new Error('database temporarily unavailable');
-  const { db } = authSyncDb({ failUpsert: databaseFailure });
-  const wrapped = express4AsyncHandler(createAuthSyncHandler({
-    db,
-    fetchPrivyUser: async () => privyAppleUser(),
-  }));
+  const wrapped = express4AsyncHandler(async () => { throw databaseFailure; });
   let forwarded = null;
 
   await wrapped({
@@ -278,4 +414,20 @@ test('Express 4 wrapper forwards rejected auth sync work to error middleware', a
   });
 
   assert.equal(forwarded, databaseFailure);
+});
+
+test('a sync transaction failure is a deletion-guard outage, never fallback-safe', async () => {
+  const databaseFailure = new Error('database temporarily unavailable');
+  const { db } = authSyncDb({ failUpsert: databaseFailure });
+  const response = responseDouble();
+  await createAuthSyncHandler({
+    db,
+    fetchPrivyUser: async () => privyAppleUser(),
+  })({
+    user: { privyDid: 'did:privy:apple-user' },
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 503);
+  assert.deepEqual(response.body, { error: 'account_deletion_guard_unavailable' });
 });

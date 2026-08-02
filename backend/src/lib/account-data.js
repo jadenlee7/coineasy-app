@@ -39,10 +39,6 @@ const userDataSelect = {
   },
 };
 
-export function accountDeletionEnabled(env = process.env) {
-  return String(env.ACCOUNT_DELETION_ENABLED || '').trim().toLowerCase() === 'true';
-}
-
 const publicSocialUserSelect = {
   id: true,
   username: true,
@@ -130,29 +126,4 @@ export async function exportLegacySocialData(prisma, privyDid, now = new Date())
       followers: followers.map((row) => ({ since: row.createdAt, user: row.follower })),
     },
   };
-}
-
-export async function deleteLocalUserData(prisma, privyDid) {
-  return prisma.$transaction(async (tx) => {
-    const user = await tx.user.findUnique({
-      where: { privyDid },
-      select: { id: true },
-    });
-    if (!user) return null;
-
-    const ownedPosts = await tx.post.findMany({
-      where: { authorId: user.id },
-      select: { id: true },
-    });
-    const ownedPostIds = ownedPosts.map((post) => post.id);
-
-    // Preserve the legacy account-deletion behavior: dependent thread replies
-    // are removed before the author's posts cascade with the User row.
-    const replies = ownedPostIds.length
-      ? await tx.post.deleteMany({ where: { parentPostId: { in: ownedPostIds } } })
-      : { count: 0 };
-    await tx.user.delete({ where: { id: user.id } });
-
-    return { deletedUserId: user.id, deletedDependentReplies: replies.count };
-  });
 }

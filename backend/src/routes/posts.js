@@ -28,6 +28,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { prisma } from '../lib/db.js';
+import { redactOwnedPost } from '../lib/account-deletion.js';
+import { express4AsyncHandler } from '../lib/express-async.js';
 
 export const postsRouter = Router();
 
@@ -62,6 +64,8 @@ async function shapePost(row, viewerUserId) {
     body: row.body,
     mediaUrl: row.mediaUrl,
     parentPostId: row.parentPostId,
+    deletedAt: row.deletedAt,
+    deleted: Boolean(row.deletedAt),
     createdAt: row.createdAt,
     author: row.author,
     counts: { likes: likeCount, replies: replyCount },
@@ -227,18 +231,30 @@ postsRouter.put('/:id', requireAuth, async (req, res) => {
 });
 
 // --- DELETE /posts/:id ----------------------------------------------
-postsRouter.delete('/:id', requireAuth, async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { privyDid: req.user.privyDid } });
-  if (!user) return res.status(404).json({ error: 'user_not_found' });
-  const post = await prisma.post.findUnique({ where: { id: req.params.id } });
-  if (!post) return res.status(404).json({ error: 'not_found' });
-  if (post.authorId !== user.id) return res.status(403).json({ error: 'forbidden' });
-  await prisma.$transaction([
-    prisma.post.deleteMany({ where: { parentPostId: post.id } }),
-    prisma.post.delete({ where: { id: post.id } }),
-  ]);
-  res.json({ ok: true });
-});
+export function createDeletePostHandler({
+  db = prisma,
+  redactPost = redactOwnedPost,
+} = {}) {
+  return async function deletePost(req, res) {
+    const user = await db.user.findUnique({ where: { privyDid: req.user.privyDid } });
+    if (!user) return res.status(404).json({ error: 'user_not_found' });
+    const post = await db.post.findUnique({ where: { id: req.params.id } });
+    if (!post) return res.status(404).json({ error: 'not_found' });
+    if (post.authorId !== user.id) return res.status(403).json({ error: 'forbidden' });
+    const redacted = await redactPost(db, {
+      postId: post.id,
+      authorId: user.id,
+    });
+    if (!redacted) return res.status(409).json({ error: 'post_already_deleted' });
+    return res.json({ ok: true, deleted: true });
+  };
+}
+
+postsRouter.delete(
+  '/:id',
+  requireAuth,
+  express4AsyncHandler(createDeletePostHandler()),
+);
 
 // --- POST /posts/:id/like (idempotent) -------------------------------
 postsRouter.post('/:id/like', requireAuth, async (req, res) => {

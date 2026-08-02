@@ -88,9 +88,6 @@ export const api = {
   // auth
   syncProfile: () => request('POST', '/auth/sync', {}),
   me: () => request('GET', '/auth/me'),
-  deleteAccount: () => request('DELETE', '/me/data', {
-    body: { confirmation: 'DELETE_MY_EASYGO_DATA' },
-  }),
   siweNonce: (address) => request('POST', '/auth/siwe/nonce', { body: { address } }),
   siweVerify: ({ message, signature }) =>
     request('POST', '/auth/siwe/verify', { body: { message, signature } }),
@@ -100,9 +97,16 @@ export const api = {
   updateConsent: (body, { signal } = {}) => request('PUT', '/me/consent', { body, signal }),
   exportMyData: ({ signal } = {}) => request('GET', '/me/data', { signal }),
   exportMySocialData: ({ signal } = {}) => request('GET', '/me/social-export', { signal }),
-  deleteMyData: () => request('DELETE', '/me/data', {
-    body: { confirmation: 'DELETE_MY_EASYGO_DATA' },
-  }),
+  accountDeletionStatus: ({ signal } = {}) => request('GET', '/me/account-deletion', { signal }),
+  requestAccountDeletion: ({ clientRequestId, walletRiskAcknowledged }) => (
+    request('POST', '/me/account-deletion', {
+      body: {
+        confirmation: 'DELETE_MY_EASYGO_ACCOUNT',
+        clientRequestId,
+        walletRiskAcknowledged: walletRiskAcknowledged === true,
+      },
+    })
+  ),
 
   // ENS identity (Path C v2 S4; backend flag remains off by default)
   subnameStatus: () => request('GET', '/identity/subname'),

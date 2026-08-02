@@ -51,6 +51,7 @@ test('a terminal auth sync failure does not loop and exposes no raw payload', as
     code: 'http_400',
     status: 400,
     retryable: false,
+    deletionBlocked: false,
   });
   assert.equal(JSON.stringify(outcome).includes('user@example.test'), false);
   assert.equal(JSON.stringify(outcome).includes('secret'), false);
@@ -58,7 +59,66 @@ test('a terminal auth sync failure does not loop and exposes no raw payload', as
     code: 'network_unavailable',
     status: null,
     retryable: true,
+    deletionBlocked: false,
   });
+});
+
+test('an account-deletion tombstone is terminal, PII-free, and never retried', async () => {
+  let calls = 0;
+  const outcome = await runAuthSyncWithRetries({
+    transitionKey: '1:did:privy:user-1',
+    isCurrent: () => true,
+    retryDelaysMs: [0, 0, 0],
+    wait: async () => {},
+    syncProfile: async () => {
+      calls += 1;
+      throw Object.assign(new Error('raw provider identity'), {
+        status: 410,
+        body: {
+          error: 'account_deletion_in_progress',
+          privyDid: 'did:privy:private',
+        },
+      });
+    },
+  });
+
+  assert.equal(calls, 1);
+  assert.deepEqual(outcome.error, {
+    code: 'account_deletion_in_progress',
+    status: 410,
+    retryable: false,
+    deletionBlocked: true,
+  });
+  assert.equal(JSON.stringify(outcome).includes('did:privy:private'), false);
+});
+
+test('a deletion-guard outage never unlocks authenticated fallback UI', async () => {
+  let calls = 0;
+  const outcome = await runAuthSyncWithRetries({
+    transitionKey: '1:did:privy:user-1',
+    isCurrent: () => true,
+    retryDelaysMs: [0],
+    wait: async () => {},
+    syncProfile: async () => {
+      calls += 1;
+      throw Object.assign(new Error('database details'), {
+        status: 503,
+        body: {
+          error: 'account_deletion_guard_unavailable',
+          detail: 'private database details',
+        },
+      });
+    },
+  });
+
+  assert.equal(calls, 2);
+  assert.deepEqual(outcome.error, {
+    code: 'account_deletion_guard_unavailable',
+    status: 503,
+    retryable: true,
+    deletionBlocked: true,
+  });
+  assert.equal(JSON.stringify(outcome).includes('database details'), false);
 });
 
 test('logout or account change during retry wait prevents another request', async () => {

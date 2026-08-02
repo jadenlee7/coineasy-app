@@ -2,23 +2,20 @@ export const WELCOME_ORANGE = 100;
 export const WELCOME_BONUS_REASON = 'WELCOME_BONUS';
 
 export async function awardWelcomeBonusOnce(prisma, { userId }) {
-  try {
-    await prisma.orangeLedger.create({
-      data: {
+  // `createMany(..., skipDuplicates: true)` compiles to conflict-free SQL on
+  // PostgreSQL. Do not catch a P2002 from `create()` here: inside an
+  // interactive transaction PostgreSQL would keep the transaction aborted
+  // even after JavaScript catches the Prisma error.
+  const result = await prisma.orangeLedger.createMany({
+    data: [{
         userId,
         delta: WELCOME_ORANGE,
         reason: WELCOME_BONUS_REASON,
         refId: userId,
-      },
-    });
-    return true;
-  } catch (error) {
-    // Concurrent first-sync requests share the same (reason, refId) key. The
-    // winner creates the reward; the unique-conflict loser is an idempotent
-    // success and must not fail authentication.
-    if (error?.code === 'P2002') return false;
-    throw error;
-  }
+      }],
+    skipDuplicates: true,
+  });
+  return result.count === 1;
 }
 
 export async function getOrangeBalance(prisma, userId) {

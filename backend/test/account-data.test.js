@@ -1,17 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  accountDeletionEnabled,
-  deleteLocalUserData,
   exportLegacySocialData,
   exportLocalUserData,
 } from '../src/lib/account-data.js';
-
-test('account deletion stays fail-closed until thread and re-auth semantics are approved', () => {
-  assert.equal(accountDeletionEnabled({}), false);
-  assert.equal(accountDeletionEnabled({ ACCOUNT_DELETION_ENABLED: 'false' }), false);
-  assert.equal(accountDeletionEnabled({ ACCOUNT_DELETION_ENABLED: 'TRUE' }), true);
-});
 
 test('local data export is versioned and excludes ephemeral SIWE secrets', async () => {
   let query;
@@ -83,37 +75,4 @@ test('legacy social export is purpose-specific and excludes identity and wallet 
   const serialized = JSON.stringify(result);
   assert.equal(serialized.includes('did:privy'), false);
   assert.equal(serialized.includes('wallet'), false);
-});
-
-test('local deletion removes dependent thread replies and then the user', async () => {
-  const calls = [];
-  const tx = {
-    user: {
-      findUnique: async () => ({ id: 'user_1' }),
-      delete: async (options) => { calls.push(['user.delete', options]); },
-    },
-    post: {
-      findMany: async () => [{ id: 'post_1' }, { id: 'post_2' }],
-      deleteMany: async (options) => {
-        calls.push(['post.deleteMany', options]);
-        return { count: 3 };
-      },
-    },
-  };
-  const prisma = { $transaction: async (callback) => callback(tx) };
-
-  const result = await deleteLocalUserData(prisma, 'did:privy:test');
-  assert.deepEqual(result, { deletedUserId: 'user_1', deletedDependentReplies: 3 });
-  assert.deepEqual(calls, [
-    ['post.deleteMany', { where: { parentPostId: { in: ['post_1', 'post_2'] } } }],
-    ['user.delete', { where: { id: 'user_1' } }],
-  ]);
-});
-
-test('local deletion is idempotent for a missing user', async () => {
-  const tx = {
-    user: { findUnique: async () => null },
-  };
-  const prisma = { $transaction: async (callback) => callback(tx) };
-  assert.equal(await deleteLocalUserData(prisma, 'did:privy:missing'), null);
 });

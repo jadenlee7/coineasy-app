@@ -83,7 +83,7 @@ import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
  */
 function AuthBridge() {
   const privy = usePrivy();
-  const { profile } = useAuthSync(privy);
+  const { profile, canUseFallback, deletionBlocked } = useAuthSync(privy);
   const { setUser, setUserData } = useContext(GlobalContext);
   const privyReady = Boolean(privy?.isReady);
   const privyUserId = privy?.user?.id ?? null;
@@ -99,7 +99,7 @@ function AuthBridge() {
       || activeProfile?.id
       || 'device';
 
-    if (privyReady && !privyUserId) {
+    if (privyReady && (!privyUserId || deletionBlocked)) {
       setUser(null);
       setUserData(null);
       return () => { cancelled = true; };
@@ -120,7 +120,7 @@ function AuthBridge() {
         },
       });
       setUserData(profileData);
-    } else if (privyReady && privyUserId) {
+    } else if (privyReady && privyUserId && canUseFallback) {
       // Keep the app usable while a bounded backend retry is in progress. Never
       // retain another account's fallback presentation state.
       const fallbackData = fallbackPresentationData({ courseProgressOwner });
@@ -137,6 +137,13 @@ function AuthBridge() {
       setUserData((current) => (
         current?.courseProgressOwner === courseProgressOwner ? current : fallbackData
       ));
+    } else if (privyReady && privyUserId) {
+      // Do not publish authenticated fallback UI until the first backend sync
+      // resolves. In particular, a tombstoned account must never flash open
+      // before its 410 deletion guard response arrives.
+      setUser(null);
+      setUserData(null);
+      return () => { cancelled = true; };
     } else {
       return () => { cancelled = true; };
     }
@@ -171,7 +178,7 @@ function AuthBridge() {
 
     hydrateLocalCourses();
     return () => { cancelled = true; };
-  }, [profile, privyReady, privyUserId, setUser, setUserData]);
+  }, [canUseFallback, deletionBlocked, profile, privyReady, privyUserId, setUser, setUserData]);
 
   return null;
 }

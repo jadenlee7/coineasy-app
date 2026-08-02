@@ -30,6 +30,8 @@ test('S3 privacy route surface is mounted on the me router', () => {
     'PUT /consent',
     'GET /data',
     'GET /social-export',
+    'GET /account-deletion',
+    'POST /account-deletion',
     'DELETE /data',
   ]);
 });
@@ -48,7 +50,7 @@ test('data deletion rejects requests without the explicit confirmation phrase', 
   });
 });
 
-test('confirmed data deletion remains gated during the safety review', async () => {
+test('confirmed legacy data deletion is retired without deleting anything', async () => {
   const layer = meRouter.stack.find((item) => item.route?.path === '/data'
     && item.route.methods.delete);
   const handler = layer.route.stack.at(-1).handle;
@@ -58,6 +60,9 @@ test('confirmed data deletion remains gated during the safety review', async () 
     body: { confirmation: DELETE_DATA_CONFIRMATION },
     user: { privyDid: 'did:privy:test' },
   }, response);
-  assert.equal(response.statusCode, 503);
-  assert.deepEqual(response.body, { error: 'account_deletion_disabled' });
+  assert.equal(response.statusCode, 410);
+  assert.deepEqual(response.body, {
+    error: 'account_deletion_endpoint_moved',
+    path: '/me/account-deletion',
+  });
 });

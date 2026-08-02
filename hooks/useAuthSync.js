@@ -31,6 +31,7 @@ export function useAuthSync(privy) {
   const [profile, setProfile] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState(null);
+  const [resolution, setResolution] = useState(null);
   const lifecycle = useRef(null);
   const singleFlight = useRef(null);
   if (!lifecycle.current) lifecycle.current = createAuthSyncLifecycle();
@@ -54,12 +55,13 @@ export function useAuthSync(privy) {
     return () => setApiTokenProvider(null);
   }, [authenticated, userId, getAccessToken]);
 
-  const syncTransition = useCallback((transitionKey) => {
+  const syncTransition = useCallback((transitionKey, ownerUserId) => {
     if (!lifecycle.current.isCurrent(transitionKey)) return Promise.resolve(null);
 
     return singleFlight.current.run(transitionKey, () => {
       setSyncing(true);
       setError(null);
+      setResolution({ userId: ownerUserId, status: 'syncing' });
 
       return runAuthSyncWithRetries({
         transitionKey,
@@ -73,6 +75,11 @@ export function useAuthSync(privy) {
 
           if (outcome.status === 'failed') {
             setError(outcome.error);
+            setProfile(null);
+            setResolution({
+              userId: ownerUserId,
+              status: outcome.error.deletionBlocked ? 'deletion-blocked' : 'failed',
+            });
             console.warn(`[auth-sync] ${outcome.error.code}`);
             return null;
           }
@@ -80,6 +87,12 @@ export function useAuthSync(privy) {
           const syncedProfile = profileFromAuthSyncResult(outcome.result);
           if (syncedProfile) {
             setProfile(syncedProfile);
+            setResolution({ userId: ownerUserId, status: 'success' });
+          } else {
+            const safeError = safeAuthSyncError(null);
+            setProfile(null);
+            setError(safeError);
+            setResolution({ userId: ownerUserId, status: 'failed' });
           }
           return syncedProfile;
         })
@@ -88,6 +101,8 @@ export function useAuthSync(privy) {
           const safeError = safeAuthSyncError(null);
           if (lifecycle.current.isCurrent(transitionKey)) {
             setError(safeError);
+            setProfile(null);
+            setResolution({ userId: ownerUserId, status: 'failed' });
             console.warn(`[auth-sync] ${safeError.code}`);
           }
           return null;
@@ -112,13 +127,14 @@ export function useAuthSync(privy) {
       setProfile(null);
       setError(null);
       setSyncing(false);
+      setResolution(null);
     }
 
     if (
       observed.canAutoSync &&
       lifecycle.current.claimAutomaticSync(observed.transitionKey)
     ) {
-      syncTransition(observed.transitionKey);
+      syncTransition(observed.transitionKey, userId);
     }
   }, [ready, authenticated, userId, syncTransition]);
 
@@ -126,10 +142,19 @@ export function useAuthSync(privy) {
     if (!ready || !authenticated || !userId) return Promise.resolve(null);
     const transitionKey = lifecycle.current.currentTransitionKey();
     if (!transitionKey) return Promise.resolve(null);
-    return syncTransition(transitionKey);
+    return syncTransition(transitionKey, userId);
   }, [ready, authenticated, userId, syncTransition]);
 
-  return { profile, syncing, error, resync };
+  const currentResolution = resolution?.userId === userId ? resolution : null;
+  return {
+    profile,
+    syncing,
+    error,
+    resync,
+    status: currentResolution?.status || (authenticated && userId ? 'pending' : 'idle'),
+    deletionBlocked: currentResolution?.status === 'deletion-blocked',
+    canUseFallback: currentResolution?.status === 'failed',
+  };
 }
 
 export default useAuthSync;
