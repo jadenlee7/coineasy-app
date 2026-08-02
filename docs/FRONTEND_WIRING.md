@@ -39,7 +39,8 @@ See `EASYGO_BUILD_PLAN.md` §11 (data flow), §12 (backend endpoints), §13.2 (S
 | Post editor | `PUT /posts/:id` | Edit the authenticated author's post body/media URL. |
 | `useReplies.create(...)` | `POST /posts` | Publish a reply using `parentPostId`. |
 | `useSocialProfile(userId)` | `GET /profiles/:userId` | Read public profile details and live post/follow counts. |
-| Profile editor | `PUT /profiles/me` | Update the authenticated user's display name and bio. |
+| Own profile | `GET /profiles/me` | Read the authenticated user's private profile projection, including their wallet address. |
+| Profile editor | `PUT /profiles/me` | Update the authenticated user's display name and bio; the private response retains their wallet address. |
 | `useFollow(userId)` | `GET/POST/DELETE /follows/:userId[/status]` | Read and update viewer-relative follow state. |
 | Profile mutual counts | `GET /profiles/:userId/followers` | Compare follower summaries for the selected and current user. |
 | `useNotifications()` | `GET /notifications` | Derive recent follows, likes, and replies for the authenticated user. |
@@ -56,6 +57,15 @@ category hashtag at publish time if the body does not already contain it.
    - `POST /auth/sync` with empty body; backend reads `req.user` from the verified token (see `backend/src/middleware/auth.js`).
    - Backend upserts on `privyDid`, captures linked accounts (telegram, kakao, embedded wallet address), returns `{ user, isNew }`, and awards welcome 🍊 on first creation.
 3. Subsequent screens use `api.me()` / `useEasyChainProfile` to read identity state.
+4. On the authenticated user's profile, `useEasyGoWalletRuntime` asks the
+   embedded EIP-1193 provider for `eth_chainId` and `eth_accounts`. The UI shows
+   `Base · Connected` only when the chain is `0x2105` and both the provider and
+   backend profile identify the same wallet. The address button remains
+   copy-only; the separate status badge opens BaseScan.
+
+Public profile/search responses never include `walletAddress`. The signed-in
+user still receives their address from `/auth/sync`, `/auth/me`, and the
+authenticated `/profiles/me` projection.
 
 ## Swap flow (Phase 1, Squid via backend)
 
@@ -104,6 +114,9 @@ mobile client if that client is used on both platforms.
 - **Quest flag off**: course completion receives `404` from `/quests` and falls back to the legacy reward route, so the current app remains usable during rollout.
 - **Social mode**: `active` preserves current behavior. A future `read_only` mode returns `410` only for writes; `retired` returns `410` for all social routes. Both responses include `/me/social-export`.
 - **Privy not yet authenticated**: `setApiTokenProvider` is unset; requests go without `Authorization` header and backend returns 401. Hooks treat 401/404 as "empty state" rather than error.
+- **Wallet chain/account mismatch**: the profile displays a retryable warning
+  instead of claiming Base connectivity. Transaction features must remain
+  unavailable unless the same runtime attestation reports `ready`.
 - **Quote returns `null`**: `getSquidQuote` swallows `ApiError` so the swap UI can show a graceful retry CTA.
 
 ## Remaining screen migrations

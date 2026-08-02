@@ -82,6 +82,12 @@ test('staging preflight requires an HTTPS backend and preserves native identity'
 
 test('staging preflight keeps the iOS JSC build on an isolated OTA runtime', () => {
   assert.equal(iosReleaseUsesIsolatedJscRuntime(appConfig), true);
+  assert.equal(iosReleaseUsesIsolatedJscRuntime({
+    expo: { ...appConfig.expo, version: '2.0.3' },
+  }), true);
+  assert.equal(iosReleaseUsesIsolatedJscRuntime({
+    expo: { ...appConfig.expo, version: '2.0.1' },
+  }), false);
   const result = validateMobileEnvironment({
     EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
     EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',

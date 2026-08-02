@@ -38,11 +38,23 @@ import Header from "./Header";
 import HeaderActions from "./HeaderActions";
 import { api } from "../utils/api";
 import { adaptSocialProfile, getEasyGoUserId } from "../utils/socialPostAdapter";
+import useEasyGoWalletRuntime from "../hooks/useEasyGoWalletRuntime";
+import { createBaseScanAddressUrl } from "../utils/baseWalletRuntime.mjs";
 
 const TabBarHeight = 50;
 const IndicatorWidth = 50
 
 const windowSize = Dimensions.get('window')
+
+const BASE_RUNTIME_PRESENTATION = Object.freeze({
+    idle: { label: 'Base · Waiting', color: '#64748B', backgroundColor: '#F1F5F9' },
+    checking: { label: 'Base · Checking', color: '#9A3412', backgroundColor: '#FFF1E8' },
+    ready: { label: 'Base · Connected', color: '#166534', backgroundColor: '#ECFDF3' },
+    'wrong-chain': { label: 'Network mismatch', color: '#B91C1C', backgroundColor: '#FEF2F2' },
+    'account-mismatch': { label: 'Wallet mismatch', color: '#B91C1C', backgroundColor: '#FEF2F2' },
+    'wallet-missing': { label: 'Wallet unavailable', color: '#B45309', backgroundColor: '#FFFBEB' },
+    error: { label: 'Base · Retry', color: '#B45309', backgroundColor: '#FFFBEB' },
+});
 
 export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 20, type}) {
     const { 
@@ -81,7 +93,20 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
     const targetUserId = getEasyGoUserId(profile);
     const ownUserId = getEasyGoUserId(user);
     const { address: didAddress } = useDidToAddress(profile?.did);
-    const address = profile?.profile?.data?.walletAddress || didAddress;
+    const isOwnProfile = type !== 'selected' || Boolean(ownUserId && targetUserId === ownUserId);
+    const expectedWalletAddress = isOwnProfile
+        ? user?.profile?.data?.walletAddress || profile?.profile?.data?.walletAddress || didAddress
+        : null;
+    const walletRuntime = useEasyGoWalletRuntime({
+        enabled: isOwnProfile,
+        expectedAddress: expectedWalletAddress,
+    });
+    const address = isOwnProfile
+        ? expectedWalletAddress || walletRuntime.walletAddress
+        : null;
+    const baseScanUrl = createBaseScanAddressUrl(address);
+    const baseRuntimePresentation = BASE_RUNTIME_PRESENTATION[walletRuntime.status]
+        || BASE_RUNTIME_PRESENTATION.error;
     const {
         isFollowing,
         loading: followLoading,
@@ -148,6 +173,20 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
         setAddressCopied(false)
         await Clipboard.setStringAsync(val);
         // alert("Address copied!");
+    }
+
+    async function handleWalletStatusPress() {
+        Haptics.selectionAsync();
+        if (walletRuntime.status !== 'ready' || !baseScanUrl) {
+            walletRuntime.refresh();
+            return;
+        }
+
+        try {
+            await Linking.openURL(baseScanUrl);
+        } catch {
+            Alert.alert('BaseScan unavailable', 'Please try again in a moment.');
+        }
     }
 
     if(!profile) {
@@ -476,14 +515,42 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
                     
                     <View style={tailwind('mt-2 flex flex-row items-center')}>
                         <Username details={userInfo} fontSize={15} />
-                        <Button 
-                            color="badge-gray" 
-                            icon={<CopyIconBadge style={{marginLeft: 4}} />} 
-                            title={userInfo?.metadata?.ensName ? userInfo.metadata.ensName : shortAddress(address, 4)} 
-                            style={{marginLeft: 8}} 
-                            onPress={() => copy(address)} 
-                        />
+                        {address &&
+                            <Button
+                                color="badge-gray"
+                                icon={<CopyIconBadge style={{marginLeft: 4}} />}
+                                title={userInfo?.metadata?.ensName ? userInfo.metadata.ensName : shortAddress(address, 4)}
+                                style={{marginLeft: 8}}
+                                onPress={() => copy(address)}
+                            />
+                        }
                     </View>
+                    {isOwnProfile &&
+                        <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityLabel={baseRuntimePresentation.label}
+                            accessibilityHint={walletRuntime.status === 'ready'
+                                ? 'Opens this address on BaseScan'
+                                : 'Checks the embedded wallet connection again'}
+                            activeOpacity={0.7}
+                            onPress={handleWalletStatusPress}
+                            style={[
+                                styles.baseRuntimeBadge,
+                                {backgroundColor: baseRuntimePresentation.backgroundColor},
+                            ]}
+                        >
+                            {walletRuntime.status === 'checking'
+                                ? <ActivityIndicator size="small" color={baseRuntimePresentation.color} />
+                                : <View style={[styles.baseRuntimeDot, {backgroundColor: baseRuntimePresentation.color}]} />
+                            }
+                            <Text style={[styles.baseRuntimeText, {color: baseRuntimePresentation.color}]}>
+                                {baseRuntimePresentation.label}
+                            </Text>
+                            {walletRuntime.status === 'ready' &&
+                                <Ionicons name="open-outline" size={13} color={baseRuntimePresentation.color} />
+                            }
+                        </TouchableOpacity>
+                    }
                     {userInfo?.profile?.description &&
                         <Text style={[tailwind(`text-main mt-2 w-2/3 text-center`), { fontSize: 11.5, lineHeight: 19, fontFamily: "GmarketMedium" }]}>
                             {userInfo.profile.description}
@@ -875,6 +942,25 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
 }
 
 const styles = StyleSheet.create({
+    baseRuntimeBadge: {
+        alignItems: 'center',
+        borderRadius: 999,
+        flexDirection: 'row',
+        gap: 6,
+        marginTop: 9,
+        minHeight: 28,
+        paddingHorizontal: 11,
+        paddingVertical: 6,
+    },
+    baseRuntimeDot: {
+        borderRadius: 4,
+        height: 7,
+        width: 7,
+    },
+    baseRuntimeText: {
+        fontFamily: 'GmarketBold',
+        fontSize: 10.5,
+    },
     label: {
         fontSize: 16,
         fontWeight: 'bold',

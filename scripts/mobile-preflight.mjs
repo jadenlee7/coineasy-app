@@ -244,9 +244,16 @@ export function iosReleaseUsesIsolatedJscRuntime(appConfig) {
   const expo = appConfig?.expo || {};
   const buildNumberText = String(expo.ios?.buildNumber || '');
   const buildNumber = Number(buildNumberText);
+  const versionMatch = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(expo.version || ''));
+  const versionParts = versionMatch ? versionMatch.slice(1).map(Number) : null;
+  const supportedVersion = Boolean(versionParts) && (
+    versionParts[0] > 2
+    || (versionParts[0] === 2 && versionParts[1] > 0)
+    || (versionParts[0] === 2 && versionParts[1] === 0 && versionParts[2] >= 2)
+  );
   return expo.ios?.jsEngine === 'jsc'
     && expo.runtimeVersion?.policy === 'appVersion'
-    && expo.version === '2.0.2'
+    && supportedVersion
     && /^\d+$/.test(buildNumberText)
     && Number.isInteger(buildNumber)
     && buildNumber >= 97;

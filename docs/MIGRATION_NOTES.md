@@ -361,8 +361,14 @@ screen. No social rows or tables are deleted by S8.
       Privy identity, its stored address matches the user's only embedded EVM
       wallet, and exactly one user-bound `WELCOME_BONUS` row yields a `100`
       Orange balance. No credential, identity, email, or address was recorded.
-- [ ] Verify Build 99 cold-launch session restoration, provider-reported Base
-      chain ID, Google OAuth, and the remaining core API paths against staging.
+- [x] Add a fail-closed embedded-wallet runtime probe for `eth_chainId` and
+      `eth_accounts`. The own-profile address remains copy-only, while a
+      separate Base status badge opens BaseScan only after chain `0x2105` and
+      account equality both pass. Public profile projections no longer disclose
+      `walletAddress`; authenticated own-profile responses retain it.
+- [ ] Verify Build 100 cold-launch session restoration, the visible
+      `Base · Connected` result, BaseScan routing, Google OAuth, public wallet
+      privacy, and the remaining core API paths against staging.
 
 ## Owner action items (outside this PR)
 

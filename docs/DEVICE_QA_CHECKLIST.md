@@ -164,8 +164,12 @@ wallet private key, or login code.
   `coineasyapp` scheme succeeds and the session survives an app restart.
 - [ ] For a new Apple or Google user, confirm exactly one embedded EVM wallet
   is created, the backend profile stores the same address, and the wallet
-  provider reports Base chain ID `0x2105`. Logout and relogin must not create a
-  second address.
+  provider reports Base chain ID `0x2105`. On Build 100 or newer, the own
+  profile must show `Base · Connected`; tapping the address still copies it,
+  while tapping the separate Base badge opens that address on BaseScan. Logout
+  and relogin must not create a second address.
+- [ ] Open another user's profile and search result; neither public response nor
+  selected-profile UI may expose that user's wallet address.
 - [x] Confirm the signed-in profile loads after the Build 98 Apple OAuth return.
 - [x] Complete the post-secret authenticated device retry. Railway recorded one
   `/auth/sync` request with HTTP 200 and no corresponding fatal, unhandled, or
