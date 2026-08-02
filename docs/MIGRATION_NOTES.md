@@ -312,6 +312,28 @@ screen. No social rows or tables are deleted by S8.
       `5f74b78a4dbdd26e31ddc78a6918571906ccf65469d2d4773abc22a139ede699`;
       release identifiers, staging URL, and Base wallet creation setting are
       present while the Apple private signing-key body and key ID are absent.
+- [x] Complete a real-device Apple OAuth round trip in Build 98 on the affected
+      iPhone 16 Pro Max. Sign up with Apple returns through `coineasyapp`, keeps
+      the mobile process alive, and renders the signed-in profile. The follow-up
+      staging trace isolated the remaining `0` balance to a failed backend
+      `/auth/sync`, not to the Apple OAuth or mobile Privy Provider path.
+- [x] Diagnose that post-login sync failure without exposing credentials. The
+      Build 98 request reached staging at `2026-08-02T06:55:46Z`, Privy's server
+      user lookup rejected the configured credential with `401`, no new local
+      user row was written, and the uncaught Express 4 async rejection restarted
+      the web process. Railway contained Privy's masked display placeholder,
+      not a usable App Secret.
+- [x] Prepare Build 99's recovery path. `/auth/sync` now converts Privy lookup
+      failures into safe `502`/`503` responses, preserves the additive `isNew`
+      contract, repairs a missing one-time welcome ledger row on retry, and
+      returns the final Orange balance. The mobile bridge performs finite
+      transition-scoped retries, blocks stale-account results, and hydrates the
+      header balance immediately. Mobile tests pass 28/28; backend tests pass
+      119 with the existing SIWE test skipped; the iOS export succeeds.
+- [ ] Create one new EasyGo Privy App Secret with owner approval, replace the
+      masked Railway staging value, and verify the same Apple user resolves to
+      exactly one embedded EVM wallet before asking the device to retry sync.
+- [ ] Build and submit iOS `2.0.2 (99)` after staging auth sync passes.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before
@@ -325,7 +347,9 @@ screen. No social rows or tables are deleted by S8.
       its AES-256 passphrase is stored in macOS Keychain service
       `easygo-staging-postgres-backup-20260722T090134Z`. An in-memory decrypt
       verified the `PGDMP` header and exact 41,032-byte round trip.
-- [ ] Run real-device Privy login and core API QA against the staging URL.
+- [ ] Verify Build 98's embedded Base wallet/backend address, welcome Orange
+      ledger and balance, session restoration, Google OAuth, and remaining core
+      API paths against staging.
 
 ## Owner action items (outside this PR)
 

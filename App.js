@@ -30,6 +30,10 @@ import { SOCIAL_CATEGORIES } from './data/socialCategories';
 import { PrivyProvider, usePrivy } from '@privy-io/expo';
 import useAuthSync from './hooks/useAuthSync';
 import {
+  fallbackPresentationData,
+  profilePresentationData,
+} from './hooks/authPresentation.mjs';
+import {
   EASYGO_BASE_CHAIN,
   EASYGO_PRIVY_CONFIG,
   getEasyGoPrivyClient,
@@ -81,64 +85,93 @@ function AuthBridge() {
   const privy = usePrivy();
   const { profile } = useAuthSync(privy);
   const { setUser, setUserData } = useContext(GlobalContext);
+  const privyReady = Boolean(privy?.isReady);
+  const privyUserId = privy?.user?.id ?? null;
 
   useEffect(() => {
     let cancelled = false;
+    const profileMatchesPrivy = !profile?.privyDid
+      || !privyUserId
+      || profile.privyDid === privyUserId;
+    const activeProfile = profileMatchesPrivy ? profile : null;
+    const courseProgressOwner = privyUserId
+      || activeProfile?.privyDid
+      || activeProfile?.id
+      || 'device';
 
-    const syncPresentationState = async () => {
-      let localCourses = [];
-      const courseProgressOwner = privy?.user?.id || profile?.privyDid || profile?.id || 'device';
+    if (privyReady && !privyUserId) {
+      setUser(null);
+      setUserData(null);
+      return () => { cancelled = true; };
+    }
+
+    if (activeProfile) {
+      // Publish the server profile before touching AsyncStorage. In particular,
+      // /auth/sync's ledger balance reaches HeaderActions in this render path.
+      const profileData = profilePresentationData(activeProfile, { courseProgressOwner });
+      setUser({
+        id: activeProfile.id,
+        did: activeProfile.privyDid || `privy:${activeProfile.id}`,
+        profile: {
+          username: activeProfile.displayName || activeProfile.username || null,
+          pfp: activeProfile.pfp || null,
+          description: activeProfile.bio || activeProfile.description || null,
+          data: profileData,
+        },
+      });
+      setUserData(profileData);
+    } else if (privyReady && privyUserId) {
+      // Keep the app usable while a bounded backend retry is in progress. Never
+      // retain another account's fallback presentation state.
+      const fallbackData = fallbackPresentationData({ courseProgressOwner });
+      const fallbackUser = {
+        id: privyUserId,
+        did: `privy:${privyUserId}`,
+        profile: { username: null, pfp: null, description: null, data: fallbackData },
+      };
+      setUser((current) => (
+        current?.profile?.data?.courseProgressOwner === courseProgressOwner
+          ? current
+          : fallbackUser
+      ));
+      setUserData((current) => (
+        current?.courseProgressOwner === courseProgressOwner ? current : fallbackData
+      ));
+    } else {
+      return () => { cancelled = true; };
+    }
+
+    const hydrateLocalCourses = async () => {
+      let localCourses;
       try {
         const stored = await AsyncStorage.getItem(`${COURSE_PROGRESS_KEY}:${courseProgressOwner}`);
         const parsed = stored ? JSON.parse(stored) : [];
-        if (Array.isArray(parsed)) localCourses = parsed;
-      } catch (error) {
-        console.warn('[courses] unable to load local progress', error);
+        if (Array.isArray(parsed) && parsed.length > 0) localCourses = parsed;
+      } catch {
+        console.warn('[courses] unable to load local progress');
       }
-      if (cancelled) return;
+      if (cancelled || !localCourses) return;
 
-      if (profile) {
-        // Map the backend profile into the presentation shape used by the app.
-        const profileData = {
-          ...(profile.data || {}),
-          ...(localCourses.length ? { courses: localCourses } : {}),
-          courseProgressOwner,
-          easygoUserId: profile.id,
-          walletAddress: profile.walletAddress || null,
-        };
-        setUser({
-          id: profile.id,
-          did: profile.privyDid || `privy:${profile.id}`,
+      setUser((current) => {
+        if (current?.profile?.data?.courseProgressOwner !== courseProgressOwner) return current;
+        return {
+          ...current,
           profile: {
-            username: profile.displayName || profile.username || null,
-            pfp: profile.pfp || null,
-            description: profile.bio || profile.description || null,
-            data: profileData,
+            ...current.profile,
+            data: { ...current.profile.data, courses: localCourses },
           },
-        });
-        setUserData(profileData);
-      } else if (privy?.isReady && privy?.user) {
-        // Keep the app usable when the local backend is not running yet. The
-        // backend profile replaces this minimal Privy shape as soon as sync wins.
-        const fallbackData = {
-          ...(localCourses.length ? { courses: localCourses } : {}),
-          courseProgressOwner,
         };
-        setUser((current) => current || {
-          id: privy.user.id,
-          did: `privy:${privy.user.id}`,
-          profile: { username: null, pfp: null, description: null, data: fallbackData },
-        });
-        setUserData((current) => current || fallbackData);
-      } else if (privy?.isReady && !privy?.user) {
-        setUser(null);
-        setUserData(null);
-      }
+      });
+      setUserData((current) => (
+        current?.courseProgressOwner === courseProgressOwner
+          ? { ...current, courses: localCourses }
+          : current
+      ));
     };
 
-    syncPresentationState();
+    hydrateLocalCourses();
     return () => { cancelled = true; };
-  }, [profile, privy?.isReady, privy?.user]);
+  }, [profile, privyReady, privyUserId, setUser, setUserData]);
 
   return null;
 }

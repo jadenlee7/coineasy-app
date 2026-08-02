@@ -19,10 +19,17 @@ const APP_SECRET = process.env.PRIVY_APP_SECRET;
 
 let _client = null;
 
+export class PrivyConfigurationError extends Error {
+  constructor() {
+    super('Privy server credentials are not configured');
+    this.name = 'PrivyConfigurationError';
+  }
+}
+
 export function getPrivyClient() {
   if (_client) return _client;
   if (!APP_ID || !APP_SECRET) {
-    throw new Error('PRIVY_APP_ID / PRIVY_APP_SECRET not set');
+    throw new PrivyConfigurationError();
   }
   _client = new PrivyClient(APP_ID, APP_SECRET);
   return _client;

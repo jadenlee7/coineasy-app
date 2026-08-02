@@ -29,7 +29,7 @@ const appConfig = {
     scheme: 'coineasyapp',
     ios: {
       bundleIdentifier: 'com.coineasy.coineasysocial',
-      buildNumber: '98',
+      buildNumber: '99',
       jsEngine: 'jsc',
       usesAppleSignIn: true,
     },

@@ -2,7 +2,7 @@
  * /auth routes.
  *
  * POST /auth/sync   - upsert User row from a verified Privy session.
- *                     Awards 100 🍊 Orange welcome bonus on first creation.
+ *                     Ensures the one-time 100 🍊 Orange welcome bonus.
  * GET  /auth/me     - return profile for the bearer token holder.
  * DELETE /auth/me   - permanently delete the bearer user and cascaded data.
  */
@@ -12,10 +12,14 @@ import { z } from 'zod';
 import { isAddress, isAddressEqual } from 'viem';
 import { requireAuth } from '../middleware/auth.js';
 import { requirePhase } from '../middleware/phase.js';
-import { getUser, extractProfile } from '../lib/privy.js';
+import {
+  getUser,
+  extractProfile,
+  PrivyConfigurationError,
+} from '../lib/privy.js';
 import { prisma } from '../lib/db.js';
 import { deleteLocalUserData } from '../lib/account-data.js';
-import { awardWelcomeBonusOnce } from '../lib/auth-sync.js';
+import { awardWelcomeBonusOnce, getOrangeBalance } from '../lib/auth-sync.js';
 import {
   createSiweChallenge,
   getSiweConfig,
@@ -55,30 +59,76 @@ async function addressLinkedToAnotherUser(address, userId) {
   });
 }
 
-authRouter.post('/sync', requireAuth, async (req, res) => {
-  const privyUser = await getUser(req.user.privyDid);
-  const profile = extractProfile(privyUser);
+export function express4AsyncHandler(handler) {
+  return function handleAsyncRoute(req, res, next) {
+    return Promise.resolve(handler(req, res, next)).catch(next);
+  };
+}
 
-  const existing = await prisma.user.findUnique({ where: { privyDid: profile.privyDid } });
+function isPrivyConfigurationFailure(error) {
+  const upstreamStatus = Number(
+    error?.status ?? error?.statusCode ?? error?.response?.status,
+  );
+  return error instanceof PrivyConfigurationError
+    || upstreamStatus === 401
+    || upstreamStatus === 403;
+}
 
-  const user = await prisma.user.upsert({
-    where: { privyDid: profile.privyDid },
-    update: {
-      telegramId: profile.telegramId,
-      telegramUsername: profile.telegramUsername,
-      kakaoId: profile.kakaoId,
-      walletAddress: profile.walletAddress,
-    },
-    create: { ...profile },
-  });
+export function createAuthSyncHandler({ db = prisma, fetchPrivyUser = getUser } = {}) {
+  return async function authSync(req, res) {
+    let privyUser;
+    try {
+      privyUser = await fetchPrivyUser(req.user.privyDid);
+    } catch (error) {
+      // Privy's server API reports an invalid app secret as 401/403. That is a
+      // server configuration outage (503), while network/rate-limit/provider
+      // failures are an upstream gateway failure (502).
+      const configurationFailure = isPrivyConfigurationFailure(error);
+      req.log?.warn(
+        { errorType: error?.name || 'Error' },
+        'Privy user lookup unavailable during auth sync',
+      );
+      return res.status(configurationFailure ? 503 : 502).json({
+        error: configurationFailure ? 'privy_not_configured' : 'privy_unavailable',
+      });
+    }
 
-  await awardWelcomeBonusOnce(prisma, {
-    userId: user.id,
-    isNewUser: !existing,
-  });
+    const profile = extractProfile(privyUser);
+    if (!profile.privyDid || profile.privyDid !== req.user.privyDid) {
+      req.log?.warn(
+        { errorType: 'PrivyIdentityMismatch' },
+        'Privy user lookup returned an invalid identity during auth sync',
+      );
+      return res.status(502).json({ error: 'privy_unavailable' });
+    }
 
-  res.json({ user, isNew: !existing });
-});
+    const existing = await db.user.findUnique({
+      where: { privyDid: profile.privyDid },
+      select: { id: true },
+    });
+
+    const user = await db.user.upsert({
+      where: { privyDid: profile.privyDid },
+      update: {
+        telegramId: profile.telegramId,
+        telegramUsername: profile.telegramUsername,
+        kakaoId: profile.kakaoId,
+        walletAddress: profile.walletAddress,
+      },
+      create: { ...profile },
+    });
+
+    // This runs for every sync, not only first creation. A retry after a
+    // partial failure can therefore repair a missing welcome ledger row, while
+    // the existing (reason, refId) unique key prevents duplicate awards.
+    await awardWelcomeBonusOnce(db, { userId: user.id });
+    const orangeBalance = await getOrangeBalance(db, user.id);
+
+    return res.json({ user, isNew: !existing, orangeBalance });
+  };
+}
+
+authRouter.post('/sync', requireAuth, express4AsyncHandler(createAuthSyncHandler()));
 
 authRouter.post('/siwe/nonce', requireSiwe, requireAuth, async (req, res) => {
   const body = nonceSchema.safeParse(req.body);

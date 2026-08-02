@@ -117,8 +117,11 @@ wallet private key, or login code.
   are absent from the bundle.
 - [ ] Install Build 98 from TestFlight on the affected iPhone 16 Pro Max and
   confirm two cold launches reach the EasyGo login screen without a crash.
-- [ ] Complete one new Apple sign-in and one new Google sign-in. Each OAuth
-  return through `coineasyapp` must succeed without showing a raw Privy error.
+- [x] Complete one new Apple sign-in on Build 98. On the affected iPhone 16 Pro
+  Max, the OAuth return through `coineasyapp` reached the signed-in EasyGo
+  profile without a raw Privy error or process exit.
+- [ ] Complete one new Google sign-in. Its OAuth return through `coineasyapp`
+  must succeed without showing a raw Privy error.
 - [ ] Confirm the expected session state. Builds 95 through 98 preserve the same
   versioned `easygo-privy-v2-` SecureStore namespace; only upgrades from a
   pre-build-94 client should require the one-time sign-in again.
@@ -144,8 +147,11 @@ wallet private key, or login code.
   is created, the backend profile stores the same address, and the wallet
   provider reports Base chain ID `0x2105`. Logout and relogin must not create a
   second address.
-- [ ] Confirm the signed-in profile loads. For a brand-new staging user, confirm
-  the welcome Orange entry appears once only; do not expect it again on relogin.
+- [x] Confirm the signed-in profile loads after the Build 98 Apple OAuth return.
+- [ ] For the brand-new staging user, confirm the welcome Orange entry appears
+  once only. The supplied profile screen displayed `0` because the backend
+  profile sync did not complete; reconcile the ledger and balance/history UI
+  before marking this passed.
 - [ ] Load the home feed, open one post/thread, and paginate or refresh once.
 - [ ] Publish one clearly labelled staging text post, edit it, and delete it.
 - [ ] Open another staging profile, follow then unfollow it, and confirm both
