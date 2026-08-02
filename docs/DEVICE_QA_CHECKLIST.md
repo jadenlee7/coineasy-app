@@ -167,11 +167,15 @@ wallet private key, or login code.
   provider reports Base chain ID `0x2105`. Logout and relogin must not create a
   second address.
 - [x] Confirm the signed-in profile loads after the Build 98 Apple OAuth return.
-- [ ] For the brand-new staging user, confirm the welcome Orange entry appears
-  once only. Before the post-secret device retry, Railway still has no local
-  user or welcome-ledger row. Open Build 99 while authenticated and verify the
-  retry creates one user with the Privy wallet and a single `100` Orange entry;
-  do not seed or repair this row manually.
+- [x] Complete the post-secret authenticated device retry. Railway recorded one
+  `/auth/sync` request with HTTP 200 and no corresponding fatal, unhandled, or
+  Privy-configuration log. The new local user matches the Privy identity, its
+  stored wallet matches the user's only embedded EVM wallet, and no address is
+  recorded in this checklist.
+- [x] Confirm the brand-new staging user's welcome Orange entry appears once
+  only. Railway has exactly one `WELCOME_BONUS` row bound to that user, its
+  delta totals `100`, and the user's full Orange balance is `100`; no manual
+  ledger insert or repair was performed.
 - [ ] Load the home feed, open one post/thread, and paginate or refresh once.
 - [ ] Publish one clearly labelled staging text post, edit it, and delete it.
 - [ ] Open another staging profile, follow then unfollow it, and confirm both

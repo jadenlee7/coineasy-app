@@ -356,9 +356,13 @@ screen. No social rows or tables are deleted by S8.
       its AES-256 passphrase is stored in macOS Keychain service
       `easygo-staging-postgres-backup-20260722T090134Z`. An in-memory decrypt
       verified the `PGDMP` header and exact 41,032-byte round trip.
-- [ ] Verify Build 99's embedded Base wallet/backend address, welcome Orange
-      ledger and balance, session restoration, Google OAuth, and remaining core
-      API paths against staging.
+- [x] Verify the Apple staging user's post-secret device sync. The single
+      `/auth/sync` request returned HTTP 200; one EasyGo user now matches the
+      Privy identity, its stored address matches the user's only embedded EVM
+      wallet, and exactly one user-bound `WELCOME_BONUS` row yields a `100`
+      Orange balance. No credential, identity, email, or address was recorded.
+- [ ] Verify Build 99 cold-launch session restoration, provider-reported Base
+      chain ID, Google OAuth, and the remaining core API paths against staging.
 
 ## Owner action items (outside this PR)
 
