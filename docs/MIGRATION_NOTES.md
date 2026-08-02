@@ -330,10 +330,19 @@ screen. No social rows or tables are deleted by S8.
       transition-scoped retries, blocks stale-account results, and hydrates the
       header balance immediately. Mobile tests pass 28/28; backend tests pass
       119 with the existing SIWE test skipped; the iOS export succeeds.
-- [ ] Create one new EasyGo Privy App Secret with owner approval, replace the
-      masked Railway staging value, and verify the same Apple user resolves to
-      exactly one embedded EVM wallet before asking the device to retry sync.
-- [ ] Build and submit iOS `2.0.2 (99)` after staging auth sync passes.
+- [x] Create one new EasyGo Privy App Secret with owner approval and replace
+      only the masked Railway web-service value without exposing it. The
+      variables-only deployment
+      `f0ed7ad2-fac3-49dd-b102-8417d62fc948` is `SUCCESS`/`RUNNING`; all three
+      health surfaces return HTTP 200. A remote Privy server query succeeds,
+      finds the Apple user, and reports exactly one embedded EVM wallet.
+- [x] Build, inspect, and submit iOS `2.0.2 (99)`. EAS build
+      `3a8dee19-9989-43b6-a8c4-7ecf84717cc4` uses exact commit
+      `6a2277018edf21abe1bb3defa4a53175d2971703`; its JSC bundle exactly matches
+      the clean local export. Submission
+      `3a7193a1-3eda-42ef-9717-46cc225aa243` finished without an error, and App
+      Store Connect marks build `3f5a6f66-f845-42bd-a2a8-75ce0557be97`
+      `VALID`, unexpired, with zero matching beta crash feedback.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before
@@ -347,7 +356,7 @@ screen. No social rows or tables are deleted by S8.
       its AES-256 passphrase is stored in macOS Keychain service
       `easygo-staging-postgres-backup-20260722T090134Z`. An in-memory decrypt
       verified the `PGDMP` header and exact 41,032-byte round trip.
-- [ ] Verify Build 98's embedded Base wallet/backend address, welcome Orange
+- [ ] Verify Build 99's embedded Base wallet/backend address, welcome Orange
       ledger and balance, session restoration, Google OAuth, and remaining core
       API paths against staging.
 

@@ -1,7 +1,8 @@
 # EasyGo staging device QA
 
-Use this checklist for the staged authentication TestFlight build `2.0.2
-(98)` and Android preview build `versionCode 64`. Both clients must target
+Use this checklist for the staged authentication-recovery TestFlight build
+`2.0.2 (99)` and Android preview build `versionCode 64`. Both clients must
+target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
@@ -115,14 +116,32 @@ wallet private key, or login code.
   bundle contains the expected public Privy IDs, staging URL, and
   `createOnLogin: all-users` behavior. The Apple signing-key body and key ID
   are absent from the bundle.
-- [ ] Install Build 98 from TestFlight on the affected iPhone 16 Pro Max and
-  confirm two cold launches reach the EasyGo login screen without a crash.
 - [x] Complete one new Apple sign-in on Build 98. On the affected iPhone 16 Pro
   Max, the OAuth return through `coineasyapp` reached the signed-in EasyGo
   profile without a raw Privy error or process exit.
+- [x] Create a new Privy App Secret with owner approval and replace only the
+  Railway `easygo-web-staging` value without exposing it. Railway deployment
+  `f0ed7ad2-fac3-49dd-b102-8417d62fc948` is `SUCCESS`/`RUNNING`; `/health`,
+  `/ready`, and `/social/status` all return HTTP 200. A server-side Privy query
+  now succeeds and the most recent Apple user has exactly one embedded EVM
+  wallet.
+- [x] Complete, inspect, submit, and process authentication-recovery build
+  `2.0.2 (99)`. EAS build `3a8dee19-9989-43b6-a8c4-7ecf84717cc4` was created
+  from exact commit `6a2277018edf21abe1bb3defa4a53175d2971703`; submission
+  `3a7193a1-3eda-42ef-9717-46cc225aa243` finished without an error. App Store
+  Connect marks build resource `3f5a6f66-f845-42bd-a2a8-75ce0557be97`
+  `VALID`, unexpired, with zero matching beta crash-feedback submissions.
+- [x] Verify the 27,025,131-byte Build 99 IPA with SHA-256
+  `685f51b527b79a8e50866a19a94d9dba8ecaeb8b6369562494538da47693b258`.
+  It reports the expected bundle identifier and build number. Its
+  6,042,150-byte plain-JavaScript bundle has SHA-256
+  `9272cf160aacbf208533ce8b039b6e4aabb31cbbdd95238a64c4b990d73ea138`,
+  exactly matches the clean local iOS export, and contains no Hermes artifact.
+- [ ] Install Build 99 from TestFlight on the affected iPhone 16 Pro Max and
+  confirm two cold launches reach the signed-in EasyGo profile without a crash.
 - [ ] Complete one new Google sign-in. Its OAuth return through `coineasyapp`
   must succeed without showing a raw Privy error.
-- [ ] Confirm the expected session state. Builds 95 through 98 preserve the same
+- [ ] Confirm the expected session state. Builds 95 through 99 preserve the same
   versioned `easygo-privy-v2-` SecureStore namespace; only upgrades from a
   pre-build-94 client should require the one-time sign-in again.
 
@@ -149,9 +168,10 @@ wallet private key, or login code.
   second address.
 - [x] Confirm the signed-in profile loads after the Build 98 Apple OAuth return.
 - [ ] For the brand-new staging user, confirm the welcome Orange entry appears
-  once only. The supplied profile screen displayed `0` because the backend
-  profile sync did not complete; reconcile the ledger and balance/history UI
-  before marking this passed.
+  once only. Before the post-secret device retry, Railway still has no local
+  user or welcome-ledger row. Open Build 99 while authenticated and verify the
+  retry creates one user with the Privy wallet and a single `100` Orange entry;
+  do not seed or repair this row manually.
 - [ ] Load the home feed, open one post/thread, and paginate or refresh once.
 - [ ] Publish one clearly labelled staging text post, edit it, and delete it.
 - [ ] Open another staging profile, follow then unfollow it, and confirm both
