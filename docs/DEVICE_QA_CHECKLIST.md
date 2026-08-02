@@ -1,7 +1,7 @@
 # EasyGo staging device QA
 
-Use this checklist for the staged-startup diagnostic TestFlight build `2.0.2
-(97)` and Android preview build `versionCode 64`. Both clients must target
+Use this checklist for the staged authentication TestFlight build `2.0.2
+(98)` and Android preview build `versionCode 64`. Both clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
@@ -95,7 +95,31 @@ wallet private key, or login code.
   branded Apple, Google, disabled passkey, and Wallet entry screen rendered
   without a process exit. The Wallet button is still an intentional
   SIWE/WalletConnect placeholder and is not evidence of a completed sign-in.
-- [ ] Confirm the expected session state. Builds 95 through 97 preserve the same
+- [x] Configure both Apple and Google login for the EasyGo Privy mobile client.
+  The public app-config response reports both providers enabled, and the
+  native identifiers `com.coineasy.coineasysocial` and
+  `com.coineasy.coineasy` plus scheme `coineasyapp` remain allowlisted. The
+  Sign in with Apple key is scoped to the EasyGo iOS primary App ID; no private
+  key content is committed or bundled.
+- [x] Complete and submit authentication build `2.0.2 (98)`. EAS build
+  `0d066e38-0ebf-464d-a20a-ae365f033f49` was created from exact commit
+  `8af34fec27a41037b7d740d7160314db6c45ce26`; EAS submission
+  `ead73b34-a9c2-4daf-a713-9664334f0178` finished without an error. App Store
+  Connect marks build resource `2a5786df-fd8c-46aa-9a05-0fdbed9240e7`
+  `VALID`, with zero matching beta crash-feedback submissions.
+- [x] Verify the 27,024,088-byte Build 98 IPA with SHA-256
+  `497b0c238f66b90f8bf2a1b7d96b17f52597484bb66e55669bebb6728647b9c9`.
+  Its JavaScript bundle exactly matches the clean local export at SHA-256
+  `5f74b78a4dbdd26e31ddc78a6918571906ccf65469d2d4773abc22a139ede699`.
+  The executable links JavaScriptCore, the app reports `2.0.2 (98)`, and the
+  bundle contains the expected public Privy IDs, staging URL, and
+  `createOnLogin: all-users` behavior. The Apple signing-key body and key ID
+  are absent from the bundle.
+- [ ] Install Build 98 from TestFlight on the affected iPhone 16 Pro Max and
+  confirm two cold launches reach the EasyGo login screen without a crash.
+- [ ] Complete one new Apple sign-in and one new Google sign-in. Each OAuth
+  return through `coineasyapp` must succeed without showing a raw Privy error.
+- [ ] Confirm the expected session state. Builds 95 through 98 preserve the same
   versioned `easygo-privy-v2-` SecureStore namespace; only upgrades from a
   pre-build-94 client should require the one-time sign-in again.
 
@@ -116,6 +140,10 @@ wallet private key, or login code.
   screen.
 - [ ] Complete one configured Privy sign-in. Returning to EasyGo through the
   `coineasyapp` scheme succeeds and the session survives an app restart.
+- [ ] For a new Apple or Google user, confirm exactly one embedded EVM wallet
+  is created, the backend profile stores the same address, and the wallet
+  provider reports Base chain ID `0x2105`. Logout and relogin must not create a
+  second address.
 - [ ] Confirm the signed-in profile loads. For a brand-new staging user, confirm
   the welcome Orange entry appears once only; do not expect it again on relogin.
 - [ ] Load the home feed, open one post/thread, and paginate or refresh once.

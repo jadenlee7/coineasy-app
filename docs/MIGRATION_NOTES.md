@@ -289,6 +289,29 @@ screen. No social rows or tables are deleted by S8.
       branded login screen remains open. This closes the startup-termination
       investigation; real OAuth, session restoration, and core API QA remain
       separate release gates.
+- [x] Harden the real OAuth handoff and session lifecycle in commit `489469b`.
+      User-cancelled OAuth is silent, genuine failures use fixed PII-free copy,
+      relogin reconnects the token provider, and each authenticated transition
+      performs one race-safe `/auth/sync`. The matching Railway staging deploy
+      passes `/ready`, `/health`, and `/social/status`.
+- [x] Enable Apple and Google on the EasyGo Privy mobile client and configure
+      the Sign in with Apple key for primary App ID
+      `com.coineasy.coineasysocial`. The public Privy config reports both OAuth
+      providers enabled. Commit `7630bd5` adds Expo-native
+      `embedded.ethereum.createOnLogin: all-users` to both Provider paths, so
+      headless OAuth creates one Base EVM wallet before `/auth/sync`.
+- [x] Complete EAS iOS build `0d066e38-0ebf-464d-a20a-ae365f033f49`
+      (`2.0.2 (98)`) from exact commit
+      `8af34fec27a41037b7d740d7160314db6c45ce26`. EAS submission
+      `ead73b34-a9c2-4daf-a713-9664334f0178` finished without an error, and App
+      Store Connect marks build `2a5786df-fd8c-46aa-9a05-0fdbed9240e7`
+      `VALID` with zero matching beta crash feedback.
+- [x] Inspect the 27,024,088-byte Build 98 IPA at SHA-256
+      `497b0c238f66b90f8bf2a1b7d96b17f52597484bb66e55669bebb6728647b9c9`.
+      Its JSC bundle exactly matches the clean local export at SHA-256
+      `5f74b78a4dbdd26e31ddc78a6918571906ccf65469d2d4773abc22a139ede699`;
+      release identifiers, staging URL, and Base wallet creation setting are
+      present while the Apple private signing-key body and key ID are absent.
 - [x] Verify the Railway web shutdown contract in a real replacement deploy.
       Production commands now launch Node directly, and the replaced web
       process logged `SIGTERM`, `stopping`, `stopped`, and exit code zero before
