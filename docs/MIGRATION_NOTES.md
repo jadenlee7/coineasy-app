@@ -366,6 +366,11 @@ screen. No social rows or tables are deleted by S8.
       separate Base status badge opens BaseScan only after chain `0x2105` and
       account equality both pass. Public profile projections no longer disclose
       `walletAddress`; authenticated own-profile responses retain it.
+- [x] Build, inspect, submit, and process iOS `2.0.3 (100)` from exact commit
+      `cb6ac70d922d170fd840f9d2b63e75b4d92a1516`. EAS build
+      `c545d16a-7237-456c-8efe-53641e2a7286` and submission
+      `370b5cb0-cf9f-4b7c-b572-4e03cc3018a9` finished successfully; App Store
+      Connect reports build `c4dbfafd-b4ae-4bd5-8e9d-749a5a5ae0a7` as `VALID`.
 - [ ] Verify Build 100 cold-launch session restoration, the visible
       `Base · Connected` result, BaseScan routing, Google OAuth, public wallet
       privacy, and the remaining core API paths against staging.

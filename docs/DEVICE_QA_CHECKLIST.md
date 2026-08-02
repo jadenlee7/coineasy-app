@@ -1,8 +1,8 @@
 # EasyGo staging device QA
 
-Use this checklist for the staged authentication-recovery TestFlight build
-`2.0.2 (99)` and Android preview build `versionCode 64`. Both clients must
-target
+Use this checklist for the staged Base-runtime TestFlight build
+`2.0.3 (100)` and the existing Android preview build `versionCode 64`. Both
+clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
@@ -137,11 +137,25 @@ wallet private key, or login code.
   6,042,150-byte plain-JavaScript bundle has SHA-256
   `9272cf160aacbf208533ce8b039b6e4aabb31cbbdd95238a64c4b990d73ea138`,
   exactly matches the clean local iOS export, and contains no Hermes artifact.
-- [ ] Install Build 99 from TestFlight on the affected iPhone 16 Pro Max and
+- [x] Complete, inspect, submit, and process Base-runtime build `2.0.3 (100)`.
+  EAS build `c545d16a-7237-456c-8efe-53641e2a7286` was created from exact
+  commit `cb6ac70d922d170fd840f9d2b63e75b4d92a1516`; submission
+  `370b5cb0-cf9f-4b7c-b572-4e03cc3018a9` finished without an error. App Store
+  Connect marks build resource `c4dbfafd-b4ae-4bd5-8e9d-749a5a5ae0a7`
+  `VALID`, unexpired, with zero matching beta crash-feedback submissions.
+- [x] Verify the 27,026,884-byte Build 100 IPA with SHA-256
+  `886230c44b7eb36d167848b16d263a773933c91d5768d86e33449061bc5a478c`.
+  It reports the expected version, build number, bundle identifier, URL scheme,
+  preview runtime, and Apple Sign-In provisioning entitlement. Its JSC-linked
+  executable contains no Hermes path. The 6,047,517-byte JavaScript bundle has
+  SHA-256 `b8efcf91a378fae63b59681ba2ed06a137545745250a450932943f3a705fba3a`
+  and exactly matches the clean local iOS export; it contains the Base runtime
+  probe and no complete private-key block or App Secret.
+- [ ] Install Build 100 from TestFlight on the affected iPhone 16 Pro Max and
   confirm two cold launches reach the signed-in EasyGo profile without a crash.
 - [ ] Complete one new Google sign-in. Its OAuth return through `coineasyapp`
   must succeed without showing a raw Privy error.
-- [ ] Confirm the expected session state. Builds 95 through 99 preserve the same
+- [ ] Confirm the expected session state. Builds 95 through 100 preserve the same
   versioned `easygo-privy-v2-` SecureStore namespace; only upgrades from a
   pre-build-94 client should require the one-time sign-in again.
 

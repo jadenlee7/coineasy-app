@@ -99,6 +99,13 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
       five startup gates pass on JSC/iOS 26.5 and the branded login UI renders
       without a process exit. Real OAuth and `/auth/sync` remain unchecked
       below.
+- [x] Complete Apple OAuth, embedded-wallet creation, authenticated
+      `/auth/sync`, and one idempotent 100 Orange welcome reward on the affected
+      iPhone through Builds 98 and 99. Build 100 adds fail-closed provider
+      `eth_chainId`/`eth_accounts` attestation and public wallet-address privacy;
+      EAS build `c545d16a-7237-456c-8efe-53641e2a7286`, submission
+      `370b5cb0-cf9f-4b7c-b572-4e03cc3018a9`, and App Store Connect processing
+      all succeeded. Physical-device Base badge verification remains open.
 
 ## Pre-Deploy
 
@@ -159,7 +166,7 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Deploy the web service to staging.
 - [x] Confirm Railway `/ready` health check becomes healthy.
 - [x] Set `EASYGO_BASE_URL` and `EXPECTED_RELEASE`, then run `npm run smoke`.
-- [ ] Verify one real-device Privy sign-in and `/auth/sync` against staging.
+- [x] Verify one real-device Privy sign-in and `/auth/sync` against staging.
 - [ ] Verify feed, profile, follow, notification, Orange balance, and Squid quote
   read paths without activating Path C flags.
 - [x] Deploy the worker service with `SEGMENTS_ENABLED=false` and confirm one
