@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTailwind } from 'tailwind-rn';
 import * as Haptics from 'expo-haptics';
 
@@ -9,17 +8,25 @@ import { CloseIcon, SmallSearchIcon } from '../components/Icons';
 import Post from '../components/Post';
 import User from '../components/User';
 import { GlobalContext } from '../contexts/GlobalContext';
+import {
+    useDeviceAccountData,
+    useDeviceAccountOperationLease,
+} from '../contexts/DeviceAccountDataContext';
 import { SOCIAL_CATEGORIES } from '../data/socialCategories';
 import useFeed from '../hooks/useFeed';
 import useStatusBarHeight from '../hooks/useStatusBarHeight';
 import { api } from '../utils/api';
 import { adaptSocialProfile, getEasyGoUserId } from '../utils/socialPostAdapter';
 
-const RECENT_SEARCH_KEY = 'easygo_recent_profile_searches';
 const BACKEND_CONFIGURED = Boolean(process.env.EXPO_PUBLIC_BACKEND_URL);
 
 const Search = ({navigation}) => {
     const { user } = useContext(GlobalContext);
+    const {
+        recentProfiles: storedRecentSearches,
+        saveRecentProfiles,
+    } = useDeviceAccountData();
+    const { isCurrentLease, lease } = useDeviceAccountOperationLease();
     const tailwind = useTailwind();
     const statusBarHeight = useStatusBarHeight();
     const inputRef = useRef(null);
@@ -28,9 +35,24 @@ const Search = ({navigation}) => {
     const [people, setPeople] = useState([]);
     const [peopleLoading, setPeopleLoading] = useState(false);
     const [peopleError, setPeopleError] = useState(null);
-    const [recentSearches, setRecentSearches] = useState([]);
+    const [peopleTargetQuery, setPeopleTargetQuery] = useState(null);
+    const livePeopleQueryRef = useRef('');
+    const recentSearches = storedRecentSearches
+        .filter((item) => getEasyGoUserId(item?.details))
+        .slice(0, 10);
+    const ownUserId = getEasyGoUserId(user);
     const [viewerFollowingIds, setViewerFollowingIds] = useState(new Set());
+    const [viewerFollowingTargetKey, setViewerFollowingTargetKey] = useState(null);
+    const viewerFollowingRequestRef = useRef(0);
+    const liveViewerFollowingTargetRef = useRef(null);
+    const currentViewerFollowingTargetKey = JSON.stringify([
+        lease?.ownerUserId || null,
+        lease?.sessionEpoch || null,
+        ownUserId || null,
+    ]);
+    liveViewerFollowingTargetRef.current = currentViewerFollowingTargetKey;
     const trimmedQuery = debouncedQuery.trim();
+    livePeopleQueryRef.current = trimmedQuery;
     const searchActive = trimmedQuery.length >= 2;
     const {
         items: posts,
@@ -53,36 +75,39 @@ const Search = ({navigation}) => {
     }, [query]);
 
     useEffect(() => {
-        let active = true;
-        AsyncStorage.getItem(RECENT_SEARCH_KEY).then((stored) => {
-            if (!active || !stored) return;
-            try {
-                const parsed = JSON.parse(stored);
-                const valid = Array.isArray(parsed)
-                    ? parsed.filter((item) => getEasyGoUserId(item?.details)).slice(0, 10)
-                    : [];
-                setRecentSearches(valid);
-            } catch {
-                setRecentSearches([]);
-            }
-        });
-        return () => { active = false; };
-    }, []);
-
-    useEffect(() => {
-        const ownUserId = getEasyGoUserId(user);
-        if (!ownUserId) return;
-        let active = true;
-        api.follows.following(ownUserId, {limit: 200}).then((result) => {
-            if (!active) return;
+        const operationLease = lease;
+        const operationOwnUserId = ownUserId;
+        const operationTargetKey = currentViewerFollowingTargetKey;
+        const requestId = ++viewerFollowingRequestRef.current;
+        const isCurrentRequest = () => (
+            requestId === viewerFollowingRequestRef.current
+            && liveViewerFollowingTargetRef.current === operationTargetKey
+            && isCurrentLease(operationLease)
+        );
+        setViewerFollowingTargetKey(operationTargetKey);
+        setViewerFollowingIds(new Set());
+        if (!operationOwnUserId || !operationLease || !isCurrentLease(operationLease)) return;
+        api.follows.following(operationOwnUserId, {limit: 200}).then((result) => {
+            if (!isCurrentRequest()) return;
             setViewerFollowingIds(new Set((result?.rows || []).map((item) => item.id)));
         }).catch(() => {
-            if (active) setViewerFollowingIds(new Set());
+            if (isCurrentRequest()) setViewerFollowingIds(new Set());
         });
-        return () => { active = false; };
-    }, [user]);
+        return () => { viewerFollowingRequestRef.current += 1; };
+    }, [currentViewerFollowingTargetKey, isCurrentLease, lease, ownUserId]);
+
+    const visibleViewerFollowingIds = viewerFollowingTargetKey === currentViewerFollowingTargetKey
+        ? viewerFollowingIds
+        : new Set();
 
     useEffect(() => {
+        const targetQuery = trimmedQuery;
+        let active = true;
+        const isCurrentQuery = () => (
+            active
+            && livePeopleQueryRef.current === targetQuery
+        );
+        setPeopleTargetQuery(targetQuery);
         if (!searchActive) {
             setPeople([]);
             setPeopleError(null);
@@ -90,29 +115,35 @@ const Search = ({navigation}) => {
             return;
         }
 
-        let active = true;
-        const peopleQuery = trimmedQuery.replace(/^[@#]/, '');
+        const peopleQuery = targetQuery.replace(/^[@#]/, '');
+        setPeople([]);
         setPeopleLoading(true);
         setPeopleError(null);
         api.profiles.search(peopleQuery, {limit: 20}).then((result) => {
-            if (!active) return;
+            if (!isCurrentQuery()) return;
             setPeople((result?.rows || []).map(adaptSocialProfile).filter(Boolean));
         }).catch((cause) => {
-            if (!active) return;
+            if (!isCurrentQuery()) return;
             setPeople([]);
             setPeopleError(cause instanceof Error ? cause : new Error(String(cause)));
         }).finally(() => {
-            if (active) setPeopleLoading(false);
+            if (isCurrentQuery()) setPeopleLoading(false);
         });
         return () => { active = false; };
     }, [searchActive, trimmedQuery]);
 
+    const presentsPeopleQuery = peopleTargetQuery === trimmedQuery;
+    const visiblePeople = presentsPeopleQuery ? people : [];
+    const visiblePeopleLoading = presentsPeopleQuery ? peopleLoading : searchActive;
+    const visiblePeopleError = presentsPeopleQuery ? peopleError : null;
+
     const storeRecentSearches = async (next) => {
-        setRecentSearches(next);
-        await AsyncStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(next));
+        return saveRecentProfiles(next);
     };
 
     const openUser = async (details) => {
+        const expectedLease = lease;
+        if (!isCurrentLease(expectedLease)) return;
         const userId = getEasyGoUserId(details);
         if (!userId) return;
         Haptics.selectionAsync();
@@ -120,17 +151,23 @@ const Search = ({navigation}) => {
             {details, date: new Date().toISOString()},
             ...recentSearches.filter((item) => getEasyGoUserId(item.details) !== userId),
         ].slice(0, 10);
-        await storeRecentSearches(next);
+        if (!await storeRecentSearches(next)) return;
+        if (!isCurrentLease(expectedLease)) return;
         navigation.navigate('ProfileSelected', {did: details.did, back: 'search'});
     };
 
     const deleteRecentSearch = async (userId) => {
+        const expectedLease = lease;
+        if (!isCurrentLease(expectedLease)) return;
         Haptics.selectionAsync();
         await storeRecentSearches(recentSearches.filter((item) => getEasyGoUserId(item.details) !== userId));
     };
 
     const updateFollowState = (userId, following) => {
+        const operationTargetKey = currentViewerFollowingTargetKey;
+        if (liveViewerFollowingTargetRef.current !== operationTargetKey) return;
         setViewerFollowingIds((current) => {
+            if (liveViewerFollowingTargetRef.current !== operationTargetKey) return current;
             const next = new Set(current);
             if (following) next.add(userId);
             else next.delete(userId);
@@ -156,7 +193,7 @@ const Search = ({navigation}) => {
                     <User
                         details={details}
                         showFollowButton={!recent}
-                        initialFollowing={viewerFollowingIds.has(userId)}
+                        initialFollowing={visibleViewerFollowingIds.has(userId)}
                         onFollowChange={updateFollowState}
                     />
                 </TouchableOpacity>
@@ -231,12 +268,12 @@ const Search = ({navigation}) => {
             ) : (
                 <ScrollView keyboardShouldPersistTaps="handled">
                     <Text style={[tailwind('text-slate-900 px-5'), {fontFamily: 'GmarketBold', fontSize: 16, marginTop: 6, marginBottom: 6}]}>People</Text>
-                    {peopleLoading
+                    {visiblePeopleLoading
                         ? <ActivityIndicator style={{marginVertical: 18}} size="small" color="#FF6B17" />
-                        : people.map((details) => renderUser(details))}
-                    {!peopleLoading && people.length === 0 && (
+                        : visiblePeople.map((details) => renderUser(details))}
+                    {!visiblePeopleLoading && visiblePeople.length === 0 && (
                         <Text style={[tailwind('text-secondary px-5'), {fontSize: 12, marginVertical: 12}]}>
-                            {!BACKEND_CONFIGURED ? 'Connect the EasyGo backend to search people.' : peopleError ? "People search couldn't load." : 'No matching people.'}
+                            {!BACKEND_CONFIGURED ? 'Connect the EasyGo backend to search people.' : visiblePeopleError ? "People search couldn't load." : 'No matching people.'}
                         </Text>
                     )}
 

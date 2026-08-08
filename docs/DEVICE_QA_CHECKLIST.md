@@ -217,10 +217,19 @@ wallet private key, or login code.
   ledger insert or repair was performed.
 - [ ] Load the home feed, open one post/thread, and paginate or refresh once.
 - [ ] Publish one clearly labelled staging text post, edit it, and delete it.
+- [ ] On that post, open the overflow menu and confirm Edit/Delete appear for
+  the signed-in author, while another account sees only Report/Block/Hide/Mute.
+- [ ] Type text, attach media, and select a category in the composer; cancel it,
+  immediately open a new post/reply composer, and confirm no prior draft flashes
+  or survives into the new presentation.
 - [ ] Open another staging profile, follow then unfollow it, and confirm both
   profile counts and state update.
+- [ ] Share the own-profile QR/link and open its `coineasyapp://user?userId=…`
+  URL both while EasyGo is ready and from a cold launch. It must navigate to
+  that public EasyGo profile without exposing or interpreting a Privy DID.
 - [ ] Open Notifications and confirm the screen loads without an auth or server
-  error. Where a second tester is available, confirm one follow/like/reply event.
+  error. Where a second tester is available, confirm one follow/like/reply event
+  and that tapping a post event opens the matching PostDetails route.
 - [ ] Open the Orange balance/history and confirm both return consistently after
   a refresh. Claim only a staging-safe idempotent reward already exposed by the
   UI; do not spend or transfer real assets.
@@ -319,10 +328,18 @@ before the harness is approved.
   challenge, one-time consume, rollback, post-write race, and provider-worker
   concurrency tests, plus the approved expired/consumed digest lifecycle, before
   requesting physical destructive QA.
-- [ ] Switch from account A to B at every local-cleanup await boundary. Confirm
-  A's non-abortable AsyncStorage cleanup cannot remove B's search, safety-list,
-  or push-token state; this requires owner-scoped keys or one reviewed
-  auth-switch/cleanup serialization boundary.
+- [x] Automated tests prove hashed A/B keys are disjoint, legacy global values
+  are never attributed, A purge drains prior writes, the synchronous deletion
+  seal rejects later A writes, and concurrent B values survive. Export creation
+  and stale cleanup are serialized as well.
+- [x] Automated API-surface tests prove every private, viewer-relative, and
+  mutating client endpoint requires the captured Privy owner before `fetch`;
+  token-provider rebinding and token-subject mismatch fail closed, while public
+  discovery endpoints are explicitly anonymous.
+- [ ] On physical iOS and Android devices, switch from A to B at every storage,
+  API, chained Orange/Squid, export, purge, and logout await boundary. Confirm B
+  never displays A search, safety, course, push-registration, social, profile,
+  or reward state and A cleanup cannot change B.
 - [ ] Remove the non-destructive diagnostic from the release graph and inspect
   the resulting bundle before building any deletion release candidate.
 - [ ] After all checks pass, verify all four compile-time latches are still

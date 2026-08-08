@@ -1,9 +1,11 @@
 // Pure auth-token registry used by the API client.
 //
-// Ordinary API calls intentionally keep their historical fail-soft behavior.
-// Destructive calls use resolveBoundAuthHeader(), which requires the token
-// provider to be explicitly bound to the expected authenticated Privy user and
-// rejects if that binding changes while the asynchronous token read is active.
+// Private, viewer-relative, and mutating API calls use
+// resolveBoundAuthHeader(). It requires the token provider to be explicitly
+// bound to the expected authenticated Privy user, validates the JWT subject,
+// and rejects if that binding changes while token resolution is active.
+// resolveOptionalAuthHeader() remains available for compatibility, but public
+// EasyGo endpoints are explicitly anonymous and do not invoke it.
 
 export const API_AUTH_ERROR_CODES = Object.freeze({
   EXPECTED_USER_REQUIRED: 'api_auth_expected_user_required',
@@ -90,19 +92,62 @@ export function createApiAuthRegistry({ onOptionalProviderError } = {}) {
   }
 
   async function resolveOptionalAuthHeader() {
-    const optionalProvider = provider;
-    if (!optionalProvider) return {};
+    const snapshot = {
+      revision,
+      provider,
+      ownerUserId,
+    };
+    if (!snapshot.provider) return {};
 
+    const bindingChanged = () => (
+      revision !== snapshot.revision ||
+      provider !== snapshot.provider ||
+      ownerUserId !== snapshot.ownerUserId
+    );
+
+    let token;
     try {
-      return authHeader(await optionalProvider());
+      token = await snapshot.provider();
     } catch (error) {
+      if (bindingChanged()) {
+        throw new ApiAuthBindingError(
+          API_AUTH_ERROR_CODES.SESSION_CHANGED,
+          'The authenticated session changed before the request was sent',
+        );
+      }
+
       try {
         onOptionalProviderError?.(error);
       } catch {
         // Diagnostics must never turn an ordinary fail-soft request into a failure.
       }
+
+      if (bindingChanged()) {
+        throw new ApiAuthBindingError(
+          API_AUTH_ERROR_CODES.SESSION_CHANGED,
+          'The authenticated session changed before the request was sent',
+        );
+      }
       return {};
     }
+
+    if (bindingChanged()) {
+      throw new ApiAuthBindingError(
+        API_AUTH_ERROR_CODES.SESSION_CHANGED,
+        'The authenticated session changed before the request was sent',
+      );
+    }
+
+    if (!token) return {};
+
+    if (snapshot.ownerUserId && accessTokenSubject(token) !== snapshot.ownerUserId) {
+      throw new ApiAuthBindingError(
+        API_AUTH_ERROR_CODES.TOKEN_OWNER_MISMATCH,
+        'The access token belongs to a different authenticated user',
+      );
+    }
+
+    return authHeader(token);
   }
 
   async function resolveBoundAuthHeader(expectedAuthUserId) {

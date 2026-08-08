@@ -5,9 +5,27 @@
 // See EASYGO_BUILD_PLAN.md §7 (profile model) and §11.
 
 import { useState, useEffect, useCallback } from 'react';
+import { useDeviceAccountOperationLease } from '../contexts/DeviceAccountDataContext';
 import { isEasyChainReady, PROFILE_REGISTRY_ADDRESS } from '../utils/easychain';
 import { PHASE } from '../utils/easygo';
 import { api, ApiError } from '../utils/api';
+import { adaptEasyGoProfileResponse } from './easyChainProfileAdapter.mjs';
+
+const EMPTY_PROFILE_STATE = Object.freeze({
+  profile: null,
+  loading: false,
+  error: null,
+  lease: null,
+});
+
+function sameLease(left, right) {
+  return Boolean(
+    left
+    && right
+    && left.ownerUserId === right.ownerUserId
+    && left.sessionEpoch === right.sessionEpoch
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Profile shape (Phase 1, backend-DB):
@@ -20,30 +38,24 @@ import { api, ApiError } from '../utils/api';
 // }
 // ---------------------------------------------------------------------------
 
-function adaptBackendUser(me) {
-  if (!me) return null;
-  return {
-    address: me.address ?? null,
-    handle: me.handle ?? null,
-    avatarUri: me.avatarUri ?? null,
-    socials: {
-      telegram: me.telegramId ?? null,
-      kakao: me.kakaoId ?? null,
-      twitter: me.twitterId ?? null,
-    },
-    joinedAt: me.createdAt ?? null,
-  };
-}
-
 export function useEasyChainProfile(address) {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const { lease, isCurrentLease } = useDeviceAccountOperationLease();
+  const [state, setState] = useState(EMPTY_PROFILE_STATE);
 
   const refresh = useCallback(async () => {
-    if (!address) return;
-    setLoading(true);
-    setError(null);
+    const expectedLease = lease;
+    if (!address || !expectedLease || !isCurrentLease(expectedLease)) return null;
+
+    setState((current) => (
+      isCurrentLease(expectedLease)
+        ? {
+            profile: null,
+            loading: true,
+            error: null,
+            lease: expectedLease,
+          }
+        : current
+    ));
     try {
       if (PHASE.AVATAR_NFT_ENABLED && isEasyChainReady()) {
         // Phase 2 path — read from PROFILE_REGISTRY_ADDRESS via getEasyChainProvider()
@@ -51,24 +63,58 @@ export function useEasyChainProfile(address) {
         // const uri = await reg.getProfile(address);
         // const meta = await fetch(resolveIpfs(uri)).then(r => r.json());
         // setProfile(meta);
-        setProfile(null);
-        return;
+        if (!isCurrentLease(expectedLease)) return null;
+        setState((current) => (
+          isCurrentLease(expectedLease)
+            ? { ...current, profile: null, lease: expectedLease }
+            : current
+        ));
+        return null;
       }
       // Phase 1 path — read from EasyGo backend
-      const me = await api.me();
-      setProfile(adaptBackendUser(me));
+      const response = await api.me({
+        expectedAuthUserId: expectedLease.ownerUserId,
+      });
+      if (!isCurrentLease(expectedLease)) return null;
+      const profile = adaptEasyGoProfileResponse(response);
+      setState((current) => (
+        isCurrentLease(expectedLease)
+          ? { ...current, profile, error: null, lease: expectedLease }
+          : current
+      ));
+      return profile;
     } catch (e) {
+      if (!isCurrentLease(expectedLease)) return null;
       if (e instanceof ApiError && (e.status === 401 || e.status === 404)) {
-        setProfile(null);
+        setState((current) => (
+          isCurrentLease(expectedLease)
+            ? { ...current, profile: null, error: null, lease: expectedLease }
+            : current
+        ));
       } else {
-        setError(e);
+        setState((current) => (
+          isCurrentLease(expectedLease)
+            ? { ...current, error: e, lease: expectedLease }
+            : current
+        ));
       }
+      return null;
     } finally {
-      setLoading(false);
+      setState((current) => (
+        isCurrentLease(expectedLease) && sameLease(current.lease, expectedLease)
+          ? { ...current, loading: false }
+          : current
+      ));
     }
-  }, [address]);
+  }, [address, isCurrentLease, lease]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    if (!address || !lease) {
+      setState(EMPTY_PROFILE_STATE);
+      return;
+    }
+    void refresh();
+  }, [address, lease, refresh]);
 
   const updateProfile = useCallback(async (patch) => {
     // Phase 1: backend profile update endpoint not yet exposed (welcome-only path).
@@ -77,10 +123,12 @@ export function useEasyChainProfile(address) {
     return null;
   }, [address]);
 
+  const ownsState = sameLease(state.lease, lease);
+
   return {
-    profile,
-    loading,
-    error,
+    profile: ownsState ? state.profile : null,
+    loading: ownsState ? state.loading : false,
+    error: ownsState ? state.error : null,
     refresh,
     updateProfile,
     isAvatarNftEnabled: PHASE.AVATAR_NFT_ENABLED, // false in Phase 1; true in Phase 2

@@ -1,7 +1,7 @@
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, useContext } from "react";
 import { StyleSheet, View, Keyboard, Platform, Animated, Image, Dimensions, Text, SafeAreaView } from 'react-native';
 
 import { StatusBar } from 'expo-status-bar';
@@ -10,6 +10,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useSharedValue } from 'react-native-reanimated';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createNavigationContainerRef } from '@react-navigation/native';
 
 import Login from "./screens/Login";
 import AccountDeletionPending from './screens/AccountDeletionPending';
@@ -17,6 +18,10 @@ import utilities from './tailwind.json';
 import QR from "./components/modals/QR.js";
 import AppNavigator from './navigation/AppNavigator';
 import { GlobalContext } from "./contexts/GlobalContext";
+import {
+  DeviceAccountDataProvider,
+  useDeviceAccountData,
+} from './contexts/DeviceAccountDataContext';
 import RepostModal from "./components/modals/RepostModal";
 import PostboxModal from "./components/modals/PostboxModal";
 import PostSettingsModal from "./components/modals/PostSettingsModal";
@@ -45,12 +50,16 @@ import {
   accountDeletionMarkerStore,
   createAccountDeletionClientRequestId,
 } from './utils/accountDeletionStorage';
+import {
+  navigationIntentFromNotificationData,
+  navigationIntentFromParsedUrl,
+  routeForEasyGoNavigationIntent,
+} from './utils/navigationIntent.mjs';
 
 // Phase 1 chain: Base mainnet (chainId 8453). EasyChain is gated by
 // PHASE.EASYCHAIN_ENABLED in EASYGO_BUILD_PLAN.md and added in Phase 2.
 const PRIVY_APP_ID = process.env.EXPO_PUBLIC_PRIVY_APP_ID;
 const PRIVY_CLIENT_ID = process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID;
-const COURSE_PROGRESS_KEY = 'easygo_course_progress';
 const STARTUP_CONFIG_CODE = 'STARTUP-CONFIG-01';
 const isSet = (value) => typeof value === 'string' && value.trim().length > 0;
 const collectMissingPrivyEnvVars = () => {
@@ -169,6 +178,7 @@ function AuthBridge({ accountDeletionGuard, onDeletionBlocked }) {
     error,
   } = useAuthSync(privy, { enabled: !markerBlocked });
   const { setUser, setUserData } = useContext(GlobalContext);
+  const deviceAccountData = useDeviceAccountData();
   const privyReady = Boolean(privy?.isReady);
 
   useEffect(() => {
@@ -176,26 +186,27 @@ function AuthBridge({ accountDeletionGuard, onDeletionBlocked }) {
   }, [deletionBlocked, error?.code, onDeletionBlocked]);
 
   useEffect(() => {
-    let cancelled = false;
     const profileMatchesPrivy = !profile?.privyDid
       || !privyUserId
       || profile.privyDid === privyUserId;
     const activeProfile = profileMatchesPrivy ? profile : null;
-    const courseProgressOwner = privyUserId
-      || activeProfile?.privyDid
-      || activeProfile?.id
-      || 'device';
+    const courseProgressOwner = privyUserId;
+    const localCourses = deviceAccountData.status === 'ready'
+      && deviceAccountData.ownerUserId === privyUserId
+      ? deviceAccountData.courseProgress
+      : [];
 
     if (markerBlocked || (privyReady && (!privyUserId || deletionBlocked))) {
       setUser(null);
       setUserData(null);
-      return () => { cancelled = true; };
+      return;
     }
 
     if (activeProfile) {
-      // Publish the server profile before touching AsyncStorage. In particular,
-      // /auth/sync's ledger balance reaches HeaderActions in this render path.
-      const profileData = profilePresentationData(activeProfile, { courseProgressOwner });
+      const profileData = profilePresentationData(activeProfile, {
+        courseProgressOwner,
+        localCourses,
+      });
       setUser({
         id: activeProfile.id,
         did: activeProfile.privyDid || `privy:${activeProfile.id}`,
@@ -210,7 +221,10 @@ function AuthBridge({ accountDeletionGuard, onDeletionBlocked }) {
     } else if (privyReady && privyUserId && canUseFallback) {
       // Keep the app usable while a bounded backend retry is in progress. Never
       // retain another account's fallback presentation state.
-      const fallbackData = fallbackPresentationData({ courseProgressOwner });
+      const fallbackData = fallbackPresentationData({
+        courseProgressOwner,
+        localCourses,
+      });
       const fallbackUser = {
         id: privyUserId,
         did: `privy:${privyUserId}`,
@@ -230,44 +244,66 @@ function AuthBridge({ accountDeletionGuard, onDeletionBlocked }) {
       // before its 410 deletion guard response arrives.
       setUser(null);
       setUserData(null);
-      return () => { cancelled = true; };
-    } else {
-      return () => { cancelled = true; };
     }
-
-    const hydrateLocalCourses = async () => {
-      let localCourses;
-      try {
-        const stored = await AsyncStorage.getItem(`${COURSE_PROGRESS_KEY}:${courseProgressOwner}`);
-        const parsed = stored ? JSON.parse(stored) : [];
-        if (Array.isArray(parsed) && parsed.length > 0) localCourses = parsed;
-      } catch {
-        console.warn('[courses] unable to load local progress');
-      }
-      if (cancelled || !localCourses) return;
-
-      setUser((current) => {
-        if (current?.profile?.data?.courseProgressOwner !== courseProgressOwner) return current;
-        return {
-          ...current,
-          profile: {
-            ...current.profile,
-            data: { ...current.profile.data, courses: localCourses },
-          },
-        };
-      });
-      setUserData((current) => (
-        current?.courseProgressOwner === courseProgressOwner
-          ? { ...current, courses: localCourses }
-          : current
-      ));
-    };
-
-    hydrateLocalCourses();
-    return () => { cancelled = true; };
-  }, [canUseFallback, deletionBlocked, markerBlocked, profile, privyReady, privyUserId, setUser, setUserData]);
+  }, [
+    canUseFallback,
+    deletionBlocked,
+    deviceAccountData.courseProgress,
+    deviceAccountData.ownerUserId,
+    deviceAccountData.status,
+    markerBlocked,
+    profile,
+    privyReady,
+    privyUserId,
+    setUser,
+    setUserData,
+  ]);
 
   return null;
+}
+
+function DeviceAccountDataRender({ children }) {
+  return children(useDeviceAccountData());
+}
+
+function AccountTransitionResetSignal({ onTransition }) {
+  const { ownerUserId, sessionEpoch } = useDeviceAccountData();
+  useLayoutEffect(() => {
+    onTransition?.({ ownerUserId, sessionEpoch });
+  }, [onTransition, ownerUserId, sessionEpoch]);
+  return null;
+}
+
+function AccountNavigationReplaySignal({ ready, ownerUserId, sessionEpoch, onReplay }) {
+  useLayoutEffect(() => {
+    if (ready) onReplay?.();
+  }, [onReplay, ownerUserId, ready, sessionEpoch]);
+  return null;
+}
+
+function sameAccountTransition(left, right) {
+  return Boolean(
+    left
+    && right
+    && left.ownerUserId === right.ownerUserId
+    && left.sessionEpoch === right.sessionEpoch,
+  );
+}
+
+function DeviceAccountDataUnavailable({ retry }) {
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.configContainer}>
+        <Text style={styles.brand}>EasyGo</Text>
+        <Text style={styles.configCode}>LOCAL-DATA-01</Text>
+        <Text style={styles.configTitle}>기기 데이터 보호를 준비하지 못했습니다.</Text>
+        <Text style={styles.configText}>
+          계정별 로컬 저장소를 확인할 때까지 앱을 열지 않았습니다. 계정 데이터는 다른 사용자에게 표시되지 않습니다.
+        </Text>
+        <Text style={styles.retryText} onPress={retry}>다시 시도</Text>
+      </View>
+    </SafeAreaView>
+  );
 }
 
 function FullStartupSignal({ onStartupStatus }) {
@@ -373,10 +409,6 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
   const [connectType, setConnectType] = useState('')
   const [connectModalVis, setConnectModalVis] = useState(false);
 
-  const [listBlockedUser, setListBlockedUser] = useState(null)
-  const [listHiddenPost, setListHiddenPost] = useState(null)
-  const [listMutedUsers, setListMutedUsers] = useState(null)
-
   const [listAccount, setListAccount] = useState([])
 
   const [posts, setPosts] = useState([]);
@@ -400,6 +432,11 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
   const modalProfileRef = useRef(null); 
   const modalPostBoxRef = useRef(null); 
   const modalNicknameRef = useRef(null); 
+  const accountTransitionRef = useRef(null);
+  const accountUiReadyRef = useRef(false);
+  const navigationRef = useMemo(() => createNavigationContainerRef(), []);
+  const pendingNavigationIntentRef = useRef(null);
+  const processedNotificationResponseIdsRef = useRef(new Set());
 
   const snapPoints = useMemo(() => ['50%', '50%'], []);
   const snapPointsLarge = useMemo(() => [Platform.OS == 'ios' ? '87%' : '95%', Platform.OS == 'ios' ? '87%' : '95%'], []);
@@ -445,13 +482,167 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
     'GmarketBold': Platform.OS == 'ios' ? require('./assets/fonts/GmarketSansBold_ios.ttf') : require('./assets/fonts/GmarketSansBold.ttf'),
   });
 
-  useEffect(() => {
-    if (!user) return;
+  const resetAccountTransientUi = useCallback((nextTransition) => {
+    const normalizedNextTransition = nextTransition?.ownerUserId
+      ? Object.freeze({
+          ownerUserId: nextTransition.ownerUserId,
+          sessionEpoch: nextTransition.sessionEpoch,
+        })
+      : null;
+    const pendingNavigation = pendingNavigationIntentRef.current;
+    if (pendingNavigation) {
+      if (!pendingNavigation.accountTransition && normalizedNextTransition) {
+        pendingNavigationIntentRef.current = Object.freeze({
+          ...pendingNavigation,
+          accountTransition: normalizedNextTransition,
+        });
+      } else if (
+        pendingNavigation.accountTransition
+        && !sameAccountTransition(
+          pendingNavigation.accountTransition,
+          normalizedNextTransition,
+        )
+      ) {
+        pendingNavigationIntentRef.current = null;
+      }
+    }
+    accountTransitionRef.current = normalizedNextTransition;
+    accountUiReadyRef.current = false;
+    callbackPostShared = undefined;
+    page = 0;
+    translateY.value = 0;
+    setScreen('home');
+    setPreviousScreen('home');
+    setCategory(null);
+    setRepost(false);
+    setPostDetailsVis(null);
+    setUpdateProfileVis(false);
+    setPushNotifsVis(false);
+    setNewFeatureVis(false);
+    setNewFeatureAlertVis(false);
+    setShowClaimOranges(false);
+    setTodayOranges(0);
     setSwitchLoading(false);
+    setLoading(false);
     setSettingsVis(false);
     setSwitchAccountVis(false);
+    setAdAlreadyClaimed(false);
+    setAddressCopied(false);
+    setPostSettingsModalVis(false);
+    setPostboxVis(false);
+    setReplyTo(null);
+    setEditedPost(null);
+    setShareProfileVis(false);
+    setShowImageSender(null);
+    setListMessages([]);
+    setNicknameVis(false);
+    setConnectType('');
+    setConnectModalVis(false);
+    setListAccount([]);
+    setPosts([]);
+    setProfileSelected(null);
+    setCategoriesVis(false);
+    setShowReportBack(false);
+    setActivityClaim(false);
+    setInviteClaim(false);
+    setCategoryPosts(null);
+    setSelectedCategory(null);
+    setNewsPosts(null);
+    setSelectedNews(null);
+    setCurrentRoute(null);
+    setNewGiftsCount(false);
+    setUserConnecting(false);
     modalSwitchRef.current?.close();
-  }, [user]);
+    modalSettingsRef.current?.close();
+    modalPostSettingsRef.current?.close();
+    modalProfileRef.current?.close();
+    modalPostBoxRef.current?.close();
+    modalNicknameRef.current?.close();
+  }, [translateY]);
+
+  const dismissNavigationOverlays = useCallback(() => {
+    translateY.value = 0;
+    setShareProfileVis(false);
+    setPostDetailsVis(null);
+    setProfileSelected(null);
+    modalPostSettingsRef.current?.close();
+    modalProfileRef.current?.close();
+    modalPostBoxRef.current?.close();
+  }, [translateY]);
+
+  const tryNavigatePendingIntent = useCallback(() => {
+    const pendingNavigation = pendingNavigationIntentRef.current;
+    const currentTransition = accountTransitionRef.current;
+    if (!pendingNavigation || !pendingNavigation.accountTransition) return false;
+    if (!sameAccountTransition(pendingNavigation.accountTransition, currentTransition)) {
+      pendingNavigationIntentRef.current = null;
+      return false;
+    }
+    if (!accountUiReadyRef.current || !navigationRef.isReady()) return false;
+
+    const route = routeForEasyGoNavigationIntent(pendingNavigation.intent);
+    if (!route) {
+      pendingNavigationIntentRef.current = null;
+      return false;
+    }
+
+    try {
+      dismissNavigationOverlays();
+      navigationRef.navigate(route.name, route.params);
+      if (pendingNavigationIntentRef.current === pendingNavigation) {
+        pendingNavigationIntentRef.current = null;
+      }
+      return true;
+    } catch (error) {
+      console.warn('[navigation] deferred intent is still waiting for the navigator', error);
+      return false;
+    }
+  }, [dismissNavigationOverlays, navigationRef]);
+
+  const queueNavigationIntent = useCallback((intent) => {
+    if (!routeForEasyGoNavigationIntent(intent)) return false;
+    pendingNavigationIntentRef.current = Object.freeze({
+      intent,
+      accountTransition: accountTransitionRef.current,
+    });
+    return tryNavigatePendingIntent();
+  }, [tryNavigatePendingIntent]);
+
+  const handleNavigationReady = useCallback(() => {
+    tryNavigatePendingIntent();
+  }, [tryNavigatePendingIntent]);
+
+  const handleNotificationResponse = useCallback((response) => {
+    const responseId = response?.notification?.request?.identifier;
+    if (typeof responseId === 'string' && responseId) {
+      const processed = processedNotificationResponseIdsRef.current;
+      if (processed.has(responseId)) return;
+      if (processed.size >= 64) processed.clear();
+      processed.add(responseId);
+    }
+
+    const data = response?.notification?.request?.content?.data;
+    const intent = navigationIntentFromNotificationData(data);
+    if (intent) queueNavigationIntent(intent);
+    void Notifications.clearLastNotificationResponseAsync().catch(() => {});
+  }, [queueNavigationIntent]);
+
+  const handleURL = useCallback(async (incomingUrl) => {
+    const parsed = Linking.parse(incomingUrl);
+    const intent = navigationIntentFromParsedUrl(parsed);
+    if (intent) {
+      queueNavigationIntent(intent);
+      return;
+    }
+
+    // Legacy OAuth callback URLs are never authentication inputs. Privy owns
+    // OAuth state and token exchange inside screens/Login.js.
+    if (parsed.path === 'google-auth' || incomingUrl.includes('google-auth')) {
+      if (Platform.OS === 'ios') await WebBrowser.dismissBrowser();
+      console.warn('[auth] ignored legacy google-auth callback; use Privy login instead');
+      setLoading(false);
+    }
+  }, [queueNavigationIntent]);
 
 
     const onLayoutRootView = useCallback(async () => {
@@ -466,24 +657,8 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
     
 
   useEffect(() => {
-    const loadLocalList = async (key, setter) => {
-      try {
-        const stored = await AsyncStorage.getItem(key);
-        const parsed = stored ? JSON.parse(stored) : [];
-        setter(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        setter([]);
-      }
-    };
-
-    Promise.all([
-      loadLocalList('list_blocked_user', setListBlockedUser),
-      loadLocalList('list_hidden_post', setListHiddenPost),
-      loadLocalList('list_muted_users', setListMutedUsers),
-    ]).finally(() => {
-      setCategories(SOCIAL_CATEGORIES);
-      setIsLayoutReady(true);
-    });
+    setCategories(SOCIAL_CATEGORIES);
+    setIsLayoutReady(true);
   }, []);
 
     useEffect(() => {
@@ -493,102 +668,26 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
 
     /** Will be triggered when a new deeplink is received */
     useEffect(() => {
-        url && handleURL(url)
-    }, [url]);
+        if (url) void handleURL(url);
+    }, [handleURL, url]);
 
     /** Handle notifications received, will open right screen or pane based on the notification received */
     useEffect(() => {
-        responseListener.current = Notifications.addNotificationResponseReceivedListener(async (response) => {
-            try {
-                let data = response.notification?.request?.content?.data;
-
-                switch (data?.type) {
-                    /** Open post pane for reactions */
-                    case "reaction":
-                        hideModals();
-                        setPostDetailsVis(data.post_id);
-                        break;
-                    /** Open post pane for replies */
-                    case "reply":
-                        hideModals();
-                        setPostDetailsVis(data.master ? data.master : data.post_id);
-                        break;
-
-                    /** Open post pane for mentions */
-                    case "mention":
-                        hideModals();
-                        setPostDetailsVis(data.post_id);
-                        break;
-                    default:
-                        break;
-                }
-            } catch(e) {
-                console.log("Error addNotificationResponseReceivedListener:", e);
-            }
-        });
+        let active = true;
+        responseListener.current = Notifications.addNotificationResponseReceivedListener(
+          handleNotificationResponse,
+        );
+        void Notifications.getLastNotificationResponseAsync()
+          .then((response) => {
+            if (active && response) handleNotificationResponse(response);
+          })
+          .catch(() => {});
 
         return () => {
+            active = false;
             Notifications.removeNotificationSubscription(responseListener.current);
         };
-    }, []);
-
-    /** Will handle links opened with the coineasy:// sheme */
-    async function handleURL(url) {
-        const { path, queryParams } = Linking.parse(url);
-        let token;
-        switch (path) {
-            case "user":
-                setScreen("profile");
-                setProfileSelected(queryParams.did);
-                hideModals();
-                break;
-            case "google-auth":
-                token = queryParams.token;
-
-                /** Dismiss browser if on iOS */
-                Platform.OS === 'ios' && WebBrowser.dismissBrowser()
-
-                if(token) {
-                    try {
-                        googleConnect(token);
-                    } catch(e) {
-                        console.log("Error authenticating with Google:", e);
-                        //setLoading(false);
-                    }
-                }
-                break;
-            default:
-                try {
-                    if(url.includes("google-auth")) {
-                        console.log("URL contains google-auth")
-                        token = queryParams.token;
-                        googleConnect(token);
-                    } else if(url.includes("profile")) {
-                        setScreen("profile");
-                        setProfileSelected(queryParams.did);
-                        hideModals();
-                    }
-                } catch(e) {
-                    console.log("Error authenticating with Google:", e);
-                }
-                break;
-        }
-    }
-
-    async function googleConnect(token) {
-        // Legacy OAuth callback URLs are no longer authentication inputs.
-        // Privy owns OAuth state and token exchange inside screens/Login.js.
-        if (Platform.OS === 'ios') await WebBrowser.dismissBrowser();
-        console.warn('[auth] ignored legacy google-auth callback; use Privy login instead');
-        setLoading(false);
-    }
-
-    function hideModals() {
-        translateY.value = 0;
-        setShareProfileVis(false);
-        setPostDetailsVis(null);
-        setProfileSelected(null);
-    }
+    }, [handleNotificationResponse]);
 
     /** Will retrieve all posts shared in the global context */
     async function loadPosts() {
@@ -611,16 +710,24 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
     }, []);
 
     async function callbackConnect(detailUser) {
-
-        console.log('CALLBACK CONNECT');
-        console.log(detailUser);
+        const expectedTransition = accountTransitionRef.current;
+        const isCurrentTransition = () => sameAccountTransition(
+            accountTransitionRef.current,
+            expectedTransition,
+        );
+        if (!expectedTransition || !isCurrentTransition()) return;
         
         if(connectType == "signup"){
             handleModalNicknamePress()
             setLoading(false);
         }else{
-            const showNotificationDate = await AsyncStorage.getItem("showNotificationDate")
-            const showNewFeatureDate = await AsyncStorage.getItem("showNewFeatureDate")
+            // These two dates are intentionally device-wide modal-dismissal
+            // preferences. They contain no account identifier or user data.
+            const [showNotificationDate, showNewFeatureDate] = await Promise.all([
+                AsyncStorage.getItem("showNotificationDate"),
+                AsyncStorage.getItem("showNewFeatureDate"),
+            ]);
+            if (!isCurrentTransition()) return;
 
             if(moment().format('YYYY-MM-DD') >= showNotificationDate || !showNotificationDate){
                 setPushNotifsVis(true);
@@ -637,11 +744,7 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
 
     /** Show postbox while saving the callback function */
     function showPostbox(callback) {
-        console.log("Enter showPostbox with:", callback);
         callbackPostShared = callback ?? defaultCallbackPostShared;
-
-        console.log('la');
-        console.log(callbackPostShared);
 
         handleModalPostBoxPress()
         Haptics.selectionAsync();
@@ -928,8 +1031,19 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
 
     return (
         <EasyGoPrivyBoundary alreadyMounted={privyAlreadyMounted}>
+        <DeviceAccountDataProvider>
         <AccountDeletionSessionGate>
         {(accountDeletionGuard, reportDeletionBlock) => (
+        <DeviceAccountDataRender>
+        {(deviceAccountData) => {
+        const presentedOwner = user?.profile?.data?.courseProgressOwner || null;
+        const accountUiReady = Boolean(
+          presentedOwner
+          && presentedOwner === deviceAccountData.ownerUserId
+          && deviceAccountData.status === 'ready',
+        );
+        accountUiReadyRef.current = accountUiReady;
+        return (
         <>
             <StatusBar translucent={true} backgroundColor="#00000000" style="black"/>
             <GestureHandlerRootView onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
@@ -1012,17 +1126,21 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
                         categoriesVis, setCategoriesVis,
                         activityClaim, setActivityClaim,
                         newGiftsCount, setNewGiftsCount,
-                        listHiddenPost, setListHiddenPost,
-                        listMutedUsers, setListMutedUsers,
                         showReportBack, setShowReportBack,
                         showImageSender, setShowImageSender,
-                        listBlockedUser, setListBlockedUser,
                         connectModalVis, setConnectModalVis,
                         selectedCategory, setSelectedCategory,
                         showClaimOranges, setShowClaimOranges,
                         adAlreadyClaimed, setAdAlreadyClaimed,
                     }}
                 >
+                    <AccountTransitionResetSignal onTransition={resetAccountTransientUi} />
+                    <AccountNavigationReplaySignal
+                      ready={accountUiReady}
+                      ownerUserId={deviceAccountData.ownerUserId}
+                      sessionEpoch={deviceAccountData.sessionEpoch}
+                      onReplay={tryNavigatePendingIntent}
+                    />
                     <FullStartupSignal onStartupStatus={onStartupStatus} />
                     <AuthBridge
                       accountDeletionGuard={accountDeletionGuard}
@@ -1032,9 +1150,14 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
                     <TailwindProvider utilities={utilities}>
                         {accountDeletionGuard.status !== 'clear' ? (
                             <AccountDeletionPending guard={accountDeletionGuard} />
-                        ) : user ? (
+                        ) : deviceAccountData.status === 'storage-error' ? (
+                            <DeviceAccountDataUnavailable retry={deviceAccountData.retry} />
+                        ) : user && accountUiReady ? (
                             <>
-                                <AppNavigator />
+                                <AppNavigator
+                                  navigationRef={navigationRef}
+                                  onNavigationReady={handleNavigationReady}
+                                />
 
                                 {/** Display the edit profile details modal */}
                                 <UpdateProfileModal />
@@ -1084,17 +1207,21 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
                                     </View>
                                 )}
                             </>
-                        ) : (
+                        ) : !deviceAccountData.ownerUserId ? (
                             <Login />
-                        )}
+                        ) : null}
 
                         {/* <Confetti confetti={confetti}/> */}
                     </TailwindProvider>
                 </GlobalContext.Provider>
             </GestureHandlerRootView>
         </>
+        );
+        }}
+        </DeviceAccountDataRender>
         )}
         </AccountDeletionSessionGate>
+        </DeviceAccountDataProvider>
       </EasyGoPrivyBoundary>
     );
 }
@@ -1142,6 +1269,13 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'center',
     marginBottom: 16,
+  },
+  retryText: {
+    color: '#C2410C',
+    fontSize: 16,
+    fontWeight: '700',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
   },
   configBullets: {
     color: '#334155',

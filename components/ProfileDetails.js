@@ -40,6 +40,7 @@ import { api } from "../utils/api";
 import { adaptSocialProfile, getEasyGoUserId } from "../utils/socialPostAdapter";
 import useEasyGoWalletRuntime from "../hooks/useEasyGoWalletRuntime";
 import { createBaseScanAddressUrl } from "../utils/baseWalletRuntime.mjs";
+import { useDeviceAccountOperationLease } from "../contexts/DeviceAccountDataContext";
 
 const TabBarHeight = 50;
 const IndicatorWidth = 50
@@ -68,6 +69,7 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
         modalProfileRef,
         addressCopied, setAddressCopied
     } = useContext(GlobalContext);
+    const { lease, isCurrentLease } = useDeviceAccountOperationLease();
     const tailwind = useTailwind();    
 
     const snapPoints = useMemo(() => ['75%','75%'], []);
@@ -131,7 +133,14 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
     }, [profile, type, user]);
 
     useEffect(() => {
-        if (type !== 'selected' || !targetUserId || !ownUserId) {
+        const operationLease = lease;
+        if (
+            !operationLease
+            || !isCurrentLease(operationLease)
+            || type !== 'selected'
+            || !targetUserId
+            || !ownUserId
+        ) {
             setListCommonFollowers([]);
             setCommonFollowLoading(false);
             return;
@@ -143,39 +152,43 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
             api.follows.followers(targetUserId, { limit: 200 }),
             api.follows.followers(ownUserId, { limit: 200 }),
         ]).then(([selectedResult, ownResult]) => {
-            if (!active) return;
+            if (!active || !isCurrentLease(operationLease)) return;
             const ownFollowerIds = new Set((ownResult?.rows || []).map((item) => item.id));
             const commonFollowers = (selectedResult?.rows || [])
                 .filter((item) => ownFollowerIds.has(item.id))
                 .map((item) => ({ details: adaptSocialProfile(item) }));
             setListCommonFollowers(commonFollowers);
         }).catch((error) => {
-            if (active) {
+            if (active && isCurrentLease(operationLease)) {
                 console.warn('[ProfileDetails] common followers unavailable', error);
                 setListCommonFollowers([]);
             }
         }).finally(() => {
-            if (active) setCommonFollowLoading(false);
+            if (active && isCurrentLease(operationLease)) setCommonFollowLoading(false);
         });
 
         return () => {
             active = false;
         };
-    }, [ownUserId, targetUserId, type]);
+    }, [isCurrentLease, lease, ownUserId, targetUserId, type]);
 
     const delay = ms => new Promise(res => setTimeout(res, ms));
 
     /** Will copy link in Clipboard */
     async function copy(val) {
-        if (!val) return;
+        const operationLease = lease;
+        if (!val || !operationLease || !isCurrentLease(operationLease)) return;
         setAddressCopied(true)
         await delay(1000);
+        if (!isCurrentLease(operationLease)) return;
         setAddressCopied(false)
         await Clipboard.setStringAsync(val);
         // alert("Address copied!");
     }
 
     async function handleWalletStatusPress() {
+        const operationLease = lease;
+        if (!operationLease || !isCurrentLease(operationLease)) return;
         Haptics.selectionAsync();
         if (walletRuntime.status !== 'ready' || !baseScanUrl) {
             walletRuntime.refresh();
@@ -185,6 +198,7 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
         try {
             await Linking.openURL(baseScanUrl);
         } catch {
+            if (!isCurrentLease(operationLease)) return;
             Alert.alert('BaseScan unavailable', 'Please try again in a moment.');
         }
     }
@@ -195,7 +209,11 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
 
     /** Will follow the user */
     async function follow(active) {
+        const operationLease = lease;
+        if (!operationLease || !isCurrentLease(operationLease)) return;
         const succeeded = active ? await followUser() : await unfollowUser();
+        if (!isCurrentLease(operationLease)) return;
+        if (succeeded == null) return;
         if (!succeeded) {
             Alert.alert('Could not update follow', 'Check the backend connection and try again.');
             return;
@@ -227,9 +245,12 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
     }
 
     async function updateProfile() {
+        const operationLease = lease;
+        if (!operationLease || !isCurrentLease(operationLease)) return;
         setRefreshing(true)
         try {
             const refreshed = await refreshProfile?.();
+            if (!isCurrentLease(operationLease)) return;
             const details = adaptSocialProfile(refreshed);
             if (details) {
                 setUserInfo(details);
@@ -249,13 +270,18 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
                     }));
                 }
             }
-            if (type === 'selected') await refreshFollow();
+            if (type === 'selected') {
+                await refreshFollow();
+                if (!isCurrentLease(operationLease)) return;
+            }
         } finally {
-            setRefreshing(false)
+            if (isCurrentLease(operationLease)) setRefreshing(false)
         }
     }
 
     const openLink = async (url) => {
+        const operationLease = lease;
+        if (!operationLease || !isCurrentLease(operationLease)) return;
         Haptics.selectionAsync()
 
         if(!url.toLowerCase().includes('http')){
@@ -263,8 +289,9 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
         }
 
         try {
-            Linking.openURL(url)
+            await Linking.openURL(url)
         } catch (error) {
+            if (!isCurrentLease(operationLease)) return;
             Alert.alert('Could not open URL '+url)
         }
     }

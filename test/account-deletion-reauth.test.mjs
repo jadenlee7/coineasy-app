@@ -255,7 +255,7 @@ test('the UI uses direct Apple authentication and writes the marker only after v
   assert.doesNotMatch(settings, /authorizationCode|credential\.user/);
   assert.match(
     settings,
-    /await deletionReauthRef\.current\.run\([\s\S]*currentPrivyUserIdRef\.current !== ownerUserId[\s\S]*reauthCompleted = true/,
+    /await deletionReauthRef\.current\.run\([\s\S]*!isCurrentDeletionOwner\(operation\)[\s\S]*reauthCompleted = true/,
   );
   assert.ok(
     settings.indexOf('deletionReauthRef.current.run')

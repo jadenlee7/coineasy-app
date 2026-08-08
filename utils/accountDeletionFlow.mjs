@@ -157,6 +157,7 @@ export async function submitAccountDeletionRequest({
   clientRequestId,
   walletRiskAcknowledged,
   request,
+  sealLocalData,
   purgeLocalData,
   logout,
   isCurrentOwner,
@@ -184,6 +185,19 @@ export async function submitAccountDeletionRequest({
   const markerCreated = markerResult?.created === true;
   if (!marker) throw new Error('account_deletion_marker_unavailable');
 
+  // Once the durable marker owns the UI, prevent any old screen callback from
+  // queueing more writes for this owner. Existing writes are drained by the
+  // owner store before its eventual purge. A seal failure keeps the marker and
+  // bearer in recovery mode and never sends the destructive request.
+  const localDataSealed = typeof sealLocalData === 'function';
+  if (localDataSealed) {
+    try {
+      await sealLocalData();
+    } catch {
+      return Object.freeze({ status: 'uncertain', code: 'account_deletion_status_unknown' });
+    }
+  }
+
   let response;
   try {
     response = await request(marker.clientRequestId);
@@ -209,6 +223,7 @@ export async function submitAccountDeletionRequest({
     }
     if (
       isDefinitiveNoRequest(error)
+      && !localDataSealed
       && markerCreated
       && marker.phase === ACCOUNT_DELETION_MARKER_PHASE.requesting
       && marker.clientRequestId === clientRequestId

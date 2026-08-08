@@ -5,6 +5,7 @@ import Button from "../Button";
 import { UserPfp } from "../User";
 import { CancelIcon, LinkIcon, PlusIcon, TelegramIcon, TwitterIcon } from "../Icons";
 import { GlobalContext } from "../../contexts/GlobalContext";
+import { useDeviceAccountOperationLease } from '../../contexts/DeviceAccountDataContext';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -15,6 +16,7 @@ import { adaptSocialProfile } from "../../utils/socialPostAdapter";
 
 export default function UpdateProfileModal({callback}) {
     const { user, setUser, modalProfileRef } = useContext(GlobalContext);
+    const { lease, isCurrentLease } = useDeviceAccountOperationLease();
     const tailwind = useTailwind();
 
     const [saving, setSaving] = useState(false);
@@ -45,6 +47,10 @@ export default function UpdateProfileModal({callback}) {
         setDescription(user?.profile?.description || '');
         setnumberLink(user?.profile?.data?.list_link?.length || 0);
     }, [user]);
+
+    useEffect(() => {
+        setSaving(false);
+    }, [lease]);
 
     const onBackSocialLinks = () => {
         Haptics.selectionAsync();
@@ -112,6 +118,8 @@ export default function UpdateProfileModal({callback}) {
 
     async function saveProfile() {
         if (saving) return;
+        const expectedLease = lease;
+        if (!expectedLease || !isCurrentLease(expectedLease)) return;
         Haptics.selectionAsync();
         const displayName = name.trim();
         const bio = description.trim();
@@ -129,7 +137,10 @@ export default function UpdateProfileModal({callback}) {
             };
             if (/^https?:\/\//i.test(pfp)) payload.pfp = pfp;
 
-            const result = await api.profiles.updateMe(payload);
+            const result = await api.profiles.updateMe(payload, {
+                expectedAuthUserId: expectedLease.ownerUserId,
+            });
+            if (!isCurrentLease(expectedLease)) return;
             const details = adaptSocialProfile(result?.profile || result);
             if (!details) throw new Error('Profile update returned no data');
 
@@ -146,14 +157,16 @@ export default function UpdateProfileModal({callback}) {
                     },
                 },
             };
-            setUser(nextUser);
+            setUser((current) => (isCurrentLease(expectedLease) ? nextUser : current));
+            if (!isCurrentLease(expectedLease)) return;
             modalProfileRef.current?.close();
             callback?.(nextUser);
         } catch (error) {
+            if (!isCurrentLease(expectedLease)) return;
             console.warn('[UpdateProfileModal] update failed', error);
             Alert.alert('Could not save profile', 'Check the backend connection and try again.');
         } finally {
-            setSaving(false);
+            if (isCurrentLease(expectedLease)) setSaving(false);
         }
     }
 

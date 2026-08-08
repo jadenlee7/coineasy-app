@@ -14,17 +14,18 @@ import {
 import HeaderImage from '../../../components/HeaderImage';
 import HeaderActions from '../../../components/HeaderActions';
 import { GlobalContext } from '../../../contexts/GlobalContext';
+import {
+    useDeviceAccountData,
+    useDeviceAccountOperationLease,
+} from '../../../contexts/DeviceAccountDataContext';
 import { QuizCheckIcon, QuizErrorIcon } from '../../../components/Icons';
 
 import { useTailwind } from 'tailwind-rn';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Header from '../../../components/Header';
 import useStatusBarHeight from '../../../hooks/useStatusBarHeight';
 import { api, ApiError } from '../../../utils/api';
-
-const COURSE_PROGRESS_KEY = 'easygo_course_progress';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -186,6 +187,11 @@ const NavigationButtons = ({
 const CourseDetailScreen = ({ navigation, route }) => {
 
     const { userData, setUserData } = useContext(GlobalContext);
+    const { ownerUserId, saveCourseProgress } = useDeviceAccountData();
+    const {
+        lease: courseLease,
+        isCurrentLease: isCurrentCourseLease,
+    } = useDeviceAccountOperationLease();
 
     const {parentCourse, course, courseId} = route.params
     
@@ -215,15 +221,13 @@ const CourseDetailScreen = ({ navigation, route }) => {
 
     const persistCourseProgress = useCallback(async (tempData) => {
         try {
-            const owner = tempData.courseProgressOwner || 'device';
-            await AsyncStorage.setItem(
-                `${COURSE_PROGRESS_KEY}:${owner}`,
-                JSON.stringify(tempData.courses || []),
-            );
+            if (!ownerUserId || tempData.courseProgressOwner !== ownerUserId) return false;
+            return await saveCourseProgress(tempData.courses || []);
         } catch (error) {
             console.warn('[courses] unable to save local progress', error);
+            return false;
         }
-    }, []);
+    }, [ownerUserId, saveCourseProgress]);
 
     const updateUserProgress = useCallback((tempData, newProgress) => {
         const userCourse = Array.isArray(tempData.courses) ? tempData.courses.find(c => c.id === parentCourse.id) : null;
@@ -264,6 +268,8 @@ const CourseDetailScreen = ({ navigation, route }) => {
     }, [course.id, course.pages.length, parentCourse.id, parentCourse.sections, updateUserProgress]);
 
     const handleNext = useCallback(async () => {
+        const expectedLease = courseLease;
+        if (!isCurrentCourseLease(expectedLease)) return;
         Haptics.selectionAsync();
         const tempData = { ...(userData || {}) };
         if (courseProgress < course.pages.length) {
@@ -275,9 +281,10 @@ const CourseDetailScreen = ({ navigation, route }) => {
             setQuizTime(true);
         }
 
+        if (!await persistCourseProgress(tempData)) return;
+        if (!isCurrentCourseLease(expectedLease)) return;
         setUserData(tempData);
-        await persistCourseProgress(tempData);
-    }, [courseProgress, course.pages.length, persistCourseProgress, updateUserProgress, userData]);
+    }, [courseLease, courseProgress, course.pages.length, isCurrentCourseLease, persistCourseProgress, updateUserProgress, userData]);
 
     const handleBack = useCallback(() => {
         Haptics.selectionAsync();
@@ -303,6 +310,8 @@ const CourseDetailScreen = ({ navigation, route }) => {
     }, [selectedOption, course.question.options]);
 
     const onValidateQuiz = useCallback(async () => {
+        const expectedLease = courseLease;
+        if (!isCurrentCourseLease(expectedLease)) return;
         Haptics.selectionAsync();
         const tempData = { ...(userData || {}) };
         let claimResult = null;
@@ -310,16 +319,22 @@ const CourseDetailScreen = ({ navigation, route }) => {
             try {
                 claimResult = await api.completeQuest(`course-${course.id}`, {
                     answer: String(selectedOption),
+                }, {
+                    expectedAuthUserId: ownerUserId,
                 });
             } catch (error) {
+                if (!isCurrentCourseLease(expectedLease)) return;
                 if (!(error instanceof ApiError) || error.status !== 404) throw error;
             }
+            if (!isCurrentCourseLease(expectedLease)) return;
             if (!claimResult) {
                 claimResult = await api.orangeClaimCourseQuiz({
                     courseId: parentCourse.id,
                     sectionId: course.id,
+                    expectedAuthUserId: ownerUserId,
                 });
             }
+            if (!isCurrentCourseLease(expectedLease)) return;
             if (!claimResult) {
                 Alert.alert(
                     'Progress saved on this device',
@@ -327,16 +342,19 @@ const CourseDetailScreen = ({ navigation, route }) => {
                 );
             }
         } catch (error) {
+            if (!isCurrentCourseLease(expectedLease)) return;
             Alert.alert(
                 'Progress saved on this device',
                 'The Orange reward could not be claimed. You can retry after the backend is available.',
             );
         }
+        if (!isCurrentCourseLease(expectedLease)) return;
         updateOrangesAndProgress(tempData, claimResult?.reward?.balance ?? claimResult?.balance);
+        if (!await persistCourseProgress(tempData)) return;
+        if (!isCurrentCourseLease(expectedLease)) return;
         setUserData(tempData);
-        await persistCourseProgress(tempData);
         navigation.navigate('CourseSelector', { course: parentCourse });
-    }, [course.id, navigation, parentCourse, persistCourseProgress, selectedOption, updateOrangesAndProgress, userData]);
+    }, [course.id, courseLease, isCurrentCourseLease, navigation, ownerUserId, parentCourse, persistCourseProgress, selectedOption, updateOrangesAndProgress, userData]);
 
     const statusBarHeight = useStatusBarHeight()
 

@@ -22,6 +22,12 @@ function exportEnvelope(overrides = {}) {
   };
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
 test('export envelope validation accepts a versioned response for the expected scope', () => {
   const payload = exportEnvelope();
   assert.equal(validateExportEnvelope(payload, EXPORT_SCOPE.full), payload);
@@ -173,4 +179,46 @@ test('stale cleanup targets only EasyGo export filenames', async () => {
     'file:///cache/easygo-social-data-20260802T193723229Z.json',
   ]);
   assert.deepEqual(result, { removed: 1, failed: 1 });
+});
+
+test('stale cleanup waits for an active export file operation', async () => {
+  const sharing = deferred();
+  const releaseShare = deferred();
+  const events = [];
+  const activeExport = withTemporaryJsonFile({
+    directory: 'file:///cache',
+    payload: exportEnvelope(),
+    expectedScope: EXPORT_SCOPE.full,
+    write: async () => { events.push('write'); },
+    share: async () => {
+      events.push('share:start');
+      sharing.resolve();
+      await releaseShare.promise;
+      events.push('share:end');
+    },
+    remove: async () => { events.push('export:remove'); },
+  });
+  await sharing.promise;
+
+  const cleanup = cleanupStaleExportFiles({
+    directory: 'file:///cache',
+    list: async () => {
+      events.push('cleanup:list');
+      return [];
+    },
+    remove: async () => {},
+  });
+  await Promise.resolve();
+  assert.deepEqual(events, ['write', 'share:start']);
+
+  releaseShare.resolve();
+  await activeExport;
+  await cleanup;
+  assert.deepEqual(events, [
+    'write',
+    'share:start',
+    'share:end',
+    'export:remove',
+    'cleanup:list',
+  ]);
 });

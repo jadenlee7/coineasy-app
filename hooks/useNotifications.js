@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useDeviceAccountOperationLease } from '../contexts/DeviceAccountDataContext';
 import { api } from '../utils/api';
 import { adaptSocialAuthor } from '../utils/socialPostAdapter';
 
@@ -23,6 +24,7 @@ function adaptNotification(row) {
 }
 
 export function useNotifications({ autoLoad = true, limit = 50 } = {}) {
+  const { lease, isCurrentLease } = useDeviceAccountOperationLease();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(autoLoad && BACKEND_CONFIGURED);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,6 +37,9 @@ export function useNotifications({ autoLoad = true, limit = 50 } = {}) {
   }, [notifications]);
 
   const refresh = useCallback(async () => {
+    const operationLease = lease;
+    if (!operationLease || !isCurrentLease(operationLease)) return [];
+
     if (!BACKEND_CONFIGURED) {
       setNotifications([]);
       setLoading(false);
@@ -49,29 +54,40 @@ export function useNotifications({ autoLoad = true, limit = 50 } = {}) {
     setError(null);
 
     try {
-      const result = await api.notifications.list({ limit });
-      if (requestId !== requestIdRef.current) return [];
+      const result = await api.notifications.list({
+        limit,
+        expectedAuthUserId: operationLease.ownerUserId,
+      });
+      if (!isCurrentLease(operationLease) || requestId !== requestIdRef.current) return [];
       const next = (result?.rows || []).map(adaptNotification).filter(Boolean);
       setNotifications(next);
       return next;
     } catch (cause) {
-      if (requestId === requestIdRef.current) {
+      if (isCurrentLease(operationLease) && requestId === requestIdRef.current) {
         setError(cause instanceof Error ? cause : new Error(String(cause)));
       }
       return [];
     } finally {
-      if (requestId === requestIdRef.current) {
+      if (isCurrentLease(operationLease) && requestId === requestIdRef.current) {
         setLoading(false);
         setRefreshing(false);
       }
     }
-  }, [limit]);
+  }, [isCurrentLease, lease, limit]);
 
   useEffect(() => {
-    if (autoLoad) refresh();
-    else setLoading(false);
+    requestIdRef.current += 1;
+    notificationsRef.current = [];
+    setNotifications([]);
+    setError(null);
+
+    if (autoLoad && lease) refresh();
+    else {
+      setLoading(false);
+      setRefreshing(false);
+    }
     return () => { requestIdRef.current += 1; };
-  }, [autoLoad, refresh]);
+  }, [autoLoad, lease, refresh]);
 
   return {
     notifications,

@@ -149,8 +149,12 @@ has been deleted.
 - [ ] Recent-auth challenge issuance has an approved rate limit, and expired
       unconsumed plus tombstone-referenced consumed digests have an approved,
       implementable retention policy.
-- [ ] On-device search/safety keys are owner-scoped, or auth switching and
-      non-abortable local cleanup share one reviewed serialization boundary.
+- [x] On-device search, safety, push-registration, and course keys are hashed by
+      Privy owner, guarded by a session epoch, serialized per owner, sealed
+      before deletion, and verified after purge. Ambiguous global legacy values
+      are discarded rather than attributed; export-file work has its own
+      serialization boundary. Physical transition evidence is still required
+      below.
 - [ ] Disposable staging accounts with empty wallets pass end-to-end deletion,
       retry, relogin, and account-switch QA.
 - [ ] Backup/restore, Telegram/AMA, telemetry, and exported-file policies are

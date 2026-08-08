@@ -5,6 +5,10 @@
 // See backend/src/lib/squid.js, backend/src/routes/swap.js, EASYGO_BUILD_PLAN.md §13.2.
 
 import { api, ApiError } from './api';
+import {
+  SquidRouteLeaseError,
+  createSquidRouteLeaseRegistry,
+} from './squidRouteLease.mjs';
 
 // ---------------------------------------------------------------------------
 // Squid config (client-visible) — kept for screens that surface integrator state
@@ -16,16 +20,45 @@ export const SQUID_CONFIG = {
   lazyLiquidity: true,
 };
 
+const squidRouteLeases = createSquidRouteLeaseRegistry();
+
 // ---------------------------------------------------------------------------
-// Quote — backend computes route via Squid SDK and returns transactionRequest
+// Quote — backend computes the route and returns { route, tx, defaultChain }.
 // ---------------------------------------------------------------------------
-export async function getSquidQuote({ fromChain, fromToken, fromAmount, toChain, toToken, toAddress }) {
+export async function getSquidQuote({
+  fromAddress,
+  fromChain,
+  fromToken,
+  fromAmount,
+  toChain,
+  toToken,
+  toAddress,
+  slippage,
+  lease,
+  isCurrentLease,
+}) {
+  const operationLease = squidRouteLeases.requireCurrent(lease, isCurrentLease);
   try {
-    const route = await api.swapQuote({ fromChain, fromToken, fromAmount, toChain, toToken, toAddress });
-    return route; // { estimate, transactionRequest, params }
+    const quote = await api.swapQuote(
+      {
+        fromAddress,
+        fromChain,
+        fromToken,
+        fromAmount,
+        toChain,
+        toToken,
+        toAddress,
+        slippage,
+      },
+      { expectedAuthUserId: operationLease.ownerUserId },
+    );
+    squidRouteLeases.requireCurrent(operationLease, isCurrentLease);
+    if (!quote?.route || !quote?.tx) return null;
+    return squidRouteLeases.bind(quote, operationLease, isCurrentLease);
   } catch (e) {
+    squidRouteLeases.requireCurrent(operationLease, isCurrentLease);
     if (e instanceof ApiError) {
-      console.warn('[squid] quote failed', e.status, e.body);
+      console.warn('[squid] quote failed', e.status);
       return null;
     }
     throw e;
@@ -33,14 +66,19 @@ export async function getSquidQuote({ fromChain, fromToken, fromAmount, toChain,
 }
 
 // ---------------------------------------------------------------------------
-// Execute — sign + broadcast the route's transactionRequest, then log for 🍊 reward
-//   route:  result of getSquidQuote
+// Execute — sign + broadcast the backend's unsigned tx, then log for 🍊 reward
+//   quote:  exact in-memory result of getSquidQuote (clones are rejected)
 //   signer: ethers-compatible signer from Privy embedded wallet
 //           (typically: const { wallets } = useWallets(); wallets[0].getEthersProvider().getSigner())
 // ---------------------------------------------------------------------------
-export async function executeSquidRoute({ route, signer }) {
-  if (!route?.transactionRequest) {
-    console.warn('[squid] no transactionRequest in route');
+export async function executeSquidRoute({ quote, signer, lease, isCurrentLease }) {
+  const operationLease = squidRouteLeases.requireBound(
+    quote,
+    lease,
+    isCurrentLease,
+  );
+  if (!quote?.tx) {
+    console.warn('[squid] no unsigned transaction in quote');
     return null;
   }
   if (!signer) {
@@ -48,30 +86,41 @@ export async function executeSquidRoute({ route, signer }) {
     return null;
   }
 
-  const { target, data, value, gasLimit } = route.transactionRequest;
+  const { to, data, value, gasLimit, gasPrice } = quote.tx;
+  // This is the last synchronous fence before the irreversible wallet prompt.
+  squidRouteLeases.requireBound(quote, operationLease, isCurrentLease);
   const tx = await signer.sendTransaction({
-    to: target,
+    to,
     data,
     value: value ?? 0,
     gasLimit,
+    gasPrice,
   });
   const receipt = await tx.wait();
+  squidRouteLeases.requireBound(quote, operationLease, isCurrentLease);
 
   // Log to backend → triggers +10 🍊 reward (see backend/src/routes/swap.js)
   try {
-    await api.swapLog({
-      txHash: tx.hash,
-      fromChain: route.params?.fromChain,
-      toChain: route.params?.toChain,
-      fromToken: route.params?.fromToken,
-      toToken: route.params?.toToken,
-      fromAmount: route.params?.fromAmount,
-      status: receipt?.status === 1 ? 'success' : 'failed',
-    });
+    await api.swapLog(
+      {
+        txHash: tx.hash,
+        fromToken: quote.route?.params?.fromToken,
+        toToken: quote.route?.params?.toToken,
+        fromAmount: quote.route?.params?.fromAmount,
+        toAmount: quote.route?.estimate?.toAmount,
+        chainId: quote.route?.params?.fromChain || quote.defaultChain,
+      },
+      { expectedAuthUserId: operationLease.ownerUserId },
+    );
   } catch (e) {
-    console.warn('[squid] swap log failed (reward may not credit)', e);
+    // If the account changed, do not convert the fail-closed owner error into a
+    // successful completion that a replacement account could render.
+    squidRouteLeases.requireBound(quote, operationLease, isCurrentLease);
+    if (e instanceof SquidRouteLeaseError) throw e;
+    console.warn('[squid] swap log failed (reward may not credit)');
   }
 
+  squidRouteLeases.requireBound(quote, operationLease, isCurrentLease);
   return { tx, receipt };
 }
 

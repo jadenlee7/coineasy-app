@@ -206,6 +206,36 @@ test('startup failures are contained and authenticated UI stays off the login pa
   assert.equal(authenticatedUiIsGated(appSource), true);
   assert.equal(startupBoundaryProtectsApp('<EasyGoApp />'), false);
   assert.equal(authenticatedUiIsGated('<Login /><PostboxModal />'), false);
+  assert.equal(authenticatedUiIsGated(
+    appSource.replace('<AppNavigator\n', '<AppNavigatorFake\n'),
+  ), false);
+  assert.equal(authenticatedUiIsGated(
+    appSource.replace(': user && accountUiReady ? (', ': user ? ('),
+  ), false);
+  assert.equal(authenticatedUiIsGated(
+    appSource.replace(
+      /const accountUiReady = Boolean\([\s\S]*?\n\s*\);/,
+      'const accountUiReady = true;',
+    ),
+  ), false);
+  assert.equal(authenticatedUiIsGated(
+    appSource.replace(
+      'presentedOwner === deviceAccountData.ownerUserId',
+      'presentedOwner !== deviceAccountData.ownerUserId',
+    ),
+  ), false);
+  assert.equal(authenticatedUiIsGated(
+    appSource.replace(
+      "&& deviceAccountData.status === 'ready'",
+      '',
+    ),
+  ), false);
+  assert.equal(authenticatedUiIsGated(
+    appSource.replace(
+      "accountDeletionGuard.status !== 'clear' ? (",
+      "accountDeletionGuard.status === 'blocked' ? (",
+    ),
+  ), false);
 });
 
 test('Privy polyfills evaluate before the application module', () => {

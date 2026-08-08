@@ -12,10 +12,16 @@ import Post from "./Post";
 import { Username } from "./User";
 import { RepostIcon } from "./Icons";
 import { GlobalContext } from "../contexts/GlobalContext";
+import { useDeviceAccountData } from '../contexts/DeviceAccountDataContext';
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
 export default function Feed({posts = [], refreshing, refreshingBottom, onRefresh, loadMore, header, feedRef, error, backendConfigured = true, showBanner = true, emptyTitle, emptyDescription }) {
-    const { userData, homeFeedRef, scrollAnim, listBlockedUser, listHiddenPost, listMutedUsers, setShowClaimOranges, setTodayOranges, setAdAlreadyClaimed} = useContext(GlobalContext);
+    const { userData, homeFeedRef, scrollAnim, setShowClaimOranges, setTodayOranges, setAdAlreadyClaimed} = useContext(GlobalContext);
+    const {
+        blockedAccounts: listBlockedUser,
+        hiddenPosts: listHiddenPost,
+        mutedAccounts: listMutedUsers,
+    } = useDeviceAccountData();
     const tailwind = useTailwind();
 
     const statusBarHeight = useStatusBarHeight();

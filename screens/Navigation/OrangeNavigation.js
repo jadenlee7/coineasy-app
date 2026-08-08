@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Alert, Dimensions, Image, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { ScrollView } from 'react-native-gesture-handler';
@@ -17,6 +17,7 @@ import ClaimOrangesModal from '../../components/modals/ClaimOrangesModal';
 import Header from '../../components/Header';
 import { api, ApiError } from '../../utils/api';
 import { useOrange } from '../../hooks/useOrange';
+import { useDeviceAccountOperationLease } from '../../contexts/DeviceAccountDataContext';
 
 
 const TabBarHeight = 50;
@@ -33,6 +34,7 @@ const OrangeNavigation = ({navigation, route}) => {
         showClaimOranges,
         newGiftsCount, setNewGiftsCount
     } = useContext(GlobalContext);
+    const { lease, isCurrentLease } = useDeviceAccountOperationLease();
     const tailwind = useTailwind();      
     const statusBarHeight = useStatusBarHeight();
 
@@ -41,6 +43,9 @@ const OrangeNavigation = ({navigation, route}) => {
     
     const [openDailyCheckinModal, setOpenDailyCheckinModal] = useState(false)
     const [openDailyActivityModal, setOpenDailyActivityModal] = useState(false)
+    const rewardStatusRequestIdRef = useRef(0);
+    const claimRequestIdRef = useRef(0);
+    const claimQueueRef = useRef(Promise.resolve());
 
     const [tabIndex, setIndex] = useState(0);
     const routes = [
@@ -91,76 +96,143 @@ const OrangeNavigation = ({navigation, route}) => {
     }, [rewardTypeLabel]);
 
     useEffect(() => {
-        if (!orangeReady) return;
-        setUserData((current) => ({
-            ...(current || {}),
-            numberOranges: balance,
-            listClaimedOranges: groupedHistory(history),
-        }));
-    }, [balance, groupedHistory, history, orangeReady, setUserData]);
+        const expectedLease = lease;
+        if (!orangeReady || !expectedLease || !isCurrentLease(expectedLease)) return;
+        setUserData((current) => (
+            isCurrentLease(expectedLease)
+                ? {
+                    ...(current || {}),
+                    numberOranges: balance,
+                    listClaimedOranges: groupedHistory(history),
+                }
+                : current
+        ));
+    }, [balance, groupedHistory, history, isCurrentLease, lease, orangeReady, setUserData]);
 
-    const loadRewardStatus = useCallback(async () => {
+    const loadRewardStatus = useCallback(async (operationLease = lease) => {
+        const expectedLease = operationLease;
+        if (!expectedLease || !isCurrentLease(expectedLease)) return null;
+        const requestId = ++rewardStatusRequestIdRef.current;
+        const isCurrentRequest = () => (
+            requestId === rewardStatusRequestIdRef.current
+            && isCurrentLease(expectedLease)
+        );
         try {
-            const status = await api.orangeRewardStatus();
-            if (!status) return;
-            setUserData((current) => ({
-                ...(current || {}),
-                numberOranges: status.balance,
-                todayActivities: status.todayActivities,
-                dailyCheckin: status.dailyCheckin,
-                dailyActivity: status.dailyActivity,
-                adReward: { nextReset: status.adReward?.nextAvailable || null },
-            }));
+            const status = await api.orangeRewardStatus({
+                expectedAuthUserId: expectedLease.ownerUserId,
+            });
+            if (!status || !isCurrentRequest()) return null;
+            setUserData((current) => (
+                isCurrentRequest()
+                    ? {
+                        ...(current || {}),
+                        numberOranges: status.balance,
+                        todayActivities: status.todayActivities,
+                        dailyCheckin: status.dailyCheckin,
+                        dailyActivity: status.dailyActivity,
+                        adReward: { nextReset: status.adReward?.nextAvailable || null },
+                    }
+                    : current
+            ));
+            return status;
         } catch (error) {
+            if (!isCurrentRequest()) return null;
             console.warn('[orange] unable to load reward status', error);
-        }
-    }, [setUserData]);
-
-    useEffect(() => {
-        if (user?.id) loadRewardStatus();
-    }, [loadRewardStatus, user?.id]);
-
-    const syncClaim = useCallback(async (claim, stateKey) => {
-        const result = await claim();
-        if (!result) {
-            Alert.alert('Backend not connected', 'Set EXPO_PUBLIC_BACKEND_URL to claim Orange rewards.');
             return null;
         }
-        setUserData((current) => ({
-            ...(current || {}),
-            numberOranges: result.balance,
-            ...(stateKey ? {
-                [stateKey]: stateKey === 'adReward'
-                    ? { nextReset: result.nextAvailable }
-                    : { claimed: true, nextAvailable: result.nextAvailable },
-            } : {}),
-        }));
-        await Promise.all([refreshOrange(), loadRewardStatus()]);
-        return result;
-    }, [loadRewardStatus, refreshOrange, setUserData]);
+    }, [isCurrentLease, lease, setUserData]);
+
+    useEffect(() => {
+        const expectedLease = lease;
+        if (user?.id && expectedLease) void loadRewardStatus(expectedLease);
+        return () => { rewardStatusRequestIdRef.current += 1; };
+    }, [lease, loadRewardStatus, user?.id]);
+
+    const syncClaim = useCallback((claim, stateKey, expectedLease) => {
+        const runClaim = async () => {
+            if (!expectedLease || !isCurrentLease(expectedLease)) return null;
+            const requestId = ++claimRequestIdRef.current;
+            const isCurrentRequest = () => (
+                requestId === claimRequestIdRef.current
+                && isCurrentLease(expectedLease)
+            );
+            try {
+                const result = await claim({
+                    expectedAuthUserId: expectedLease.ownerUserId,
+                });
+                if (!isCurrentRequest()) return null;
+                if (!result) {
+                    Alert.alert('Backend not connected', 'Set EXPO_PUBLIC_BACKEND_URL to claim Orange rewards.');
+                    return null;
+                }
+                setUserData((current) => (
+                    isCurrentRequest()
+                        ? {
+                            ...(current || {}),
+                            numberOranges: result.balance,
+                            ...(stateKey ? {
+                                [stateKey]: stateKey === 'adReward'
+                                    ? { nextReset: result.nextAvailable }
+                                    : { claimed: true, nextAvailable: result.nextAvailable },
+                            } : {}),
+                        }
+                        : current
+                ));
+                await Promise.all([refreshOrange(), loadRewardStatus(expectedLease)]);
+                if (!isCurrentRequest()) return null;
+                return result;
+            } catch (error) {
+                if (!isCurrentRequest()) return null;
+                throw error;
+            }
+        };
+
+        // Reward mutations are serialized so every committed claim is followed by
+        // its own balance/status refresh before another claim can start.
+        const operation = claimQueueRef.current.then(runClaim);
+        claimQueueRef.current = operation.catch(() => null);
+        return operation;
+    }, [isCurrentLease, loadRewardStatus, refreshOrange, setUserData]);
+
+    useEffect(() => () => {
+        claimRequestIdRef.current += 1;
+        rewardStatusRequestIdRef.current += 1;
+    }, [lease]);
 
     const onClaimDailyCheckin = async () => {
+        const expectedLease = lease;
+        if (!expectedLease || !isCurrentLease(expectedLease)) return;
         Haptics.selectionAsync();
         try {
-            const result = await syncClaim(api.orangeClaimDailyCheckin, 'dailyCheckin');
+            const result = await syncClaim(api.orangeClaimDailyCheckin, 'dailyCheckin', expectedLease);
+            if (!isCurrentLease(expectedLease)) return;
             if (result?.claimed) setOpenDailyCheckinModal(true);
             else if (result) Alert.alert('Already claimed', 'Daily check-in will reset at the next UTC day.');
         } catch (error) {
+            if (!isCurrentLease(expectedLease)) return;
             Alert.alert('Claim failed', 'Please try again in a moment.');
         }
     };
 
     const handleClaimDailyActivity = async () => {
+        const expectedLease = lease;
+        if (!expectedLease || !isCurrentLease(expectedLease)) return;
         Haptics.selectionAsync();
         try {
-            const result = await syncClaim(api.orangeClaimDailyActivity, 'dailyActivity');
+            const result = await syncClaim(api.orangeClaimDailyActivity, 'dailyActivity', expectedLease);
+            if (!isCurrentLease(expectedLease)) return;
             if (result?.claimed) setOpenDailyActivityModal(true);
             else if (result) Alert.alert('Already claimed', 'The daily activity reward has already been collected.');
         } catch (error) {
+            if (!isCurrentLease(expectedLease)) return;
             if (error instanceof ApiError && error.status === 409) {
                 const progress = error.body?.progress || {};
                 const targets = error.body?.targets || {};
-                setUserData((current) => ({ ...(current || {}), todayActivities: progress }));
+                setUserData((current) => (
+                    isCurrentLease(expectedLease)
+                        ? { ...(current || {}), todayActivities: progress }
+                        : current
+                ));
                 Alert.alert(
                     'Tasks not complete',
                     `Post ${progress.posts || 0}/${targets.posts || 1} · Comments ${progress.comments || 0}/${targets.comments || 2} · Likes ${progress.likes || 0}/${targets.likes || 10}`,
@@ -172,14 +244,18 @@ const OrangeNavigation = ({navigation, route}) => {
     };
 
     const onClaimAdReward = async () => {
+        const expectedLease = lease;
+        if (!expectedLease || !isCurrentLease(expectedLease)) return false;
         Haptics.selectionAsync();
         try {
-            const result = await syncClaim(api.orangeClaimAdReward, 'adReward');
+            const result = await syncClaim(api.orangeClaimAdReward, 'adReward', expectedLease);
+            if (!isCurrentLease(expectedLease)) return false;
             if (!result?.claimed && result) {
                 Alert.alert('Already claimed', 'The next ad reward will unlock in the next reward slot.');
             }
             return Boolean(result?.claimed);
         } catch (error) {
+            if (!isCurrentLease(expectedLease)) return false;
             Alert.alert('Claim failed', 'Please try again in a moment.');
             return false;
         }

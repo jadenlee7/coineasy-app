@@ -25,7 +25,9 @@ import { InterpunctIcon, PostMenuIcon, RepostIcon2, CommentIcon2, LikeIcon2, Suc
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { useDeviceAccountOperationLease } from "../contexts/DeviceAccountDataContext";
 import { api } from "../utils/api";
+import { getEasyGoUserId } from '../utils/socialPostAdapter';
 
 // const listPost = [
 //     1712122694, 
@@ -111,6 +113,19 @@ const PostDisplay = (props) => {
     const [showSuccessMessage, setShowSuccessMessage] = useState(false)
     const [currentIndex, setCurrentIndex] = useState(0)
     const [lengthMore,setLengthMore] = useState(false);
+    const currentEasyGoUserId = getEasyGoUserId(user);
+    const postAuthorUserId = post?.easygo?.authorId
+        || getEasyGoUserId(post?.creator_details)
+        || getEasyGoUserId(post?.creator);
+    const repostAuthorUserId = post?.content?.repost_details?.easygo?.authorId
+        || getEasyGoUserId(post?.content?.repost_details?.creator_details);
+    const isCurrentUserPost = currentEasyGoUserId
+        ? [postAuthorUserId, repostAuthorUserId].includes(currentEasyGoUserId)
+        : Boolean(
+            user?.did
+            && [post?.creator, post?.content?.repost_details?.creator_details?.did]
+                .includes(user.did)
+        );
 
     const onTextLayout = useCallback(e => {
         var count_lines = 0
@@ -419,7 +434,7 @@ const PostDisplay = (props) => {
                             {/** Show post menu */}
                             <TouchableOpacity 
                                 onPress={() => 
-                                    {(user?.did == post.creator || user?.did == post.content?.repost_details?.creator_details?.did) ? 
+                                    {isCurrentUserPost ?
                                         setEditedPost({value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost}) 
                                         : setEditedPost({type:'notCreator',value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost});
                                         handleModalPostBoxPress()
@@ -676,6 +691,7 @@ export const LikeCTA = ({post, isReply}) => {
   const [countLikes, setCountLikes] = useState(numLikes ?? 0);
   const [likeLoading, setLikeLoading] = useState(false);
   const { user } = useContext(GlobalContext);
+  const { lease, isCurrentLease } = useDeviceAccountOperationLease();
   const tailwind = useTailwind();
 
   useEffect(() => {
@@ -684,10 +700,12 @@ export const LikeCTA = ({post, isReply}) => {
   }, [numLikes, post.likedByMe, post.stream_id]);
 
   async function toggleLike() {
+    const operationLease = lease;
     if (!user) {
       Alert.alert('Sign in required', 'Connect your EasyGo account to like posts.');
       return;
     }
+    if (!operationLease || !isCurrentLease(operationLease)) return;
     if (likeLoading) return;
 
     Haptics.selectionAsync();
@@ -700,16 +718,22 @@ export const LikeCTA = ({post, isReply}) => {
 
     try {
       const result = nextLiked
-        ? await api.posts.like(post.stream_id)
-        : await api.posts.unlike(post.stream_id);
+        ? await api.posts.like(post.stream_id, {
+          expectedAuthUserId: operationLease.ownerUserId,
+        })
+        : await api.posts.unlike(post.stream_id, {
+          expectedAuthUserId: operationLease.ownerUserId,
+        });
+      if (!isCurrentLease(operationLease)) return;
       if (!result) throw new Error('backend_not_configured');
       if (Number.isFinite(Number(result.likes))) setCountLikes(Number(result.likes));
     } catch {
+      if (!isCurrentLease(operationLease)) return;
       setHasLiked(previousLiked);
       setCountLikes(previousCount);
       Alert.alert('Could not update like', 'Check the backend connection and try again.');
     } finally {
-      setLikeLoading(false);
+      if (isCurrentLease(operationLease)) setLikeLoading(false);
     }
   }
 

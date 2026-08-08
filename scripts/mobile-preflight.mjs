@@ -45,26 +45,38 @@ export function startupBoundaryProtectsApp(appSource) {
 
 export function authenticatedUiIsGated(appSource) {
   const source = String(appSource || '');
+  const presentedOwnerDefinition = source.indexOf(
+    'const presentedOwner = user?.profile?.data?.courseProgressOwner || null;',
+  );
+  const accountGateStart = source.indexOf('const accountUiReady = Boolean(');
+  const accountGateEnd = source.indexOf(');', accountGateStart);
+  const accountGate = accountGateStart >= 0 && accountGateEnd > accountGateStart
+    ? source.slice(accountGateStart, accountGateEnd + 2)
+    : '';
   const deletionGate = source.indexOf("accountDeletionGuard.status !== 'clear' ? (");
   const pendingScreen = source.indexOf('<AccountDeletionPending', deletionGate);
-  const branchOpen = deletionGate >= 0
-    ? source.indexOf(': user ? (', pendingScreen)
-    : source.indexOf('{user ? (');
-  const loginBranch = source.indexOf(') : (', branchOpen);
+  const branchOpen = source.indexOf(': user && accountUiReady ? (', pendingScreen);
+  const loginBranch = source.indexOf('<Login />', branchOpen);
   if (
-    branchOpen < 0
+    presentedOwnerDefinition < 0
+    || accountGateStart < 0
+    || !accountGate.includes('presentedOwner')
+    || !accountGate.includes('presentedOwner === deviceAccountData.ownerUserId')
+    || !accountGate.includes("deviceAccountData.status === 'ready'")
+    || deletionGate < 0
+    || pendingScreen <= deletionGate
+    || branchOpen <= pendingScreen
     || loginBranch < 0
-    || (deletionGate >= 0 && !(pendingScreen > deletionGate && pendingScreen < branchOpen))
   ) return false;
+  const authenticatedBranch = source.slice(branchOpen, loginBranch);
   return [
-    '<AppNavigator />',
-    '<UpdateProfileModal />',
-    '<NicknameModal />',
-    '<PostboxModal />',
-  ].every((component) => {
-    const index = source.indexOf(component, branchOpen);
-    return index > branchOpen && index < loginBranch;
-  });
+    'AppNavigator',
+    'UpdateProfileModal',
+    'NicknameModal',
+    'PostboxModal',
+  ].every((componentName) => (
+    new RegExp(`<${componentName}(?:\\s|/?>)`, 'u').test(authenticatedBranch)
+  ));
 }
 
 export function privyPolyfillsLoadFirst(bootstrapSource) {

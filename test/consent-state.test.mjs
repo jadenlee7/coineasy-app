@@ -155,9 +155,29 @@ test('Login and Settings share one legal-document source', () => {
     new URL('../components/modals/SettingsModal.js', import.meta.url),
     'utf8',
   );
+  const consentHook = readFileSync(
+    new URL('../hooks/useConsent.js', import.meta.url),
+    'utf8',
+  );
   assert.equal(login.includes('EASYGO_LEGAL_DOCUMENTS'), true);
   assert.equal(settings.includes('EASYGO_LEGAL_DOCUMENTS'), true);
   assert.equal(settings.includes('consentState.revokeAll'), true);
+  assert.match(settings, /performExport\(kind, expectedOperation\)/);
+  assert.match(settings, /if \(!isCurrentExport\(\)\) return/);
+  assert.match(
+    settings,
+    /isCurrentAccountOperation\(expectedOperation\) \? revokeAll\(\) : null/,
+  );
+  assert.match(
+    settings,
+    /const signOut = async \(\) => \{[\s\S]*?const expectedOperation = accountOperationRef\.current;[\s\S]*?await logout\(\);[\s\S]*?if \(!isCurrentAccountOperation\(expectedOperation\)\) return;[\s\S]*?setUser\(null\);/,
+  );
+  assert.match(
+    settings,
+    /catch \{\s*if \(!isCurrentAccountOperation\(expectedOperation\)\) return;\s*Alert\.alert\('Could not sign out'/,
+  );
+  assert.match(consentHook, /!mountedRef\.current/);
+  assert.match(consentHook, /expectedAuthUserId: authOwnerUserId/);
   assert.equal(login.includes('drive.google.com/file/d/'), false);
   assert.equal(settings.includes('drive.google.com/file/d/'), false);
 });

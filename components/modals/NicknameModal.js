@@ -9,6 +9,7 @@ import {
 } from '@gorhom/bottom-sheet';
 
 import { GlobalContext } from '../../contexts/GlobalContext';
+import { useDeviceAccountOperationLease } from '../../contexts/DeviceAccountDataContext';
 import useStatusBarHeight from '../../hooks/useStatusBarHeight';
 import { api } from '../../utils/api';
 import { adaptSocialProfile } from '../../utils/socialPostAdapter';
@@ -16,6 +17,7 @@ import { CloseIcon } from '../Icons';
 
 export default function NicknameModal() {
   const { user, setUser, setUserData, setPushNotifsVis, modalNicknameRef } = useContext(GlobalContext);
+  const { lease, isCurrentLease } = useDeviceAccountOperationLease();
   const tailwind = useTailwind();
   const statusBarHeight = useStatusBarHeight();
   const snapPoints = useMemo(() => ['62%'], []);
@@ -24,7 +26,8 @@ export default function NicknameModal() {
 
   useEffect(() => {
     setDisplayName(user?.profile?.data?.displayName || user?.profile?.username || '');
-  }, [user?.did]);
+    setLoading(false);
+  }, [lease, user?.did]);
 
   const close = () => {
     Haptics.selectionAsync();
@@ -33,6 +36,8 @@ export default function NicknameModal() {
   };
 
   const save = async () => {
+    const expectedLease = lease;
+    if (!expectedLease || !isCurrentLease(expectedLease)) return;
     const normalizedName = displayName.trim();
     if (!normalizedName) {
       Alert.alert('Choose a name', 'Enter the name people should see on EasyGo.');
@@ -46,17 +51,39 @@ export default function NicknameModal() {
     Haptics.selectionAsync();
     setLoading(true);
     try {
-      const result = await api.profiles.updateMe({ displayName: normalizedName });
+      const result = await api.profiles.updateMe(
+        { displayName: normalizedName },
+        { expectedAuthUserId: expectedLease.ownerUserId },
+      );
+      if (!isCurrentLease(expectedLease)) return;
       const adapted = adaptSocialProfile(result?.profile);
       if (!adapted) throw new Error('profile_update_failed');
-      setUser(adapted);
-      setUserData(adapted.profile.data || {});
+      setUser((current) => (isCurrentLease(expectedLease) ? ({
+        ...current,
+        id: adapted.id || current?.id,
+        did: adapted.did || current?.did,
+        profile: {
+          ...current?.profile,
+          ...adapted.profile,
+          data: {
+            ...current?.profile?.data,
+            ...adapted.profile?.data,
+          },
+        },
+      }) : current));
+      setUserData((current) => (
+        isCurrentLease(expectedLease)
+          ? { ...(current || {}), ...(adapted.profile.data || {}) }
+          : current
+      ));
+      if (!isCurrentLease(expectedLease)) return;
       close();
       setPushNotifsVis(true);
     } catch {
+      if (!isCurrentLease(expectedLease)) return;
       Alert.alert('Could not save profile', 'Connect the EasyGo backend and try again.');
     } finally {
-      setLoading(false);
+      if (isCurrentLease(expectedLease)) setLoading(false);
     }
   };
 

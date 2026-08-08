@@ -12,10 +12,6 @@ import {
   reconcileAccountDeletionStatus,
   submitAccountDeletionRequest,
 } from '../utils/accountDeletionFlow.mjs';
-import {
-  accountDeletionLocalDataKeys,
-  purgeAccountDeletionLocalData,
-} from '../utils/accountDeletionLocalData.mjs';
 
 const USER_A = 'did:privy:user-a';
 const USER_B = 'did:privy:user-b';
@@ -486,6 +482,77 @@ test('a 400 on a retried marker cannot erase a possibly accepted earlier request
   assert.equal((await store.load(USER_A)).marker.clientRequestId, CLIENT_A);
 });
 
+test('a new request seals owner data only after the durable marker and before the network', async () => {
+  const { markerStore: store } = markerStore();
+  const order = [];
+  const originalBegin = store.begin.bind(store);
+  const result = await submitAccountDeletionRequest({
+    markerStore: {
+      ...store,
+      async begin(input) {
+        const value = await originalBegin(input);
+        order.push('marker');
+        return value;
+      },
+    },
+    userId: USER_A,
+    clientRequestId: CLIENT_A,
+    walletRiskAcknowledged: true,
+    sealLocalData: async () => { order.push('seal'); },
+    request: async () => {
+      order.push('request');
+      return {
+        requestId: 'delete_sealed',
+        state: 'LOCAL_PURGED',
+        localDataDeleted: true,
+      };
+    },
+  });
+
+  assert.deepEqual(order, ['marker', 'seal', 'request']);
+  assert.equal(result.status, 'accepted');
+});
+
+test('seal failure retains the marker and sends no destructive request', async () => {
+  const { markerStore: store } = markerStore();
+  let requests = 0;
+  const result = await submitAccountDeletionRequest({
+    markerStore: store,
+    userId: USER_A,
+    clientRequestId: CLIENT_A,
+    walletRiskAcknowledged: true,
+    sealLocalData: async () => { throw new Error('storage unavailable'); },
+    request: async () => { requests += 1; },
+  });
+
+  assert.deepEqual(result, {
+    status: 'uncertain',
+    code: 'account_deletion_status_unknown',
+  });
+  assert.equal(requests, 0);
+  assert.equal((await store.load(USER_A)).status, 'blocked');
+});
+
+test('a sealed request never releases its marker after a definitive 400', async () => {
+  const { markerStore: store } = markerStore();
+  const result = await submitAccountDeletionRequest({
+    markerStore: store,
+    userId: USER_A,
+    clientRequestId: CLIENT_A,
+    walletRiskAcknowledged: true,
+    sealLocalData: async () => {},
+    request: async () => {
+      throw { status: 400, body: { error: 'confirmation_required' } };
+    },
+  });
+
+  assert.deepEqual(result, {
+    status: 'uncertain',
+    code: 'account_deletion_status_unknown',
+  });
+  assert.equal((await store.load(USER_A)).status, 'blocked');
+});
+
 test('confirmation requires capability, wallet acknowledgement, exact text, and same owner', () => {
   const ready = {
     available: true,
@@ -499,23 +566,4 @@ test('confirmation requires capability, wallet acknowledgement, exact text, and 
   assert.equal(canConfirmAccountDeletion({ ...ready, walletRiskAcknowledged: false }), false);
   assert.equal(canConfirmAccountDeletion({ ...ready, confirmationText: 'delete' }), false);
   assert.equal(canConfirmAccountDeletion({ ...ready, currentUserId: USER_B }), false);
-});
-
-test('local purge removes only the scoped account/device data keys', async () => {
-  let removed;
-  const keys = await purgeAccountDeletionLocalData({
-    courseProgressOwner: USER_A,
-    removeMany: async (value) => { removed = value; },
-  });
-  assert.deepEqual(keys, accountDeletionLocalDataKeys(USER_A));
-  assert.deepEqual(removed, [
-    `easygo_course_progress:${USER_A}`,
-    'easygo_recent_profile_searches',
-    'list_blocked_user',
-    'list_muted_users',
-    'list_hidden_post',
-    'easygo_expo_push_token',
-  ]);
-  assert.equal(removed.includes('showNotificationDate'), false);
-  assert.equal(removed.some((key) => key.startsWith('easygo-privy-v2-')), false);
 });

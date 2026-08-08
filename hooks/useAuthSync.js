@@ -1,7 +1,8 @@
 // hooks/useAuthSync.js
 // Bridge between Privy auth state and EasyGo backend.
 // Runs one bounded POST /auth/sync operation per login transition and caches profile.
-// Also wires the Privy access token into utils/api.js so all subsequent calls are authenticated.
+// Also wires an owner-bound Privy token provider into utils/api.js. Private
+// calls must name that owner; explicitly public discovery calls stay anonymous.
 // See backend/src/routes/auth.js and EASYGO_BUILD_PLAN.md §11.
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -72,7 +73,9 @@ export function useAuthSync(privy, { enabled = true } = {}) {
         isCurrent: (candidate) => (
           syncAllowedRef.current && lifecycle.current.isCurrent(candidate)
         ),
-        syncProfile: () => api.syncProfile(),
+        syncProfile: () => api.syncProfile({
+          expectedAuthUserId: ownerUserId,
+        }),
       })
         .then((outcome) => {
           if (

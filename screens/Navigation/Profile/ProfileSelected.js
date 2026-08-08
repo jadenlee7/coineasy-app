@@ -9,12 +9,13 @@ import ProfileDetails from "../../../components/ProfileDetails";
 import { NotificationsIcon } from "../../../components/Icons";
 import useSocialProfile from "../../../hooks/useSocialProfile";
 import { adaptSocialProfile, getEasyGoUserId } from "../../../utils/socialPostAdapter";
+import { normalizeEasyGoRouteId } from '../../../utils/navigationIntent.mjs';
 
 const ProfileSelected = ({navigation, route}) => {
 
-    const { did, back } = route.params
+    const { did, back, userId: routeUserId } = route.params || {}
     const tailwind = useTailwind();
-    const userId = getEasyGoUserId(did);
+    const userId = normalizeEasyGoRouteId(routeUserId || getEasyGoUserId(did));
     const { profile: backendProfile, loading, error, refresh } = useSocialProfile(userId);
     const profile = adaptSocialProfile(backendProfile);
 

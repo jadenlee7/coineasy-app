@@ -24,10 +24,10 @@ import Categories from '../screens/Categories';
 
 const Stack = createStackNavigator();
 
-const AppNavigator = (props) => {
+const AppNavigator = ({ navigationRef, onNavigationReady }) => {
     return (
         <>
-            <NavigationContainer>
+            <NavigationContainer ref={navigationRef} onReady={onNavigationReady}>
                 <Stack.Navigator>
                     <Stack.Screen name="Navigator" component={BottomTabsNavigator} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="ProfileSelected" component={ProfileSelected} options={{ headerShown: false, gestureEnabled: true }} />

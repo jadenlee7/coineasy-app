@@ -205,9 +205,22 @@ still must be implemented and reviewed before activation.
 - An Apple-authenticated account with an ambiguous or changed provider subject
   fails closed and requires investigation; no DID-only fallback is allowed.
 - Google-only accounts and Android still lack an equivalent recent-auth flow.
-- Several legacy on-device safety/search keys are not owner-namespaced. They
-  must be migrated or account switching must share a serialization boundary
-  with cleanup before the dormant path can activate.
+- Search history, safety lists, push-token registration state, and course
+  progress use allow-listed keys under a SHA-256 Privy-owner namespace. A
+  session-epoch lease gates hydration and mutation, while each owner has an
+  independent write queue. Deletion seals that owner before the network
+  request, drains prior writes, removes and verifies only that owner's keys,
+  and rejects later writes. Ambiguous legacy global values are deleted rather
+  than assigned to the next login; exact-owner legacy course progress may be
+  migrated. Authenticated UI remains closed until the live owner snapshot is
+  hydrated. Export-file creation and stale cleanup share a separate process
+  queue so another account's active share cannot race deletion cleanup.
+- Every private, viewer-relative, and mutating mobile API call captures the
+  full device-session lease and supplies its Privy DID as the expected bearer
+  owner. Provider rebinding, JWT-subject mismatch, or a newer session epoch
+  fails before dispatch or suppresses the late continuation. Public discovery
+  calls are explicitly anonymous. The dormant Squid client additionally binds
+  each quote object to that full lease before any wallet signature.
 - Apple authorization-code exchange and revocation remain independently
   unresolved.
 - Migration, PostgreSQL concurrency/replay tests, and real-device QA are
@@ -241,6 +254,7 @@ still must be implemented and reviewed before activation.
    for expired unconsumed rows and tombstone-referenced consumed rows before
    activation; the current restrictive audit FK intentionally prevents
    consumed-row pruning.
-10. [ ] Owner-namespace the on-device search/safety data and push-token state,
-    or prove and document a single auth-switch/cleanup serialization boundary,
-    before enabling device cleanup.
+10. [x] Owner-namespace search, safety, push-token, and course state; add
+    session-epoch hydration guards, per-owner mutation queues, a deletion seal,
+    verified purge, fail-closed legacy cleanup, and serialized export-file
+    cleanup. Physical A/B transition QA remains part of item 8.

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useDeviceAccountOperationLease } from '../contexts/DeviceAccountDataContext';
 import { api } from '../utils/api';
 import {
   buildConsentPayload,
@@ -9,16 +10,26 @@ import {
   updateConsentDraft,
 } from '../utils/consentState.mjs';
 
-export default function useConsent({ accountKey, enabled = true } = {}) {
+export default function useConsent({ accountKey, authOwnerUserId, enabled = true } = {}) {
+  const { lease, isCurrentLease } = useDeviceAccountOperationLease();
   const [consent, setConsent] = useState(null);
   const [draft, setDraft] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [ownerKey, setOwnerKey] = useState(null);
+  const [ownerAuthUserId, setOwnerAuthUserId] = useState(null);
   const requestRef = useRef({ controller: null, generation: 0, kind: null });
   const accountKeyRef = useRef(accountKey);
+  const authOwnerUserIdRef = useRef(authOwnerUserId);
+  const mountedRef = useRef(false);
   accountKeyRef.current = accountKey;
+  authOwnerUserIdRef.current = authOwnerUserId;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const beginRequest = useCallback((kind) => {
     if (requestRef.current.kind === 'save') return null;
@@ -35,37 +46,67 @@ export default function useConsent({ accountKey, enabled = true } = {}) {
   ), []);
 
   const load = useCallback(async ({ preserveError = false } = {}) => {
-    if (!enabled || !accountKey) return null;
+    const operationLease = lease;
+    if (
+      !mountedRef.current
+      || !enabled
+      || !accountKey
+      || !authOwnerUserId
+      || operationLease?.ownerUserId !== authOwnerUserId
+      || !isCurrentLease(operationLease)
+    ) return null;
     const request = beginRequest('load');
     if (!request) return null;
     const { controller, generation, kind } = request;
     const requestedAccountKey = accountKey;
+    const requestedAuthOwnerUserId = authOwnerUserId;
     setLoading(true);
     if (!preserveError) setError(null);
     try {
-      const response = await api.consent({ signal: controller.signal });
+      const response = await api.consent({
+        signal: controller.signal,
+        expectedAuthUserId: requestedAuthOwnerUserId,
+      });
       const nextConsent = parseConsentEnvelope(response);
-      if (!isCurrent(generation, kind)
-        || accountKeyRef.current !== requestedAccountKey) return null;
+      if (
+        !mountedRef.current
+        || !isCurrentLease(operationLease)
+        || !isCurrent(generation, kind)
+        || accountKeyRef.current !== requestedAccountKey
+        || authOwnerUserIdRef.current !== requestedAuthOwnerUserId
+      ) return null;
       setConsent(nextConsent);
       setDraft(createConsentDraft(nextConsent));
-      setOwnerKey(accountKey);
+      setOwnerKey(requestedAccountKey);
+      setOwnerAuthUserId(requestedAuthOwnerUserId);
       return nextConsent;
     } catch (requestError) {
-      if (!isCurrent(generation, kind)) return null;
+      if (
+        !mountedRef.current
+        || !isCurrentLease(operationLease)
+        || !isCurrent(generation, kind)
+        || accountKeyRef.current !== requestedAccountKey
+        || authOwnerUserIdRef.current !== requestedAuthOwnerUserId
+      ) return null;
       const safeError = safeConsentError(requestError);
       if (safeError) setError(safeError);
       return null;
     } finally {
-      if (isCurrent(generation, kind)) {
+      if (
+        mountedRef.current
+        && isCurrentLease(operationLease)
+        && isCurrent(generation, kind)
+        && accountKeyRef.current === requestedAccountKey
+        && authOwnerUserIdRef.current === requestedAuthOwnerUserId
+      ) {
         requestRef.current.kind = null;
         setLoading(false);
       }
     }
-  }, [accountKey, beginRequest, enabled, isCurrent]);
+  }, [accountKey, authOwnerUserId, beginRequest, enabled, isCurrent, isCurrentLease, lease]);
 
   useEffect(() => {
-    if (!enabled || !accountKey) {
+    if (!enabled || !accountKey || !authOwnerUserId) {
       requestRef.current.controller?.abort();
       requestRef.current = {
         controller: null,
@@ -78,6 +119,7 @@ export default function useConsent({ accountKey, enabled = true } = {}) {
       setLoading(false);
       setSaving(false);
       setOwnerKey(null);
+      setOwnerAuthUserId(null);
       return undefined;
     }
 
@@ -86,6 +128,7 @@ export default function useConsent({ accountKey, enabled = true } = {}) {
     setError(null);
     setSaving(false);
     setOwnerKey(null);
+    setOwnerAuthUserId(null);
     load();
     return () => {
       requestRef.current.controller?.abort();
@@ -95,14 +138,26 @@ export default function useConsent({ accountKey, enabled = true } = {}) {
         kind: null,
       };
     };
-  }, [accountKey, enabled, load]);
+  }, [accountKey, authOwnerUserId, enabled, load]);
 
   const setChoice = useCallback((field, value) => {
     setDraft((current) => updateConsentDraft(current, field, value));
   }, []);
 
   const submit = useCallback(async (payload) => {
-    if (!enabled || !accountKey || ownerKey !== accountKey) return null;
+    const operationLease = lease;
+    if (
+      !mountedRef.current
+      || !enabled
+      || !accountKey
+      || !authOwnerUserId
+      || accountKeyRef.current !== accountKey
+      || authOwnerUserIdRef.current !== authOwnerUserId
+      || ownerKey !== accountKey
+      || ownerAuthUserId !== authOwnerUserId
+      || operationLease?.ownerUserId !== authOwnerUserId
+      || !isCurrentLease(operationLease)
+    ) return null;
     const request = beginRequest('save');
     if (!request) return null;
     const { controller, generation, kind } = request;
@@ -110,15 +165,31 @@ export default function useConsent({ accountKey, enabled = true } = {}) {
     setSaving(true);
     setError(null);
     try {
-      const response = await api.updateConsent(payload, { signal: controller.signal });
+      const response = await api.updateConsent(payload, {
+        signal: controller.signal,
+        expectedAuthUserId: authOwnerUserId,
+      });
       const nextConsent = parseConsentEnvelope(response);
-      if (!isCurrent(generation, kind)) return null;
+      if (
+        !mountedRef.current
+        || !isCurrentLease(operationLease)
+        || !isCurrent(generation, kind)
+        || accountKeyRef.current !== accountKey
+        || authOwnerUserIdRef.current !== authOwnerUserId
+      ) return null;
       setConsent(nextConsent);
       setDraft(createConsentDraft(nextConsent));
       setOwnerKey(accountKey);
+      setOwnerAuthUserId(authOwnerUserId);
       return nextConsent;
     } catch (requestError) {
-      if (!isCurrent(generation, kind)) return null;
+      if (
+        !mountedRef.current
+        || !isCurrentLease(operationLease)
+        || !isCurrent(generation, kind)
+        || accountKeyRef.current !== accountKey
+        || authOwnerUserIdRef.current !== authOwnerUserId
+      ) return null;
       const safeError = safeConsentError(requestError);
       if (safeError) setError(safeError);
       if (requestError?.status === 409) {
@@ -128,21 +199,48 @@ export default function useConsent({ accountKey, enabled = true } = {}) {
         setConsent(null);
         setDraft(null);
         setOwnerKey(null);
-        if (accountKeyRef.current === expectedAccountKey) {
+        setOwnerAuthUserId(null);
+        if (
+          accountKeyRef.current === expectedAccountKey
+          && authOwnerUserIdRef.current === authOwnerUserId
+        ) {
           await load({ preserveError: true });
         }
-        if (accountKeyRef.current === expectedAccountKey && safeError) {
+        if (
+          mountedRef.current
+          && isCurrentLease(operationLease)
+          && accountKeyRef.current === expectedAccountKey
+          && authOwnerUserIdRef.current === authOwnerUserId
+          && safeError
+        ) {
           setError(safeError);
         }
       }
       return null;
     } finally {
-      if (isCurrent(generation, kind)) {
+      if (
+        mountedRef.current
+        && isCurrentLease(operationLease)
+        && isCurrent(generation, kind)
+        && accountKeyRef.current === accountKey
+        && authOwnerUserIdRef.current === authOwnerUserId
+      ) {
         requestRef.current.kind = null;
         setSaving(false);
       }
     }
-  }, [accountKey, beginRequest, enabled, isCurrent, load, ownerKey]);
+  }, [
+    accountKey,
+    authOwnerUserId,
+    beginRequest,
+    enabled,
+    isCurrent,
+    isCurrentLease,
+    lease,
+    load,
+    ownerAuthUserId,
+    ownerKey,
+  ]);
 
   const save = useCallback(async () => {
     if (!consent || !draft) return null;
@@ -165,7 +263,12 @@ export default function useConsent({ accountKey, enabled = true } = {}) {
     });
   }, [consent, submit]);
 
-  const ownsState = Boolean(accountKey) && ownerKey === accountKey;
+  const ownsState = Boolean(accountKey)
+    && Boolean(authOwnerUserId)
+    && lease?.ownerUserId === authOwnerUserId
+    && isCurrentLease(lease)
+    && ownerKey === accountKey
+    && ownerAuthUserId === authOwnerUserId;
 
   return {
     consent: ownsState ? consent : null,

@@ -8,18 +8,17 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as FileSystem from 'expo-file-system';
 import { usePrivy } from '@privy-io/expo';
 
 import { GlobalContext } from '../contexts/GlobalContext';
+import { useDeviceAccountData } from '../contexts/DeviceAccountDataContext';
 import { api } from '../utils/api';
 import {
   reconcileAccountDeletionStatus,
   submitAccountDeletionRequest,
 } from '../utils/accountDeletionFlow.mjs';
-import { purgeAccountDeletionLocalData } from '../utils/accountDeletionLocalData.mjs';
 import {
   ACCOUNT_DELETION_REAUTH_ERROR,
   AccountDeletionReauthError,
@@ -65,20 +64,29 @@ export default function AccountDeletionPending({ guard }) {
     setUser,
     setUserData,
     setPosts,
-    setListBlockedUser,
-    setListMutedUsers,
-    setListHiddenPost,
   } = useContext(GlobalContext);
+  const {
+    accountLease,
+    isCurrentAccountLease,
+    purgeOwnerData,
+    sealOwnerData,
+  } = useDeviceAccountData();
   const [action, setAction] = useState(null);
   const [message, setMessage] = useState(null);
   const actionRef = useRef(null);
   const currentUserId = privy?.user?.id || null;
   const currentUserIdRef = useRef(currentUserId);
   currentUserIdRef.current = currentUserId;
+  const deviceAccountLeaseRef = useRef(accountLease);
+  deviceAccountLeaseRef.current = accountLease;
   const reauthRef = useRef(null);
   if (!reauthRef.current) {
     reauthRef.current = createAccountDeletionReauthCoordinator({
-      getCurrentOwnerUserId: () => currentUserIdRef.current,
+      getCurrentOwnerUserId: () => (
+        isCurrentAccountLease(deviceAccountLeaseRef.current)
+          ? currentUserIdRef.current
+          : null
+      ),
     });
   }
   const copy = copyFor(guard);
@@ -88,7 +96,7 @@ export default function AccountDeletionPending({ guard }) {
     actionRef.current = null;
     setAction(null);
     setMessage(null);
-  }, [currentUserId]);
+  }, [accountLease, currentUserId]);
 
   useEffect(() => () => {
     reauthRef.current?.cancel();
@@ -96,17 +104,18 @@ export default function AccountDeletionPending({ guard }) {
     currentUserIdRef.current = null;
   }, []);
 
-  const purgeLocalData = async (expectedOwnerUserId) => {
-    if (currentUserIdRef.current !== expectedOwnerUserId) {
+  const purgeLocalData = async (expectedOwnerUserId, expectedAccountLease) => {
+    const isCurrentCleanupOwner = () => (
+      currentUserIdRef.current === expectedOwnerUserId
+      && isCurrentAccountLease(expectedAccountLease)
+    );
+    if (!isCurrentCleanupOwner()) {
       throw new Error('account_deletion_cleanup_owner_changed');
     }
     let purgeError = null;
     try {
-      await purgeAccountDeletionLocalData({
-        courseProgressOwner: expectedOwnerUserId,
-        removeMany: (keys) => AsyncStorage.multiRemove(keys),
-      });
-      if (currentUserIdRef.current !== expectedOwnerUserId) {
+      await purgeOwnerData(expectedOwnerUserId);
+      if (!isCurrentCleanupOwner()) {
         throw new Error('account_deletion_cleanup_owner_changed');
       }
       if (FileSystem.cacheDirectory) {
@@ -120,15 +129,12 @@ export default function AccountDeletionPending({ guard }) {
     } catch (error) {
       purgeError = error;
     }
-    if (currentUserIdRef.current !== expectedOwnerUserId) {
+    if (!isCurrentCleanupOwner()) {
       throw new Error('account_deletion_cleanup_owner_changed');
     }
     setUser?.(null);
     setUserData?.(null);
     setPosts?.([]);
-    setListBlockedUser?.([]);
-    setListMutedUsers?.([]);
-    setListHiddenPost?.([]);
     if (purgeError) throw purgeError;
   };
 
@@ -137,14 +143,21 @@ export default function AccountDeletionPending({ guard }) {
       guard.retry?.();
       return;
     }
-    if (!currentUserId || !guard.marker || actionRef.current) return;
+    if (
+      !currentUserId
+      || !accountLease
+      || !isCurrentAccountLease(accountLease)
+      || !guard.marker
+      || actionRef.current
+    ) return;
 
     const ownerUserId = currentUserId;
     const marker = guard.marker;
-    const operation = { kind: 'retry', ownerUserId };
+    const operation = { kind: 'retry', ownerUserId, accountLease };
     const isCurrentOperation = () => (
       actionRef.current === operation
       && currentUserIdRef.current === ownerUserId
+      && isCurrentAccountLease(operation.accountLease)
     );
     const requireCurrentOperation = () => {
       if (isCurrentOperation()) return;
@@ -173,7 +186,7 @@ export default function AccountDeletionPending({ guard }) {
           clientRequestId: marker.clientRequestId,
           status,
           isCurrentOwner: isCurrentOperation,
-          purgeLocalData: () => purgeLocalData(ownerUserId),
+          purgeLocalData: () => purgeLocalData(ownerUserId, operation.accountLease),
           logout: () => {
             requireCurrentOperation();
             return privy.logout();
@@ -227,6 +240,10 @@ export default function AccountDeletionPending({ guard }) {
         userId: ownerUserId,
         clientRequestId: marker.clientRequestId,
         walletRiskAcknowledged: true,
+        sealLocalData: () => {
+          requireCurrentOperation();
+          return sealOwnerData(ownerUserId);
+        },
         isCurrentOwner: isCurrentOperation,
         request: (authoritativeClientRequestId) => {
           requireCurrentOperation();
@@ -241,7 +258,7 @@ export default function AccountDeletionPending({ guard }) {
             expectedAuthUserId: ownerUserId,
           });
         },
-        purgeLocalData: () => purgeLocalData(ownerUserId),
+        purgeLocalData: () => purgeLocalData(ownerUserId, operation.accountLease),
         logout: () => {
           requireCurrentOperation();
           return privy.logout();
@@ -258,7 +275,7 @@ export default function AccountDeletionPending({ guard }) {
         setMessage('요청 형식을 확인하지 못했습니다. 앱을 업데이트한 뒤 다시 시도해 주세요.');
       }
     } catch (error) {
-      if (actionRef.current !== operation) return;
+      if (!isCurrentOperation()) return;
       if (error?.code === ACCOUNT_DELETION_REAUTH_ERROR.cancelled) {
         setMessage('Apple 재인증이 취소되었습니다. 삭제 잠금과 로그인 세션은 그대로 유지됩니다.');
       } else if (error?.code === ACCOUNT_DELETION_REAUTH_ERROR.unavailable) {
@@ -273,7 +290,12 @@ export default function AccountDeletionPending({ guard }) {
       reauthProof = null;
       if (actionRef.current === operation) {
         actionRef.current = null;
-        setAction(null);
+        if (
+          currentUserIdRef.current === ownerUserId
+          && isCurrentAccountLease(operation.accountLease)
+        ) {
+          setAction(null);
+        }
       }
     }
   };
@@ -281,28 +303,37 @@ export default function AccountDeletionPending({ guard }) {
   const signOut = async () => {
     if (actionRef.current) return;
     const ownerUserId = currentUserId;
-    if (!ownerUserId) return;
-    const operation = { kind: 'logout', ownerUserId };
+    if (
+      !ownerUserId
+      || !accountLease
+      || !isCurrentAccountLease(accountLease)
+    ) return;
+    const operation = { kind: 'logout', ownerUserId, accountLease };
+    const isCurrentOperation = () => (
+      actionRef.current === operation
+      && currentUserIdRef.current === ownerUserId
+      && isCurrentAccountLease(operation.accountLease)
+    );
     actionRef.current = operation;
     setAction('logout');
     setMessage(null);
     try {
-      await purgeLocalData(ownerUserId);
-      if (
-        actionRef.current !== operation
-        || currentUserIdRef.current !== ownerUserId
-      ) return;
+      await purgeLocalData(ownerUserId, operation.accountLease);
+      if (!isCurrentOperation()) return;
       await privy.logout();
-      setUser?.(null);
-      setUserData?.(null);
     } catch {
-      if (actionRef.current === operation) {
+      if (isCurrentOperation()) {
         setMessage('기기 데이터 정리 또는 로그아웃을 완료하지 못했습니다. 계정 화면은 계속 잠겨 있으니 다시 시도해 주세요.');
       }
     } finally {
       if (actionRef.current === operation) {
         actionRef.current = null;
-        setAction(null);
+        if (
+          currentUserIdRef.current === ownerUserId
+          && isCurrentAccountLease(operation.accountLease)
+        ) {
+          setAction(null);
+        }
       }
     }
   };

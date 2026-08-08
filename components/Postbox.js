@@ -14,13 +14,74 @@ import usePosts from "../hooks/usePosts";
 import useReplies from "../hooks/useReplies";
 import { api } from "../utils/api";
 import { adaptSocialAuthor } from "../utils/socialPostAdapter";
-
-/** Init mentions object */
-let mentions = [];
+import { useDeviceAccountOperationLease } from "../contexts/DeviceAccountDataContext";
 
 const { width, height } = Dimensions.get('window')
 
-export default function Postbox({isReply = false}) {
+function postboxReplyParentId(replyTo) {
+    return replyTo?.easygo?.postId || replyTo?.stream_id || null;
+}
+
+function postboxEditedPostId(editedPost) {
+    return editedPost?.value?.easygo?.postId || editedPost?.value?.stream_id || null;
+}
+
+export function createPostboxComposeTarget({ editedPost, openGeneration = 0, replyTo, repost }) {
+    const editedPostId = postboxEditedPostId(editedPost);
+    const replyParentId = postboxReplyParentId(replyTo);
+    return Object.freeze({
+        mode: editedPostId ? 'edit' : replyParentId ? 'reply' : repost ? 'repost' : 'post',
+        editedPostId,
+        replyParentId,
+        openGeneration: Number.isFinite(openGeneration) ? openGeneration : 0,
+    });
+}
+
+export function samePostboxComposeTarget(left, right) {
+    return Boolean(
+        left
+        && right
+        && left.mode === right.mode
+        && left.editedPostId === right.editedPostId
+        && left.replyParentId === right.replyParentId
+        && left.openGeneration === right.openGeneration
+    );
+}
+
+export function postboxComposeTargetKey(target) {
+    return JSON.stringify([
+        target?.mode || 'post',
+        target?.editedPostId || null,
+        target?.replyParentId || null,
+        target?.openGeneration || 0,
+    ]);
+}
+
+function categoryIdentity(category) {
+    return category?.stream_id
+        || category?.id
+        || category?.content?.id
+        || category?.content?.displayName
+        || null;
+}
+
+export function createPostboxDraft(editedPost) {
+    const content = editedPost?.value?.content || {};
+    const category = editedPost ? {
+        content: editedPost.value?.context_details?.context_details
+            || content.context_details
+            || null,
+        stream_id: editedPost.value?.context || content.context || null,
+    } : false;
+    return {
+        category,
+        media: Array.isArray(content.media) ? [...content.media] : [],
+        mentions: Array.isArray(content.mentions) ? [...content.mentions] : [],
+        message: typeof content.body === 'string' ? content.body : '',
+    };
+}
+
+export default function Postbox({isReply = false, openGeneration = 0}) {
     const { 
         user, 
         userData,
@@ -39,44 +100,69 @@ export default function Postbox({isReply = false}) {
         categoriesVis,
         setCategoriesVis
     } = useContext(GlobalContext);
+    const { lease, isCurrentLease } = useDeviceAccountOperationLease();
     const tailwind = useTailwind();
-    const replyParentId = replyTo?.easygo?.postId || replyTo?.stream_id || null;
+    const replyParentId = postboxReplyParentId(replyTo);
+    const composeTarget = createPostboxComposeTarget({
+        editedPost,
+        openGeneration,
+        replyTo,
+        repost,
+    });
+    const composeTargetKey = postboxComposeTargetKey(composeTarget);
+    const initialDraft = createPostboxDraft(editedPost);
     const { create: createPost, update: updatePost, backendConfigured } = usePosts({ autoLoad: false });
     const { create: createReply } = useReplies(replyParentId, { autoLoad: false });
 
     const textInputRef = useRef();
+    const mentionsRef = useRef(initialDraft.mentions);
+    const liveComposeTargetRef = useRef(composeTarget);
+    const liveMentionOwnerUserIdRef = useRef(user?.id || null);
+    const mentionRequestGenerationRef = useRef(0);
+    const accessRequestGenerationRef = useRef(0);
+    const selectedCategoryIdentityRef = useRef(categoryIdentity(initialDraft.category));
+    const composeOperationGenerationRef = useRef(0);
+    const composeOperationRef = useRef(null);
     const moveAnimation1 = useRef(new Animated.Value(0)).current;
     const moveAnimation2 = useRef(new Animated.Value(width)).current;
+    liveComposeTargetRef.current = composeTarget;
+    liveMentionOwnerUserIdRef.current = user?.id || null;
 
-    const [message, setMessage] = useState("");
+    const [message, setMessage] = useState(initialDraft.message);
     const [loading, setLoading] = useState(false);
-    const [categorySelected, setCategorySelected] = useState(false);
+    const [categorySelected, setCategorySelected] = useState(initialDraft.category);
     const [hasAccess, setHasAccess] = useState(false);
     const [mentionsBoxVis, setMentionsBoxVis] = useState(false);
     const [currentMention, setCurrentMention] = useState(null);
-    const [listMedia, setListMedia] = useState([]);
+    const [listMedia, setListMedia] = useState(initialDraft.media);
     const [fullListFollow, setFullListFollow] = useState([])
     const [keyboardHeight, setKeyboardHeight] = useState(0);
 
     useEffect(() => {
-        /** If user is editing a post we pre-fill the content */
-        if(editedPost) {
-            setMessage(editedPost.value.content.body);
-            setListMedia([...editedPost.value.content.media]);
-
-            mentions = editedPost.value.content.mentions
-
-            const temp_category = {}
-            temp_category.content = editedPost.value.context_details?.context_details ? editedPost.value.context_details?.context_details : editedPost.value.content?.context_details
-            temp_category.stream_id = editedPost.value.context ? editedPost.value.context : editedPost.value.content?.context
-
-            setCategorySelected(temp_category)
-        }
-    }, [editedPost])
+        const nextDraft = createPostboxDraft(editedPost);
+        composeOperationGenerationRef.current += 1;
+        composeOperationRef.current = null;
+        accessRequestGenerationRef.current += 1;
+        mentionsRef.current = nextDraft.mentions;
+        selectedCategoryIdentityRef.current = categoryIdentity(nextDraft.category);
+        setMessage(nextDraft.message);
+        setListMedia(nextDraft.media);
+        setCategorySelected(nextDraft.category);
+        setHasAccess(false);
+        setMentionsBoxVis(false);
+        setCurrentMention(null);
+        setLoading(false);
+        setCategoriesVis(false);
+        moveAnimation1.setValue(0);
+        moveAnimation2.setValue(width);
+    }, [composeTargetKey, moveAnimation1, moveAnimation2, setCategoriesVis])
 
     useEffect(() => {
-        getListFollow()
-    }, [backendConfigured, user?.id])
+        void getListFollow()
+        return () => {
+            mentionRequestGenerationRef.current += 1;
+        };
+    }, [backendConfigured, isCurrentLease, lease, user?.id])
 
     useEffect(() => {
         function onKeyboardDidShow(e) {setKeyboardHeight(e.endCoordinates.height);}
@@ -90,17 +176,61 @@ export default function Postbox({isReply = false}) {
         };
     }, [])
 
+    function isCurrentComposeTarget(operationTarget, operationLease) {
+        return Boolean(
+            operationLease
+            && isCurrentLease(operationLease)
+            && samePostboxComposeTarget(liveComposeTargetRef.current, operationTarget)
+        );
+    }
+
+    function beginComposeOperation(operationLease, operationTarget) {
+        const existing = composeOperationRef.current;
+        if (existing && isCurrentComposeOperation(existing)) return null;
+        const operation = Object.freeze({
+            generation: ++composeOperationGenerationRef.current,
+            lease: operationLease,
+            target: operationTarget,
+        });
+        composeOperationRef.current = operation;
+        return operation;
+    }
+
+    function isCurrentComposeOperation(operation) {
+        return Boolean(
+            operation
+            && composeOperationRef.current === operation
+            && operation.generation === composeOperationGenerationRef.current
+            && isCurrentComposeTarget(operation.target, operation.lease)
+        );
+    }
+
+    function finishComposeOperation(operation) {
+        if (composeOperationRef.current !== operation) return;
+        composeOperationRef.current = null;
+        if (isCurrentComposeTarget(operation.target, operation.lease)) setLoading(false);
+    }
+
     async function getListFollow() {
-        if (!user?.id || !backendConfigured) {
-            setFullListFollow([]);
-            return;
-        }
+        const operationLease = lease;
+        const operationUserId = user?.id || null;
+        const requestGeneration = ++mentionRequestGenerationRef.current;
+        const isCurrentRequest = () => Boolean(
+            operationLease
+            && isCurrentLease(operationLease)
+            && requestGeneration === mentionRequestGenerationRef.current
+            && liveMentionOwnerUserIdRef.current === operationUserId
+        );
+        if (!operationLease || !isCurrentLease(operationLease)) return;
+        setFullListFollow([]);
+        if (!operationUserId || !backendConfigured) return;
 
         try {
             const [followersResult, followingResult] = await Promise.all([
-                api.follows.followers(user.id, { limit: 100 }),
-                api.follows.following(user.id, { limit: 100 }),
+                api.follows.followers(operationUserId, { limit: 100 }),
+                api.follows.following(operationUserId, { limit: 100 }),
             ]);
+            if (!isCurrentRequest()) return;
             const followers = (followersResult?.rows || []).map((profile) => ({
                 details: { ...adaptSocialAuthor(profile), type: 'Followers' },
             }));
@@ -109,34 +239,64 @@ export default function Postbox({isReply = false}) {
             }));
             setFullListFollow([...followers, ...following]);
         } catch (error) {
+            if (!isCurrentRequest()) return;
             console.warn('[Postbox] unable to load mention suggestions', error);
             setFullListFollow([]);
         }
     }
 
     async function checkAccess(temp_cat) {
+        const operationLease = lease;
+        const operationTarget = composeTarget;
+        const operationCategoryIdentity = categoryIdentity(temp_cat);
+        const requestGeneration = ++accessRequestGenerationRef.current;
+        selectedCategoryIdentityRef.current = operationCategoryIdentity;
+        const isCurrentRequest = () => Boolean(
+            isCurrentComposeTarget(operationTarget, operationLease)
+            && requestGeneration === accessRequestGenerationRef.current
+            && selectedCategoryIdentityRef.current === operationCategoryIdentity
+        );
+        if (!operationLease || !isCurrentComposeTarget(operationTarget, operationLease)) return;
+        setHasAccess(false);
         if(temp_cat?.content.accessRules && temp_cat?.content.accessRules.length > 0) {
-            checkContextAccess(user, temp_cat.content.accessRules, () => setHasAccess(true)).catch(e => console.log(e))
+            try {
+                await checkContextAccess(user, temp_cat.content.accessRules, () => {
+                    if (isCurrentRequest()) setHasAccess(true);
+                });
+            } catch (error) {
+                if (isCurrentRequest()) console.log(error);
+            }
         } else {
-            setHasAccess(true);
+            if (isCurrentRequest()) setHasAccess(true);
         }
     }
 
     /** Pre-select category if one already selected in the feed */
     useEffect(() => {
-        if(category || selectedCategory || selectedNews) {
-            const temp_cat = currentRoute == 'Categories' ? selectedCategory : currentRoute == 'News' ? selectedNews : category
-            setCategorySelected(temp_cat);
-            checkAccess(temp_cat);
-        }else{
-            checkAccess(null)
-        }
-    }, [category, selectedCategory, selectedNews])
+        const editCategory = createPostboxDraft(editedPost).category;
+        const temp_cat = composeTarget.mode === 'edit'
+            ? editCategory
+            : category || selectedCategory || selectedNews
+                ? currentRoute == 'Categories'
+                    ? selectedCategory
+                    : currentRoute == 'News'
+                        ? selectedNews
+                        : category
+                : false;
+        selectedCategoryIdentityRef.current = categoryIdentity(temp_cat);
+        setCategorySelected(temp_cat);
+        void checkAccess(temp_cat || null);
+    }, [category, composeTargetKey, currentRoute, isCurrentLease, lease, selectedCategory, selectedNews])
 
     async function edit() {
-        if (loading) return;
+        const operationLease = lease;
+        const operationTarget = composeTarget;
+        if (!operationLease || !isCurrentComposeTarget(operationTarget, operationLease)) return;
+        if (composeOperationRef.current && isCurrentComposeOperation(composeOperationRef.current)) return;
         Haptics.selectionAsync();
-        const postId = editedPost?.value?.easygo?.postId || editedPost?.value?.stream_id;
+        const operationEditedPost = editedPost;
+        const operationCategory = categorySelected;
+        const postId = operationTarget.editedPostId;
         const body = message.trim();
         if (!backendConfigured) {
             Alert.alert('Backend not connected', 'Add EXPO_PUBLIC_BACKEND_URL to .env before editing.');
@@ -163,29 +323,36 @@ export default function Postbox({isReply = false}) {
 
         const firstMedia = listMedia?.[0];
         const mediaUrl = firstMedia?.url || firstMedia?.[0]?.url || null;
+        const operation = beginComposeOperation(operationLease, operationTarget);
+        if (!operation) return;
         setLoading(true);
         try {
             const updated = await updatePost(postId, { body: publishBody, mediaUrl });
+            if (!isCurrentComposeOperation(operation)) return;
             if (!updated) {
                 Alert.alert('Could not edit post', 'Check the backend connection and try again.');
                 return;
             }
-            editedPost?.callback?.(
+            operationEditedPost?.callback?.(
                 updated.content.body,
                 updated.content.media,
-                categorySelected || null
+                operationCategory || null
             );
-            if (!editedPost?.callback) hidePostbox();
+            if (!operationEditedPost?.callback && isCurrentComposeOperation(operation)) hidePostbox();
         } finally {
-            setLoading(false);
+            finishComposeOperation(operation);
         }
     }
 
     /** Create a root post or reply through the EasyGo backend. */
     async function send() {
+        const operationLease = lease;
+        const operationTarget = composeTarget;
+        if (!operationLease || !isCurrentComposeTarget(operationTarget, operationLease)) return;
+        let operation = null;
 
         try {
-            if (loading) return;
+            if (composeOperationRef.current && isCurrentComposeOperation(composeOperationRef.current)) return;
             Haptics.selectionAsync();
             const body = message.trim();
 
@@ -206,9 +373,14 @@ export default function Postbox({isReply = false}) {
                 return;
             }
 
-            const categoryTag = categorySelected?.tag || categorySelected?.content?.displayName;
+            const operationReplyTo = replyTo;
+            const operationRepost = repost;
+            const operationCategory = categorySelected;
+            const operationMentions = [...mentionsRef.current];
+            const operationCallback = callbackPostShared || defaultCallbackPostShared;
+            const categoryTag = operationCategory?.tag || operationCategory?.content?.displayName;
             const normalizedCategoryTag = typeof categoryTag === 'string' && categoryTag.startsWith('#') ? categoryTag : null;
-            const publishBody = !replyTo && normalizedCategoryTag && !body.toLowerCase().includes(normalizedCategoryTag.toLowerCase())
+            const publishBody = !operationReplyTo && normalizedCategoryTag && !body.toLowerCase().includes(normalizedCategoryTag.toLowerCase())
                 ? `${body}\n\n${normalizedCategoryTag}`
                 : body;
             if (publishBody.length > 2000) {
@@ -218,61 +390,60 @@ export default function Postbox({isReply = false}) {
 
             let _context = null;
             let master;
-            if(replyTo) {
-                _context = replyTo.content.context;
-                if(replyTo.content.master) {
-                    master = replyTo.content.master;
+            if(operationReplyTo) {
+                _context = operationReplyTo.content.context;
+                if(operationReplyTo.content.master) {
+                    master = operationReplyTo.content.master;
                 } else {
-                    master = replyTo.stream_id;
+                    master = operationReplyTo.stream_id;
                 }
             }
-            else if(repost) {
-                _context = repost.context;
-            } else if(categorySelected) {
-                _context = categorySelected.stream_id;
+            else if(operationRepost) {
+                _context = operationRepost.context;
+            } else if(operationCategory) {
+                _context = operationCategory.stream_id;
             }
 
+            operation = beginComposeOperation(operationLease, operationTarget);
+            if (!operation) return;
             setLoading(true);
             let content = {
                 body: publishBody,
                 context: _context,
                 media: listMedia ? listMedia : null,
-                repost: repost ? repost.stream_id : null,
-                reply_to: replyTo ? replyTo.stream_id : null,
+                repost: operationRepost ? operationRepost.stream_id : null,
+                reply_to: operationReplyTo ? operationReplyTo.stream_id : null,
                 master: master ? master : null,
-                mentions: mentions,
-                repost_details: repost
+                mentions: operationMentions,
+                repost_details: operationRepost
             };
 
             const firstMedia = listMedia?.[0];
             const mediaUrl = firstMedia?.url || firstMedia?.[0]?.url || null;
-            const created = replyTo
+            const created = operationReplyTo
                 ? await createReply({ body: publishBody, mediaUrl })
                 : await createPost({ body: publishBody, mediaUrl });
+            if (!isCurrentComposeOperation(operation)) return;
 
             if(created) {
                 setMessage("");
-                mentions = [];
+                mentionsRef.current = [];
 
                 const temp_details = {}
-                temp_details.context_details = categorySelected?.content
-                temp_details.context_id = categorySelected?.stream_id
+                temp_details.context_details = operationCategory?.content
+                temp_details.context_id = operationCategory?.stream_id
                 let _callbackContent = {
                     ...created,
                     content: { ...created.content, ...content },
-                    repost_details: repost,
-                    context: categorySelected?.stream_id,
-                    context_details: categorySelected ? temp_details : null,
+                    repost_details: operationRepost,
+                    context: operationCategory?.stream_id,
+                    context_details: operationCategory ? temp_details : null,
                 }
 
                 /** If any trigger callback after the post is shared */
-                if(callbackPostShared) {
-                    await callbackPostShared(_callbackContent);
-                }else{
-                    await defaultCallbackPostShared(_callbackContent)
-                }
+                await operationCallback?.(_callbackContent);
+                if (!isCurrentComposeOperation(operation)) return;
 
-                setLoading(false);
                 hidePostbox();
                 return;
 
@@ -521,14 +692,15 @@ export default function Postbox({isReply = false}) {
             //     setLoading(false);
             } else {
                 Alert.alert('Could not publish', 'Please check your connection and try again.');
-                setLoading(false);
             }
 
             // hidePostbox()
         } catch(e) {
+            if (!operation || !isCurrentComposeOperation(operation)) return;
             console.log("Error sharing post: ", e);
             Alert.alert('Could not publish', 'Please check your connection and try again.');
-            setLoading(false);
+        } finally {
+            if (operation) finishComposeOperation(operation);
         }
     }
 
@@ -636,7 +808,7 @@ export default function Postbox({isReply = false}) {
             username: "@" + _mentionName,
             did: mention.did
         }
-        mentions.push(new_mention);
+        mentionsRef.current.push(new_mention);
 
         // let seenObjects = [];
         // let listWithoutDuplicates = mentions.filter(objet => {
@@ -711,7 +883,7 @@ export default function Postbox({isReply = false}) {
                 setFollowUsers(listWithoutDuplicates)
                 setUsersLoading(false);
             }
-        }, [term]);
+        }, [fullListFollow, term]);
 
         /** Show loasing state */
         if(usersLoading) {

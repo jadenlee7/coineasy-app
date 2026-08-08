@@ -26,37 +26,48 @@ import { api } from "../utils/api";
  * }}
  */
 export function useSocialProfile(userId) {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [state, setState] = useState({
+    targetUserId: null,
+    profile: null,
+    loading: false,
+    error: null,
+  });
 
   // Guard against state updates after unmount or stale userId changes.
   const reqIdRef = useRef(0);
+  const liveUserIdRef = useRef(userId);
+  liveUserIdRef.current = userId;
 
   const refresh = useCallback(async () => {
-    if (!userId) {
-      setProfile(null);
-      setError(null);
+    const targetUserId = userId;
+    const myReq = ++reqIdRef.current;
+    const isCurrentRequest = () => (
+      myReq === reqIdRef.current
+      && liveUserIdRef.current === targetUserId
+    );
+
+    if (!targetUserId) {
+      setState({ targetUserId, profile: null, loading: false, error: null });
       return null;
     }
-    const myReq = ++reqIdRef.current;
-    setLoading(true);
-    setError(null);
+    setState({ targetUserId, profile: null, loading: true, error: null });
     try {
-      const res = await api.profiles.get(userId);
+      const res = await api.profiles.get(targetUserId);
       // api.profiles.get returns null when EXPO_PUBLIC_BACKEND_URL is unset
       // (see utils/api.js helper contract). Treat that as "no data, no error".
-      if (myReq !== reqIdRef.current) return null; // stale
+      if (!isCurrentRequest()) return null;
       const next = res && typeof res === "object" ? (res.profile ?? res) : null;
-      setProfile(next);
+      setState({ targetUserId, profile: next, loading: false, error: null });
       return next;
     } catch (e) {
-      if (myReq !== reqIdRef.current) return null; // stale
-      setError(e instanceof Error ? e : new Error(String(e)));
-      setProfile(null);
+      if (!isCurrentRequest()) return null;
+      setState({
+        targetUserId,
+        profile: null,
+        loading: false,
+        error: e instanceof Error ? e : new Error(String(e)),
+      });
       return null;
-    } finally {
-      if (myReq === reqIdRef.current) setLoading(false);
     }
   }, [userId]);
 
@@ -81,7 +92,14 @@ export function useSocialProfile(userId) {
     return null;
   }, []);
 
-  return { profile, loading, error, refresh, update };
+  const ownsTarget = state.targetUserId === userId;
+  return {
+    profile: ownsTarget ? state.profile : null,
+    loading: ownsTarget ? state.loading : Boolean(userId),
+    error: ownsTarget ? state.error : null,
+    refresh,
+    update,
+  };
 }
 
 export default useSocialProfile;

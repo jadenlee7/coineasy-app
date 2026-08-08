@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -17,6 +17,7 @@ import { NotificationsIcon } from '../../components/Icons';
 import Post from '../../components/Post';
 import { UserPfp } from '../../components/User';
 import { GlobalContext } from '../../contexts/GlobalContext';
+import { useDeviceAccountOperationLease } from '../../contexts/DeviceAccountDataContext';
 import useReplies from '../../hooks/useReplies';
 import { api } from '../../utils/api';
 import { adaptSocialPost } from '../../utils/socialPostAdapter';
@@ -31,11 +32,17 @@ const PostDetails = ({ navigation, route }) => {
     showPostbox,
     setReplyTo,
   } = useContext(GlobalContext);
+  const { isCurrentLease, lease } = useDeviceAccountOperationLease();
   const tailwind = useTailwind();
   const postId = route.params?.postId || postDetailsVis;
   const [post, setPost] = useState(null);
+  const [postTargetId, setPostTargetId] = useState(null);
   const [postLoading, setPostLoading] = useState(Boolean(postId && BACKEND_CONFIGURED));
   const [postError, setPostError] = useState(null);
+  const requestGenerationRef = useRef(0);
+  const livePostIdRef = useRef(postId);
+  const postTargetIdRef = useRef(null);
+  livePostIdRef.current = postId;
   const {
     replies,
     loading: repliesLoading,
@@ -51,7 +58,20 @@ const PostDetails = ({ navigation, route }) => {
   }, [postId, setPostDetailsVis]);
 
   const loadPost = useCallback(async () => {
-    if (!BACKEND_CONFIGURED || !postId) {
+    const expectedLease = lease;
+    const expectedPostId = postId;
+    const requestGeneration = ++requestGenerationRef.current;
+    const isCurrentRequest = () => (
+      isCurrentLease(expectedLease)
+      && requestGeneration === requestGenerationRef.current
+      && livePostIdRef.current === expectedPostId
+    );
+
+    if (!expectedLease || !isCurrentLease(expectedLease)) return null;
+    if (postTargetIdRef.current !== expectedPostId) setPost(null);
+    postTargetIdRef.current = expectedPostId;
+    setPostTargetId(expectedPostId);
+    if (!BACKEND_CONFIGURED || !expectedPostId) {
       setPost(null);
       setPostLoading(false);
       setPostError(null);
@@ -61,35 +81,50 @@ const PostDetails = ({ navigation, route }) => {
     setPostLoading(true);
     setPostError(null);
     try {
-      const result = await api.posts.get(postId);
+      const result = await api.posts.get(expectedPostId, {
+        expectedAuthUserId: expectedLease.ownerUserId,
+      });
+      if (!isCurrentRequest()) return null;
       const next = adaptSocialPost(result?.post || result);
       setPost(next);
       return next;
     } catch (cause) {
+      if (!isCurrentRequest()) return null;
       setPostError(cause instanceof Error ? cause : new Error(String(cause)));
       return null;
     } finally {
-      setPostLoading(false);
+      if (isCurrentRequest()) setPostLoading(false);
     }
-  }, [postId]);
+  }, [isCurrentLease, lease, postId]);
 
-  useEffect(() => { loadPost(); }, [loadPost]);
+  useEffect(() => {
+    loadPost();
+    return () => {
+      requestGenerationRef.current += 1;
+    };
+  }, [loadPost]);
+
+  const currentPost = postTargetId === postId ? post : null;
+  const currentPostError = postTargetId === postId ? postError : null;
+  const currentPostLoading = postTargetId === postId
+    ? postLoading
+    : Boolean(BACKEND_CONFIGURED && postId);
 
   const refreshAll = async () => {
     await Promise.all([loadPost(), refreshReplies()]);
   };
 
   const openReplyBox = () => {
-    if (!post) return;
+    if (!currentPost) return;
     showPostbox(() => {});
-    setReplyTo(post);
+    setReplyTo(currentPost);
   };
 
   const emptyMessage = !BACKEND_CONFIGURED
     ? 'Connect the EasyGo backend to open this post.'
     : !postId
       ? 'No post was selected.'
-      : postError
+      : currentPostError
         ? "This post couldn't load. It may have been deleted."
         : 'Post unavailable.';
 
@@ -131,14 +166,14 @@ const PostDetails = ({ navigation, route }) => {
       </View>
 
       <View style={[tailwind('flex pt-2 flex-1'), { backgroundColor: 'white' }]}>
-        {postLoading && !post ? (
+        {currentPostLoading && !currentPost ? (
           <ActivityIndicator style={{ marginTop: 35 }} size="small" color="#020617" />
-        ) : post ? (
+        ) : currentPost ? (
           <ScrollView
-            refreshControl={<RefreshControl refreshing={postLoading || repliesLoading} onRefresh={refreshAll} />}
+            refreshControl={<RefreshControl refreshing={currentPostLoading || repliesLoading} onRefresh={refreshAll} />}
           >
             <View style={{ marginTop: -10 }}>
-              <Post post={post} verticalDivider={true} fontSize={15} notTouchable={true} />
+              <Post post={currentPost} verticalDivider={true} fontSize={15} notTouchable={true} />
 
               <View style={tailwind('flex flex-col')}>
                 {replies.map((reply) => (
@@ -185,7 +220,7 @@ const PostDetails = ({ navigation, route }) => {
         ) : (
           <View style={tailwind('bg-slate-50 px-4 py-5 items-center mt-4 mx-6 rounded-md')}>
             <Text style={tailwind('text-secondary text-center')}>{emptyMessage}</Text>
-            {postError ? (
+            {currentPostError ? (
               <TouchableOpacity onPress={loadPost} style={{ padding: 12, marginTop: 4 }}>
                 <Text style={{ color: '#FF6B17', fontFamily: 'GmarketBold', fontSize: 12 }}>Try again</Text>
               </TouchableOpacity>

@@ -8,6 +8,14 @@ const EXPORT_FILENAME_PREFIX = Object.freeze({
   [EXPORT_SCOPE.social]: 'easygo-social-data',
 });
 
+let exportFileOperationTail = Promise.resolve();
+
+function enqueueExportFileOperation(operation) {
+  const result = exportFileOperationTail.catch(() => {}).then(operation);
+  exportFileOperationTail = result.catch(() => {});
+  return result;
+}
+
 export class DataExportError extends Error {
   constructor(code, message) {
     super(message);
@@ -77,7 +85,7 @@ export function buildExportFilename(scope, exportedAt) {
   return `${EXPORT_FILENAME_PREFIX[scope]}-${timestamp}.json`;
 }
 
-export async function withTemporaryJsonFile({
+async function withTemporaryJsonFileUnlocked({
   directory,
   payload,
   expectedScope,
@@ -116,7 +124,11 @@ export async function withTemporaryJsonFile({
   }
 }
 
-export async function cleanupStaleExportFiles({ directory, list, remove }) {
+export function withTemporaryJsonFile(options) {
+  return enqueueExportFileOperation(() => withTemporaryJsonFileUnlocked(options));
+}
+
+async function cleanupStaleExportFilesUnlocked({ directory, list, remove }) {
   if (typeof directory !== 'string' || !directory.trim()) return { removed: 0, failed: 0 };
   if (typeof list !== 'function' || typeof remove !== 'function') {
     throw new DataExportError('invalid_file_operations', 'Data export file operations are unavailable.');
@@ -135,4 +147,8 @@ export async function cleanupStaleExportFiles({ directory, list, remove }) {
     }
   }
   return { removed, failed };
+}
+
+export function cleanupStaleExportFiles(options) {
+  return enqueueExportFileOperation(() => cleanupStaleExportFilesUnlocked(options));
 }

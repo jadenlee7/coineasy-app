@@ -10,6 +10,7 @@ import { GlobalContext } from '../contexts/GlobalContext';
 import { FollowIcon, UnfollowIcon } from './Icons';
 import useFollow from '../hooks/useFollow';
 import { getEasyGoUserId } from '../utils/socialPostAdapter';
+import { useDeviceAccountOperationLease } from '../contexts/DeviceAccountDataContext';
 
 // import { Image } from 'expo-image';
 
@@ -47,6 +48,7 @@ export default function User({
 
 function UserFollowButton({details, initialFollowing, onFollowChange}) {
   const { user } = useContext(GlobalContext);
+  const { lease, isCurrentLease } = useDeviceAccountOperationLease();
   const targetUserId = getEasyGoUserId(details);
   const ownUserId = getEasyGoUserId(user);
   const enabled = Boolean(targetUserId && ownUserId && targetUserId !== ownUserId);
@@ -64,10 +66,14 @@ function UserFollowButton({details, initialFollowing, onFollowChange}) {
   if (!enabled) return null;
 
   const toggleFollow = async (event) => {
+    const operationLease = lease;
+    if (!operationLease || !isCurrentLease(operationLease)) return;
     event?.stopPropagation?.();
     Haptics.selectionAsync();
     const nextFollowing = !isFollowing;
     const succeeded = nextFollowing ? await follow() : await unfollow();
+    if (!isCurrentLease(operationLease)) return;
+    if (succeeded == null) return;
     if (!succeeded) {
       Alert.alert('Could not update follow', 'Check the backend connection and try again.');
       return;

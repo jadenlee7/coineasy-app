@@ -1,10 +1,11 @@
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { TabBar, TabView } from 'react-native-tab-view';
 import { useTailwind } from 'tailwind-rn';
 import * as Haptics from 'expo-haptics';
 
 import { GlobalContext } from '../../../contexts/GlobalContext';
+import { useDeviceAccountOperationLease } from '../../../contexts/DeviceAccountDataContext';
 import HeaderImage from '../../../components/HeaderImage';
 import FollowerScreen from './FollowerScreen';
 import FollowingScreen from './FollowingScreen';
@@ -20,8 +21,30 @@ function adaptRows(result) {
     return (result?.rows || []).map(adaptSocialProfile).filter(Boolean);
 }
 
+function followListTarget(lease, ownUserId, targetUserId) {
+    if (!lease) return null;
+    return Object.freeze({
+        ownerUserId: lease.ownerUserId,
+        sessionEpoch: lease.sessionEpoch,
+        ownUserId: ownUserId || null,
+        targetUserId: targetUserId || null,
+    });
+}
+
+function sameFollowListTarget(left, lease, ownUserId, targetUserId) {
+    return Boolean(
+        left
+        && lease
+        && left.ownerUserId === lease.ownerUserId
+        && left.sessionEpoch === lease.sessionEpoch
+        && left.ownUserId === (ownUserId || null)
+        && left.targetUserId === (targetUserId || null)
+    );
+}
+
 const FollowNavigation = ({navigation, route}) => {
     const { user } = useContext(GlobalContext);
+    const { lease, isCurrentLease } = useDeviceAccountOperationLease();
     const tailwind = useTailwind();
     const { origin = 'Followers', profile, type } = route.params || {};
     const targetUserId = getEasyGoUserId(profile);
@@ -36,9 +59,47 @@ const FollowNavigation = ({navigation, route}) => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState(null);
+    const [presentedTarget, setPresentedTarget] = useState(null);
+    const requestGenerationRef = useRef(0);
+    const presentedTargetRef = useRef(null);
+    const liveOwnUserIdRef = useRef(ownUserId);
+    const liveTargetUserIdRef = useRef(targetUserId);
+    liveOwnUserIdRef.current = ownUserId;
+    liveTargetUserIdRef.current = targetUserId;
 
     const loadFollowLists = useCallback(async (pullToRefresh = false) => {
-        if (!targetUserId) {
+        const operationLease = lease;
+        const operationOwnUserId = ownUserId;
+        const operationTargetUserId = targetUserId;
+        const requestGeneration = ++requestGenerationRef.current;
+        const isCurrentRequest = () => (
+            isCurrentLease(operationLease)
+            && requestGeneration === requestGenerationRef.current
+            && liveOwnUserIdRef.current === operationOwnUserId
+            && liveTargetUserIdRef.current === operationTargetUserId
+        );
+
+        if (!operationLease || !isCurrentLease(operationLease)) return;
+        if (!sameFollowListTarget(
+            presentedTargetRef.current,
+            operationLease,
+            operationOwnUserId,
+            operationTargetUserId,
+        )) {
+            const nextTarget = followListTarget(
+                operationLease,
+                operationOwnUserId,
+                operationTargetUserId,
+            );
+            presentedTargetRef.current = nextTarget;
+            setPresentedTarget(nextTarget);
+            setFollowers([]);
+            setFollowing([]);
+            setMutual([]);
+            setViewerFollowerIds(new Set());
+            setViewerFollowingIds(new Set());
+        }
+        if (!operationTargetUserId) {
             setError(new Error('Missing EasyGo user id'));
             setLoading(false);
             setRefreshing(false);
@@ -50,17 +111,18 @@ const FollowNavigation = ({navigation, route}) => {
         setError(null);
 
         try {
-            const ownRequests = ownUserId
+            const ownRequests = operationOwnUserId
                 ? [
-                    api.follows.followers(ownUserId, {limit: 200}),
-                    api.follows.following(ownUserId, {limit: 200}),
+                    api.follows.followers(operationOwnUserId, {limit: 200}),
+                    api.follows.following(operationOwnUserId, {limit: 200}),
                 ]
                 : [Promise.resolve(null), Promise.resolve(null)];
             const [targetFollowersResult, targetFollowingResult, ownFollowersResult, ownFollowingResult] = await Promise.all([
-                api.follows.followers(targetUserId, {limit: 200}),
-                api.follows.following(targetUserId, {limit: 200}),
+                api.follows.followers(operationTargetUserId, {limit: 200}),
+                api.follows.following(operationTargetUserId, {limit: 200}),
                 ...ownRequests,
             ]);
+            if (!isCurrentRequest()) return;
 
             const nextFollowers = adaptRows(targetFollowersResult);
             const nextFollowing = adaptRows(targetFollowingResult);
@@ -75,15 +137,21 @@ const FollowNavigation = ({navigation, route}) => {
             setViewerFollowingIds(ownFollowingIds);
             setMutual(nextFollowers.filter((details) => ownFollowerIds.has(getEasyGoUserId(details))));
         } catch (cause) {
+            if (!isCurrentRequest()) return;
             setError(cause instanceof Error ? cause : new Error(String(cause)));
         } finally {
-            setLoading(false);
-            setRefreshing(false);
+            if (isCurrentRequest()) {
+                setLoading(false);
+                setRefreshing(false);
+            }
         }
-    }, [ownUserId, targetUserId]);
+    }, [isCurrentLease, lease, ownUserId, targetUserId]);
 
     useEffect(() => {
         loadFollowLists();
+        return () => {
+            requestGenerationRef.current += 1;
+        };
     }, [loadFollowLists]);
 
     const handleFollowChange = useCallback((changedUserId, nextFollowing) => {
@@ -116,9 +184,35 @@ const FollowNavigation = ({navigation, route}) => {
         : [
             {key: 'followers', title: 'Followers'},
             {key: 'following', title: 'Following'},
-        ], [showMutual]);
+    ], [showMutual]);
     const initialIndex = origin === 'Following' ? 1 : origin === 'Mutual' && showMutual ? 2 : 0;
-    const [tabIndex, setIndex] = useState(initialIndex);
+    const tabTargetKey = JSON.stringify([
+        lease?.ownerUserId || null,
+        lease?.sessionEpoch || null,
+        ownUserId || null,
+        targetUserId || null,
+        origin,
+        type || null,
+    ]);
+    const [tabSelection, setTabSelection] = useState(() => ({
+        targetKey: tabTargetKey,
+        index: initialIndex,
+    }));
+    const tabIndex = tabSelection.targetKey === tabTargetKey
+        ? Math.min(tabSelection.index, routes.length - 1)
+        : initialIndex;
+    const setIndex = useCallback((index) => {
+        setTabSelection({
+            targetKey: tabTargetKey,
+            index: Math.min(index, routes.length - 1),
+        });
+    }, [routes.length, tabTargetKey]);
+    const presentsCurrentTarget = sameFollowListTarget(
+        presentedTarget,
+        lease,
+        ownUserId,
+        targetUserId,
+    );
 
     const commonProps = {
         error,
@@ -132,7 +226,7 @@ const FollowNavigation = ({navigation, route}) => {
 
     const displayName = profile?.profile?.username || 'This user';
     const renderScene = ({route: tabRoute}) => {
-        if (loading) {
+        if (!presentsCurrentTarget || loading) {
             return <ActivityIndicator style={{marginTop: 50}} size="small" color="#020617" />;
         }
         if (tabRoute.key === 'followers') {

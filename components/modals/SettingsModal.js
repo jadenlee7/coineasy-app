@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as FileSystem from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
@@ -19,6 +18,7 @@ import { usePrivy } from '@privy-io/expo';
 import { useTailwind } from 'tailwind-rn';
 
 import { GlobalContext } from '../../contexts/GlobalContext';
+import { useDeviceAccountData } from '../../contexts/DeviceAccountDataContext';
 import useConsent from '../../hooks/useConsent';
 import { api } from '../../utils/api';
 import {
@@ -59,13 +59,19 @@ const EXPORTS = {
     scope: EXPORT_SCOPE.full,
     title: 'Export full EasyGo data?',
     description: 'This JSON includes account-linked identifiers, wallet addresses, consent history, Orange activity, swaps, and social data. Share or save it only somewhere you trust.',
-    request: (signal) => api.exportMyData({ signal }),
+    request: (signal, expectedAuthUserId) => api.exportMyData({
+      signal,
+      expectedAuthUserId,
+    }),
   },
   social: {
     scope: EXPORT_SCOPE.social,
     title: 'Export EasyGo social data?',
     description: 'This privacy-minimized JSON includes your public profile, posts, likes, followers, and following list. It excludes your wallet and Privy identity.',
-    request: (signal) => api.exportMySocialData({ signal }),
+    request: (signal, expectedAuthUserId) => api.exportMySocialData({
+      signal,
+      expectedAuthUserId,
+    }),
   },
 };
 
@@ -75,14 +81,21 @@ export default function SettingsModal() {
     setUser,
     setSettingsVis,
     setPushNotifsVis,
-    listBlockedUser,
-    setListBlockedUser,
-    listMutedUsers,
-    setListMutedUsers,
-    listHiddenPost,
-    setListHiddenPost,
     modalSettingsRef,
   } = useContext(GlobalContext);
+  const {
+    accountLease: deviceAccountLease,
+    blockedAccounts: listBlockedUser,
+    clearBlockedAccounts,
+    clearHiddenPosts,
+    clearMutedAccounts,
+    hiddenPosts: listHiddenPost,
+    mutedAccounts: listMutedUsers,
+    ownerUserId: deviceOwnerUserId,
+    isCurrentAccountLease,
+    sealOwnerData,
+    sessionEpoch: deviceSessionEpoch,
+  } = useDeviceAccountData();
   const privy = usePrivy();
   const { logout } = privy;
   const tailwind = useTailwind();
@@ -93,19 +106,67 @@ export default function SettingsModal() {
   const [deletionConfirmation, setDeletionConfirmation] = useState('');
   const deletionRequestRef = useRef(false);
   const deletionActionRef = useRef(null);
-  const currentPrivyUserIdRef = useRef(privy?.user?.id || null);
-  currentPrivyUserIdRef.current = privy?.user?.id || null;
+  const currentPrivyUserId = privy?.user?.id || null;
+  const currentPrivyUserIdRef = useRef(currentPrivyUserId);
+  currentPrivyUserIdRef.current = currentPrivyUserId;
+  const deviceAccountLeaseRef = useRef(deviceAccountLease);
+  deviceAccountLeaseRef.current = deviceAccountLease;
   const deletionReauthRef = useRef(null);
   if (!deletionReauthRef.current) {
     deletionReauthRef.current = createAccountDeletionReauthCoordinator({
-      getCurrentOwnerUserId: () => currentPrivyUserIdRef.current,
+      getCurrentOwnerUserId: () => (
+        isCurrentAccountLease(deviceAccountLeaseRef.current)
+          ? currentPrivyUserIdRef.current
+          : null
+      ),
     });
   }
-  const exportRequestRef = useRef({ controller: null, generation: 0, ownerKey: null });
   const syncedAccountKey = user?.profile?.data?.easygoUserId || null;
+  const accountOperationRef = useRef(null);
+  const currentAccountOperation = accountOperationRef.current;
+  if (
+    !currentAccountOperation
+    || currentAccountOperation.ownerUserId !== currentPrivyUserId
+    || currentAccountOperation.accountKey !== syncedAccountKey
+    || currentAccountOperation.accountLease !== deviceAccountLease
+    || currentAccountOperation.deviceOwnerUserId !== deviceOwnerUserId
+    || currentAccountOperation.sessionEpoch !== deviceSessionEpoch
+  ) {
+    accountOperationRef.current = Object.freeze({
+      ownerUserId: currentPrivyUserId,
+      accountKey: syncedAccountKey,
+      accountLease: deviceAccountLease,
+      deviceOwnerUserId,
+      sessionEpoch: deviceSessionEpoch,
+    });
+  }
+  const settingsMountedRef = useRef(false);
+  const exportRequestRef = useRef({ controller: null, generation: 0, ownerKey: null });
+  const isCurrentAccountOperation = (expectedOperation) => Boolean(
+    settingsMountedRef.current
+    && expectedOperation
+    && accountOperationRef.current === expectedOperation
+    && isCurrentAccountLease(expectedOperation.accountLease)
+    && expectedOperation.ownerUserId
+    && expectedOperation.ownerUserId === expectedOperation.deviceOwnerUserId
+    && expectedOperation.ownerUserId === currentPrivyUserIdRef.current
+    && expectedOperation.accountKey
+    && Number.isSafeInteger(expectedOperation.sessionEpoch)
+  );
+  const isCurrentDeletionOwner = (operation) => Boolean(
+    operation
+    && operation.ownerUserId
+    && operation.ownerUserId === currentPrivyUserIdRef.current
+    && isCurrentAccountLease(operation.accountLease)
+  );
+  const isCurrentDeletionAction = (operation) => Boolean(
+    deletionActionRef.current === operation
+    && isCurrentDeletionOwner(operation)
+  );
   const consentState = useConsent({
     accountKey: syncedAccountKey,
-    enabled: Boolean(syncedAccountKey),
+    authOwnerUserId: currentPrivyUserId,
+    enabled: Boolean(syncedAccountKey && currentPrivyUserId),
   });
   const consentReadiness = getConsentDocumentReadiness(
     consentState.consent?.currentVersion,
@@ -116,6 +177,11 @@ export default function SettingsModal() {
     || consentState.consent?.segmentingOptIn
     || consentState.consent?.marketingOptIn,
   );
+
+  useEffect(() => {
+    settingsMountedRef.current = true;
+    return () => { settingsMountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     exportRequestRef.current.controller?.abort();
@@ -135,7 +201,7 @@ export default function SettingsModal() {
         ownerKey: null,
       };
     };
-  }, [syncedAccountKey]);
+  }, [currentPrivyUserId, deviceOwnerUserId, deviceSessionEpoch, syncedAccountKey]);
 
   useEffect(() => {
     if (Platform.OS !== 'ios' || !FileSystem.cacheDirectory) return;
@@ -170,7 +236,7 @@ export default function SettingsModal() {
     setSettingsVis?.(false);
   };
 
-  const clearLocalList = (label, key, setter) => {
+  const clearLocalList = (label, clear) => {
     Haptics.selectionAsync();
     Alert.alert(`Clear ${label}?`, 'This only resets the list stored on this device.', [
       { text: 'Cancel', style: 'cancel' },
@@ -178,33 +244,50 @@ export default function SettingsModal() {
         text: 'Clear',
         style: 'destructive',
         onPress: async () => {
-          await AsyncStorage.removeItem(key);
-          setter([]);
+          await clear();
         },
       },
     ]);
   };
 
   const signOut = async () => {
-    if (deletionRequestRef.current) return;
+    const expectedOperation = accountOperationRef.current;
+    if (
+      deletionRequestRef.current
+      || !isCurrentAccountOperation(expectedOperation)
+    ) return;
     Haptics.selectionAsync();
     setLoadingAction('logout');
     try {
       await logout();
+      if (!isCurrentAccountOperation(expectedOperation)) return;
       setUser(null);
       close();
     } catch {
+      if (!isCurrentAccountOperation(expectedOperation)) return;
       Alert.alert('Could not sign out', 'Please try again.');
     } finally {
-      setLoadingAction(null);
+      if (isCurrentAccountOperation(expectedOperation)) {
+        setLoadingAction(null);
+      }
     }
   };
 
   const prepareAccountDeletion = async () => {
-    const ownerUserId = currentPrivyUserIdRef.current;
-    if (!ownerUserId || loadingAction || deletionRequestRef.current) return;
+    const accountOperation = accountOperationRef.current;
+    const ownerUserId = accountOperation?.ownerUserId;
+    if (
+      !isCurrentAccountOperation(accountOperation)
+      || !ownerUserId
+      || loadingAction
+      || deletionRequestRef.current
+    ) return;
 
-    const operation = { kind: 'status', ownerUserId };
+    const operation = {
+      kind: 'status',
+      ownerUserId,
+      accountLease: accountOperation.accountLease,
+    };
     deletionActionRef.current = operation;
     deletionRequestRef.current = true;
     Haptics.selectionAsync();
@@ -213,7 +296,7 @@ export default function SettingsModal() {
       const status = await api.accountDeletionStatus({
         expectedAuthUserId: ownerUserId,
       });
-      if (currentPrivyUserIdRef.current !== ownerUserId) {
+      if (!isCurrentDeletionOwner(operation)) {
         throw new Error('account_session_changed');
       }
 
@@ -230,8 +313,7 @@ export default function SettingsModal() {
           isCurrentOwner: () => false,
         });
         if (
-          deletionActionRef.current !== operation
-          || currentPrivyUserIdRef.current !== ownerUserId
+          !isCurrentDeletionAction(operation)
         ) return;
         close();
         return;
@@ -253,8 +335,7 @@ export default function SettingsModal() {
       setDeletionStage('confirm');
     } catch {
       if (
-        deletionActionRef.current !== operation
-        || currentPrivyUserIdRef.current !== ownerUserId
+        !isCurrentDeletionAction(operation)
       ) return;
       Alert.alert(
         '삭제 가능 여부를 확인하지 못했습니다',
@@ -262,8 +343,7 @@ export default function SettingsModal() {
       );
     } finally {
       if (
-        deletionActionRef.current === operation
-        && currentPrivyUserIdRef.current === ownerUserId
+        isCurrentDeletionAction(operation)
       ) {
         deletionActionRef.current = null;
         deletionRequestRef.current = false;
@@ -281,10 +361,22 @@ export default function SettingsModal() {
   });
 
   const confirmAccountDeletion = async () => {
+    const accountOperation = accountOperationRef.current;
     const ownerUserId = deletionCapability?.ownerUserId;
-    if (!deletionReady || !ownerUserId || loadingAction || deletionRequestRef.current) return;
+    if (
+      !isCurrentAccountOperation(accountOperation)
+      || accountOperation.ownerUserId !== ownerUserId
+      || !deletionReady
+      || !ownerUserId
+      || loadingAction
+      || deletionRequestRef.current
+    ) return;
 
-    const operation = { kind: 'delete', ownerUserId };
+    const operation = {
+      kind: 'delete',
+      ownerUserId,
+      accountLease: accountOperation.accountLease,
+    };
     deletionActionRef.current = operation;
     deletionRequestRef.current = true;
     setLoadingAction('account-deletion');
@@ -305,7 +397,7 @@ export default function SettingsModal() {
         signInWithApple: (options) => AppleAuthentication.signInAsync(options),
         verifyChallenge: (params) => api.accountDeletionReauthVerify(params),
       });
-      if (currentPrivyUserIdRef.current !== ownerUserId) {
+      if (!isCurrentDeletionOwner(operation)) {
         throw new AccountDeletionReauthError(
           ACCOUNT_DELETION_REAUTH_ERROR.sessionChanged,
         );
@@ -319,6 +411,7 @@ export default function SettingsModal() {
         userId: ownerUserId,
         clientRequestId,
         walletRiskAcknowledged: true,
+        sealLocalData: () => sealOwnerData(ownerUserId),
         // markerStore.begin unmounts Settings before the server responds.
         // Defer cleanup to AccountDeletionPending, whose owner reader remains
         // live while it reconciles the accepted marker.
@@ -326,7 +419,7 @@ export default function SettingsModal() {
         request: (authoritativeClientRequestId) => {
           if (
             authoritativeClientRequestId !== clientRequestId
-            || currentPrivyUserIdRef.current !== ownerUserId
+            || !isCurrentDeletionOwner(operation)
           ) {
             throw new Error('account_deletion_reauth_binding_changed');
           }
@@ -341,8 +434,7 @@ export default function SettingsModal() {
       });
 
       if (
-        deletionActionRef.current !== operation
-        || currentPrivyUserIdRef.current !== ownerUserId
+        !isCurrentDeletionAction(operation)
       ) return;
 
       if (outcome.status === 'rejected') {
@@ -358,8 +450,7 @@ export default function SettingsModal() {
       }
     } catch (error) {
       if (
-        deletionActionRef.current !== operation
-        || currentPrivyUserIdRef.current !== ownerUserId
+        !isCurrentDeletionAction(operation)
       ) return;
       deletionRequestRef.current = false;
       if (!reauthCompleted) {
@@ -394,8 +485,7 @@ export default function SettingsModal() {
       challengeId = null;
       reauthProof = null;
       if (
-        deletionActionRef.current === operation
-        && currentPrivyUserIdRef.current === ownerUserId
+        isCurrentDeletionAction(operation)
       ) {
         deletionActionRef.current = null;
         setLoadingAction(null);
@@ -403,18 +493,19 @@ export default function SettingsModal() {
     }
   };
 
-  const performExport = async (kind) => {
-    if (loadingAction || !syncedAccountKey) return;
+  const performExport = async (kind, expectedOperation) => {
+    if (loadingAction || !isCurrentAccountOperation(expectedOperation)) return;
     const descriptor = EXPORTS[kind];
     const controller = new AbortController();
     const generation = exportRequestRef.current.generation + 1;
-    const ownerKey = syncedAccountKey;
+    const ownerKey = expectedOperation.accountKey;
     exportRequestRef.current.controller?.abort();
     exportRequestRef.current = { controller, generation, ownerKey };
     const isCurrentExport = () => (
       exportRequestRef.current.generation === generation
       && exportRequestRef.current.ownerKey === ownerKey
       && !controller.signal.aborted
+      && isCurrentAccountOperation(expectedOperation)
     );
     const requireCurrentExport = () => {
       if (isCurrentExport()) return;
@@ -426,7 +517,10 @@ export default function SettingsModal() {
     let androidCleanupFailed = false;
     setLoadingAction(`export-${kind}`);
     try {
-      const payload = await descriptor.request(controller.signal);
+      const payload = await descriptor.request(
+        controller.signal,
+        expectedOperation.ownerUserId,
+      );
       requireCurrentExport();
       if (Platform.OS === 'android') {
         const permission = await FileSystem.StorageAccessFramework
@@ -478,13 +572,16 @@ export default function SettingsModal() {
           androidCleanupFailed = true;
         }
       }
-      if (exportError?.name === 'AbortError') return;
       if (androidCleanupFailed) {
         Alert.alert(
           'Check the selected folder',
           'The export did not finish and a partial JSON file may remain. Delete it before sharing the folder.',
         );
-      } else if (['cleanup_failed', 'operation_cleanup_failed'].includes(exportError?.code)) {
+        return;
+      }
+      if (!isCurrentExport()) return;
+      if (exportError?.name === 'AbortError') return;
+      if (['cleanup_failed', 'operation_cleanup_failed'].includes(exportError?.code)) {
         Alert.alert(
           'Temporary cleanup needs attention',
           'The share action may have created a copy, but EasyGo could not verify cache cleanup. Close EasyGo before another person uses this device; cleanup is retried on the next profile load.',
@@ -504,22 +601,36 @@ export default function SettingsModal() {
   };
 
   const requestExport = (kind) => {
+    const expectedOperation = accountOperationRef.current;
+    if (!isCurrentAccountOperation(expectedOperation)) return;
     Haptics.selectionAsync();
     const descriptor = EXPORTS[kind];
     Alert.alert(descriptor.title, descriptor.description, [
       { text: 'Cancel', style: 'cancel' },
-      { text: Platform.OS === 'android' ? 'Choose folder' : 'Continue', onPress: () => performExport(kind) },
+      {
+        text: Platform.OS === 'android' ? 'Choose folder' : 'Continue',
+        onPress: () => performExport(kind, expectedOperation),
+      },
     ]);
   };
 
   const requestConsentRevocation = () => {
+    const expectedOperation = accountOperationRef.current;
+    if (!isCurrentAccountOperation(expectedOperation)) return;
+    const revokeAll = consentState.revokeAll;
     Haptics.selectionAsync();
     Alert.alert(
       'Revoke all stored consent?',
       'Required and optional consent choices for the current server version will be set to off. You can review published documents and consent again later.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Revoke', style: 'destructive', onPress: consentState.revokeAll },
+        {
+          text: 'Revoke',
+          style: 'destructive',
+          onPress: () => (
+            isCurrentAccountOperation(expectedOperation) ? revokeAll() : null
+          ),
+        },
       ],
     );
   };
@@ -579,9 +690,9 @@ export default function SettingsModal() {
       <Text style={{ fontFamily: 'GmarketBold', fontSize: 12, color: '#64748B', marginTop: 24 }}>
         ON-DEVICE SAFETY LISTS
       </Text>
-      {row('Blocked accounts', (listBlockedUser || []).length, () => clearLocalList('blocked accounts', 'list_blocked_user', setListBlockedUser))}
-      {row('Muted accounts', (listMutedUsers || []).length, () => clearLocalList('muted accounts', 'list_muted_users', setListMutedUsers))}
-      {row('Hidden posts', (listHiddenPost || []).length, () => clearLocalList('hidden posts', 'list_hidden_post', setListHiddenPost))}
+      {row('Blocked accounts', listBlockedUser.length, () => clearLocalList('blocked accounts', clearBlockedAccounts))}
+      {row('Muted accounts', listMutedUsers.length, () => clearLocalList('muted accounts', clearMutedAccounts))}
+      {row('Hidden posts', listHiddenPost.length, () => clearLocalList('hidden posts', clearHiddenPosts))}
 
       <Text style={{ fontFamily: 'GmarketBold', fontSize: 12, color: '#64748B', marginTop: 24 }}>
         PRIVACY & DATA
