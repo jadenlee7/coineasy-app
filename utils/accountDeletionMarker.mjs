@@ -266,6 +266,43 @@ export function createAccountDeletionMarkerStore({
     });
   };
 
+  // A server-side deletion record can exist before local purge completes
+  // (for example MANUAL_REVIEW). Preserve that recovery state without
+  // promoting the device marker to accepted or clearing the bearer session.
+  const recover = async ({ userId, clientRequestId, requestId = null } = {}) => {
+    const subjectKey = await subjectKeyFor(userId);
+    const normalizedRequestId = normalizedClientRequestId(clientRequestId);
+    const normalizedProviderRequestId = normalizedServerRequestId(requestId);
+
+    listeners.forEach((listener) => {
+      try { listener({ type: 'blocking', subjectKey }); } catch {}
+    });
+    try {
+      return await serializeMutation(async () => {
+        const existing = await readMarker(subjectKey);
+        if (existing && existing.clientRequestId !== normalizedRequestId) {
+          throw markerError('account_deletion_marker_request_mismatch');
+        }
+        const timestamp = normalizedNow(now);
+        const marker = normalizeAccountDeletionMarker({
+          version: ACCOUNT_DELETION_MARKER_SCHEMA_VERSION,
+          subjectKey,
+          clientRequestId: normalizedRequestId,
+          phase: ACCOUNT_DELETION_MARKER_PHASE.requesting,
+          requestId: normalizedProviderRequestId || existing?.requestId || null,
+          createdAt: existing?.createdAt || timestamp,
+          updatedAt: timestamp,
+        });
+        await writeMarker(marker);
+        return marker;
+      });
+    } finally {
+      listeners.forEach((listener) => {
+        try { listener({ type: 'changed', subjectKey }); } catch {}
+      });
+    }
+  };
+
   const releaseRequesting = async ({ userId, clientRequestId } = {}) => {
     const subjectKey = await subjectKeyFor(userId);
     const normalizedRequestId = normalizedClientRequestId(clientRequestId);
@@ -295,6 +332,7 @@ export function createAccountDeletionMarkerStore({
     load,
     begin,
     accept,
+    recover,
     releaseRequesting,
     subscribe(listener) {
       if (typeof listener !== 'function') return () => {};

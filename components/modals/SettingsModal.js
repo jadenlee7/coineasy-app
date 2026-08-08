@@ -22,6 +22,7 @@ import useConsent from '../../hooks/useConsent';
 import { api } from '../../utils/api';
 import {
   canConfirmAccountDeletion,
+  reconcileAccountDeletionStatus,
   submitAccountDeletionRequest,
 } from '../../utils/accountDeletionFlow.mjs';
 import { purgeAccountDeletionLocalData } from '../../utils/accountDeletionLocalData.mjs';
@@ -225,14 +226,14 @@ export default function SettingsModal() {
 
       if (status?.state) {
         const clientRequestId = createAccountDeletionClientRequestId();
-        await accountDeletionMarkerStore.begin({
+        await reconcileAccountDeletionStatus({
+          markerStore: accountDeletionMarkerStore,
           userId: ownerUserId,
           clientRequestId,
-          phase: 'accepted',
-          requestId: status.requestId || null,
+          status,
+          purgeLocalData: purgeDeletedAccountFromDevice,
+          logout,
         });
-        await purgeDeletedAccountFromDevice();
-        try { await logout(); } catch {}
         close();
         return;
       }

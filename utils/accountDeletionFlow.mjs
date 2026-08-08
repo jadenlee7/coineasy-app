@@ -5,11 +5,6 @@ function isDefinitiveNoRequest(error) {
     && error?.body?.error === 'confirmation_required';
 }
 
-function isConfirmedDeletionTombstone(error) {
-  return Number(error?.status) === 410
-    && error?.body?.error === 'account_deletion_in_progress';
-}
-
 function acceptedDeletionResponse(value) {
   return Boolean(
     value
@@ -18,7 +13,21 @@ function acceptedDeletionResponse(value) {
     && typeof value.state === 'string'
     && value.state.length > 0
     && typeof value.requestId === 'string'
-    && value.requestId.length > 0,
+    && value.requestId.length > 0
+    && value.localDataDeleted === true,
+  );
+}
+
+function recoverableDeletionResponse(error) {
+  const body = error?.body;
+  return Boolean(
+    Number(error?.status) === 409
+    && body
+    && typeof body === 'object'
+    && !Array.isArray(body)
+    && typeof body.state === 'string'
+    && body.state.length > 0
+    && body.localDataDeleted === false,
   );
 }
 
@@ -47,6 +56,83 @@ export function canConfirmAccountDeletion({
     && expectedUserId === currentUserId;
 }
 
+/**
+ * Reconcile an authenticated GET /me/account-deletion response with the
+ * durable device marker. A server state alone is not proof of local deletion:
+ * only localDataDeleted === true may promote, purge, and optionally log out.
+ */
+export async function reconcileAccountDeletionStatus({
+  markerStore,
+  userId,
+  clientRequestId,
+  status,
+  purgeLocalData,
+  logout,
+} = {}) {
+  if (
+    !markerStore
+    || typeof markerStore.begin !== 'function'
+    || typeof markerStore.accept !== 'function'
+    || typeof markerStore.recover !== 'function'
+  ) {
+    throw new Error('account_deletion_status_recovery_invalid');
+  }
+  const hasState = Boolean(
+    status
+    && typeof status === 'object'
+    && !Array.isArray(status)
+    && typeof status.state === 'string'
+    && status.state.length > 0,
+  );
+  if (!hasState) {
+    return Object.freeze({ status: 'unknown', code: 'account_deletion_status_unknown' });
+  }
+
+  // Establish the durable lock before interpreting any server state. This also
+  // makes the marker's original client request id authoritative during a
+  // recovery race instead of replacing it with a newly generated id.
+  const markerResult = await markerStore.begin({
+    userId,
+    clientRequestId,
+    phase: ACCOUNT_DELETION_MARKER_PHASE.requesting,
+  });
+  const marker = markerResult?.marker;
+  if (!marker) throw new Error('account_deletion_marker_unavailable');
+
+  if (!acceptedDeletionResponse(status)) {
+    await markerStore.recover({
+      userId,
+      clientRequestId: marker.clientRequestId,
+      requestId: typeof status.requestId === 'string' ? status.requestId : null,
+    });
+    return Object.freeze({
+      status: status.localDataDeleted === false ? 'recovery' : 'uncertain',
+      code: status.state === 'MANUAL_REVIEW'
+        ? 'account_deletion_manual_review'
+        : 'account_deletion_status_unknown',
+      requestId: status.requestId || null,
+      state: status.state,
+      localDataPurged: false,
+      loggedOut: false,
+    });
+  }
+
+  await markerStore.accept({
+    userId,
+    clientRequestId: marker.clientRequestId,
+    requestId: status.requestId,
+  });
+  const localDataPurged = await settleCleanup(purgeLocalData);
+  const loggedOut = localDataPurged ? await settleCleanup(logout) : false;
+  return Object.freeze({
+    status: 'accepted',
+    requestId: status.requestId,
+    state: status.state,
+    localDataPurged,
+    loggedOut,
+  });
+}
+
 export async function submitAccountDeletionRequest({
   markerStore,
   userId,
@@ -60,6 +146,7 @@ export async function submitAccountDeletionRequest({
     !markerStore
     || typeof markerStore.begin !== 'function'
     || typeof markerStore.accept !== 'function'
+    || typeof markerStore.recover !== 'function'
     || typeof markerStore.releaseRequesting !== 'function'
     || typeof request !== 'function'
     || walletRiskAcknowledged !== true
@@ -82,25 +169,23 @@ export async function submitAccountDeletionRequest({
   try {
     response = await request(marker.clientRequestId);
   } catch (error) {
-    if (isConfirmedDeletionTombstone(error)) {
+    if (recoverableDeletionResponse(error)) {
       try {
-        await markerStore.accept({
+        await markerStore.recover({
           userId,
           clientRequestId: marker.clientRequestId,
-          requestId: marker.requestId,
+          requestId: error.body.requestId || marker.requestId,
         });
       } catch {
-        await settleCleanup(purgeLocalData);
         return Object.freeze({ status: 'uncertain', code: 'account_deletion_status_unknown' });
       }
-      const localDataPurged = await settleCleanup(purgeLocalData);
-      const loggedOut = localDataPurged ? await settleCleanup(logout) : false;
       return Object.freeze({
-        status: 'accepted',
-        requestId: marker.requestId,
-        state: 'IN_PROGRESS',
-        localDataPurged,
-        loggedOut,
+        status: 'recovery',
+        code: error.body.error || 'account_deletion_recovery_required',
+        requestId: error.body.requestId || marker.requestId,
+        state: error.body.state,
+        localDataPurged: false,
+        loggedOut: false,
       });
     }
     if (
@@ -117,14 +202,12 @@ export async function submitAccountDeletionRequest({
       }
     }
 
-    await settleCleanup(purgeLocalData);
     // Keep the authenticated bearer available for status/retry recovery when
     // the server outcome is unknown. The root session gate hides the main UI.
     return Object.freeze({ status: 'uncertain', code: 'account_deletion_status_unknown' });
   }
 
   if (!acceptedDeletionResponse(response)) {
-    await settleCleanup(purgeLocalData);
     return Object.freeze({ status: 'uncertain', code: 'account_deletion_status_unknown' });
   }
 

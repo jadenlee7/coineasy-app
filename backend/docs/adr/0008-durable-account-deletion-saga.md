@@ -179,8 +179,9 @@ both facts clear before activation.
 ## Consequences
 
 - `ACCOUNT_DELETION_ENABLED` remains `false` in Railway and all EAS builds.
-- A DID tombstone blocks stale sessions only; a stable Apple identity guard is
-  a release blocker before Privy deletion can be activated.
+- Stable Apple identity tombstones and ordered auth/deletion locks are
+  implemented, while the irreversible enforcement latch stays closed until
+  every enabled login method has equivalent stable-identity coverage.
 - Staging and production deploy preflight requires both deletion keys even
   while the request gate is off, so disabling the feature can never disable
   tombstone enforcement for subjects deleted earlier.
@@ -226,15 +227,16 @@ both facts clear before activation.
 1. [x] Implement and test the additive schema and local tombstone foundation
    on the isolated branch; production deployment remains deferred.
 2. [x] Prevent `/auth/sync` from recreating a tombstoned Privy DID.
-3. [ ] Add provider worker leases, retry/backoff, and redacted diagnostics.
+3. [x] Add a dormant provider worker with leases, retry/backoff, and redacted
+   diagnostics; activation remains deferred.
 4. [ ] Obtain written confirmation of Apple-token revocation ownership or add
    EasyGo's own Apple token-exchange/revocation flow.
-5. [ ] Capture and tombstone a stable Apple subject so a new Privy DID cannot
-   recreate the deleted account.
+5. [x] Capture a server-verified Apple subject only long enough to derive and
+   persist its keyed tombstone, so a replacement Privy DID is blocked.
 6. [ ] Approve wallet, blockchain, backup, Telegram/AMA, and telemetry copy and
    retention behavior.
 7. [x] Add the mobile deletion marker, session gate, owner-bound request,
    two-step warning/confirmation UI, pending recovery screen, and targeted
    cache purge.
-8. [ ] Add recent reauthentication and stable Apple-subject protection.
+8. [ ] Add recent interactive reauthentication before destructive confirmation.
 9. [ ] Run destructive QA only with a disposable staging account.

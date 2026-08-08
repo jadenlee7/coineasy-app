@@ -9,6 +9,7 @@ import {
 } from '../utils/accountDeletionMarker.mjs';
 import {
   canConfirmAccountDeletion,
+  reconcileAccountDeletionStatus,
   submitAccountDeletionRequest,
 } from '../utils/accountDeletionFlow.mjs';
 import {
@@ -104,7 +105,11 @@ test('a marker is durably written before the destructive request', async () => {
     walletRiskAcknowledged: true,
     request: async (clientRequestId) => {
       events.push(['request', clientRequestId]);
-      return { requestId: 'delete_1', state: 'LOCAL_PURGED' };
+      return {
+        requestId: 'delete_1',
+        state: 'LOCAL_PURGED',
+        localDataDeleted: true,
+      };
     },
     purgeLocalData: async () => events.push(['purge']),
     logout: async () => events.push(['logout']),
@@ -182,11 +187,11 @@ test('an uncertain server outcome keeps the marker and bearer session for recove
     code: 'account_deletion_status_unknown',
   });
   assert.equal((await store.load(USER_A)).marker.phase, 'requesting');
-  assert.equal(purges, 1);
+  assert.equal(purges, 0);
   assert.equal(logouts, 0);
 });
 
-test('a server tombstone is confirmed, promoted, purged, and logged out', async () => {
+test('a bare 410 tombstone stays requesting without purge or logout', async () => {
   const { markerStore: store } = markerStore();
   let purges = 0;
   let logouts = 0;
@@ -201,10 +206,114 @@ test('a server tombstone is confirmed, promoted, purged, and logged out', async 
     purgeLocalData: async () => { purges += 1; },
     logout: async () => { logouts += 1; },
   });
-  assert.equal(result.status, 'accepted');
-  assert.equal((await store.load(USER_A)).marker.phase, 'accepted');
-  assert.equal(purges, 1);
-  assert.equal(logouts, 1);
+  assert.deepEqual(result, {
+    status: 'uncertain',
+    code: 'account_deletion_status_unknown',
+  });
+  assert.equal((await store.load(USER_A)).marker.phase, 'requesting');
+  assert.equal(purges, 0);
+  assert.equal(logouts, 0);
+});
+
+test('GET MANUAL_REVIEW keeps a recovery marker and the bearer session intact', async () => {
+  const { markerStore: store } = markerStore();
+  await store.begin({
+    userId: USER_A,
+    clientRequestId: CLIENT_A,
+    phase: ACCOUNT_DELETION_MARKER_PHASE.accepted,
+    requestId: 'delete_old',
+  });
+  let purges = 0;
+  let logouts = 0;
+
+  const result = await reconcileAccountDeletionStatus({
+    markerStore: store,
+    userId: USER_A,
+    clientRequestId: CLIENT_A,
+    status: {
+      requestId: 'delete_manual',
+      state: 'MANUAL_REVIEW',
+      localDataDeleted: false,
+      completed: false,
+    },
+    purgeLocalData: async () => { purges += 1; },
+    logout: async () => { logouts += 1; },
+  });
+
+  assert.deepEqual(result, {
+    status: 'recovery',
+    code: 'account_deletion_manual_review',
+    requestId: 'delete_manual',
+    state: 'MANUAL_REVIEW',
+    localDataPurged: false,
+    loggedOut: false,
+  });
+  const loaded = await store.load(USER_A);
+  assert.equal(loaded.status, 'blocked');
+  assert.equal(loaded.marker.phase, ACCOUNT_DELETION_MARKER_PHASE.requesting);
+  assert.equal(loaded.marker.requestId, 'delete_manual');
+  assert.equal(purges, 0);
+  assert.equal(logouts, 0);
+});
+
+test('a 202 body without local purge proof remains uncertain and blocking', async () => {
+  const { markerStore: store } = markerStore();
+  let purges = 0;
+  let logouts = 0;
+  const result = await submitAccountDeletionRequest({
+    markerStore: store,
+    userId: USER_A,
+    clientRequestId: CLIENT_A,
+    walletRiskAcknowledged: true,
+    request: async () => ({
+      requestId: 'delete_manual',
+      state: 'MANUAL_REVIEW',
+      localDataDeleted: false,
+    }),
+    purgeLocalData: async () => { purges += 1; },
+    logout: async () => { logouts += 1; },
+  });
+
+  assert.deepEqual(result, {
+    status: 'uncertain',
+    code: 'account_deletion_status_unknown',
+  });
+  assert.equal((await store.load(USER_A)).marker.phase, 'requesting');
+  assert.equal(purges, 0);
+  assert.equal(logouts, 0);
+});
+
+test('a 409 manual-review response records recovery without local cleanup', async () => {
+  const { markerStore: store } = markerStore();
+  let purges = 0;
+  let logouts = 0;
+  const result = await submitAccountDeletionRequest({
+    markerStore: store,
+    userId: USER_A,
+    clientRequestId: CLIENT_A,
+    walletRiskAcknowledged: true,
+    request: async () => {
+      throw {
+        status: 409,
+        body: {
+          error: 'account_deletion_manual_review',
+          requestId: 'delete_manual',
+          state: 'MANUAL_REVIEW',
+          localDataDeleted: false,
+        },
+      };
+    },
+    purgeLocalData: async () => { purges += 1; },
+    logout: async () => { logouts += 1; },
+  });
+
+  assert.equal(result.status, 'recovery');
+  assert.equal(result.state, 'MANUAL_REVIEW');
+  const loaded = await store.load(USER_A);
+  assert.equal(loaded.marker.phase, 'requesting');
+  assert.equal(loaded.marker.requestId, 'delete_manual');
+  assert.equal(purges, 0);
+  assert.equal(logouts, 0);
 });
 
 test('confirmed deletion stays authenticated and blocked when local purge fails', async () => {
@@ -215,7 +324,11 @@ test('confirmed deletion stays authenticated and blocked when local purge fails'
     userId: USER_A,
     clientRequestId: CLIENT_A,
     walletRiskAcknowledged: true,
-    request: async () => ({ requestId: 'delete_1', state: 'LOCAL_PURGED' }),
+    request: async () => ({
+      requestId: 'delete_1',
+      state: 'LOCAL_PURGED',
+      localDataDeleted: true,
+    }),
     purgeLocalData: async () => { throw new Error('local purge failed'); },
     logout: async () => { logouts += 1; },
   });

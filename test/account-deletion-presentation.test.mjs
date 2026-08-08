@@ -54,11 +54,18 @@ test('account deletion is capability-gated and binds the destructive request to 
   assert.match(settings, /walletRiskAcknowledged/);
   assert.match(settings, /confirmationText: deletionConfirmation/);
   assert.match(settings, /submitAccountDeletionRequest/);
+  assert.match(settings, /reconcileAccountDeletionStatus/);
   assert.match(settings, /expectedAuthUserId: ownerUserId/);
+  assert.doesNotMatch(settings, /phase:\s*['"]accepted['"]/);
   assert.match(api, /boundAuth: true/);
   assert.match(api, /expectedAuthUserId/);
   assert.match(api, /expectedPrivyDid: expectedAuthUserId/);
   assert.match(pending, /guard\.marker\.clientRequestId/);
   assert.match(pending, /accountDeletionStatus\(\{/);
+  assert.match(pending, /reconcileAccountDeletionStatus/);
   assert.match(pending, /'server-error', 'server-blocked'/);
+
+  const app = readFileSync(new URL('../App.js', import.meta.url), 'utf8');
+  assert.match(app, /account_deletion_in_progress[\s\S]*phase:\s*['"]requesting['"]/);
+  assert.doesNotMatch(app, /phase:\s*['"]accepted['"]/);
 });

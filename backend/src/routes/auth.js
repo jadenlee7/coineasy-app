@@ -15,14 +15,23 @@ import { requirePhase } from '../middleware/phase.js';
 import {
   getUser,
   extractProfile,
-  PrivyConfigurationError,
+  extractAppleSubject,
+  isPrivyConfigurationFailure,
+  PrivyIdentityError,
 } from '../lib/privy.js';
 import { prisma } from '../lib/db.js';
 import { awardWelcomeBonusOnce, getOrangeBalance } from '../lib/auth-sync.js';
 import { express4AsyncHandler } from '../lib/express-async.js';
 import {
   AccountDeletionBlockedError,
+  AccountDeletionConfigurationError,
+  AccountDeletionIdentityError,
+  accountDeletionStableIdentityEnforced,
+  APPLE_STABLE_IDENTITY_CONTEXT,
+  APPLE_STABLE_IDENTITY_PROVIDER,
+  deriveAppleStableProviderIdentity,
   findAccountDeletionRequest,
+  reconcileUserStableProviderIdentities,
   runWithAccountDeletionGuard,
 } from '../lib/account-deletion.js';
 import {
@@ -62,15 +71,6 @@ async function addressLinkedToAnotherUser(address, userId) {
     },
     select: { id: true },
   });
-}
-
-function isPrivyConfigurationFailure(error) {
-  const upstreamStatus = Number(
-    error?.status ?? error?.statusCode ?? error?.response?.status,
-  );
-  return error instanceof PrivyConfigurationError
-    || upstreamStatus === 401
-    || upstreamStatus === 403;
 }
 
 export function createAuthSyncHandler({
@@ -122,16 +122,62 @@ export function createAuthSyncHandler({
       return res.status(502).json({ error: 'privy_unavailable' });
     }
 
+    let appleSubject;
+    let appleIdentity;
+    try {
+      appleSubject = extractAppleSubject(privyUser);
+      appleIdentity = deriveAppleStableProviderIdentity(appleSubject, env, {
+        required: accountDeletionStableIdentityEnforced(env),
+      });
+    } catch (error) {
+      if (error instanceof PrivyIdentityError) {
+        req.log?.warn?.(
+          { errorType: error.name },
+          'Privy stable identity was invalid during auth sync',
+        );
+        return res.status(502).json({ error: 'privy_unavailable' });
+      }
+      req.log?.error?.(
+        { errorType: error?.name || 'Error' },
+        'account deletion stable identity guard is unavailable during auth sync',
+      );
+      return res.status(503).json({ error: 'account_deletion_guard_unavailable' });
+    } finally {
+      // Keep the raw provider subject scoped to extraction/derivation only.
+      appleSubject = null;
+    }
+
+    const stableProviderIdentities = appleIdentity ? [appleIdentity] : [];
+
     try {
       const result = await runWithAccountDeletionGuard({
         prisma: db,
         privyDid: profile.privyDid,
+        stableProviderIdentities,
         env,
-        operation: async (tx) => {
+        operation: async (tx, guardContext = null) => {
           const existing = await tx.user.findUnique({
             where: { privyDid: profile.privyDid },
             select: { id: true },
           });
+
+          const requireStableIdentity = accountDeletionStableIdentityEnforced(env)
+            && !existing;
+          if (requireStableIdentity && stableProviderIdentities.length === 0) {
+            throw new AccountDeletionIdentityError('stable_provider_identity_required');
+          }
+          if (existing && guardContext) {
+            await reconcileUserStableProviderIdentities(tx, {
+              userId: existing.id,
+              stableProviderIdentities,
+              expectedNamespaces: [{
+                provider: APPLE_STABLE_IDENTITY_PROVIDER,
+                context: APPLE_STABLE_IDENTITY_CONTEXT,
+              }],
+              keyFingerprint: guardContext.keyFingerprint,
+              keyVersion: guardContext.keyVersion,
+            });
+          }
 
           const user = await tx.user.upsert({
             where: { privyDid: profile.privyDid },
@@ -143,6 +189,20 @@ export function createAuthSyncHandler({
             },
             create: { ...profile },
           });
+
+          if (!existing && guardContext) {
+            await reconcileUserStableProviderIdentities(tx, {
+              userId: user.id,
+              stableProviderIdentities,
+              expectedNamespaces: [{
+                provider: APPLE_STABLE_IDENTITY_PROVIDER,
+                context: APPLE_STABLE_IDENTITY_CONTEXT,
+              }],
+              keyFingerprint: guardContext.keyFingerprint,
+              keyVersion: guardContext.keyVersion,
+              requireIdentity: requireStableIdentity,
+            });
+          }
 
           // This runs for every sync, not only first creation. A retry after a
           // partial failure can therefore repair a missing welcome ledger row,
@@ -156,6 +216,16 @@ export function createAuthSyncHandler({
     } catch (error) {
       if (error instanceof AccountDeletionBlockedError) {
         return res.status(410).json({ error: error.code });
+      }
+      if (
+        error instanceof AccountDeletionIdentityError
+        || error instanceof AccountDeletionConfigurationError
+      ) {
+        req.log?.error?.(
+          { errorType: error.name },
+          'stable identity guard rejected auth sync',
+        );
+        return res.status(503).json({ error: 'account_deletion_guard_unavailable' });
       }
       req.log?.error?.(
         { errorType: error?.name || 'Error' },

@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 import 'dotenv/config';
 import { fileURLToPath } from 'node:url';
+import {
+  ACCOUNT_DELETION_PROVIDER_CLEANUP_READY,
+  ACCOUNT_DELETION_PUBLIC_REQUEST_READY,
+  ACCOUNT_DELETION_STABLE_IDENTITY_GUARD_READY,
+} from '../src/lib/account-deletion-gates.js';
 
 const BOOLEAN_FLAGS = [
   'SIWE_AUTH_ENABLED',
@@ -12,11 +17,6 @@ const BOOLEAN_FLAGS = [
   'ACCOUNT_DELETION_ENABLED',
   'ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED',
 ];
-
-// Keep this independent from environment input. It moves to true only in the
-// reviewed release that includes provider cleanup and the mobile deletion
-// marker; until then no Railway flag combination may activate deletion.
-const ACCOUNT_DELETION_ACTIVATION_READY = false;
 
 function clean(value) {
   return String(value || '').trim();
@@ -60,6 +60,16 @@ export function validateDeployEnvironment(
     checks.push({ ok: Boolean(ok), name, failure, warning });
   };
   const requireValue = (name) => add(Boolean(clean(env[name])), name, `${name} is required`);
+  const configuredInteger = (name, fallback, min, max) => {
+    const raw = clean(env[name]);
+    const parsed = raw ? Number(raw) : fallback;
+    add(
+      Number.isInteger(parsed) && parsed >= min && parsed <= max,
+      `${name} range`,
+      `${name} must be an integer between ${min} and ${max}`,
+    );
+    return parsed;
+  };
   const staged = target === 'staging' || target === 'production';
 
   add(target !== 'invalid', 'deploy target', 'target must be local, staging, or production');
@@ -187,9 +197,14 @@ export function validateDeployEnvironment(
 
   if (deletionEnabled) {
     add(
-      ACCOUNT_DELETION_ACTIVATION_READY,
+      ACCOUNT_DELETION_PUBLIC_REQUEST_READY,
       'account deletion implementation readiness',
-      'ACCOUNT_DELETION_ENABLED cannot be true until provider cleanup and the mobile deletion marker are implemented',
+      'ACCOUNT_DELETION_ENABLED cannot be true until every public account deletion blocker is approved',
+    );
+    add(
+      ACCOUNT_DELETION_STABLE_IDENTITY_GUARD_READY,
+      'account deletion stable identity readiness',
+      'ACCOUNT_DELETION_ENABLED cannot be true until the irreversible stable identity guard is approved',
     );
     add(
       deletionCleanupEnabled,
@@ -200,15 +215,43 @@ export function validateDeployEnvironment(
 
   if (deletionCleanupEnabled) {
     add(
-      ACCOUNT_DELETION_ACTIVATION_READY,
+      ACCOUNT_DELETION_PROVIDER_CLEANUP_READY,
       'account deletion provider implementation readiness',
-      'ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED cannot be true before the cleanup worker is implemented',
+      'ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED cannot be true until provider cleanup is approved',
     );
     const appleMode = clean(env.ACCOUNT_DELETION_APPLE_REVOCATION_MODE);
     add(
       ['privy_confirmed', 'easygo_managed'].includes(appleMode),
       'account deletion Apple revocation mode',
       'provider cleanup requires an approved ACCOUNT_DELETION_APPLE_REVOCATION_MODE',
+    );
+  }
+
+  const deletionWorkerConfigPresent = [
+    'ACCOUNT_DELETION_WORKER_INTERVAL_MS',
+    'ACCOUNT_DELETION_WORKER_BATCH_SIZE',
+    'ACCOUNT_DELETION_WORKER_LEASE_MS',
+    'ACCOUNT_DELETION_PROVIDER_TIMEOUT_MS',
+  ].some((name) => Boolean(clean(env[name])));
+  if (deletionCleanupEnabled || deletionWorkerConfigPresent) {
+    configuredInteger('ACCOUNT_DELETION_WORKER_INTERVAL_MS', 30_000, 5_000, 3_600_000);
+    configuredInteger('ACCOUNT_DELETION_WORKER_BATCH_SIZE', 10, 1, 100);
+    const leaseMs = configuredInteger(
+      'ACCOUNT_DELETION_WORKER_LEASE_MS',
+      60_000,
+      30_000,
+      600_000,
+    );
+    const providerTimeoutMs = configuredInteger(
+      'ACCOUNT_DELETION_PROVIDER_TIMEOUT_MS',
+      10_000,
+      1_000,
+      30_000,
+    );
+    add(
+      leaseMs >= providerTimeoutMs * 2,
+      'account deletion worker lease safety margin',
+      'ACCOUNT_DELETION_WORKER_LEASE_MS must be at least twice ACCOUNT_DELETION_PROVIDER_TIMEOUT_MS',
     );
   }
 

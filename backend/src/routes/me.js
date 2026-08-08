@@ -28,9 +28,19 @@ import {
 } from '../lib/account-data.js';
 import { express4AsyncHandler } from '../lib/express-async.js';
 import {
+  extractAppleSubject,
+  getUser,
+  isPrivyConfigurationFailure,
+  PrivyIdentityError,
+} from '../lib/privy.js';
+import {
   accountDeletionEnabled,
   AccountDeletionConfigurationError,
+  AccountDeletionIdentityError,
+  accountDeletionStableIdentityEnforced,
+  accountDeletionSubjectHash,
   DELETE_ACCOUNT_CONFIRMATION,
+  deriveAppleStableProviderIdentity,
   findAccountDeletionRequest,
   requestAccountDeletion,
 } from '../lib/account-deletion.js';
@@ -48,6 +58,29 @@ const accountDeletionSchema = z.object({
   expectedPrivyDid: z.string().trim().min(1).max(255),
   walletRiskAcknowledged: z.literal(true),
 }).strict();
+
+function accountDeletionStatusBody(request, available) {
+  return {
+    // Disabling new requests must never hide an existing tombstone. Mobile
+    // recovery relies on this read path after a rollout brake is reapplied.
+    available: Boolean(available && !request),
+    state: request?.state || null,
+    requestId: request?.id || null,
+    localDataDeleted: Boolean(request?.localPurgedAt),
+    completed: request?.state === 'COMPLETED',
+  };
+}
+
+function privyLookupFailure(req, res, error, action) {
+  const configurationFailure = isPrivyConfigurationFailure(error);
+  req.log?.warn?.(
+    { errorType: error?.name || 'Error' },
+    `Privy user lookup unavailable during account deletion ${action}`,
+  );
+  return res.status(configurationFailure ? 503 : 502).json({
+    error: configurationFailure ? 'privy_not_configured' : 'privy_unavailable',
+  });
+}
 
 function currentVersionOr503(req, res) {
   try {
@@ -168,62 +201,233 @@ meRouter.get('/social-export', requireAuth, async (req, res) => {
   return res.json(exported);
 });
 
-meRouter.get('/account-deletion', requireAuth, express4AsyncHandler(async (req, res) => {
-  res.set('Cache-Control', 'no-store');
-  try {
-    const request = await findAccountDeletionRequest(prisma, req.user.privyDid);
-    return res.json({
-      // Disabling new requests must never hide an existing tombstone. Mobile
-      // recovery relies on this read path after a rollout brake is reapplied.
-      available: accountDeletionEnabled() && !request,
-      state: request?.state || null,
-      requestId: request?.id || null,
-      localDataDeleted: Boolean(request?.localPurgedAt),
-      completed: request?.state === 'COMPLETED',
-    });
-  } catch (error) {
-    if (error instanceof AccountDeletionConfigurationError) {
-      req.log?.error?.({ errorType: error.name }, 'account deletion guard is not configured');
-      return res.status(503).json({ error: 'account_deletion_not_configured' });
+export function createAccountDeletionStatusHandler({
+  db = prisma,
+  fetchPrivyUser = getUser,
+  env = process.env,
+  deletionCapability = accountDeletionEnabled,
+  stableIdentityEnforced = accountDeletionStableIdentityEnforced,
+  findDeletionRequest = findAccountDeletionRequest,
+} = {}) {
+  return async function accountDeletionStatus(req, res) {
+    res.set('Cache-Control', 'no-store');
+    let request;
+    try {
+      // Fast path and post-provider-deletion recovery: the original Privy DID
+      // tombstone never requires the upstream user to remain fetchable.
+      request = await findDeletionRequest(db, req.user.privyDid, env);
+      if (request) {
+        return res.json(accountDeletionStatusBody(
+          request,
+          deletionCapability(env),
+        ));
+      }
+    } catch (error) {
+      if (error instanceof AccountDeletionConfigurationError) {
+        req.log?.error?.({ errorType: error.name }, 'account deletion guard is not configured');
+        return res.status(503).json({ error: 'account_deletion_not_configured' });
+      }
+      throw error;
     }
-    throw error;
-  }
-}));
 
-meRouter.post('/account-deletion', requireAuth, express4AsyncHandler(async (req, res) => {
-  res.set('Cache-Control', 'no-store');
-  const parsed = accountDeletionSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({
-      error: 'confirmation_required',
-      confirmation: DELETE_ACCOUNT_CONFIRMATION,
-    });
-  }
-  if (parsed.data.expectedPrivyDid !== req.user.privyDid) {
-    return res.status(409).json({ error: 'account_deletion_session_changed' });
-  }
-  if (!accountDeletionEnabled()) {
-    return res.status(503).json({ error: 'account_deletion_disabled' });
-  }
+    // The foundation is intentionally behavior-neutral while the relevant
+    // compile-time activation latches are down. Do not add a Privy dependency
+    // to the existing settings probe for Google-only users in this release.
+    if (!deletionCapability(env) && !stableIdentityEnforced(env)) {
+      return res.json(accountDeletionStatusBody(null, false));
+    }
 
-  try {
-    const result = await requestAccountDeletion({
-      prisma,
-      privyDid: req.user.privyDid,
-      clientRequestId: parsed.data.clientRequestId,
-    });
-    return res.status(202).json(result);
-  } catch (error) {
-    if (error instanceof AccountDeletionConfigurationError) {
-      req.log?.error?.({ errorType: error.name }, 'account deletion request is not configured');
-      return res.status(503).json({ error: 'account_deletion_not_configured' });
+    let privyUser;
+    try {
+      privyUser = await fetchPrivyUser(req.user.privyDid);
+    } catch (error) {
+      return privyLookupFailure(req, res, error, 'status recovery');
     }
-    if (error?.code === 'account_deletion_disabled') {
-      return res.status(503).json({ error: error.code });
+    if (privyUser?.id !== req.user.privyDid) {
+      return privyLookupFailure(
+        req,
+        res,
+        new PrivyIdentityError('privy_identity_mismatch'),
+        'status recovery',
+      );
     }
-    throw error;
-  }
-}));
+
+    let appleSubject;
+    try {
+      appleSubject = extractAppleSubject(privyUser);
+      if (!appleSubject) {
+        return res.status(409).json({ error: 'stable_provider_identity_required' });
+      }
+      const appleIdentity = deriveAppleStableProviderIdentity(
+        appleSubject,
+        env,
+        { required: true },
+      );
+      appleSubject = null;
+      request = await findDeletionRequest(db, req.user.privyDid, env, {
+        required: true,
+        stableProviderIdentities: [appleIdentity],
+      });
+      const currentSubjectHash = accountDeletionSubjectHash(
+        req.user.privyDid,
+        env,
+        { required: true },
+      );
+      if (request && request.subjectHash !== currentSubjectHash) {
+        return res.status(409).json({
+          error: 'stable_provider_identity_component_conflict',
+          requestId: request.id,
+          state: request.state,
+          localDataDeleted: false,
+        });
+      }
+      return res.json(accountDeletionStatusBody(
+        request,
+        deletionCapability(env),
+      ));
+    } catch (error) {
+      appleSubject = null;
+      if (error instanceof PrivyIdentityError) {
+        return privyLookupFailure(req, res, error, 'status recovery');
+      }
+      if (error instanceof AccountDeletionConfigurationError) {
+        req.log?.error?.({ errorType: error.name }, 'account deletion guard is not configured');
+        return res.status(503).json({ error: 'account_deletion_not_configured' });
+      }
+      if (error instanceof AccountDeletionIdentityError) {
+        return res.status(409).json({ error: 'stable_provider_identity_unavailable' });
+      }
+      throw error;
+    }
+  };
+}
+
+export function createAccountDeletionRequestHandler({
+  db = prisma,
+  fetchPrivyUser = getUser,
+  env = process.env,
+  deletionCapability = accountDeletionEnabled,
+  findDeletionRequest = findAccountDeletionRequest,
+  requestDeletion = requestAccountDeletion,
+} = {}) {
+  return async function accountDeletionRequest(req, res) {
+    res.set('Cache-Control', 'no-store');
+    const parsed = accountDeletionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'confirmation_required',
+        confirmation: DELETE_ACCOUNT_CONFIRMATION,
+      });
+    }
+    if (parsed.data.expectedPrivyDid !== req.user.privyDid) {
+      return res.status(409).json({ error: 'account_deletion_session_changed' });
+    }
+
+    try {
+      const existingRequest = await findDeletionRequest(db, req.user.privyDid, env);
+      if (existingRequest) {
+        if (!existingRequest.localPurgedAt) {
+          return res.status(409).json({
+            error: 'account_deletion_recovery_required',
+            requestId: existingRequest.id,
+            state: existingRequest.state,
+            localDataDeleted: false,
+          });
+        }
+        return res.status(202).json({
+          requestId: existingRequest.id,
+          state: existingRequest.state,
+          created: false,
+          localDataDeleted: true,
+          providerDeletionPending: existingRequest.state !== 'COMPLETED',
+          redactedPosts: 0,
+        });
+      }
+    } catch (error) {
+      if (error instanceof AccountDeletionConfigurationError) {
+        req.log?.error?.({ errorType: error.name }, 'account deletion guard is not configured');
+        return res.status(503).json({ error: 'account_deletion_not_configured' });
+      }
+      throw error;
+    }
+    if (!deletionCapability(env)) {
+      return res.status(503).json({ error: 'account_deletion_disabled' });
+    }
+
+    let privyUser;
+    try {
+      privyUser = await fetchPrivyUser(req.user.privyDid);
+    } catch (error) {
+      return privyLookupFailure(req, res, error, 'request');
+    }
+    if (privyUser?.id !== req.user.privyDid) {
+      return privyLookupFailure(
+        req,
+        res,
+        new PrivyIdentityError('privy_identity_mismatch'),
+        'request',
+      );
+    }
+
+    let appleSubject;
+    try {
+      appleSubject = extractAppleSubject(privyUser);
+      if (!appleSubject) {
+        return res.status(409).json({ error: 'stable_provider_identity_required' });
+      }
+      const appleIdentity = deriveAppleStableProviderIdentity(
+        appleSubject,
+        env,
+        { required: true },
+      );
+      appleSubject = null;
+      const result = await requestDeletion({
+        prisma: db,
+        privyDid: req.user.privyDid,
+        stableProviderIdentities: [appleIdentity],
+        clientRequestId: parsed.data.clientRequestId,
+        env,
+      });
+      if (!result.localDataDeleted || result.state === 'MANUAL_REVIEW') {
+        return res.status(409).json({
+          error: 'account_deletion_manual_review',
+          requestId: result.requestId,
+          state: result.state,
+          localDataDeleted: false,
+        });
+      }
+      return res.status(202).json(result);
+    } catch (error) {
+      appleSubject = null;
+      if (error instanceof PrivyIdentityError) {
+        return privyLookupFailure(req, res, error, 'request');
+      }
+      if (error instanceof AccountDeletionConfigurationError) {
+        req.log?.error?.({ errorType: error.name }, 'account deletion request is not configured');
+        return res.status(503).json({ error: 'account_deletion_not_configured' });
+      }
+      if (error instanceof AccountDeletionIdentityError) {
+        return res.status(409).json({ error: 'stable_provider_identity_unavailable' });
+      }
+      if (error?.code === 'account_deletion_disabled') {
+        return res.status(503).json({ error: error.code });
+      }
+      throw error;
+    }
+  };
+}
+
+meRouter.get(
+  '/account-deletion',
+  requireAuth,
+  express4AsyncHandler(createAccountDeletionStatusHandler()),
+);
+
+meRouter.post(
+  '/account-deletion',
+  requireAuth,
+  express4AsyncHandler(createAccountDeletionRequestHandler()),
+);
 
 meRouter.delete('/data', requireAuth, async (req, res) => {
   const parsed = deleteDataSchema.safeParse(req.body);

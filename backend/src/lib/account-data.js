@@ -20,6 +20,18 @@ const userDataSelect = {
   bio: true,
   createdAt: true,
   updatedAt: true,
+  // Describe the server-verified identity namespaces attached to this user,
+  // but never export the keyed digest or its key fingerprint. Those values
+  // are deletion-guard material rather than portable account identifiers.
+  stableProviderIdentities: {
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    select: {
+      provider: true,
+      context: true,
+      keyVersion: true,
+      createdAt: true,
+    },
+  },
   consent: true,
   consentAudits: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
   ledger: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },

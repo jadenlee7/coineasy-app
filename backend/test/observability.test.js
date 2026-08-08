@@ -138,6 +138,18 @@ test('logger redacts authentication, signatures, identity, and wallet fields', (
     walletAddress: '0x1234567890',
     subjectHash: 'account-subject-hash',
     privyDidCiphertext: 'encrypted-provider-id',
+    providerSubjectHash: 'provider-subject-hash',
+    digest: 'stable-provider-digest',
+    linkedAccounts: [{
+      type: 'apple_oauth',
+      subject: 'apple-provider-subject',
+      email: 'apple-relay-private@example.com',
+    }],
+    stableProviderIdentities: [{
+      providerIdentityHash: 'nested-stable-provider-digest',
+    }],
+    leaseToken: 'worker-lease-token',
+    refreshToken: 'apple-refresh-token',
   }, 'redaction test');
 
   const output = chunks.join('');
@@ -152,6 +164,13 @@ test('logger redacts authentication, signatures, identity, and wallet fields', (
     '0x1234567890',
     'account-subject-hash',
     'encrypted-provider-id',
+    'provider-subject-hash',
+    'stable-provider-digest',
+    'apple-provider-subject',
+    'apple-relay-private@example.com',
+    'nested-stable-provider-digest',
+    'worker-lease-token',
+    'apple-refresh-token',
   ]) {
     assert.equal(output.includes(secret), false);
   }

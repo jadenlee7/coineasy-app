@@ -5,6 +5,9 @@ import test from 'node:test';
 import {
   accountDeletionEnabled,
   AccountDeletionBlockedError,
+  acquireAccountDeletionLocks,
+  deriveAppleStableProviderIdentity,
+  deriveStableProviderIdentity,
   accountDeletionSubjectHash,
   accountDeletionSubjectKeyFingerprint,
   decryptAccountDeletionSubject,
@@ -16,6 +19,7 @@ import {
 } from '../src/lib/account-deletion.js';
 
 const PRIVY_DID = 'did:privy:account-to-delete';
+const APPLE_SUBJECT = 'apple-stable-subject';
 const CLIENT_REQUEST_ID = '11111111-1111-4111-8111-111111111111';
 const TEST_ENV = Object.freeze({
   ACCOUNT_DELETION_ENABLED: 'true',
@@ -23,6 +27,7 @@ const TEST_ENV = Object.freeze({
   ACCOUNT_DELETION_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
 });
 const TEST_KEY_FINGERPRINT = accountDeletionSubjectKeyFingerprint(TEST_ENV);
+const TEST_APPLE_IDENTITY = deriveAppleStableProviderIdentity(APPLE_SUBJECT, TEST_ENV);
 
 test('the foundation release brake keeps destructive deletion disabled', () => {
   assert.equal(accountDeletionEnabled({}), false);
@@ -35,12 +40,10 @@ test('the status route never hides a tombstone behind the activation brake', () 
     new URL('../src/routes/me.js', import.meta.url),
     'utf8',
   );
-  const handler = route.match(
-    /meRouter\.get\('\/account-deletion'[\s\S]*?\n\}\)\);/u,
-  )?.[0] || '';
-  assert.match(handler, /findAccountDeletionRequest\(prisma, req\.user\.privyDid\)/u);
-  assert.match(handler, /available: accountDeletionEnabled\(\) && !request/u);
-  assert.doesNotMatch(handler, /if \(!accountDeletionEnabled\(\)\)/u);
+  assert.match(route, /export function createAccountDeletionStatusHandler/u);
+  assert.match(route, /findDeletionRequest\(db, req\.user\.privyDid, env\)/u);
+  assert.match(route, /if \(request\)/u);
+  assert.match(route, /deletionCapability\(env\)/u);
 });
 
 test('subject lookup is deterministic and provider identity encryption is authenticated', () => {
@@ -60,9 +63,82 @@ test('subject lookup is deterministic and provider identity encryption is authen
   );
 });
 
-function deletionDb({ user = { id: 'user_1' }, existingRequest = null } = {}) {
+test('stable provider HMACs are deterministic and domain separated', () => {
+  const apple = deriveAppleStableProviderIdentity(APPLE_SUBJECT, TEST_ENV);
+  const same = deriveAppleStableProviderIdentity(APPLE_SUBJECT, TEST_ENV);
+  const otherContext = deriveStableProviderIdentity({
+    provider: 'apple_oauth',
+    context: 'signin-with-apple.subject.v2',
+    subject: APPLE_SUBJECT,
+  }, TEST_ENV);
+  const otherProvider = deriveStableProviderIdentity({
+    provider: 'google_oauth',
+    context: 'google-openid.subject.v1',
+    subject: APPLE_SUBJECT,
+  }, TEST_ENV);
+
+  assert.deepEqual(apple, same);
+  assert.match(apple.providerIdentityHash, /^[a-f0-9]{64}$/);
+  assert.notEqual(apple.providerIdentityHash, accountDeletionSubjectHash(APPLE_SUBJECT, TEST_ENV));
+  assert.notEqual(apple.providerIdentityHash, otherContext.providerIdentityHash);
+  assert.notEqual(apple.providerIdentityHash, otherProvider.providerIdentityHash);
+  assert.equal(JSON.stringify(apple).includes(APPLE_SUBJECT), false);
+});
+
+test('combined deletion locks are deduplicated and globally deterministic', async () => {
+  const googleIdentity = deriveStableProviderIdentity({
+    provider: 'google_oauth',
+    context: 'google-openid.subject.v1',
+    subject: 'google-stable-subject',
+  }, TEST_ENV);
+  const captureLocks = () => {
+    const lockKeys = [];
+    return {
+      lockKeys,
+      tx: {
+        async $queryRawUnsafe(_query, lockKey) {
+          lockKeys.push(lockKey);
+        },
+      },
+    };
+  };
+  const first = captureLocks();
+  const reversed = captureLocks();
+  const subjectHash = accountDeletionSubjectHash(PRIVY_DID, TEST_ENV);
+  await acquireAccountDeletionLocks(first.tx, subjectHash, [
+    TEST_APPLE_IDENTITY,
+    googleIdentity,
+    TEST_APPLE_IDENTITY,
+  ]);
+  await acquireAccountDeletionLocks(reversed.tx, subjectHash, [
+    googleIdentity,
+    TEST_APPLE_IDENTITY,
+  ]);
+  assert.deepEqual(first.lockKeys, [...new Set(first.lockKeys)].sort());
+  assert.deepEqual(reversed.lockKeys, first.lockKeys);
+  assert.equal(first.lockKeys.length, 3);
+  assert.ok(first.lockKeys.includes(subjectHash));
+  assert.ok(first.lockKeys.some((value) => value.startsWith('provider:apple_oauth:')));
+});
+
+function deletionDb({
+  user = {
+    id: 'user_1',
+    privyDid: PRIVY_DID,
+    stableProviderIdentities: [TEST_APPLE_IDENTITY],
+  },
+  users = null,
+  existingRequest = null,
+  existingProviderIdentity = null,
+} = {}) {
   const calls = [];
-  let storedRequest = existingRequest;
+  let storedRequest = existingRequest
+    ? {
+      subjectHash: accountDeletionSubjectHash(PRIVY_DID, TEST_ENV),
+      ...existingRequest,
+    }
+    : null;
+  let storedProviderIdentity = existingProviderIdentity;
   const tx = {
     async $queryRawUnsafe(query, subjectHash) {
       calls.push(['lock', query, subjectHash]);
@@ -81,7 +157,9 @@ function deletionDb({ user = { id: 'user_1' }, existingRequest = null } = {}) {
     accountDeletionRequest: {
       async findUnique({ where }) {
         calls.push(['request.findUnique', where]);
-        return storedRequest;
+        return storedRequest?.subjectHash === where.subjectHash
+          ? storedRequest
+          : null;
       },
       async create({ data }) {
         calls.push(['request.create', data]);
@@ -104,14 +182,30 @@ function deletionDb({ user = { id: 'user_1' }, existingRequest = null } = {}) {
         return storedRequest;
       },
     },
-    user: {
-      async findUnique(options) {
-        calls.push(['user.findUnique', options]);
-        return user;
+    accountDeletionProviderIdentity: {
+      async findMany(options) {
+        calls.push(['providerIdentity.findMany', options]);
+        if (!storedProviderIdentity) return [];
+        if (options.select?.request) {
+          return [{ request: storedRequest }];
+        }
+        return [storedProviderIdentity];
       },
-      async delete(options) {
-        calls.push(['user.delete', options]);
-        return user;
+      async create({ data }) {
+        calls.push(['providerIdentity.create', data]);
+        storedProviderIdentity = { id: 'provider_identity_1', ...data };
+        return storedProviderIdentity;
+      },
+    },
+    user: {
+      async findMany(options) {
+        calls.push(['user.findMany', options]);
+        if (users) return users;
+        return user ? [user] : [];
+      },
+      async deleteMany(options) {
+        calls.push(['user.deleteMany', options]);
+        return { count: users?.length ?? (user ? 1 : 0) };
       },
     },
     post: {
@@ -135,6 +229,7 @@ test('local purge redacts only the owner posts and preserves every reply row', a
   const result = await requestAccountDeletion({
     prisma,
     privyDid: PRIVY_DID,
+    appleSubject: APPLE_SUBJECT,
     clientRequestId: CLIENT_REQUEST_ID,
     env: TEST_ENV,
     now,
@@ -162,14 +257,28 @@ test('local purge redacts only the owner posts and preserves every reply row', a
   assert.equal(calls.some(([name]) => name === 'post.deleteMany'), false);
   assert.equal(calls.some(([name]) => name === 'post.delete'), false);
   assert.deepEqual(
-    calls.find(([name]) => name === 'user.delete')[1],
-    { where: { id: 'user_1' } },
+    calls.find(([name]) => name === 'user.deleteMany')[1],
+    { where: { id: { in: ['user_1'] } } },
   );
 
   const created = calls.find(([name]) => name === 'request.create')[1];
   assert.equal(JSON.stringify(created).includes(PRIVY_DID), false);
   assert.match(created.subjectHash, /^[a-f0-9]{64}$/);
   assert.equal(created.privyDidCiphertext.includes(PRIVY_DID), false);
+  const providerIdentity = calls.find(([name]) => name === 'providerIdentity.create')[1];
+  assert.deepEqual(
+    {
+      provider: providerIdentity.provider,
+      context: providerIdentity.context,
+      providerIdentityHash: providerIdentity.providerIdentityHash,
+    },
+    TEST_APPLE_IDENTITY,
+  );
+  assert.equal(JSON.stringify(calls).includes(APPLE_SUBJECT), false);
+  assert.ok(
+    calls.findIndex(([name]) => name === 'providerIdentity.create')
+      < calls.findIndex(([name]) => name === 'post.updateMany'),
+  );
 });
 
 test('a missing local user still creates a provider-cleanup tombstone', async () => {
@@ -177,6 +286,7 @@ test('a missing local user still creates a provider-cleanup tombstone', async ()
   const result = await requestAccountDeletion({
     prisma,
     privyDid: PRIVY_DID,
+    appleSubject: APPLE_SUBJECT,
     clientRequestId: CLIENT_REQUEST_ID,
     env: TEST_ENV,
     allowFoundationExecution: true,
@@ -185,7 +295,7 @@ test('a missing local user still creates a provider-cleanup tombstone', async ()
   assert.equal(result.state, 'LOCAL_PURGED');
   assert.equal(result.redactedPosts, 0);
   assert.equal(calls.some(([name]) => name === 'post.updateMany'), false);
-  assert.equal(calls.some(([name]) => name === 'user.delete'), false);
+  assert.equal(calls.some(([name]) => name === 'user.deleteMany'), false);
 });
 
 test('repeated deletion requests return the durable request without purging twice', async () => {
@@ -200,6 +310,7 @@ test('repeated deletion requests return the durable request without purging twic
   const result = await requestAccountDeletion({
     prisma,
     privyDid: PRIVY_DID,
+    appleSubject: APPLE_SUBJECT,
     clientRequestId: CLIENT_REQUEST_ID,
     env: TEST_ENV,
     allowFoundationExecution: true,
@@ -209,7 +320,99 @@ test('repeated deletion requests return the durable request without purging twic
   assert.equal(result.created, false);
   assert.equal(calls.some(([name]) => name === 'request.create'), false);
   assert.equal(calls.some(([name]) => name === 'post.updateMany'), false);
-  assert.equal(calls.some(([name]) => name === 'user.delete'), false);
+  assert.equal(calls.some(([name]) => name === 'user.deleteMany'), false);
+});
+
+test('a same-Apple cross-DID race records manual review before any local purge', async () => {
+  const secondDid = 'did:privy:race-winner';
+  const { calls, prisma } = deletionDb({
+    users: [
+      {
+        id: 'user_a',
+        privyDid: PRIVY_DID,
+        stableProviderIdentities: [],
+      },
+      {
+        id: 'user_b',
+        privyDid: secondDid,
+        stableProviderIdentities: [TEST_APPLE_IDENTITY],
+      },
+    ],
+  });
+
+  const result = await requestAccountDeletion({
+    prisma,
+    privyDid: PRIVY_DID,
+    appleSubject: APPLE_SUBJECT,
+    clientRequestId: CLIENT_REQUEST_ID,
+    env: TEST_ENV,
+    allowFoundationExecution: true,
+  });
+  assert.equal(result.state, 'MANUAL_REVIEW');
+  assert.equal(result.localDataDeleted, false);
+  assert.equal(calls.some(([name]) => name === 'request.create'), true);
+  assert.equal(calls.some(([name]) => name === 'providerIdentity.create'), true);
+  assert.equal(
+    calls.find(([name]) => name === 'request.update')[2].state,
+    'MANUAL_REVIEW',
+  );
+  assert.equal(calls.some(([name]) => name === 'post.updateMany'), false);
+  assert.equal(calls.some(([name]) => name === 'user.deleteMany'), false);
+});
+
+test('an old completed provider tombstone never reports a different DID as deleted', async () => {
+  const secondDid = 'did:privy:recreated-user';
+  const existingRequest = {
+    id: 'deletion_old',
+    state: 'COMPLETED',
+    localPurgedAt: new Date('2026-08-02T12:00:00.000Z'),
+    completedAt: new Date('2026-08-02T12:05:00.000Z'),
+  };
+  const { calls, prisma } = deletionDb({
+    existingRequest,
+    existingProviderIdentity: {
+      accountDeletionRequestId: existingRequest.id,
+      ...TEST_APPLE_IDENTITY,
+    },
+    users: [{
+      id: 'user_b',
+      privyDid: secondDid,
+      stableProviderIdentities: [TEST_APPLE_IDENTITY],
+    }],
+  });
+
+  await assert.rejects(
+    () => requestAccountDeletion({
+      prisma,
+      privyDid: secondDid,
+      appleSubject: APPLE_SUBJECT,
+      clientRequestId: CLIENT_REQUEST_ID,
+      env: TEST_ENV,
+      allowFoundationExecution: true,
+    }),
+    /stable_provider_identity_component_conflict/,
+  );
+  assert.equal(calls.some(([name]) => name === 'post.updateMany'), false);
+  assert.equal(calls.some(([name]) => name === 'user.deleteMany'), false);
+});
+
+test('initial deletion refuses to purge without a stable provider identity', async () => {
+  let transactionCalls = 0;
+  await assert.rejects(
+    () => requestAccountDeletion({
+      prisma: {
+        async $transaction() {
+          transactionCalls += 1;
+        },
+      },
+      privyDid: PRIVY_DID,
+      clientRequestId: CLIENT_REQUEST_ID,
+      env: TEST_ENV,
+      allowFoundationExecution: true,
+    }),
+    /stable_provider_identity_required/,
+  );
+  assert.equal(transactionCalls, 0);
 });
 
 test('ordinary post deletion redacts one owned node instead of deleting its replies', async () => {
@@ -306,6 +509,13 @@ test('schema and migration enforce nullable redacted authors with a durable tomb
     new URL('../prisma/migrations/20260802120000_safe_account_deletion/migration.sql', import.meta.url),
     'utf8',
   );
+  const stableIdentityMigration = readFileSync(
+    new URL(
+      '../prisma/migrations/20260808120000_stable_provider_deletion_identity/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
 
   assert.match(schema, /authorId\s+String\?/);
   assert.match(schema, /author\s+User\?.*onDelete: SetNull/);
@@ -318,6 +528,17 @@ test('schema and migration enforce nullable redacted authors with a durable tomb
   assert.match(migration, /AccountDeletionRequest_subjectHash_key/);
   assert.match(migration, /subjectHashKeyFingerprint/);
   assert.match(migration, /AccountDeletionRequest_subject_key_fkey/);
+  assert.match(schema, /model UserStableProviderIdentity/);
+  assert.match(schema, /model AccountDeletionProviderIdentity/);
+  assert.match(schema, /providerIdentityHash\s+String\s+@db\.Char\(64\)/);
+  assert.doesNotMatch(stableIdentityMigration, /"email"/i);
+  assert.match(stableIdentityMigration, /uniq_user_stable_provider_identity/);
+  assert.match(stableIdentityMigration, /uniq_deletion_stable_provider_identity/);
+  assert.match(stableIdentityMigration, /AccountDeletionProviderIdentity_immutable/);
+  assert.match(stableIdentityMigration, /BEFORE UPDATE OR DELETE/);
+  assert.match(stableIdentityMigration, /AccountDeletionRequest_attemptCount_nonnegative_check/);
+  assert.match(stableIdentityMigration, /AccountDeletionRequest_lease_pair_check/);
+  assert.match(stableIdentityMigration, /AccountDeletionRequest_completed_ciphertext_cleared_check/);
 });
 
 test('a changed HMAC key fails closed before tombstone lookup', async () => {

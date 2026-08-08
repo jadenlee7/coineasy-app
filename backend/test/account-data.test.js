@@ -29,6 +29,20 @@ test('local data export is versioned and excludes ephemeral SIWE secrets', async
   assert.equal(query.select.subnameStatus, true);
   assert.equal(query.select.subnameChallengeHash, undefined);
   assert.equal(query.select.subnameChallengeExpiresAt, undefined);
+  assert.deepEqual(query.select.stableProviderIdentities.select, {
+    provider: true,
+    context: true,
+    keyVersion: true,
+    createdAt: true,
+  });
+  assert.equal(
+    query.select.stableProviderIdentities.select.providerIdentityHash,
+    undefined,
+  );
+  assert.equal(
+    query.select.stableProviderIdentities.select.keyFingerprint,
+    undefined,
+  );
   assert.equal(query.select.consent, true);
   assert.ok(query.select.questCompletions);
   assert.ok(query.select.segments);

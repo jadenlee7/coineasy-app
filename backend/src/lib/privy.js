@@ -26,6 +26,14 @@ export class PrivyConfigurationError extends Error {
   }
 }
 
+export class PrivyIdentityError extends Error {
+  constructor(code = 'privy_identity_invalid') {
+    super(code);
+    this.name = 'PrivyIdentityError';
+    this.code = code;
+  }
+}
+
 export function getPrivyClient() {
   if (_client) return _client;
   if (!APP_ID || !APP_SECRET) {
@@ -52,6 +60,49 @@ export async function verifyAccessToken(token) {
 export async function getUser(userId) {
   const client = getPrivyClient();
   return client.getUser(userId);
+}
+
+/**
+ * Extract the stable Apple provider subject from Privy's server-fetched user.
+ *
+ * The value is intentionally returned separately from the persisted EasyGo
+ * profile. Callers must immediately derive a keyed deletion digest from it;
+ * neither the subject nor Apple's relay email belongs in the local user row.
+ */
+export function extractAppleSubject(privyUser) {
+  const linked = Array.isArray(privyUser?.linkedAccounts)
+    ? privyUser.linkedAccounts
+    : [];
+  const appleAccounts = linked.filter((account) => account?.type === 'apple_oauth');
+  if (appleAccounts.length === 0) return null;
+
+  const subjects = appleAccounts.map((account) => {
+    const subject = account?.subject;
+    if (
+      typeof subject !== 'string'
+      || subject.length === 0
+      || subject.length > 1024
+      || subject !== subject.trim()
+    ) {
+      throw new PrivyIdentityError('privy_apple_subject_invalid');
+    }
+    return subject;
+  });
+
+  const distinct = new Set(subjects);
+  if (distinct.size !== 1) {
+    throw new PrivyIdentityError('privy_apple_subject_conflict');
+  }
+  return subjects[0];
+}
+
+export function isPrivyConfigurationFailure(error) {
+  const upstreamStatus = Number(
+    error?.status ?? error?.statusCode ?? error?.response?.status,
+  );
+  return error instanceof PrivyConfigurationError
+    || upstreamStatus === 401
+    || upstreamStatus === 403;
 }
 
 /**

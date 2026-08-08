@@ -10,6 +10,8 @@
     "start": "node src/index.js",
     "worker:segments": "node src/worker.js",
     "worker:segments:once": "node src/worker.js --once",
+    "worker:account-deletion": "node src/account-deletion-worker.js",
+    "worker:account-deletion:once": "node src/account-deletion-worker.js --once",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",

@@ -101,6 +101,12 @@ test('account deletion cannot activate before the worker and mobile marker ship'
     ),
     true,
   );
+  assert.equal(
+    otherwiseComplete.errors.some(
+      (item) => item.name === 'account deletion stable identity readiness',
+    ),
+    true,
+  );
 });
 
 test('partial Better Stack configuration and malformed flags fail closed', () => {

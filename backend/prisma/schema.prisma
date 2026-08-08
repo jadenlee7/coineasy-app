@@ -73,6 +73,11 @@ model User {
   consentAudits    UserConsentAudit[]
   questCompletions QuestCompletion[]
   segments         UserSegment[]
+
+  // Server-derived, keyed digests of stable upstream identities. Raw
+  // provider subjects and emails are never stored. The generic provider +
+  // context namespace lets later providers join the same deletion guard.
+  stableProviderIdentities UserStableProviderIdentity[]
 }
 
 enum AccountDeletionState {
@@ -89,10 +94,12 @@ enum AccountDeletionState {
 // winner, so an accidental secret replacement fails closed without globally
 // serializing every auth sync.
 model AccountDeletionKeyRegistry {
-  keyVersion       Int                      @id
-  fingerprint      String                   @unique @db.Char(64)
-  createdAt        DateTime                 @default(now())
-  deletionRequests AccountDeletionRequest[] @relation("AccountDeletionSubjectKey")
+  keyVersion                 Int                               @id
+  fingerprint                String                            @unique @db.Char(64)
+  createdAt                  DateTime                          @default(now())
+  deletionRequests           AccountDeletionRequest[]          @relation("AccountDeletionSubjectKey")
+  userProviderIdentities     UserStableProviderIdentity[]      @relation("UserStableProviderIdentityKey")
+  deletionProviderIdentities AccountDeletionProviderIdentity[] @relation("AccountDeletionProviderIdentityKey")
 
   @@unique([keyVersion, fingerprint])
 }
@@ -125,11 +132,55 @@ model AccountDeletionRequest {
   manualReviewAt            DateTime?
   updatedAt                 DateTime             @updatedAt
 
-  subjectKey AccountDeletionKeyRegistry @relation("AccountDeletionSubjectKey", fields: [subjectHashKeyVersion, subjectHashKeyFingerprint], references: [keyVersion, fingerprint], onDelete: Restrict, onUpdate: Restrict)
+  subjectKey         AccountDeletionKeyRegistry        @relation("AccountDeletionSubjectKey", fields: [subjectHashKeyVersion, subjectHashKeyFingerprint], references: [keyVersion, fingerprint], onDelete: Restrict, onUpdate: Restrict, map: "AccountDeletionRequest_subject_key_fkey")
+  providerIdentities AccountDeletionProviderIdentity[]
 
   @@index([clientRequestId])
   @@index([state, nextAttemptAt])
   @@index([leaseExpiresAt])
+}
+
+// Active ownership of a stable upstream provider identity. A provider identity
+// may belong to only one local User at a time. Rows are append-only in place;
+// they are deleted only by the User cascade after a durable deletion identity
+// has been created in AccountDeletionProviderIdentity.
+model UserStableProviderIdentity {
+  id                   String   @id @default(cuid())
+  userId               String
+  provider             String   @db.VarChar(64)
+  context              String   @db.VarChar(128)
+  providerIdentityHash String   @db.Char(64)
+  keyVersion           Int      @default(1)
+  keyFingerprint       String   @db.Char(64)
+  createdAt            DateTime @default(now())
+
+  user       User                       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  subjectKey AccountDeletionKeyRegistry @relation("UserStableProviderIdentityKey", fields: [keyVersion, keyFingerprint], references: [keyVersion, fingerprint], onDelete: Restrict, onUpdate: Restrict, map: "UserStableProviderIdentity_subject_key_fkey")
+
+  @@unique([provider, context, providerIdentityHash], map: "uniq_user_stable_provider_identity")
+  @@unique([userId, provider, context], map: "uniq_user_stable_provider_namespace")
+  @@index([userId], map: "idx_user_stable_provider_user")
+}
+
+// Durable, provider-generic tombstone identity. It survives local User purge
+// and lets a new Privy DID carrying the same upstream subject recover or block
+// the original deletion request without persisting the raw subject.
+model AccountDeletionProviderIdentity {
+  id                       String   @id @default(cuid())
+  accountDeletionRequestId String
+  provider                 String   @db.VarChar(64)
+  context                  String   @db.VarChar(128)
+  providerIdentityHash     String   @db.Char(64)
+  keyVersion               Int      @default(1)
+  keyFingerprint           String   @db.Char(64)
+  createdAt                DateTime @default(now())
+
+  request    AccountDeletionRequest     @relation(fields: [accountDeletionRequestId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "AccountDeletionProviderIdentity_request_fkey")
+  subjectKey AccountDeletionKeyRegistry @relation("AccountDeletionProviderIdentityKey", fields: [keyVersion, keyFingerprint], references: [keyVersion, fingerprint], onDelete: Restrict, onUpdate: Restrict, map: "AccountDeletionProviderIdentity_subject_key_fkey")
+
+  @@unique([provider, context, providerIdentityHash], map: "uniq_deletion_stable_provider_identity")
+  @@unique([accountDeletionRequestId, provider, context], map: "uniq_deletion_request_provider_namespace")
+  @@index([accountDeletionRequestId], map: "idx_deletion_provider_request")
 }
 
 model OrangeLedger {

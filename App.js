@@ -110,7 +110,10 @@ function AccountDeletionSessionGate({ children }) {
       void accountDeletionMarkerStore.begin({
         userId: privyUserId,
         clientRequestId: createAccountDeletionClientRequestId(),
-        phase: 'accepted',
+        // A 410 tombstone can still be MANUAL_REVIEW with local data intact.
+        // Keep a recovery marker until an authenticated status response proves
+        // localDataDeleted === true.
+        phase: 'requesting',
       }).catch(() => {
         // The in-memory server block remains fail-closed if SecureStore fails.
       });
@@ -128,7 +131,7 @@ function AccountDeletionSessionGate({ children }) {
       void accountDeletionMarkerStore.begin({
         userId: privyUserId,
         clientRequestId: createAccountDeletionClientRequestId(),
-        phase: 'accepted',
+        phase: 'requesting',
       }).catch(() => {
         // Keep the in-memory tombstone block until SecureStore recovers.
       });

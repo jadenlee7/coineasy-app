@@ -13,7 +13,10 @@ import { usePrivy } from '@privy-io/expo';
 
 import { GlobalContext } from '../contexts/GlobalContext';
 import { api } from '../utils/api';
-import { submitAccountDeletionRequest } from '../utils/accountDeletionFlow.mjs';
+import {
+  reconcileAccountDeletionStatus,
+  submitAccountDeletionRequest,
+} from '../utils/accountDeletionFlow.mjs';
 import { purgeAccountDeletionLocalData } from '../utils/accountDeletionLocalData.mjs';
 import { accountDeletionMarkerStore } from '../utils/accountDeletionStorage';
 import { cleanupStaleExportFiles } from '../utils/dataExport.mjs';
@@ -107,18 +110,21 @@ export default function AccountDeletionPending({ guard }) {
         const status = await api.accountDeletionStatus({
           expectedAuthUserId: currentUserId,
         });
-        if (status?.state) {
-          if (status.requestId) {
-            await accountDeletionMarkerStore.accept({
-              userId: currentUserId,
-              clientRequestId: guard.marker.clientRequestId,
-              requestId: status.requestId,
-            });
-          }
-          await purgeLocalData();
+        const outcome = await reconcileAccountDeletionStatus({
+          markerStore: accountDeletionMarkerStore,
+          userId: currentUserId,
+          clientRequestId: guard.marker.clientRequestId,
+          status,
+          purgeLocalData,
+        });
+        if (outcome.status === 'accepted') {
           setMessage(status.completed
             ? 'EasyGo 데이터 삭제가 완료되었습니다. 이제 안전하게 로그아웃할 수 있습니다.'
             : '삭제 요청이 서버에 보존되어 있습니다. 처리가 계속 진행됩니다.');
+        } else if (outcome.status === 'recovery') {
+          setMessage(status.state === 'MANUAL_REVIEW'
+            ? '삭제 요청이 안전 검토 중입니다. 로그인 세션과 기기 데이터는 유지됩니다.'
+            : '서버 삭제는 아직 완료되지 않았습니다. 로그인 세션과 잠금은 유지됩니다.');
         } else {
           setMessage('삭제 요청 기록을 확정할 수 없습니다. 잠금은 유지됩니다. 잠시 후 다시 확인해 주세요.');
         }
@@ -140,6 +146,10 @@ export default function AccountDeletionPending({ guard }) {
       });
       if (outcome.status === 'uncertain') {
         setMessage('서버 응답을 확정하지 못했습니다. 로그인 세션과 잠금을 유지했으니 다시 확인할 수 있습니다.');
+      } else if (outcome.status === 'recovery') {
+        setMessage(outcome.state === 'MANUAL_REVIEW'
+          ? '삭제 요청이 안전 검토 중입니다. 로그인 세션과 기기 데이터는 유지됩니다.'
+          : '삭제 요청 복구가 필요합니다. 로그인 세션과 잠금은 유지됩니다.');
       } else if (outcome.status === 'rejected') {
         setMessage('요청 형식을 확인하지 못했습니다. 앱을 업데이트한 뒤 다시 시도해 주세요.');
       }

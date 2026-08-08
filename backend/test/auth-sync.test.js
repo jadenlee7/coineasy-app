@@ -7,7 +7,10 @@ import {
   WELCOME_ORANGE,
 } from '../src/lib/auth-sync.js';
 import { PrivyConfigurationError } from '../src/lib/privy.js';
-import { accountDeletionSubjectKeyFingerprint } from '../src/lib/account-deletion.js';
+import {
+  accountDeletionSubjectKeyFingerprint,
+  deriveAppleStableProviderIdentity,
+} from '../src/lib/account-deletion.js';
 import { express4AsyncHandler } from '../src/lib/express-async.js';
 import {
   createAuthSyncHandler,
@@ -175,14 +178,96 @@ function authSyncDb({ failUpsert = null, existingUser = true } = {}) {
   };
 }
 
-function privyAppleUser() {
+function privyAppleUser({
+  id = 'did:privy:apple-user',
+  subject = 'apple-stable-subject',
+} = {}) {
   return {
-    id: 'did:privy:apple-user',
-    linkedAccounts: [{
-      type: 'wallet',
-      chainType: 'ethereum',
-      address: '0x0000000000000000000000000000000000000001',
-    }],
+    id,
+    linkedAccounts: [
+      {
+        type: 'apple_oauth',
+        subject,
+        email: 'relay-never-persist@example.com',
+      },
+      {
+        type: 'wallet',
+        chainType: 'ethereum',
+        address: '0x0000000000000000000000000000000000000001',
+      },
+    ],
+  };
+}
+
+function guardedAuthSyncDb({
+  privyDid = 'did:privy:apple-user',
+  existingUser = null,
+  existingStableIdentities = [],
+  providerTombstone = null,
+} = {}) {
+  const calls = [];
+  const ledger = [];
+  const user = existingUser || { id: 'easygo_user_guarded', privyDid };
+  const tx = {
+    async $queryRawUnsafe(_query, lockKey) {
+      calls.push(['lock', lockKey]);
+    },
+    accountDeletionKeyRegistry: {
+      async createMany(options) {
+        calls.push(['registry.createMany', options]);
+        return { count: 0 };
+      },
+      async findUnique(options) {
+        calls.push(['registry.findUnique', options]);
+        return { fingerprint: DELETION_KEY_FINGERPRINT };
+      },
+    },
+    accountDeletionRequest: {
+      async findUnique(options) {
+        calls.push(['request.findUnique', options]);
+        return null;
+      },
+    },
+    accountDeletionProviderIdentity: {
+      async findMany(options) {
+        calls.push(['deletionIdentity.findMany', options]);
+        return providerTombstone ? [{ request: providerTombstone }] : [];
+      },
+    },
+    user: {
+      async findUnique(options) {
+        calls.push(['user.findUnique', options]);
+        return existingUser ? { id: existingUser.id } : null;
+      },
+      async upsert(options) {
+        calls.push(['user.upsert', options]);
+        return user;
+      },
+    },
+    userStableProviderIdentity: {
+      async findMany(options) {
+        calls.push(['liveIdentity.findMany', options]);
+        return existingStableIdentities;
+      },
+      async create(options) {
+        calls.push(['liveIdentity.create', options]);
+        return { id: 'live_identity_1', ...options.data };
+      },
+    },
+    orangeLedger: {
+      async createMany({ data: [data] }) {
+        calls.push(['ledger.createMany', data]);
+        ledger.push(data);
+        return { count: 1 };
+      },
+      async aggregate() {
+        return { _sum: { delta: WELCOME_ORANGE } };
+      },
+    },
+  };
+  return {
+    calls,
+    db: { async $transaction(callback) { return callback(tx); } },
   };
 }
 
@@ -296,6 +381,9 @@ test('auth sync rechecks the tombstone under lock after the Privy lookup', async
           : { id: 'deletion_race', state: 'REQUESTED' };
       },
     },
+    accountDeletionProviderIdentity: {
+      async findMany() { return []; },
+    },
     user: {
       async findUnique() { operationCalls += 1; },
       async upsert() { operationCalls += 1; },
@@ -318,6 +406,146 @@ test('auth sync rechecks the tombstone under lock after the Privy lookup', async
   assert.equal(operationCalls, 0);
   assert.equal(response.statusCode, 410);
   assert.deepEqual(response.body, { error: 'account_deletion_in_progress' });
+});
+
+test('a new Privy DID carrying a tombstoned Apple subject is blocked', async () => {
+  const newDid = 'did:privy:replacement-user';
+  const providerTombstone = { id: 'deletion_apple', state: 'LOCAL_PURGED' };
+  const { calls, db } = guardedAuthSyncDb({
+    privyDid: newDid,
+    providerTombstone,
+  });
+  const response = responseDouble();
+
+  await createAuthSyncHandler({
+    db,
+    env: DELETION_GUARD_ENV,
+    fetchPrivyUser: async () => privyAppleUser({ id: newDid }),
+  })({
+    user: { privyDid: newDid },
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 410);
+  assert.deepEqual(response.body, { error: 'account_deletion_in_progress' });
+  assert.equal(calls.some(([name]) => name === 'user.upsert'), false);
+  assert.equal(calls.some(([name]) => name === 'ledger.createMany'), false);
+  const lookup = calls.find(([name]) => name === 'deletionIdentity.findMany')[1];
+  const serialized = JSON.stringify(lookup);
+  assert.match(serialized, /providerIdentityHash/u);
+  assert.equal(serialized.includes('apple-stable-subject'), false);
+});
+
+test('auth sync persists only the HMAC Apple identity binding', async () => {
+  const { calls, db } = guardedAuthSyncDb();
+  const response = responseDouble();
+  await createAuthSyncHandler({
+    db,
+    env: DELETION_GUARD_ENV,
+    fetchPrivyUser: async () => privyAppleUser(),
+  })({
+    user: { privyDid: 'did:privy:apple-user' },
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  const binding = calls.find(([name]) => name === 'liveIdentity.create')[1].data;
+  assert.deepEqual(
+    {
+      provider: binding.provider,
+      context: binding.context,
+      providerIdentityHash: binding.providerIdentityHash,
+    },
+    deriveAppleStableProviderIdentity('apple-stable-subject', DELETION_GUARD_ENV),
+  );
+  const persistedCalls = JSON.stringify(calls.filter(([name]) => (
+    name === 'user.upsert'
+    || name === 'liveIdentity.create'
+    || name === 'deletionIdentity.findMany'
+  )));
+  assert.equal(persistedCalls.includes('apple-stable-subject'), false);
+  assert.equal(persistedCalls.includes('relay-never-persist@example.com'), false);
+});
+
+test('the dormant stable-identity latch keeps a new Google-only sync behavior-neutral', async () => {
+  const { calls, db } = guardedAuthSyncDb({
+    privyDid: 'did:privy:google-user',
+  });
+  const response = responseDouble();
+  await createAuthSyncHandler({
+    db,
+    env: {
+      ...DELETION_GUARD_ENV,
+      NODE_ENV: 'production',
+    },
+    fetchPrivyUser: async () => ({
+      id: 'did:privy:google-user',
+      linkedAccounts: [{
+        type: 'google_oauth',
+        subject: 'google-subject-not-yet-supported',
+        email: 'google@example.com',
+      }],
+    }),
+  })({
+    user: { privyDid: 'did:privy:google-user' },
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(calls.some(([name]) => name === 'user.upsert'), true);
+  assert.equal(calls.some(([name]) => name === 'liveIdentity.create'), false);
+});
+
+test('conflicting Apple accounts fail before user or ledger writes', async () => {
+  const { calls, db } = guardedAuthSyncDb();
+  const response = responseDouble();
+  await createAuthSyncHandler({
+    db,
+    env: DELETION_GUARD_ENV,
+    fetchPrivyUser: async () => ({
+      id: 'did:privy:apple-user',
+      linkedAccounts: [
+        { type: 'apple_oauth', subject: 'apple-a' },
+        { type: 'apple_oauth', subject: 'apple-b' },
+      ],
+    }),
+  })({
+    user: { privyDid: 'did:privy:apple-user' },
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 502);
+  assert.deepEqual(response.body, { error: 'privy_unavailable' });
+  assert.equal(calls.some(([name]) => name === 'user.upsert'), false);
+  assert.equal(calls.some(([name]) => name === 'ledger.createMany'), false);
+});
+
+test('an existing Apple binding cannot be silently cleared by a provider snapshot', async () => {
+  const storedIdentity = deriveAppleStableProviderIdentity(
+    'apple-stable-subject',
+    DELETION_GUARD_ENV,
+  );
+  const { calls, db } = guardedAuthSyncDb({
+    existingUser: { id: 'easygo_user_guarded', privyDid: 'did:privy:apple-user' },
+    existingStableIdentities: [storedIdentity],
+  });
+  const response = responseDouble();
+  await createAuthSyncHandler({
+    db,
+    env: DELETION_GUARD_ENV,
+    fetchPrivyUser: async () => ({
+      id: 'did:privy:apple-user',
+      linkedAccounts: [],
+    }),
+  })({
+    user: { privyDid: 'did:privy:apple-user' },
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 503);
+  assert.deepEqual(response.body, { error: 'account_deletion_guard_unavailable' });
+  assert.equal(calls.some(([name]) => name === 'user.upsert'), false);
+  assert.equal(calls.some(([name]) => name === 'ledger.createMany'), false);
 });
 
 test('auth sync fails closed when deletion is enabled without its hash key', async () => {

@@ -4,18 +4,29 @@ import {
   createHmac,
   randomBytes,
 } from 'node:crypto';
+import {
+  ACCOUNT_DELETION_PUBLIC_REQUEST_READY,
+  accountDeletionGuardTarget,
+  accountDeletionPublicRequestEnabled,
+  accountDeletionStableIdentityGuardEnabled,
+} from './account-deletion-gates.js';
 
 const SUBJECT_HASH_KEY_VERSION = 1;
 const ENCRYPTION_KEY_VERSION = 1;
 const CIPHERTEXT_VERSION = 'v1';
 const DELETION_AAD_PREFIX = 'easygo-account-deletion:';
 const SUBJECT_KEY_FINGERPRINT_CONTEXT = 'easygo-account-deletion-hmac-key-v1';
+const PROVIDER_IDENTITY_DIGEST_CONTEXT = 'easygo-account-deletion:stable-provider-identity:v1';
+
+export const APPLE_STABLE_IDENTITY_PROVIDER = 'apple_oauth';
+export const APPLE_STABLE_IDENTITY_CONTEXT = 'signin-with-apple.subject.v1';
 
 export const DELETE_ACCOUNT_CONFIRMATION = 'DELETE_MY_EASYGO_ACCOUNT';
-// Compile-time release brake. Environment flags cannot expose destructive
-// account deletion until the provider worker and durable mobile marker land
-// in a separately reviewed change.
-export const ACCOUNT_DELETION_ACTIVATION_READY = false;
+// Backwards-compatible name. The single source of truth lives with the other
+// compile-time deletion release brakes.
+export {
+  ACCOUNT_DELETION_PUBLIC_REQUEST_READY as ACCOUNT_DELETION_ACTIVATION_READY,
+};
 
 export class AccountDeletionConfigurationError extends Error {
   constructor(code = 'account_deletion_not_configured') {
@@ -34,21 +45,23 @@ export class AccountDeletionBlockedError extends Error {
   }
 }
 
-function accountDeletionRequested(env = process.env) {
-  return String(env.ACCOUNT_DELETION_ENABLED || '').trim().toLowerCase() === 'true';
+export class AccountDeletionIdentityError extends Error {
+  constructor(code = 'stable_provider_identity_invalid') {
+    super(code);
+    this.name = 'AccountDeletionIdentityError';
+    this.code = code;
+  }
 }
 
 function accountDeletionGuardRequired(env = process.env) {
-  const deployTarget = String(env.EASYGO_DEPLOY_TARGET || '').trim().toLowerCase();
-  return accountDeletionRequested(env)
-    || String(env.NODE_ENV || '').trim().toLowerCase() === 'production'
-    || deployTarget === 'staging'
-    || deployTarget === 'production';
+  return accountDeletionGuardTarget(env);
 }
 
-export function accountDeletionEnabled(env = process.env) {
-  return ACCOUNT_DELETION_ACTIVATION_READY && accountDeletionRequested(env);
+export function accountDeletionStableIdentityEnforced(env = process.env) {
+  return accountDeletionStableIdentityGuardEnabled(env);
 }
+
+export const accountDeletionEnabled = accountDeletionPublicRequestEnabled;
 
 function normalizedPrivyDid(privyDid) {
   const normalized = typeof privyDid === 'string' ? privyDid.trim() : '';
@@ -93,6 +106,78 @@ export function accountDeletionSubjectHash(privyDid, env = process.env, options 
   const key = subjectHashKey(env, options);
   if (!key) return null;
   return createHmac('sha256', key).update(normalizedPrivyDid(privyDid), 'utf8').digest('hex');
+}
+
+function normalizedIdentityNamespace(value, name, maxLength) {
+  const normalized = typeof value === 'string' ? value : '';
+  const pattern = name === 'provider'
+    ? /^[a-z][a-z0-9_:-]*$/u
+    : /^[a-z0-9][a-z0-9._:/-]*$/u;
+  if (
+    !normalized
+    || normalized !== normalized.trim()
+    || normalized.length > maxLength
+    || !pattern.test(normalized)
+  ) {
+    throw new AccountDeletionIdentityError(`stable_provider_${name}_invalid`);
+  }
+  return normalized;
+}
+
+function normalizedProviderSubject(subject) {
+  if (
+    typeof subject !== 'string'
+    || subject.length === 0
+    || subject.length > 2048
+    || subject !== subject.trim()
+  ) {
+    throw new AccountDeletionIdentityError('stable_provider_subject_invalid');
+  }
+  return subject;
+}
+
+/**
+ * Derive a provider-generic stable identity without retaining the raw subject.
+ * provider + context are part of the authenticated input, so equal raw values
+ * in different identity systems cannot collide into the same namespace.
+ */
+export function deriveStableProviderIdentity(
+  { provider, context, subject },
+  env = process.env,
+  options = {},
+) {
+  const normalizedProvider = normalizedIdentityNamespace(provider, 'provider', 64);
+  const normalizedContext = normalizedIdentityNamespace(context, 'context', 128);
+  const normalizedSubject = normalizedProviderSubject(subject);
+  const key = subjectHashKey(env, options);
+  if (!key) return null;
+  const providerIdentityHash = createHmac('sha256', key)
+    .update(PROVIDER_IDENTITY_DIGEST_CONTEXT, 'utf8')
+    .update('\0', 'utf8')
+    .update(normalizedProvider, 'utf8')
+    .update('\0', 'utf8')
+    .update(normalizedContext, 'utf8')
+    .update('\0', 'utf8')
+    .update(normalizedSubject, 'utf8')
+    .digest('hex');
+  return Object.freeze({
+    provider: normalizedProvider,
+    context: normalizedContext,
+    providerIdentityHash,
+  });
+}
+
+export function deriveAppleStableProviderIdentity(
+  appleSubject,
+  env = process.env,
+  options = {},
+) {
+  if (appleSubject == null) return null;
+  return deriveStableProviderIdentity({
+    provider: APPLE_STABLE_IDENTITY_PROVIDER,
+    context: APPLE_STABLE_IDENTITY_CONTEXT,
+    subject: appleSubject,
+  }, env, options);
 }
 
 export function accountDeletionSubjectKeyFingerprint(env = process.env, options = {}) {
@@ -166,6 +251,64 @@ export async function acquireAccountDeletionLock(tx, subjectHash) {
   );
 }
 
+function validatedStableProviderIdentities(values = []) {
+  if (!Array.isArray(values)) {
+    throw new AccountDeletionIdentityError('stable_provider_identities_invalid');
+  }
+  const identities = [];
+  const byNamespace = new Map();
+  for (const value of values) {
+    const provider = normalizedIdentityNamespace(value?.provider, 'provider', 64);
+    const context = normalizedIdentityNamespace(value?.context, 'context', 128);
+    const providerIdentityHash = String(value?.providerIdentityHash || '');
+    if (!/^[a-f0-9]{64}$/u.test(providerIdentityHash)) {
+      throw new AccountDeletionIdentityError('stable_provider_identity_hash_invalid');
+    }
+    const namespace = `${provider}\0${context}`;
+    const previous = byNamespace.get(namespace);
+    if (previous && previous.providerIdentityHash !== providerIdentityHash) {
+      throw new AccountDeletionIdentityError('stable_provider_identity_conflict');
+    }
+    if (!previous) {
+      const identity = Object.freeze({ provider, context, providerIdentityHash });
+      byNamespace.set(namespace, identity);
+      identities.push(identity);
+    }
+  }
+  return identities.sort((left, right) => (
+    `${left.provider}\0${left.context}\0${left.providerIdentityHash}`
+      .localeCompare(`${right.provider}\0${right.context}\0${right.providerIdentityHash}`)
+  ));
+}
+
+function stableProviderIdentityWhere(identity) {
+  return {
+    provider: identity.provider,
+    context: identity.context,
+    providerIdentityHash: identity.providerIdentityHash,
+  };
+}
+
+function stableProviderIdentityLockKey(identity) {
+  return `provider:${identity.provider}:${identity.context}:${identity.providerIdentityHash}`;
+}
+
+export async function acquireAccountDeletionLocks(
+  tx,
+  subjectHash,
+  stableProviderIdentities = [],
+) {
+  const lockKeys = [
+    subjectHash,
+    ...validatedStableProviderIdentities(stableProviderIdentities)
+      .map(stableProviderIdentityLockKey),
+  ].filter(Boolean);
+  const uniqueSorted = [...new Set(lockKeys)].sort();
+  for (const lockKey of uniqueSorted) {
+    await acquireAccountDeletionLock(tx, lockKey);
+  }
+}
+
 async function assertAccountDeletionKeyFingerprint(tx, env) {
   const configuredFingerprint = accountDeletionSubjectKeyFingerprint(env, { required: true });
   await tx.accountDeletionKeyRegistry.createMany({
@@ -185,37 +328,85 @@ async function assertAccountDeletionKeyFingerprint(tx, env) {
   return configuredFingerprint;
 }
 
+
+const DELETION_REQUEST_STATUS_SELECT = Object.freeze({
+  id: true,
+  subjectHash: true,
+  state: true,
+  requestedAt: true,
+  localPurgedAt: true,
+  completedAt: true,
+});
+
+async function findRequestByStableIdentities(tx, stableProviderIdentities, select) {
+  const identities = validatedStableProviderIdentities(stableProviderIdentities);
+  if (identities.length === 0) return null;
+  const rows = await tx.accountDeletionProviderIdentity.findMany({
+    where: { OR: identities.map(stableProviderIdentityWhere) },
+    select: { request: { select } },
+  });
+  const requests = rows.map((row) => row.request).filter(Boolean);
+  const requestIds = new Set(requests.map((request) => request.id));
+  if (requestIds.size > 1) {
+    throw new AccountDeletionIdentityError('stable_provider_tombstone_conflict');
+  }
+  return requests[0] || null;
+}
+
+async function findRequestUnderLock(
+  tx,
+  subjectHash,
+  stableProviderIdentities,
+  select = DELETION_REQUEST_STATUS_SELECT,
+) {
+  const didRequest = await tx.accountDeletionRequest.findUnique({
+    where: { subjectHash },
+    select,
+  });
+  const providerRequest = await findRequestByStableIdentities(
+    tx,
+    stableProviderIdentities,
+    select,
+  );
+  if (didRequest && providerRequest && didRequest.id !== providerRequest.id) {
+    throw new AccountDeletionIdentityError('stable_provider_tombstone_conflict');
+  }
+  return didRequest || providerRequest;
+}
+
 export async function findAccountDeletionRequest(
   prisma,
   privyDid,
   env = process.env,
-  { required = accountDeletionGuardRequired(env) } = {},
+  {
+    required = accountDeletionGuardRequired(env),
+    stableProviderIdentities = [],
+  } = {},
 ) {
   const subjectHash = accountDeletionSubjectHash(privyDid, env, { required });
   if (!subjectHash) return null;
+  const identities = validatedStableProviderIdentities(stableProviderIdentities);
   return prisma.$transaction(async (tx) => {
     await assertAccountDeletionKeyFingerprint(tx, env);
-    await acquireAccountDeletionLock(tx, subjectHash);
-    return tx.accountDeletionRequest.findUnique({
-      where: { subjectHash },
-      select: {
-        id: true,
-        state: true,
-        requestedAt: true,
-        localPurgedAt: true,
-        completedAt: true,
-      },
-    });
+    await acquireAccountDeletionLocks(tx, subjectHash, identities);
+    return findRequestUnderLock(
+      tx,
+      subjectHash,
+      identities,
+      DELETION_REQUEST_STATUS_SELECT,
+    );
   });
 }
 
 export async function runWithAccountDeletionGuard({
   prisma,
   privyDid,
+  stableProviderIdentities = [],
   env = process.env,
   operation,
 }) {
   if (typeof operation !== 'function') throw new TypeError('operation is required');
+  const identities = validatedStableProviderIdentities(stableProviderIdentities);
   const subjectHash = accountDeletionSubjectHash(privyDid, env, {
     required: accountDeletionGuardRequired(env),
   });
@@ -225,15 +416,99 @@ export async function runWithAccountDeletionGuard({
   if (!subjectHash) return operation(prisma);
 
   return prisma.$transaction(async (tx) => {
-    await assertAccountDeletionKeyFingerprint(tx, env);
-    await acquireAccountDeletionLock(tx, subjectHash);
-    const request = await tx.accountDeletionRequest.findUnique({
-      where: { subjectHash },
-      select: { id: true, state: true },
-    });
+    const keyFingerprint = await assertAccountDeletionKeyFingerprint(tx, env);
+    await acquireAccountDeletionLocks(tx, subjectHash, identities);
+    const request = await findRequestUnderLock(
+      tx,
+      subjectHash,
+      identities,
+      { id: true, state: true },
+    );
     if (request) throw new AccountDeletionBlockedError(request);
-    return operation(tx);
+    return operation(tx, {
+      subjectHash,
+      stableProviderIdentities: identities,
+      keyFingerprint,
+      keyVersion: SUBJECT_HASH_KEY_VERSION,
+    });
   });
+}
+
+/**
+ * Bind the currently verified upstream identities to a local User. Existing
+ * bindings are immutable: omission or replacement of an already stored
+ * identity fails closed instead of silently weakening deletion recovery.
+ */
+export async function reconcileUserStableProviderIdentities(tx, {
+  userId,
+  stableProviderIdentities = [],
+  expectedNamespaces = [],
+  keyFingerprint,
+  keyVersion = SUBJECT_HASH_KEY_VERSION,
+  requireIdentity = false,
+}) {
+  const identities = validatedStableProviderIdentities(stableProviderIdentities);
+  if (requireIdentity && identities.length === 0) {
+    throw new AccountDeletionIdentityError('stable_provider_identity_required');
+  }
+  const namespaces = new Map();
+  for (const identity of identities) {
+    namespaces.set(`${identity.provider}\0${identity.context}`, {
+      provider: identity.provider,
+      context: identity.context,
+    });
+  }
+  for (const value of expectedNamespaces) {
+    const provider = normalizedIdentityNamespace(value?.provider, 'provider', 64);
+    const context = normalizedIdentityNamespace(value?.context, 'context', 128);
+    namespaces.set(`${provider}\0${context}`, { provider, context });
+  }
+  if (namespaces.size === 0) return [];
+
+  const existing = await tx.userStableProviderIdentity.findMany({
+    where: {
+      userId,
+      OR: [...namespaces.values()],
+    },
+    select: { provider: true, context: true, providerIdentityHash: true },
+  });
+  const incomingByNamespace = new Map(
+    identities.map((identity) => [`${identity.provider}\0${identity.context}`, identity]),
+  );
+  const existingByNamespace = new Map(
+    existing.map((identity) => [`${identity.provider}\0${identity.context}`, identity]),
+  );
+
+  for (const [namespace, stored] of existingByNamespace) {
+    const incoming = incomingByNamespace.get(namespace);
+    if (!incoming) {
+      throw new AccountDeletionIdentityError('stable_provider_identity_missing');
+    }
+    if (stored.providerIdentityHash !== incoming.providerIdentityHash) {
+      throw new AccountDeletionIdentityError('stable_provider_identity_conflict');
+    }
+  }
+
+  const created = [];
+  for (const [namespace, incoming] of incomingByNamespace) {
+    if (existingByNamespace.has(namespace)) continue;
+    try {
+      created.push(await tx.userStableProviderIdentity.create({
+        data: {
+          userId,
+          ...incoming,
+          keyVersion,
+          keyFingerprint,
+        },
+      }));
+    } catch (error) {
+      if (error?.code === 'P2002') {
+        throw new AccountDeletionIdentityError('stable_provider_identity_conflict');
+      }
+      throw error;
+    }
+  }
+  return [...existing, ...created];
 }
 
 export async function redactPostsByAuthor(tx, authorId, now = new Date()) {
@@ -272,9 +547,99 @@ function deletionResult(request, { created = false, redactedPosts = 0 } = {}) {
   };
 }
 
+async function ensureDeletionProviderIdentities(
+  tx,
+  requestId,
+  stableProviderIdentities,
+  keyFingerprint,
+) {
+  const identities = validatedStableProviderIdentities(stableProviderIdentities);
+  if (identities.length === 0) {
+    throw new AccountDeletionIdentityError('stable_provider_identity_required');
+  }
+  const existing = await tx.accountDeletionProviderIdentity.findMany({
+    where: { OR: identities.map(stableProviderIdentityWhere) },
+    select: {
+      accountDeletionRequestId: true,
+      provider: true,
+      context: true,
+      providerIdentityHash: true,
+    },
+  });
+  const existingByNamespace = new Map(
+    existing.map((identity) => [`${identity.provider}\0${identity.context}`, identity]),
+  );
+  for (const identity of identities) {
+    const namespace = `${identity.provider}\0${identity.context}`;
+    const stored = existingByNamespace.get(namespace);
+    if (stored && (
+      stored.accountDeletionRequestId !== requestId
+      || stored.providerIdentityHash !== identity.providerIdentityHash
+    )) {
+      throw new AccountDeletionIdentityError('stable_provider_tombstone_conflict');
+    }
+    if (stored) continue;
+    try {
+      await tx.accountDeletionProviderIdentity.create({
+        data: {
+          accountDeletionRequestId: requestId,
+          ...identity,
+          keyVersion: SUBJECT_HASH_KEY_VERSION,
+          keyFingerprint,
+        },
+      });
+    } catch (error) {
+      if (error?.code === 'P2002') {
+        throw new AccountDeletionIdentityError('stable_provider_tombstone_conflict');
+      }
+      throw error;
+    }
+  }
+}
+
+function identityNamespaceKey(identity) {
+  return `${identity.provider}\0${identity.context}\0${identity.providerIdentityHash}`;
+}
+
+async function usersInStableIdentityComponent(
+  tx,
+  privyDid,
+  stableProviderIdentities,
+) {
+  const identities = validatedStableProviderIdentities(stableProviderIdentities);
+  const users = await tx.user.findMany({
+    where: {
+      OR: [
+        { privyDid },
+        {
+          stableProviderIdentities: {
+            some: { OR: identities.map(stableProviderIdentityWhere) },
+          },
+        },
+      ],
+    },
+    select: {
+      id: true,
+      privyDid: true,
+      stableProviderIdentities: {
+        select: { provider: true, context: true, providerIdentityHash: true },
+      },
+    },
+  });
+  const lockedIdentities = new Set(identities.map(identityNamespaceKey));
+  const closureComplete = users.every((user) => (
+    user.stableProviderIdentities.every((identity) => (
+      lockedIdentities.has(identityNamespaceKey(identity))
+    ))
+  ));
+  return { users, closureComplete };
+}
+
 export async function requestAccountDeletion({
   prisma,
   privyDid,
+  appleSubject = null,
+  stableProviderIdentities = [],
   clientRequestId,
   env = process.env,
   now = new Date(),
@@ -290,12 +655,38 @@ export async function requestAccountDeletion({
   const subjectHash = accountDeletionSubjectHash(normalizedDid, env, { required: true });
   const subjectHashKeyFingerprint = accountDeletionSubjectKeyFingerprint(env, { required: true });
   const privyDidCiphertext = encryptAccountDeletionSubject(normalizedDid, subjectHash, env);
+  const appleIdentity = deriveAppleStableProviderIdentity(
+    appleSubject,
+    env,
+    { required: true },
+  );
+  const identities = validatedStableProviderIdentities([
+    ...stableProviderIdentities,
+    ...(appleIdentity ? [appleIdentity] : []),
+  ]);
+  if (identities.length === 0) {
+    throw new AccountDeletionIdentityError('stable_provider_identity_required');
+  }
 
   return prisma.$transaction(async (tx) => {
     await assertAccountDeletionKeyFingerprint(tx, env);
-    await acquireAccountDeletionLock(tx, subjectHash);
-    let request = await tx.accountDeletionRequest.findUnique({ where: { subjectHash } });
-    if (request && request.state !== 'REQUESTED') return deletionResult(request);
+    await acquireAccountDeletionLocks(tx, subjectHash, identities);
+    let request = await findRequestUnderLock(tx, subjectHash, identities, undefined);
+    if (request && request.subjectHash !== subjectHash) {
+      throw new AccountDeletionIdentityError('stable_provider_identity_component_conflict');
+    }
+
+    // Never auto-delete a second Privy principal (the provider worker only has
+    // this request's encrypted DID), and never leave another stable identity
+    // in the connected component untombstoned. The deletion intent is still
+    // durably recorded below as MANUAL_REVIEW, but no local content is purged.
+    const { users, closureComplete } = await usersInStableIdentityComponent(
+      tx,
+      normalizedDid,
+      identities,
+    );
+    const hasAdditionalPrivyDid = users.some((user) => user.privyDid !== normalizedDid);
+    const identityComponentConflict = !closureComplete || hasAdditionalPrivyDid;
 
     let created = false;
     if (!request) {
@@ -313,15 +704,45 @@ export async function requestAccountDeletion({
       created = true;
     }
 
-    const user = await tx.user.findUnique({
-      where: { privyDid: normalizedDid },
-      select: { id: true },
-    });
+    // This durable mapping is written before any local purge. A new Privy DID
+    // with the same upstream identity is therefore blocked even if the active
+    // User row and its live identity binding are removed below.
+    await ensureDeletionProviderIdentities(
+      tx,
+      request.id,
+      identities,
+      subjectHashKeyFingerprint,
+    );
+    if (identityComponentConflict) {
+      if (request.state !== 'REQUESTED') {
+        throw new AccountDeletionIdentityError('stable_provider_identity_component_conflict');
+      }
+      request = await tx.accountDeletionRequest.update({
+        where: { id: request.id },
+        data: {
+          state: 'MANUAL_REVIEW',
+          stateVersion: { increment: 1 },
+          manualReviewAt: now,
+          lastErrorAt: now,
+          lastErrorCode: hasAdditionalPrivyDid
+            ? 'stable_identity_additional_privy_did'
+            : 'stable_identity_component_incomplete',
+          nextAttemptAt: null,
+        },
+      });
+      return deletionResult(request, { created });
+    }
+    if (request.state !== 'REQUESTED') return deletionResult(request);
+
     let redactedPosts = 0;
-    if (user) {
+    for (const user of users) {
       const redacted = await redactPostsByAuthor(tx, user.id, now);
-      redactedPosts = redacted.count;
-      await tx.user.delete({ where: { id: user.id } });
+      redactedPosts += redacted.count;
+    }
+    if (users.length > 0) {
+      await tx.user.deleteMany({
+        where: { id: { in: users.map((user) => user.id) } },
+      });
     }
 
     request = await tx.accountDeletionRequest.update({

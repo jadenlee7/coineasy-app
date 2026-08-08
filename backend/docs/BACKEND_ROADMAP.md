@@ -222,11 +222,14 @@ review.
   legal-document review. Revocation remains available while the gate is off.
 - `GET /me/data` returns a no-store, versioned export of records held in the
   EasyGo database. Ephemeral SIWE nonce hashes are excluded.
-- `DELETE /me/data` requires the literal confirmation
-  `DELETE_MY_EASYGO_DATA`, then deletes the local user and cascaded records.
-  It does not claim to delete the separate Privy identity. The route remains
-  `503` behind default-off `ACCOUNT_DELETION_ENABLED` until cross-user reply
-  ownership and post-deletion Privy session recreation are resolved.
+- Legacy `DELETE /me/data` is retired with `410`; deletion recovery and future
+  requests live at `GET|POST /me/account-deletion`. The new flow preserves
+  reply topology, creates DID and stable-provider tombstones, and queues
+  provider cleanup in a separately leased worker.
+- Public deletion, provider cleanup, and irreversible stable-identity
+  enforcement each have a compile-time latch. All remain `false`; Apple token
+  revocation ownership, recent authentication, Google identity coverage,
+  retention approval, and disposable-account QA remain activation blockers.
 - Production consent reads return `503` until `EASYGO_CONSENT_VERSION` is set
   to the approved, published policy version. That version alone never enables
   mutation; the separate gate above is also required.
