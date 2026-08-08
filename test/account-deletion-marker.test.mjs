@@ -339,6 +339,99 @@ test('confirmed deletion stays authenticated and blocked when local purge fails'
   assert.equal((await store.load(USER_A)).marker.phase, 'accepted');
 });
 
+test('an accepted response for an old owner preserves its marker without purging the new owner', async () => {
+  const { markerStore: store } = markerStore();
+  let ownerCurrent = true;
+  let purges = 0;
+  let logouts = 0;
+  const result = await submitAccountDeletionRequest({
+    markerStore: store,
+    userId: USER_A,
+    clientRequestId: CLIENT_A,
+    walletRiskAcknowledged: true,
+    isCurrentOwner: () => ownerCurrent,
+    request: async () => {
+      ownerCurrent = false;
+      return {
+        requestId: 'delete_owner_switched',
+        state: 'LOCAL_PURGED',
+        localDataDeleted: true,
+      };
+    },
+    purgeLocalData: async () => { purges += 1; },
+    logout: async () => { logouts += 1; },
+  });
+
+  assert.equal(result.status, 'accepted');
+  assert.equal(result.localDataPurged, false);
+  assert.equal(result.loggedOut, false);
+  assert.equal((await store.load(USER_A)).marker.phase, 'accepted');
+  assert.equal(purges, 0);
+  assert.equal(logouts, 0);
+});
+
+test('marker acceptance failure never purges after the authenticated owner changed', async () => {
+  const { markerStore: store } = markerStore();
+  const guardedStore = {
+    ...store,
+    async accept() { throw new Error('secure store unavailable'); },
+  };
+  let ownerCurrent = true;
+  let purges = 0;
+  const result = await submitAccountDeletionRequest({
+    markerStore: guardedStore,
+    userId: USER_A,
+    clientRequestId: CLIENT_A,
+    walletRiskAcknowledged: true,
+    isCurrentOwner: () => ownerCurrent,
+    request: async () => {
+      ownerCurrent = false;
+      return {
+        requestId: 'delete_marker_failure',
+        state: 'LOCAL_PURGED',
+        localDataDeleted: true,
+      };
+    },
+    purgeLocalData: async () => { purges += 1; },
+  });
+
+  assert.deepEqual(result, {
+    status: 'uncertain',
+    code: 'account_deletion_status_unknown',
+  });
+  assert.equal(purges, 0);
+});
+
+test('an owner switch during local purge prevents logout of the new session', async () => {
+  const { markerStore: store } = markerStore();
+  let ownerCurrent = true;
+  let purges = 0;
+  let logouts = 0;
+  const result = await submitAccountDeletionRequest({
+    markerStore: store,
+    userId: USER_A,
+    clientRequestId: CLIENT_A,
+    walletRiskAcknowledged: true,
+    isCurrentOwner: () => ownerCurrent,
+    request: async () => ({
+      requestId: 'delete_switch_during_purge',
+      state: 'LOCAL_PURGED',
+      localDataDeleted: true,
+    }),
+    purgeLocalData: async () => {
+      purges += 1;
+      ownerCurrent = false;
+    },
+    logout: async () => { logouts += 1; },
+  });
+
+  assert.equal(result.status, 'accepted');
+  assert.equal(result.localDataPurged, true);
+  assert.equal(result.loggedOut, false);
+  assert.equal(purges, 1);
+  assert.equal(logouts, 0);
+});
+
 test('a malformed success response remains blocked and reuses the first UUID', async () => {
   const { markerStore: store } = markerStore();
   const seen = [];

@@ -3,9 +3,13 @@ import test from 'node:test';
 import {
   accountDeletionSubjectHash,
   DELETE_ACCOUNT_CONFIRMATION,
+  deriveAppleStableProviderIdentity,
 } from '../src/lib/account-deletion.js';
 import { PrivyConfigurationError } from '../src/lib/privy.js';
+import { AccountDeletionReauthError } from '../src/lib/account-deletion-reauth.js';
 import {
+  createAccountDeletionReauthChallengeHandler,
+  createAccountDeletionReauthVerifyHandler,
   createAccountDeletionRequestHandler,
   createAccountDeletionStatusHandler,
   DELETE_DATA_CONFIRMATION,
@@ -17,10 +21,16 @@ const DELETION_ENV = Object.freeze({
 });
 const REQUEST_BODY = Object.freeze({
   confirmation: DELETE_ACCOUNT_CONFIRMATION,
+  challengeId: 'challenge_recent_auth',
   clientRequestId: '11111111-1111-4111-8111-111111111111',
   expectedPrivyDid: 'did:privy:test',
+  reauthProof: 'p'.repeat(43),
   walletRiskAcknowledged: true,
 });
+
+function authenticatedUser(privyDid = 'did:privy:test') {
+  return { privyDid, claims: { sessionId: 'privy-session-test' } };
+}
 
 function routeTable() {
   return meRouter.stack
@@ -54,6 +64,8 @@ test('S3 privacy route surface is mounted on the me router', () => {
     'GET /data',
     'GET /social-export',
     'GET /account-deletion',
+    'POST /account-deletion/reauth/challenge',
+    'POST /account-deletion/reauth/verify',
     'POST /account-deletion',
     'DELETE /data',
   ]);
@@ -65,7 +77,7 @@ test('data deletion rejects requests without the explicit confirmation phrase', 
   const handler = layer.route.stack.at(-1).handle;
   const response = responseDouble();
 
-  await handler({ body: {}, user: { privyDid: 'did:privy:test' } }, response);
+  await handler({ body: {}, user: authenticatedUser() }, response);
   assert.equal(response.statusCode, 400);
   assert.deepEqual(response.body, {
     error: 'confirmation_required',
@@ -81,7 +93,7 @@ test('confirmed legacy data deletion is retired without deleting anything', asyn
 
   await handler({
     body: { confirmation: DELETE_DATA_CONFIRMATION },
-    user: { privyDid: 'did:privy:test' },
+    user: authenticatedUser(),
   }, response);
   assert.equal(response.statusCode, 410);
   assert.deepEqual(response.body, {
@@ -124,7 +136,7 @@ test('dormant deletion status stays behavior-neutral without calling Privy', asy
       return null;
     },
   })({
-    user: { privyDid: 'did:privy:test' },
+    user: authenticatedUser(),
     log: { warn() {}, error() {} },
   }, response);
 
@@ -155,7 +167,7 @@ test('status returns an exact DID tombstone without a provider lookup', async ()
       throw new Error('deleted provider user');
     },
   })({
-    user: { privyDid: 'did:privy:test' },
+    user: authenticatedUser(),
     log: { warn() {}, error() {} },
   }, response);
 
@@ -163,6 +175,131 @@ test('status returns an exact DID tombstone without a provider lookup', async ()
   assert.equal(response.body.requestId, 'deletion_1');
   assert.equal(response.body.localDataDeleted, true);
   assert.equal(providerCalls, 0);
+});
+
+test('the dormant recent-auth route refuses challenge issuance with zero mutations', async () => {
+  let issueCalls = 0;
+  const response = responseDouble();
+  await createAccountDeletionReauthChallengeHandler({
+    recentAuthCapability: () => false,
+    issueChallenge: async () => { issueCalls += 1; },
+  })({
+    body: {
+      clientRequestId: REQUEST_BODY.clientRequestId,
+      expectedPrivyDid: REQUEST_BODY.expectedPrivyDid,
+    },
+    user: authenticatedUser(),
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 503);
+  assert.deepEqual(response.body, { error: 'account_deletion_reauth_disabled' });
+  assert.equal(issueCalls, 0);
+});
+
+test('challenge issuance binds the verified Privy session and client request', async () => {
+  let issueInput;
+  let boundIdentityDid;
+  const response = responseDouble();
+  await createAccountDeletionReauthChallengeHandler({
+    env: DELETION_ENV,
+    recentAuthCapability: () => true,
+    findBoundIdentity: async (_db, privyDid) => {
+      boundIdentityDid = privyDid;
+      return deriveAppleStableProviderIdentity('bound-apple-subject', DELETION_ENV);
+    },
+    issueChallenge: async (input) => {
+      issueInput = input;
+      return {
+        challengeId: 'challenge_recent_auth',
+        nonce: 'n'.repeat(43),
+        state: 's'.repeat(43),
+        expiresAt: '2026-08-08T12:05:00.000Z',
+      };
+    },
+  })({
+    body: {
+      clientRequestId: REQUEST_BODY.clientRequestId,
+      expectedPrivyDid: REQUEST_BODY.expectedPrivyDid,
+    },
+    user: authenticatedUser(),
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 201);
+  assert.equal(boundIdentityDid, REQUEST_BODY.expectedPrivyDid);
+  assert.equal(issueInput.privyDid, REQUEST_BODY.expectedPrivyDid);
+  assert.equal(issueInput.sessionId, 'privy-session-test');
+  assert.equal(issueInput.clientRequestId, REQUEST_BODY.clientRequestId);
+});
+
+test('recent-auth verification uses only the immutable locally bound Apple identity', async () => {
+  const rawSubject = 'apple-recent-auth-subject';
+  const boundIdentity = deriveAppleStableProviderIdentity(rawSubject, DELETION_ENV);
+  const identityToken = `${'a'.repeat(32)}.${'b'.repeat(32)}.${'c'.repeat(32)}`;
+  let verifyInput;
+  const response = responseDouble();
+  await createAccountDeletionReauthVerifyHandler({
+    env: DELETION_ENV,
+    recentAuthCapability: () => true,
+    findBoundIdentity: async (_db, privyDid) => {
+      assert.equal(privyDid, REQUEST_BODY.expectedPrivyDid);
+      return boundIdentity;
+    },
+    verifyChallenge: async (input) => {
+      verifyInput = input;
+      return {
+        challengeId: REQUEST_BODY.challengeId,
+        reauthProof: REQUEST_BODY.reauthProof,
+      };
+    },
+  })({
+    body: {
+      challengeId: REQUEST_BODY.challengeId,
+      clientRequestId: REQUEST_BODY.clientRequestId,
+      expectedPrivyDid: REQUEST_BODY.expectedPrivyDid,
+      identityToken,
+      nonce: 'n'.repeat(43),
+      state: 's'.repeat(43),
+    },
+    user: authenticatedUser(),
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(verifyInput.sessionId, 'privy-session-test');
+  assert.match(verifyInput.stableProviderIdentity.providerIdentityHash, /^[a-f0-9]{64}$/u);
+  assert.equal(JSON.stringify(verifyInput.stableProviderIdentity).includes(rawSubject), false);
+  assert.equal(JSON.stringify(response.body).includes(identityToken), false);
+});
+
+test('recent-auth challenge fails closed when the account has no bound Apple identity', async () => {
+  let issueCalls = 0;
+  const response = responseDouble();
+  await createAccountDeletionReauthChallengeHandler({
+    env: DELETION_ENV,
+    recentAuthCapability: () => true,
+    findBoundIdentity: async () => {
+      throw new AccountDeletionReauthError(
+        'account_deletion_reauth_stable_apple_identity_required',
+        { status: 409 },
+      );
+    },
+    issueChallenge: async () => { issueCalls += 1; },
+  })({
+    body: {
+      clientRequestId: REQUEST_BODY.clientRequestId,
+      expectedPrivyDid: REQUEST_BODY.expectedPrivyDid,
+    },
+    user: authenticatedUser(),
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 409);
+  assert.deepEqual(response.body, {
+    error: 'account_deletion_reauth_stable_apple_identity_required',
+  });
+  assert.equal(issueCalls, 0);
 });
 
 test('provider lookup failure causes zero deletion mutations', async (t) => {
@@ -184,7 +321,7 @@ test('provider lookup failure causes zero deletion mutations', async (t) => {
         },
       })({
         body: REQUEST_BODY,
-        user: { privyDid: 'did:privy:test' },
+        user: authenticatedUser(),
         log: { warn() {}, error() {} },
       }, response);
 
@@ -215,11 +352,37 @@ test('conflicting Apple identities cause zero deletion mutations', async () => {
     },
   })({
     body: REQUEST_BODY,
-    user: { privyDid: 'did:privy:test' },
+    user: authenticatedUser(),
     log: { warn() {}, error() {} },
   }, response);
 
   assert.equal(response.statusCode, 502);
+  assert.equal(deletionCalls, 0);
+});
+
+test('a new deletion without a verified recent-auth proof stops before Privy', async () => {
+  let providerCalls = 0;
+  let deletionCalls = 0;
+  const response = responseDouble();
+  await createAccountDeletionRequestHandler({
+    deletionCapability: () => true,
+    findDeletionRequest: async () => null,
+    fetchPrivyUser: async () => { providerCalls += 1; },
+    requestDeletion: async () => { deletionCalls += 1; },
+  })({
+    body: {
+      confirmation: DELETE_ACCOUNT_CONFIRMATION,
+      clientRequestId: REQUEST_BODY.clientRequestId,
+      expectedPrivyDid: REQUEST_BODY.expectedPrivyDid,
+      walletRiskAcknowledged: true,
+    },
+    user: authenticatedUser(),
+    log: { warn() {}, error() {} },
+  }, response);
+
+  assert.equal(response.statusCode, 400);
+  assert.deepEqual(response.body, { error: 'account_deletion_reauth_required' });
+  assert.equal(providerCalls, 0);
   assert.equal(deletionCalls, 0);
 });
 
@@ -249,7 +412,7 @@ test('successful request forwards only the hashed Apple identity', async () => {
     },
   })({
     body: REQUEST_BODY,
-    user: { privyDid: 'did:privy:test' },
+    user: authenticatedUser(),
     log: { warn() {}, error() {} },
   }, response);
 
@@ -258,6 +421,12 @@ test('successful request forwards only the hashed Apple identity', async () => {
     deletionInput.stableProviderIdentities[0].providerIdentityHash,
     /^[a-f0-9]{64}$/,
   );
+  assert.deepEqual(deletionInput.recentAuth, {
+    sessionId: 'privy-session-test',
+    challengeId: REQUEST_BODY.challengeId,
+    reauthProof: REQUEST_BODY.reauthProof,
+  });
+  assert.equal(typeof deletionInput.consumeRecentAuth, 'function');
   const serialized = JSON.stringify({
     privyDid: deletionInput.privyDid,
     stableProviderIdentities: deletionInput.stableProviderIdentities,
@@ -294,7 +463,7 @@ test('a lost-response retry recovers its DID tombstone before brakes or Privy', 
     },
   })({
     body: REQUEST_BODY,
-    user: { privyDid: 'did:privy:test' },
+    user: authenticatedUser(),
     log: { warn() {}, error() {} },
   }, response);
 
@@ -362,7 +531,7 @@ test('manual-review results are never returned as accepted deletion', async () =
     }),
   })({
     body: REQUEST_BODY,
-    user: { privyDid: 'did:privy:test' },
+    user: authenticatedUser(),
     log: { warn() {}, error() {} },
   }, response);
 

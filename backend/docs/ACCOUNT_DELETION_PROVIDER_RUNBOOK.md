@@ -4,9 +4,16 @@
 
 The provider worker is a dormant foundation. Do not create a Railway service,
 set `ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED=true`, set
+`ACCOUNT_DELETION_RECENT_AUTH_ENABLED=true`, set
 `ACCOUNT_DELETION_ENABLED=true`, or manually delete a Privy user from this
-runbook. All three compile-time latches are `false` and must remain so until the
+runbook. All four compile-time latches are `false` and must remain so until the
 activation checklist is approved.
+
+Those latches are `ACCOUNT_DELETION_PUBLIC_REQUEST_READY`,
+`ACCOUNT_DELETION_PROVIDER_CLEANUP_READY`,
+`ACCOUNT_DELETION_RECENT_AUTH_READY`, and
+`ACCOUNT_DELETION_STABLE_IDENTITY_GUARD_READY`. They are source constants, not
+Railway variables.
 
 Build 101 remains Apple TestFlight Internal Only. A build containing a disabled
 worker or identity migration is not an account-deletion release candidate.
@@ -18,6 +25,7 @@ screenshots. Never copy any of the following into an operational system:
 
 - Privy DID or bearer token;
 - Apple subject, email, authorization code, access token, or refresh token;
+- Apple identity token, reauthentication nonce/state, or opaque reauth proof;
 - provider-identity digest or DID subject digest;
 - encrypted DID ciphertext or encryption/HMAC key fingerprint;
 - worker lease token;
@@ -26,6 +34,48 @@ screenshots. Never copy any of the following into an operational system:
 If diagnosis genuinely requires a provider identity, use a separately approved
 break-glass procedure with least-privilege access and an audited reviewer. This
 repository does not define or authorize that procedure.
+
+## Recent reauthentication boundary
+
+The Apple reauthentication flow described in ADR-0010 is a dormant safety
+foundation, not an available deletion path. It uses the authenticated session
+to request a five-minute server nonce/state, opens the native Expo
+`AppleAuthentication.signInAsync` prompt, and asks the backend to verify the
+Apple identity JWT. Verification must bind all of the following:
+
+- current authenticated DID and the client's expected DID;
+- deletion `clientRequestId` and server challenge ID;
+- nonce and state hashes held by the server;
+- Apple issuer, native-app audience, signature, and token lifetime;
+- the signed Apple subject's digest matching the exact immutable
+  `UserStableProviderIdentity` row owned by the current EasyGo account (never a
+  newly observed Privy linkage); and
+- registered deletion-subject HMAC key version and fingerprint.
+
+The server returns an opaque proof only after all checks pass. A new deletion
+request must consume that proof once, inside the same PostgreSQL transaction as
+the local purge and tombstone creation. Expiry and consumption use the database
+clock. A rolled-back purge also rolls back consumption so the same idempotent
+request can recover; a committed request cannot replay its proof.
+
+Issuing another challenge must not revoke an already-attested proof. Multiple
+five-minute, request-bound challenges may therefore coexist. Before activation,
+enforce a reviewed issuance rate limit and scheduled cleanup; opportunistic
+pruning alone does not define retention for an account that never returns.
+Consumed rows are currently retained by a restrictive tombstone audit FK, so
+their lifecycle needs an explicit retention decision rather than a cleanup job
+that cannot legally delete them.
+
+Do not copy an identity token, nonce, state, proof, DID, Apple subject, or
+provider digest into Railway commands, logs, tickets, screenshots, or manual
+SQL. The foundation does not send or persist Apple's authorization code and
+does not exchange or revoke an Apple token. Passing reauthentication tests is
+therefore not evidence that the Apple revocation blocker is closed.
+
+`GET /me/account-deletion` and idempotent recovery of an existing tombstone do
+not require a new Apple prompt. That exception restores an already-authorized
+deletion after local data or provider access is gone; it must never create a
+new request.
 
 ## State interpretation
 
@@ -56,7 +106,8 @@ has been deleted.
 
 ## Manual-review response
 
-1. Keep both runtime flags off if the issue could affect more than one request.
+1. Keep all three runtime flags off if the issue could affect more than one
+   request.
 2. Record only request ID, state, sanitized error code, attempt count, release,
    and timestamps.
 3. Verify the deployed release, database migration state, key fingerprints,
@@ -72,14 +123,34 @@ has been deleted.
 - [ ] Product and Legal approve permanent stable-identity retention and
       re-registration behavior.
 - [ ] Apple revocation ownership has written evidence, or EasyGo securely
-      captures/exchanges/revokes an appropriate Apple token.
-- [ ] Recent interactive authentication is required before deletion.
+      captures, immediately exchanges, securely stores, and revokes an
+      appropriate Apple token with a dedicated Sign in with Apple key, Team ID,
+      and Key ID.
+- [ ] Physical-device evidence proves the raw-versus-transformed Apple nonce
+      contract and native Apple subject equivalence with Privy's stable subject
+      for both new and returning users. Use a reviewed internal-only diagnostic
+      that cannot invoke deletion, then remove it from the release graph.
+- [ ] Recent interactive authentication is required before every new deletion,
+      with short expiry, session/DID/request binding, single-use atomic consume,
+      sanitized failures, and existing-tombstone recovery preserved.
+- [ ] Equivalent recent authentication is approved for Google-only users and
+      Android, or those account-creation methods are unavailable when deletion
+      is activated.
 - [ ] Stable identities cover every enabled account-creation method, including
       Google before Google signup remains enabled.
+- [ ] Every eligible existing user has an audited immutable Apple mapping;
+      missing or changed mappings fail before proof consumption and are never
+      backfilled by the deletion route.
 - [ ] The Apple disposition schema represents actual, not inferred, outcomes.
 - [ ] Database migration, concurrent claim, lease expiry, stale fencing,
-      backoff, all-`404` manual review, log redaction, and concurrent post-write
-      rollback/recovery tests pass on staging.
+      backoff, all-`404` manual review, reauth expiry/replay/parallel consume,
+      log redaction, and concurrent post-write rollback/recovery tests pass on
+      PostgreSQL staging.
+- [ ] Recent-auth challenge issuance has an approved rate limit, and expired
+      unconsumed plus tombstone-referenced consumed digests have an approved,
+      implementable retention policy.
+- [ ] On-device search/safety keys are owner-scoped, or auth switching and
+      non-abortable local cleanup share one reviewed serialization boundary.
 - [ ] Disposable staging accounts with empty wallets pass end-to-end deletion,
       retry, relogin, and account-switch QA.
 - [ ] Backup/restore, Telegram/AMA, telemetry, and exported-file policies are
@@ -88,4 +159,5 @@ has been deleted.
 - [ ] Cleanup is enabled internally before the public request gate, and a new
       internal-only build passes device QA.
 
-Any unchecked item keeps all three compile-time latches closed.
+Any unchecked item keeps all four compile-time latches closed. A Railway
+runtime-variable change cannot bypass them.

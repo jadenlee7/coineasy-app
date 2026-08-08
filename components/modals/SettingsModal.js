@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import * as FileSystem from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
@@ -25,7 +26,11 @@ import {
   reconcileAccountDeletionStatus,
   submitAccountDeletionRequest,
 } from '../../utils/accountDeletionFlow.mjs';
-import { purgeAccountDeletionLocalData } from '../../utils/accountDeletionLocalData.mjs';
+import {
+  ACCOUNT_DELETION_REAUTH_ERROR,
+  AccountDeletionReauthError,
+  createAccountDeletionReauthCoordinator,
+} from '../../utils/accountDeletionReauth.mjs';
 import {
   accountDeletionMarkerStore,
   createAccountDeletionClientRequestId,
@@ -68,8 +73,6 @@ export default function SettingsModal() {
   const {
     user,
     setUser,
-    setUserData,
-    setPosts,
     setSettingsVis,
     setPushNotifsVis,
     listBlockedUser,
@@ -89,13 +92,17 @@ export default function SettingsModal() {
   const [walletRiskAcknowledged, setWalletRiskAcknowledged] = useState(false);
   const [deletionConfirmation, setDeletionConfirmation] = useState('');
   const deletionRequestRef = useRef(false);
+  const deletionActionRef = useRef(null);
   const currentPrivyUserIdRef = useRef(privy?.user?.id || null);
   currentPrivyUserIdRef.current = privy?.user?.id || null;
+  const deletionReauthRef = useRef(null);
+  if (!deletionReauthRef.current) {
+    deletionReauthRef.current = createAccountDeletionReauthCoordinator({
+      getCurrentOwnerUserId: () => currentPrivyUserIdRef.current,
+    });
+  }
   const exportRequestRef = useRef({ controller: null, generation: 0, ownerKey: null });
   const syncedAccountKey = user?.profile?.data?.easygoUserId || null;
-  const courseProgressOwner = user?.profile?.data?.courseProgressOwner
-    || privy?.user?.id
-    || null;
   const consentState = useConsent({
     accountKey: syncedAccountKey,
     enabled: Boolean(syncedAccountKey),
@@ -140,12 +147,23 @@ export default function SettingsModal() {
   }, []);
 
   useEffect(() => {
+    deletionReauthRef.current?.cancel();
+    deletionActionRef.current = null;
     deletionRequestRef.current = false;
+    setLoadingAction((current) => (
+      current === 'deletion-status' || current === 'account-deletion' ? null : current
+    ));
     setDeletionStage('idle');
     setDeletionCapability(null);
     setWalletRiskAcknowledged(false);
     setDeletionConfirmation('');
   }, [privy?.user?.id]);
+
+  useEffect(() => () => {
+    deletionReauthRef.current?.cancel();
+    deletionActionRef.current = null;
+    deletionRequestRef.current = false;
+  }, []);
 
   const close = () => {
     modalSettingsRef.current?.close();
@@ -182,37 +200,12 @@ export default function SettingsModal() {
     }
   };
 
-  const purgeDeletedAccountFromDevice = async () => {
-    let purgeError = null;
-    try {
-      await purgeAccountDeletionLocalData({
-        courseProgressOwner,
-        removeMany: (keys) => AsyncStorage.multiRemove(keys),
-      });
-      if (FileSystem.cacheDirectory) {
-        const cleanup = await cleanupStaleExportFiles({
-          directory: FileSystem.cacheDirectory,
-          list: FileSystem.readDirectoryAsync,
-          remove: (uri) => FileSystem.deleteAsync(uri, { idempotent: true }),
-        });
-        if (cleanup.failed > 0) throw new Error('account_deletion_export_cleanup_failed');
-      }
-    } catch (error) {
-      purgeError = error;
-    }
-    setUser(null);
-    setUserData?.(null);
-    setPosts?.([]);
-    setListBlockedUser?.([]);
-    setListMutedUsers?.([]);
-    setListHiddenPost?.([]);
-    if (purgeError) throw purgeError;
-  };
-
   const prepareAccountDeletion = async () => {
     const ownerUserId = currentPrivyUserIdRef.current;
     if (!ownerUserId || loadingAction || deletionRequestRef.current) return;
 
+    const operation = { kind: 'status', ownerUserId };
+    deletionActionRef.current = operation;
     deletionRequestRef.current = true;
     Haptics.selectionAsync();
     setLoadingAction('deletion-status');
@@ -231,9 +224,15 @@ export default function SettingsModal() {
           userId: ownerUserId,
           clientRequestId,
           status,
-          purgeLocalData: purgeDeletedAccountFromDevice,
-          logout,
+          // Writing the marker immediately replaces this modal with the
+          // always-mounted pending screen. That screen, not this stale
+          // closure, owns account-bound device cleanup and logout.
+          isCurrentOwner: () => false,
         });
+        if (
+          deletionActionRef.current !== operation
+          || currentPrivyUserIdRef.current !== ownerUserId
+        ) return;
         close();
         return;
       }
@@ -253,13 +252,23 @@ export default function SettingsModal() {
       setDeletionConfirmation('');
       setDeletionStage('confirm');
     } catch {
+      if (
+        deletionActionRef.current !== operation
+        || currentPrivyUserIdRef.current !== ownerUserId
+      ) return;
       Alert.alert(
         '삭제 가능 여부를 확인하지 못했습니다',
         '계정이나 데이터를 변경하지 않았습니다. 연결 상태를 확인하고 다시 시도해 주세요.',
       );
     } finally {
-      deletionRequestRef.current = false;
-      setLoadingAction(null);
+      if (
+        deletionActionRef.current === operation
+        && currentPrivyUserIdRef.current === ownerUserId
+      ) {
+        deletionActionRef.current = null;
+        deletionRequestRef.current = false;
+        setLoadingAction(null);
+      }
     }
   };
 
@@ -273,24 +282,68 @@ export default function SettingsModal() {
 
   const confirmAccountDeletion = async () => {
     const ownerUserId = deletionCapability?.ownerUserId;
-    if (!deletionReady || !ownerUserId || deletionRequestRef.current) return;
+    if (!deletionReady || !ownerUserId || loadingAction || deletionRequestRef.current) return;
 
+    const operation = { kind: 'delete', ownerUserId };
+    deletionActionRef.current = operation;
     deletionRequestRef.current = true;
     setLoadingAction('account-deletion');
+    const clientRequestId = createAccountDeletionClientRequestId();
+    let reauthCompleted = false;
+    let challengeId = null;
+    let reauthProof = null;
     try {
+      const verified = await deletionReauthRef.current.run({
+        ownerUserId,
+        clientRequestId,
+        isAppleAuthenticationAvailable: () => (
+          Platform.OS === 'ios'
+            ? AppleAuthentication.isAvailableAsync()
+            : Promise.resolve(false)
+        ),
+        requestChallenge: (params) => api.accountDeletionReauthChallenge(params),
+        signInWithApple: (options) => AppleAuthentication.signInAsync(options),
+        verifyChallenge: (params) => api.accountDeletionReauthVerify(params),
+      });
+      if (currentPrivyUserIdRef.current !== ownerUserId) {
+        throw new AccountDeletionReauthError(
+          ACCOUNT_DELETION_REAUTH_ERROR.sessionChanged,
+        );
+      }
+      reauthCompleted = true;
+      challengeId = verified.challengeId;
+      reauthProof = verified.reauthProof;
+
       const outcome = await submitAccountDeletionRequest({
         markerStore: accountDeletionMarkerStore,
         userId: ownerUserId,
-        clientRequestId: createAccountDeletionClientRequestId(),
+        clientRequestId,
         walletRiskAcknowledged: true,
-        request: (clientRequestId) => api.requestAccountDeletion({
-          clientRequestId,
-          walletRiskAcknowledged: true,
-          expectedAuthUserId: ownerUserId,
-        }),
-        purgeLocalData: purgeDeletedAccountFromDevice,
-        logout,
+        // markerStore.begin unmounts Settings before the server responds.
+        // Defer cleanup to AccountDeletionPending, whose owner reader remains
+        // live while it reconciles the accepted marker.
+        isCurrentOwner: () => false,
+        request: (authoritativeClientRequestId) => {
+          if (
+            authoritativeClientRequestId !== clientRequestId
+            || currentPrivyUserIdRef.current !== ownerUserId
+          ) {
+            throw new Error('account_deletion_reauth_binding_changed');
+          }
+          return api.requestAccountDeletion({
+            challengeId,
+            clientRequestId: authoritativeClientRequestId,
+            reauthProof,
+            walletRiskAcknowledged: true,
+            expectedAuthUserId: ownerUserId,
+          });
+        },
       });
+
+      if (
+        deletionActionRef.current !== operation
+        || currentPrivyUserIdRef.current !== ownerUserId
+      ) return;
 
       if (outcome.status === 'rejected') {
         deletionRequestRef.current = false;
@@ -303,14 +356,50 @@ export default function SettingsModal() {
       } else {
         close();
       }
-    } catch {
+    } catch (error) {
+      if (
+        deletionActionRef.current !== operation
+        || currentPrivyUserIdRef.current !== ownerUserId
+      ) return;
       deletionRequestRef.current = false;
-      Alert.alert(
-        '안전 잠금을 저장하지 못했습니다',
-        '삭제 요청은 전송하지 않았습니다. 기기의 보안 저장소를 확인한 뒤 다시 시도해 주세요.',
-      );
+      if (!reauthCompleted) {
+        if (error?.code === ACCOUNT_DELETION_REAUTH_ERROR.cancelled) {
+          Alert.alert(
+            'Apple 재인증이 취소되었습니다',
+            '계정 삭제 요청은 전송하지 않았습니다.',
+          );
+        } else if (error?.code === ACCOUNT_DELETION_REAUTH_ERROR.unavailable) {
+          Alert.alert(
+            'Apple 재인증을 사용할 수 없습니다',
+            '이 기기에서는 계정 삭제를 진행할 수 없습니다. 계정과 데이터는 변경되지 않았습니다.',
+          );
+        } else if (error?.code === ACCOUNT_DELETION_REAUTH_ERROR.sessionChanged) {
+          Alert.alert(
+            '로그인 계정이 변경되었습니다',
+            '계정 삭제 요청은 전송하지 않았습니다. 현재 계정에서 다시 시작해 주세요.',
+          );
+        } else {
+          Alert.alert(
+            'Apple 재인증을 완료하지 못했습니다',
+            '계정 삭제 요청은 전송하지 않았습니다. 잠시 후 다시 시도해 주세요.',
+          );
+        }
+      } else {
+        Alert.alert(
+          '안전 잠금을 저장하지 못했습니다',
+          '삭제 요청은 전송하지 않았습니다. 기기의 보안 저장소를 확인한 뒤 다시 시도해 주세요.',
+        );
+      }
     } finally {
-      setLoadingAction(null);
+      challengeId = null;
+      reauthProof = null;
+      if (
+        deletionActionRef.current === operation
+        && currentPrivyUserIdRef.current === ownerUserId
+      ) {
+        deletionActionRef.current = null;
+        setLoadingAction(null);
+      }
     }
   };
 
@@ -657,7 +746,7 @@ export default function SettingsModal() {
               accessibilityLabel="계정 삭제 확인 문구"
               autoCapitalize="characters"
               autoCorrect={false}
-              editable={loadingAction !== 'account-deletion'}
+              editable={!loadingAction}
               onChangeText={setDeletionConfirmation}
               placeholder="DELETE"
               style={{
@@ -677,7 +766,7 @@ export default function SettingsModal() {
             <TouchableOpacity
               accessibilityLabel="EasyGo 계정 영구 삭제 확인"
               accessibilityRole="button"
-              disabled={!deletionReady || loadingAction === 'account-deletion'}
+              disabled={!deletionReady || Boolean(loadingAction)}
               onPress={confirmAccountDeletion}
               style={{
                 alignItems: 'center',
@@ -688,13 +777,14 @@ export default function SettingsModal() {
               }}
             >
               <Text style={{ color: '#FFF', fontFamily: 'GmarketBold', fontSize: 13 }}>
-                {loadingAction === 'account-deletion' ? '삭제 요청 보호 중…' : 'Permanently delete account'}
+                {loadingAction === 'account-deletion' ? 'Apple 재인증 및 삭제 보호 중…' : 'Permanently delete account'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               accessibilityRole="button"
-              disabled={loadingAction === 'account-deletion'}
+              disabled={Boolean(loadingAction)}
               onPress={() => {
+                deletionReauthRef.current?.cancel();
                 setDeletionStage('idle');
                 setDeletionCapability(null);
                 setWalletRiskAcknowledged(false);

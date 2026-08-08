@@ -60,9 +60,16 @@ test('account deletion is capability-gated and binds the destructive request to 
   assert.match(api, /boundAuth: true/);
   assert.match(api, /expectedAuthUserId/);
   assert.match(api, /expectedPrivyDid: expectedAuthUserId/);
-  assert.match(pending, /guard\.marker\.clientRequestId/);
+  assert.match(pending, /const marker = guard\.marker/);
+  assert.match(pending, /clientRequestId: marker\.clientRequestId/);
   assert.match(pending, /accountDeletionStatus\(\{/);
   assert.match(pending, /reconcileAccountDeletionStatus/);
+  assert.ok(
+    pending.indexOf('accountDeletionStatus({')
+      < pending.indexOf('reauthRef.current.run({'),
+  );
+  assert.match(pending, /challengeId,[\s\S]*reauthProof,[\s\S]*walletRiskAcknowledged/);
+  assert.match(pending, /isCurrentOwner: isCurrentOperation/);
   assert.match(pending, /'server-error', 'server-blocked'/);
 
   const app = readFileSync(new URL('../App.js', import.meta.url), 'utf8');

@@ -132,6 +132,10 @@ test('logger redacts authentication, signatures, identity, and wallet fields', (
         signature: 'wallet-signature',
         answer: 'quiz-answer',
         expectedPrivyDid: 'did:privy:expected-owner',
+        identityToken: 'apple.identity.token',
+        nonce: 'raw-apple-nonce',
+        state: 'raw-apple-state',
+        reauthProof: 'raw-reauth-proof',
       },
     },
     email: 'private@example.com',
@@ -150,6 +154,8 @@ test('logger redacts authentication, signatures, identity, and wallet fields', (
     }],
     leaseToken: 'worker-lease-token',
     refreshToken: 'apple-refresh-token',
+    sessionId: 'privy-session-id',
+    proofHash: 'reauth-proof-hash',
   }, 'redaction test');
 
   const output = chunks.join('');
@@ -171,6 +177,12 @@ test('logger redacts authentication, signatures, identity, and wallet fields', (
     'nested-stable-provider-digest',
     'worker-lease-token',
     'apple-refresh-token',
+    'apple.identity.token',
+    'raw-apple-nonce',
+    'raw-apple-state',
+    'raw-reauth-proof',
+    'privy-session-id',
+    'reauth-proof-hash',
   ]) {
     assert.equal(output.includes(secret), false);
   }

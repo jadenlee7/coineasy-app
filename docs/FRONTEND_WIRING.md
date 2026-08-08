@@ -10,7 +10,11 @@ See `EASYGO_BUILD_PLAN.md` §11 (data flow), §12 (backend endpoints), §13.2 (S
 | Client | Backend route | Purpose |
 | --- | --- | --- |
 | `useAuthSync(privy)` | `POST /auth/sync` | Upsert user on Privy login; awards 100 🍊 welcome bonus on first sync. |
-| Settings | `DELETE /me/data` | Confirmed EasyGo-local deletion contract; UI and route remain safety-gated while thread ownership and Privy re-auth behavior are resolved. |
+| Account deletion status | `GET /me/account-deletion` | Read the server capability or recover an existing durable deletion tombstone. Recovery remains available while creation is gated. |
+| Apple deletion reauth | `POST /me/account-deletion/reauth/challenge` | Request a short-lived nonce/state bound to the authenticated DID and deletion `clientRequestId`. Dormant while the recent-auth latch is closed. |
+| Apple deletion reauth | `POST /me/account-deletion/reauth/verify` | Submit the native Apple identity token plus challenge nonce/state for server verification; returns a short-lived opaque proof, never an Apple token. |
+| Settings deletion confirmation | `POST /me/account-deletion` | Consume `challengeId` plus `reauthProof` atomically with the idempotent local-purge tombstone. New requests remain unavailable. |
+| Retired deletion alias | `DELETE /me/data` | Always returns the moved/retired response; it cannot bypass recent reauthentication or the deletion saga. |
 | Privacy settings | `GET/PUT /me/consent` | Read effective consent and atomically update the current row plus audit history. |
 | Data access | `GET /me/data` | Fetch a no-store, versioned export of the authenticated user's EasyGo-local records. |
 | Social data export | `GET /me/social-export` | Download only the signed-in user's public profile fields, posts, likes, and follow graph. |
@@ -67,6 +71,59 @@ Public profile/search responses never include `walletAddress`. The signed-in
 user still receives their address from `/auth/sync`, `/auth/me`, and the
 authenticated `/profiles/me` projection.
 
+## Dormant account-deletion reauthentication
+
+The settings UI does not treat the current Privy bearer token as recent
+authentication. After the server reports deletion available and the user
+acknowledges wallet risk and types `DELETE`, the dormant iOS flow is:
+
+1. Create one `clientRequestId` and keep the expected Privy DID fixed for the
+   entire destructive flow.
+2. Request `/me/account-deletion/reauth/challenge` using owner-bound auth. The
+   server first requires the current DID's immutable local Apple mapping, then
+   returns a challenge ID, nonce, state, and short expiry.
+3. Call Expo's native `AppleAuthentication.signInAsync({ nonce, state })` while
+   the existing Privy session remains active. Do not call Privy's login or
+   linking hooks for reauthentication.
+4. Send only the challenge ID, request ID, expected DID, Apple identity token,
+   nonce, and state to `/reauth/verify`. The server verifies Apple's RS256 JWT,
+   native-app audience, challenge values, and stable Apple subject mapping,
+   then returns an opaque `reauthProof`.
+5. Persist the existing local deletion marker before sending the final
+   `POST /me/account-deletion` with the same request ID, `challengeId`, and
+   `reauthProof`. The backend consumes the proof in the local-purge transaction.
+   Writing the marker replaces Settings with the pending safety screen; only
+   that still-mounted, live-owner screen may purge device state or log out
+   after an authoritative accepted/tombstoned response.
+
+If the final POST response is lost, the pending screen checks status first. A
+found tombstone is reconciled without another proof. If no tombstone exists,
+it runs a new Apple prompt and retries with the marker's original request ID;
+challenge secrets and proofs remain memory-only.
+
+Cancellation, challenge expiry, subject mismatch, account switch, or server
+verification failure sends no deletion request and leaves the session and
+account intact. The client never logs or persists the identity token, raw
+nonce/state, or proof. It sends neither `authorizationCode` nor `appleUser`;
+authorization-code exchange, refresh-token custody, and Apple revocation are
+separate activation blockers.
+
+Status and idempotent recovery for an existing deletion tombstone intentionally
+skip a new Apple prompt. They restore an already-authorized request and cannot
+create another one.
+
+This entire path remains dormant: `ACCOUNT_DELETION_RECENT_AUTH_READY` is
+`false`, alongside the public-request, stable-identity, and provider-cleanup
+compile latches, and `ACCOUNT_DELETION_RECENT_AUTH_ENABLED` remains off. No
+Railway environment variable can bypass a compile latch in the current release.
+Physical-device proof of Apple's raw-versus-transformed nonce behavior and
+native-versus-Privy Apple subject equivalence is still required through a
+reviewed internal diagnostic that cannot call deletion and is removed before a
+release build. Google-only and Android reauthentication designs are also still
+required. The current global AsyncStorage search/safety keys must also become
+owner-scoped (or account switching must be serialized with their non-abortable
+cleanup) before this path is activated.
+
 ## Swap flow (Phase 1, Squid via backend)
 
 ```
@@ -121,9 +178,14 @@ mobile client if that client is used on both platforms.
   staging policy version exists. Revocation remains available. This is the
   required state until the EasyGo documents and App Store privacy disclosures
   are approved.
-- **Account deletion gate off**: Settings keeps deletion unavailable and
-  `DELETE /me/data` returns `503` while `ACCOUNT_DELETION_ENABLED` is false or
-  missing. The unconfirmed legacy `/auth/me` alias always returns `410`.
+- **Account deletion gates off**: Settings keeps new deletion unavailable;
+  challenge/verification and `POST /me/account-deletion` fail closed while the
+  compile-time or Railway gates are closed. `GET /me/account-deletion` can
+  still recover an existing tombstone. Retired `DELETE /me/data` and the
+  unconfirmed legacy `/auth/me` deletion alias always return `410`.
+- **Apple reauthentication fails or is cancelled**: The client shows fixed,
+  credential-free copy and sends no deletion request. It must not fall back to
+  the current Privy access token, a DID-only check, or an account-linking flow.
 - **Backend unreachable**: requests throw and feed screens expose a retry state while retaining any previously loaded rows.
 - **Quest flag off**: course completion receives `404` from `/quests` and falls back to the legacy reward route, so the current app remains usable during rollout.
 - **Social mode**: `active` preserves current behavior. A future `read_only` mode returns `410` only for writes; `retired` returns `410` for all social routes. Both responses include `/me/social-export`.

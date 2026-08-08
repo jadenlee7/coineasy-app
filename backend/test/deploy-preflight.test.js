@@ -66,10 +66,11 @@ test('enabled features require their server-only provider configuration', () => 
   assert.equal(result.errors.some((item) => item.failure.includes('ETHERSCAN_API_KEY')), true);
 });
 
-test('account deletion cannot activate before the worker and mobile marker ship', () => {
+test('account deletion cannot activate before worker, marker, and recent auth ship', () => {
   const missing = validateDeployEnvironment(stagingEnv({
     ACCOUNT_DELETION_ENABLED: 'true',
     ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED: 'false',
+    ACCOUNT_DELETION_RECENT_AUTH_ENABLED: 'false',
     ACCOUNT_DELETION_SUBJECT_HMAC_KEY: '',
     ACCOUNT_DELETION_ENCRYPTION_KEY: '',
   }), { target: 'staging' });
@@ -81,10 +82,15 @@ test('account deletion cannot activate before the worker and mobile marker ship'
     missing.errors.some((item) => item.name === 'account deletion provider cleanup'),
     true,
   );
+  assert.equal(
+    missing.errors.some((item) => item.name === 'account deletion recent authentication'),
+    true,
+  );
 
   const otherwiseComplete = validateDeployEnvironment(stagingEnv({
     ACCOUNT_DELETION_ENABLED: 'true',
     ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED: 'true',
+    ACCOUNT_DELETION_RECENT_AUTH_ENABLED: 'true',
     ACCOUNT_DELETION_SUBJECT_HMAC_KEY: 'h'.repeat(32),
     ACCOUNT_DELETION_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
     ACCOUNT_DELETION_APPLE_REVOCATION_MODE: 'privy_confirmed',
@@ -104,6 +110,12 @@ test('account deletion cannot activate before the worker and mobile marker ship'
   assert.equal(
     otherwiseComplete.errors.some(
       (item) => item.name === 'account deletion stable identity readiness',
+    ),
+    true,
+  );
+  assert.equal(
+    otherwiseComplete.errors.some(
+      (item) => item.name === 'account deletion recent authentication readiness',
     ),
     true,
   );

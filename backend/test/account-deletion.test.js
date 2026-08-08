@@ -28,6 +28,14 @@ const TEST_ENV = Object.freeze({
 });
 const TEST_KEY_FINGERPRINT = accountDeletionSubjectKeyFingerprint(TEST_ENV);
 const TEST_APPLE_IDENTITY = deriveAppleStableProviderIdentity(APPLE_SUBJECT, TEST_ENV);
+const TEST_RECENT_AUTH_INPUT = Object.freeze({
+  recentAuth: Object.freeze({
+    sessionId: 'session_recent_auth',
+    challengeId: 'challenge_recent_auth',
+    reauthProof: 'proof_recent_auth',
+  }),
+  consumeRecentAuth: async () => {},
+});
 
 test('the foundation release brake keeps destructive deletion disabled', () => {
   assert.equal(accountDeletionEnabled({}), false);
@@ -198,6 +206,13 @@ function deletionDb({
       },
     },
     user: {
+      async findUnique(options) {
+        calls.push(['user.findUnique', options]);
+        const candidates = users || (user ? [user] : []);
+        return candidates.find((candidate) => (
+          candidate.privyDid === options.where.privyDid
+        )) || null;
+      },
       async findMany(options) {
         calls.push(['user.findMany', options]);
         if (users) return users;
@@ -234,6 +249,7 @@ test('local purge redacts only the owner posts and preserves every reply row', a
     env: TEST_ENV,
     now,
     allowFoundationExecution: true,
+    ...TEST_RECENT_AUTH_INPUT,
   });
 
   assert.deepEqual(result, {
@@ -281,21 +297,166 @@ test('local purge redacts only the owner posts and preserves every reply row', a
   );
 });
 
-test('a missing local user still creates a provider-cleanup tombstone', async () => {
-  const { calls, prisma } = deletionDb({ user: null });
+test('a new deletion atomically consumes recent auth before creating its tombstone', async () => {
+  const { calls, prisma, tx } = deletionDb();
+  const recentAuth = {
+    sessionId: 'session_recent_auth',
+    challengeId: 'challenge_recent_auth',
+    reauthProof: 'proof_recent_auth',
+  };
+
   const result = await requestAccountDeletion({
     prisma,
     privyDid: PRIVY_DID,
     appleSubject: APPLE_SUBJECT,
     clientRequestId: CLIENT_REQUEST_ID,
+    recentAuth,
+    consumeRecentAuth: async (actualTx, input) => {
+      assert.equal(actualTx, tx);
+      calls.push(['reauth.consume', input]);
+    },
     env: TEST_ENV,
     allowFoundationExecution: true,
   });
 
-  assert.equal(result.state, 'LOCAL_PURGED');
-  assert.equal(result.redactedPosts, 0);
+  assert.equal(result.localDataDeleted, true);
+  const consumeIndex = calls.findIndex(([name]) => name === 'reauth.consume');
+  const createIndex = calls.findIndex(([name]) => name === 'request.create');
+  const purgeIndex = calls.findIndex(([name]) => name === 'post.updateMany');
+  assert.ok(consumeIndex >= 0);
+  assert.ok(consumeIndex < createIndex);
+  assert.ok(createIndex < purgeIndex);
+  const consumeInput = calls[consumeIndex][1];
+  assert.equal(consumeInput.privyDid, PRIVY_DID);
+  assert.equal(consumeInput.clientRequestId, CLIENT_REQUEST_ID);
+  assert.equal(consumeInput.challengeId, recentAuth.challengeId);
+  assert.equal(consumeInput.reauthProof, recentAuth.reauthProof);
+  assert.deepEqual(consumeInput.stableProviderIdentity, TEST_APPLE_IDENTITY);
+  const created = calls[createIndex][1];
+  assert.equal(created.recentAuthChallengeId, recentAuth.challengeId);
+});
+
+test('a recent-auth consumption failure rolls back before tombstone or purge mutations', async () => {
+  const { calls, prisma } = deletionDb();
+
+  await assert.rejects(
+    () => requestAccountDeletion({
+      prisma,
+      privyDid: PRIVY_DID,
+      appleSubject: APPLE_SUBJECT,
+      clientRequestId: CLIENT_REQUEST_ID,
+      recentAuth: {
+        sessionId: 'session_recent_auth',
+        challengeId: 'challenge_recent_auth',
+        reauthProof: 'wrong_proof',
+      },
+      consumeRecentAuth: async () => {
+        throw new Error('account_deletion_reauth_invalid');
+      },
+      env: TEST_ENV,
+      allowFoundationExecution: true,
+    }),
+    /account_deletion_reauth_invalid/,
+  );
+
+  assert.equal(calls.some(([name]) => name === 'request.create'), false);
+  assert.equal(calls.some(([name]) => name === 'providerIdentity.create'), false);
   assert.equal(calls.some(([name]) => name === 'post.updateMany'), false);
   assert.equal(calls.some(([name]) => name === 'user.deleteMany'), false);
+});
+
+test('a committed tombstone recovery never consumes a second recent-auth proof', async () => {
+  const { prisma } = deletionDb({
+    existingRequest: {
+      id: 'deletion_existing',
+      state: 'LOCAL_PURGED',
+      subjectHashKeyFingerprint: TEST_KEY_FINGERPRINT,
+      localPurgedAt: new Date('2026-08-02T12:00:00.000Z'),
+      completedAt: null,
+    },
+  });
+  let consumeCalls = 0;
+
+  const result = await requestAccountDeletion({
+    prisma,
+    privyDid: PRIVY_DID,
+    appleSubject: APPLE_SUBJECT,
+    clientRequestId: CLIENT_REQUEST_ID,
+    consumeRecentAuth: async () => { consumeCalls += 1; },
+    env: TEST_ENV,
+    allowFoundationExecution: true,
+  });
+
+  assert.equal(result.requestId, 'deletion_existing');
+  assert.equal(consumeCalls, 0);
+});
+
+test('a missing or legacy-unmapped local user cannot consume proof or purge', async () => {
+  const { calls, prisma } = deletionDb({ user: null });
+  await assert.rejects(
+    () => requestAccountDeletion({
+      prisma,
+      privyDid: PRIVY_DID,
+      appleSubject: APPLE_SUBJECT,
+      clientRequestId: CLIENT_REQUEST_ID,
+      env: TEST_ENV,
+      allowFoundationExecution: true,
+      ...TEST_RECENT_AUTH_INPUT,
+    }),
+    /stable_provider_identity_missing/,
+  );
+  assert.equal(calls.some(([name]) => name === 'request.create'), false);
+  assert.equal(calls.some(([name]) => name === 'post.updateMany'), false);
+  assert.equal(calls.some(([name]) => name === 'user.deleteMany'), false);
+});
+
+test('an existing legacy user without an Apple mapping also fails before proof consumption', async () => {
+  const { calls, prisma } = deletionDb({
+    user: { id: 'legacy_user', privyDid: PRIVY_DID, stableProviderIdentities: [] },
+  });
+  let consumeCalls = 0;
+  await assert.rejects(
+    () => requestAccountDeletion({
+      prisma,
+      privyDid: PRIVY_DID,
+      appleSubject: APPLE_SUBJECT,
+      clientRequestId: CLIENT_REQUEST_ID,
+      recentAuth: TEST_RECENT_AUTH_INPUT.recentAuth,
+      consumeRecentAuth: async () => { consumeCalls += 1; },
+      env: TEST_ENV,
+      allowFoundationExecution: true,
+    }),
+    /stable_provider_identity_missing/,
+  );
+  assert.equal(consumeCalls, 0);
+  assert.equal(calls.some(([name]) => name === 'request.create'), false);
+  assert.equal(calls.some(([name]) => name === 'post.updateMany'), false);
+});
+
+test('a relinked Apple subject cannot replace the local deletion identity binding', async () => {
+  const originalIdentity = deriveAppleStableProviderIdentity('original-apple-subject', TEST_ENV);
+  const { calls, prisma } = deletionDb({
+    user: {
+      id: 'user_1',
+      privyDid: PRIVY_DID,
+      stableProviderIdentities: [originalIdentity],
+    },
+  });
+
+  await assert.rejects(
+    () => requestAccountDeletion({
+      prisma,
+      privyDid: PRIVY_DID,
+      appleSubject: APPLE_SUBJECT,
+      clientRequestId: CLIENT_REQUEST_ID,
+      env: TEST_ENV,
+      allowFoundationExecution: true,
+      ...TEST_RECENT_AUTH_INPUT,
+    }),
+    /stable_provider_identity_conflict/,
+  );
+  assert.equal(calls.some(([name]) => name === 'request.create'), false);
+  assert.equal(calls.some(([name]) => name === 'post.updateMany'), false);
 });
 
 test('repeated deletion requests return the durable request without purging twice', async () => {
@@ -314,6 +475,7 @@ test('repeated deletion requests return the durable request without purging twic
     clientRequestId: CLIENT_REQUEST_ID,
     env: TEST_ENV,
     allowFoundationExecution: true,
+    ...TEST_RECENT_AUTH_INPUT,
   });
 
   assert.equal(result.requestId, existingRequest.id);
@@ -330,7 +492,7 @@ test('a same-Apple cross-DID race records manual review before any local purge',
       {
         id: 'user_a',
         privyDid: PRIVY_DID,
-        stableProviderIdentities: [],
+        stableProviderIdentities: [TEST_APPLE_IDENTITY],
       },
       {
         id: 'user_b',
@@ -347,6 +509,7 @@ test('a same-Apple cross-DID race records manual review before any local purge',
     clientRequestId: CLIENT_REQUEST_ID,
     env: TEST_ENV,
     allowFoundationExecution: true,
+    ...TEST_RECENT_AUTH_INPUT,
   });
   assert.equal(result.state, 'MANUAL_REVIEW');
   assert.equal(result.localDataDeleted, false);

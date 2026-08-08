@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   ACCOUNT_DELETION_PROVIDER_CLEANUP_READY,
   ACCOUNT_DELETION_PUBLIC_REQUEST_READY,
+  ACCOUNT_DELETION_RECENT_AUTH_READY,
   ACCOUNT_DELETION_STABLE_IDENTITY_GUARD_READY,
 } from '../src/lib/account-deletion-gates.js';
 
@@ -16,6 +17,7 @@ const BOOLEAN_FLAGS = [
   'CONSENT_GRANTS_ENABLED',
   'ACCOUNT_DELETION_ENABLED',
   'ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED',
+  'ACCOUNT_DELETION_RECENT_AUTH_ENABLED',
 ];
 
 function clean(value) {
@@ -172,11 +174,17 @@ export function validateDeployEnvironment(
 
   const deletionEnabled = enabled(env, 'ACCOUNT_DELETION_ENABLED');
   const deletionCleanupEnabled = enabled(env, 'ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED');
+  const deletionRecentAuthEnabled = enabled(env, 'ACCOUNT_DELETION_RECENT_AUTH_ENABLED');
   const deletionHashKey = clean(env.ACCOUNT_DELETION_SUBJECT_HMAC_KEY);
   const deletionEncryptionKey = clean(env.ACCOUNT_DELETION_ENCRYPTION_KEY);
   const deletionKeysPresent = Boolean(deletionHashKey || deletionEncryptionKey);
 
-  if (deletionEnabled || deletionCleanupEnabled || deletionKeysPresent) {
+  if (
+    deletionEnabled
+    || deletionCleanupEnabled
+    || deletionRecentAuthEnabled
+    || deletionKeysPresent
+  ) {
     requireValue('ACCOUNT_DELETION_SUBJECT_HMAC_KEY');
     requireValue('ACCOUNT_DELETION_ENCRYPTION_KEY');
     if (deletionHashKey) {
@@ -210,6 +218,19 @@ export function validateDeployEnvironment(
       deletionCleanupEnabled,
       'account deletion provider cleanup',
       'ACCOUNT_DELETION_ENABLED requires ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED=true',
+    );
+    add(
+      deletionRecentAuthEnabled,
+      'account deletion recent authentication',
+      'ACCOUNT_DELETION_ENABLED requires ACCOUNT_DELETION_RECENT_AUTH_ENABLED=true',
+    );
+  }
+
+  if (deletionRecentAuthEnabled) {
+    add(
+      ACCOUNT_DELETION_RECENT_AUTH_READY,
+      'account deletion recent authentication readiness',
+      'ACCOUNT_DELETION_RECENT_AUTH_ENABLED cannot be true until recent authentication is approved',
     );
   }
 

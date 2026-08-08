@@ -116,7 +116,9 @@ default.
 | GET | `/me/data` | Bearer | Export versioned EasyGo-local user data with `no-store` |
 | GET | `/me/social-export` | Bearer | Download privacy-minimized social profile/content/graph data |
 | GET | `/me/account-deletion` | Bearer | Read server-authoritative deletion capability and current saga state |
-| POST | `/me/account-deletion` | Bearer + confirmation + flag | Idempotently request the durable deletion saga; returns `202` after local purge |
+| POST | `/me/account-deletion/reauth/challenge` | Bearer + recent-auth flag | Issue a five-minute Apple nonce/state bound to the current Privy session and deletion request |
+| POST | `/me/account-deletion/reauth/verify` | Bearer + recent-auth flag | Verify the native Apple identity token and return a short-lived one-time proof |
+| POST | `/me/account-deletion` | Bearer + confirmation + proof + flags | Idempotently request the durable deletion saga; returns `202` after local purge |
 | DELETE | `/me/data` | Bearer | Retired unsafe local-only endpoint; always returns `410` after confirmation validation |
 | GET | `/identity/subname` | Bearer + flag | Read local ENS issuance state |
 | POST | `/identity/subname/challenge` | Bearer + flag | Request a two-minute JustaName SIWE challenge |
@@ -340,26 +342,44 @@ Account deletion is a durable, asynchronous saga. The request body is:
 ```json
 {
   "confirmation": "DELETE_MY_EASYGO_ACCOUNT",
+  "challengeId": "challenge_recent_auth",
   "clientRequestId": "11111111-1111-4111-8111-111111111111",
+  "expectedPrivyDid": "did:privy:current-session-user",
+  "reauthProof": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   "walletRiskAcknowledged": true
 }
 ```
 
-Once a later reviewed release removes the activation brake,
+For a new deletion, the client first uses the challenge and verify endpoints
+with the same `clientRequestId` and `expectedPrivyDid`, completes the native
+Apple prompt, and submits the returned `challengeId` and `reauthProof` in the
+final request. Recovery of an already-committed tombstone remains idempotent
+and does not require a replayable recent-auth proof.
+
+Once a later reviewed release removes every activation brake,
 `POST /me/account-deletion` returns `202` only after the user row and owned
 content have been locally purged and a permanent HMAC tombstone prevents that
-same Privy DID from passing `/auth/sync`. Other users' replies remain attached
-to redacted thread placeholders. A new Privy DID for the same Apple identity is
-not covered by this foundation and is an activation blocker. Apple and Privy
-cleanup continue as later saga stages, so the response never claims that
-provider or blockchain data is gone.
+same Privy DID from passing `/auth/sync`. The same transaction records the
+immutable, server-derived Apple identity digest; with the irreversible stable
+identity guard active, a new Privy DID carrying the same Apple subject is also
+blocked before local user creation. Other users' replies remain attached to
+redacted thread placeholders. Apple and Privy cleanup continue as later saga
+stages, so the response never claims that provider or blockchain data is gone.
 
 Both older delete endpoints return `410` and never perform deletion. The public
-request stays behind `ACCOUNT_DELETION_ENABLED=false`; this release also has a
-compile-time and preflight brake that rejects activation until the worker,
-stable Apple identity guard, and mobile marker exist. HMAC-key fingerprints
-make accidental key replacement fail closed. See
-[`docs/adr/0008-durable-account-deletion-saga.md`](./docs/adr/0008-durable-account-deletion-saga.md).
+request stays behind three runtime switches:
+`ACCOUNT_DELETION_ENABLED=false`,
+`ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED=false`, and
+`ACCOUNT_DELETION_RECENT_AUTH_ENABLED=false`. Four independent source latches
+also remain `false`: public request, provider cleanup, recent authentication,
+and the irreversible stable-identity guard. Preflight rejects a runtime switch
+whose corresponding source latch is closed, so Railway configuration cannot
+bypass review. HMAC-key fingerprints make accidental key replacement fail
+closed. See
+[`docs/adr/0008-durable-account-deletion-saga.md`](./docs/adr/0008-durable-account-deletion-saga.md),
+[`docs/adr/0009-provider-identity-and-cleanup-worker.md`](./docs/adr/0009-provider-identity-and-cleanup-worker.md),
+and
+[`docs/adr/0010-account-deletion-recent-reauth.md`](./docs/adr/0010-account-deletion-recent-reauth.md).
 
 ### Migration
 

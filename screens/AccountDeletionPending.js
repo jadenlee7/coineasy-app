@@ -1,6 +1,7 @@
-import React, { useContext, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -8,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import * as FileSystem from 'expo-file-system';
 import { usePrivy } from '@privy-io/expo';
 
@@ -18,6 +20,11 @@ import {
   submitAccountDeletionRequest,
 } from '../utils/accountDeletionFlow.mjs';
 import { purgeAccountDeletionLocalData } from '../utils/accountDeletionLocalData.mjs';
+import {
+  ACCOUNT_DELETION_REAUTH_ERROR,
+  AccountDeletionReauthError,
+  createAccountDeletionReauthCoordinator,
+} from '../utils/accountDeletionReauth.mjs';
 import { accountDeletionMarkerStore } from '../utils/accountDeletionStorage';
 import { cleanupStaleExportFiles } from '../utils/dataExport.mjs';
 
@@ -64,17 +71,44 @@ export default function AccountDeletionPending({ guard }) {
   } = useContext(GlobalContext);
   const [action, setAction] = useState(null);
   const [message, setMessage] = useState(null);
-  const actionRef = useRef(false);
+  const actionRef = useRef(null);
   const currentUserId = privy?.user?.id || null;
+  const currentUserIdRef = useRef(currentUserId);
+  currentUserIdRef.current = currentUserId;
+  const reauthRef = useRef(null);
+  if (!reauthRef.current) {
+    reauthRef.current = createAccountDeletionReauthCoordinator({
+      getCurrentOwnerUserId: () => currentUserIdRef.current,
+    });
+  }
   const copy = copyFor(guard);
 
-  const purgeLocalData = async () => {
+  useEffect(() => {
+    reauthRef.current?.cancel();
+    actionRef.current = null;
+    setAction(null);
+    setMessage(null);
+  }, [currentUserId]);
+
+  useEffect(() => () => {
+    reauthRef.current?.cancel();
+    actionRef.current = null;
+    currentUserIdRef.current = null;
+  }, []);
+
+  const purgeLocalData = async (expectedOwnerUserId) => {
+    if (currentUserIdRef.current !== expectedOwnerUserId) {
+      throw new Error('account_deletion_cleanup_owner_changed');
+    }
     let purgeError = null;
     try {
       await purgeAccountDeletionLocalData({
-        courseProgressOwner: currentUserId,
+        courseProgressOwner: expectedOwnerUserId,
         removeMany: (keys) => AsyncStorage.multiRemove(keys),
       });
+      if (currentUserIdRef.current !== expectedOwnerUserId) {
+        throw new Error('account_deletion_cleanup_owner_changed');
+      }
       if (FileSystem.cacheDirectory) {
         const cleanup = await cleanupStaleExportFiles({
           directory: FileSystem.cacheDirectory,
@@ -85,6 +119,9 @@ export default function AccountDeletionPending({ guard }) {
       }
     } catch (error) {
       purgeError = error;
+    }
+    if (currentUserIdRef.current !== expectedOwnerUserId) {
+      throw new Error('account_deletion_cleanup_owner_changed');
     }
     setUser?.(null);
     setUserData?.(null);
@@ -102,25 +139,53 @@ export default function AccountDeletionPending({ guard }) {
     }
     if (!currentUserId || !guard.marker || actionRef.current) return;
 
-    actionRef.current = true;
+    const ownerUserId = currentUserId;
+    const marker = guard.marker;
+    const operation = { kind: 'retry', ownerUserId };
+    const isCurrentOperation = () => (
+      actionRef.current === operation
+      && currentUserIdRef.current === ownerUserId
+    );
+    const requireCurrentOperation = () => {
+      if (isCurrentOperation()) return;
+      throw new AccountDeletionReauthError(
+        ACCOUNT_DELETION_REAUTH_ERROR.sessionChanged,
+      );
+    };
+
+    actionRef.current = operation;
     setAction('retry');
     setMessage(null);
+    let challengeId = null;
+    let reauthProof = null;
     try {
-      if (guard.marker.phase === 'accepted') {
-        const status = await api.accountDeletionStatus({
-          expectedAuthUserId: currentUserId,
-        });
+      // Always reconcile the server first. A prior final POST may have reached
+      // the server even when the device never received its response.
+      const status = await api.accountDeletionStatus({
+        expectedAuthUserId: ownerUserId,
+      });
+      requireCurrentOperation();
+
+      if (status?.state) {
         const outcome = await reconcileAccountDeletionStatus({
           markerStore: accountDeletionMarkerStore,
-          userId: currentUserId,
-          clientRequestId: guard.marker.clientRequestId,
+          userId: ownerUserId,
+          clientRequestId: marker.clientRequestId,
           status,
-          purgeLocalData,
+          isCurrentOwner: isCurrentOperation,
+          purgeLocalData: () => purgeLocalData(ownerUserId),
+          logout: () => {
+            requireCurrentOperation();
+            return privy.logout();
+          },
         });
+        if (!isCurrentOperation()) return;
         if (outcome.status === 'accepted') {
-          setMessage(status.completed
-            ? 'EasyGo 데이터 삭제가 완료되었습니다. 이제 안전하게 로그아웃할 수 있습니다.'
-            : '삭제 요청이 서버에 보존되어 있습니다. 처리가 계속 진행됩니다.');
+          setMessage(outcome.localDataPurged
+            ? (status.completed
+              ? 'EasyGo 데이터와 이 기기의 계정 데이터가 안전하게 정리되었습니다.'
+              : '삭제 요청이 서버에 보존되어 있고, 이 기기의 계정 데이터도 정리되었습니다.')
+            : '서버 삭제는 확인했지만 이 기기 데이터 정리가 끝나지 않았습니다. 잠금을 유지한 채 다시 시도해 주세요.');
         } else if (outcome.status === 'recovery') {
           setMessage(status.state === 'MANUAL_REVIEW'
             ? '삭제 요청이 안전 검토 중입니다. 로그인 세션과 기기 데이터는 유지됩니다.'
@@ -131,19 +196,58 @@ export default function AccountDeletionPending({ guard }) {
         return;
       }
 
+      if (marker.phase === 'accepted') {
+        setMessage('삭제 요청 기록을 확정할 수 없습니다. 잠금은 유지됩니다. 잠시 후 다시 확인해 주세요.');
+        return;
+      }
+
+      if (status?.available !== true) {
+        setMessage('새 삭제 요청은 현재 사용할 수 없습니다. 기존 잠금과 로그인 세션은 안전하게 유지됩니다.');
+        return;
+      }
+
+      const verified = await reauthRef.current.run({
+        ownerUserId,
+        clientRequestId: marker.clientRequestId,
+        isAppleAuthenticationAvailable: () => (
+          Platform.OS === 'ios'
+            ? AppleAuthentication.isAvailableAsync()
+            : Promise.resolve(false)
+        ),
+        requestChallenge: (params) => api.accountDeletionReauthChallenge(params),
+        signInWithApple: (options) => AppleAuthentication.signInAsync(options),
+        verifyChallenge: (params) => api.accountDeletionReauthVerify(params),
+      });
+      requireCurrentOperation();
+      challengeId = verified.challengeId;
+      reauthProof = verified.reauthProof;
+
       const outcome = await submitAccountDeletionRequest({
         markerStore: accountDeletionMarkerStore,
-        userId: currentUserId,
-        clientRequestId: guard.marker.clientRequestId,
+        userId: ownerUserId,
+        clientRequestId: marker.clientRequestId,
         walletRiskAcknowledged: true,
-        request: (clientRequestId) => api.requestAccountDeletion({
-          clientRequestId,
-          walletRiskAcknowledged: true,
-          expectedAuthUserId: currentUserId,
-        }),
-        purgeLocalData,
-        logout: () => privy.logout(),
+        isCurrentOwner: isCurrentOperation,
+        request: (authoritativeClientRequestId) => {
+          requireCurrentOperation();
+          if (authoritativeClientRequestId !== marker.clientRequestId) {
+            throw new Error('account_deletion_reauth_binding_changed');
+          }
+          return api.requestAccountDeletion({
+            challengeId,
+            clientRequestId: authoritativeClientRequestId,
+            reauthProof,
+            walletRiskAcknowledged: true,
+            expectedAuthUserId: ownerUserId,
+          });
+        },
+        purgeLocalData: () => purgeLocalData(ownerUserId),
+        logout: () => {
+          requireCurrentOperation();
+          return privy.logout();
+        },
       });
+      if (!isCurrentOperation()) return;
       if (outcome.status === 'uncertain') {
         setMessage('서버 응답을 확정하지 못했습니다. 로그인 세션과 잠금을 유지했으니 다시 확인할 수 있습니다.');
       } else if (outcome.status === 'recovery') {
@@ -153,29 +257,53 @@ export default function AccountDeletionPending({ guard }) {
       } else if (outcome.status === 'rejected') {
         setMessage('요청 형식을 확인하지 못했습니다. 앱을 업데이트한 뒤 다시 시도해 주세요.');
       }
-    } catch {
-      setMessage('삭제 상태를 안전하게 확인하지 못했습니다. 잠금은 그대로 유지됩니다.');
+    } catch (error) {
+      if (actionRef.current !== operation) return;
+      if (error?.code === ACCOUNT_DELETION_REAUTH_ERROR.cancelled) {
+        setMessage('Apple 재인증이 취소되었습니다. 삭제 잠금과 로그인 세션은 그대로 유지됩니다.');
+      } else if (error?.code === ACCOUNT_DELETION_REAUTH_ERROR.unavailable) {
+        setMessage('이 기기에서는 Apple 재인증을 사용할 수 없습니다. 삭제 잠금은 그대로 유지됩니다.');
+      } else if (error?.code === ACCOUNT_DELETION_REAUTH_ERROR.sessionChanged) {
+        setMessage('로그인 계정이 변경되어 작업을 중단했습니다. 다른 계정의 데이터는 변경하지 않았습니다.');
+      } else {
+        setMessage('삭제 상태를 안전하게 확인하지 못했습니다. 잠금은 그대로 유지됩니다.');
+      }
     } finally {
-      actionRef.current = false;
-      setAction(null);
+      challengeId = null;
+      reauthProof = null;
+      if (actionRef.current === operation) {
+        actionRef.current = null;
+        setAction(null);
+      }
     }
   };
 
   const signOut = async () => {
     if (actionRef.current) return;
-    actionRef.current = true;
+    const ownerUserId = currentUserId;
+    if (!ownerUserId) return;
+    const operation = { kind: 'logout', ownerUserId };
+    actionRef.current = operation;
     setAction('logout');
     setMessage(null);
     try {
-      await purgeLocalData();
+      await purgeLocalData(ownerUserId);
+      if (
+        actionRef.current !== operation
+        || currentUserIdRef.current !== ownerUserId
+      ) return;
       await privy.logout();
       setUser?.(null);
       setUserData?.(null);
     } catch {
-      setMessage('기기 데이터 정리 또는 로그아웃을 완료하지 못했습니다. 계정 화면은 계속 잠겨 있으니 다시 시도해 주세요.');
+      if (actionRef.current === operation) {
+        setMessage('기기 데이터 정리 또는 로그아웃을 완료하지 못했습니다. 계정 화면은 계속 잠겨 있으니 다시 시도해 주세요.');
+      }
     } finally {
-      actionRef.current = false;
-      setAction(null);
+      if (actionRef.current === operation) {
+        actionRef.current = null;
+        setAction(null);
+      }
     }
   };
 

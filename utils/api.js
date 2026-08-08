@@ -115,8 +115,48 @@ export const api = {
       expectedAuthUserId,
     })
   ),
-  requestAccountDeletion: ({
+  accountDeletionReauthChallenge: ({
     clientRequestId,
+    expectedAuthUserId,
+    signal,
+  }) => (
+    request('POST', '/me/account-deletion/reauth/challenge', {
+      body: {
+        clientRequestId,
+        expectedPrivyDid: expectedAuthUserId,
+      },
+      signal,
+      boundAuth: true,
+      expectedAuthUserId,
+    })
+  ),
+  accountDeletionReauthVerify: ({
+    challengeId,
+    clientRequestId,
+    expectedAuthUserId,
+    identityToken,
+    nonce,
+    signal,
+    state,
+  }) => (
+    request('POST', '/me/account-deletion/reauth/verify', {
+      body: {
+        challengeId,
+        clientRequestId,
+        expectedPrivyDid: expectedAuthUserId,
+        identityToken,
+        nonce,
+        state,
+      },
+      signal,
+      boundAuth: true,
+      expectedAuthUserId,
+    })
+  ),
+  requestAccountDeletion: ({
+    challengeId,
+    clientRequestId,
+    reauthProof,
     walletRiskAcknowledged,
     expectedAuthUserId,
     signal,
@@ -124,8 +164,10 @@ export const api = {
     request('POST', '/me/account-deletion', {
       body: {
         confirmation: 'DELETE_MY_EASYGO_ACCOUNT',
+        challengeId,
         clientRequestId,
         expectedPrivyDid: expectedAuthUserId,
+        reauthProof,
         walletRiskAcknowledged: walletRiskAcknowledged === true,
       },
       signal,

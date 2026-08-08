@@ -41,6 +41,15 @@ async function settleCleanup(operation) {
   }
 }
 
+function cleanupOwnerIsCurrent(isCurrentOwner) {
+  if (typeof isCurrentOwner !== 'function') return true;
+  try {
+    return isCurrentOwner() === true;
+  } catch {
+    return false;
+  }
+}
+
 export function canConfirmAccountDeletion({
   available,
   walletRiskAcknowledged,
@@ -68,6 +77,7 @@ export async function reconcileAccountDeletionStatus({
   status,
   purgeLocalData,
   logout,
+  isCurrentOwner,
 } = {}) {
   if (
     !markerStore
@@ -122,8 +132,16 @@ export async function reconcileAccountDeletionStatus({
     clientRequestId: marker.clientRequestId,
     requestId: status.requestId,
   });
-  const localDataPurged = await settleCleanup(purgeLocalData);
-  const loggedOut = localDataPurged ? await settleCleanup(logout) : false;
+  // The server result and marker belong to `userId`, but the active Privy
+  // session may have changed while the request was in flight. Preserve the
+  // accepted marker for the original owner without touching a newer account's
+  // device state or session.
+  const localDataPurged = cleanupOwnerIsCurrent(isCurrentOwner)
+    ? await settleCleanup(purgeLocalData)
+    : false;
+  const loggedOut = localDataPurged && cleanupOwnerIsCurrent(isCurrentOwner)
+    ? await settleCleanup(logout)
+    : false;
   return Object.freeze({
     status: 'accepted',
     requestId: status.requestId,
@@ -141,6 +159,7 @@ export async function submitAccountDeletionRequest({
   request,
   purgeLocalData,
   logout,
+  isCurrentOwner,
 } = {}) {
   if (
     !markerStore
@@ -218,12 +237,18 @@ export async function submitAccountDeletionRequest({
       requestId: response.requestId,
     });
   } catch {
-    await settleCleanup(purgeLocalData);
+    if (cleanupOwnerIsCurrent(isCurrentOwner)) {
+      await settleCleanup(purgeLocalData);
+    }
     return Object.freeze({ status: 'uncertain', code: 'account_deletion_status_unknown' });
   }
 
-  const localDataPurged = await settleCleanup(purgeLocalData);
-  const loggedOut = localDataPurged ? await settleCleanup(logout) : false;
+  const localDataPurged = cleanupOwnerIsCurrent(isCurrentOwner)
+    ? await settleCleanup(purgeLocalData)
+    : false;
+  const loggedOut = localDataPurged && cleanupOwnerIsCurrent(isCurrentOwner)
+    ? await settleCleanup(logout)
+    : false;
   return Object.freeze({
     status: 'accepted',
     requestId: response.requestId,

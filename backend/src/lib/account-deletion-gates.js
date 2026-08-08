@@ -8,6 +8,7 @@
  */
 export const ACCOUNT_DELETION_PUBLIC_REQUEST_READY = false;
 export const ACCOUNT_DELETION_PROVIDER_CLEANUP_READY = false;
+export const ACCOUNT_DELETION_RECENT_AUTH_READY = false;
 // This latch is independent from both runtime kill switches. Once deletion has
 // ever been exposed, a later request/worker rollback must not let a replacement
 // provider identity bypass an existing tombstone. It therefore moves to true
@@ -34,12 +35,19 @@ export function accountDeletionStableIdentityGuardEnabled(env = process.env) {
 export function accountDeletionPublicRequestEnabled(env = process.env) {
   return ACCOUNT_DELETION_PUBLIC_REQUEST_READY
     && ACCOUNT_DELETION_PROVIDER_CLEANUP_READY
+    && ACCOUNT_DELETION_RECENT_AUTH_READY
     && ACCOUNT_DELETION_STABLE_IDENTITY_GUARD_READY
     && explicitlyEnabled(env.ACCOUNT_DELETION_ENABLED)
-    && explicitlyEnabled(env.ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED);
+    && explicitlyEnabled(env.ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED)
+    && explicitlyEnabled(env.ACCOUNT_DELETION_RECENT_AUTH_ENABLED);
 }
 
 export function accountDeletionProviderCleanupEnabled(env = process.env) {
   return ACCOUNT_DELETION_PROVIDER_CLEANUP_READY
     && explicitlyEnabled(env.ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED);
+}
+
+export function accountDeletionRecentAuthEnabled(env = process.env) {
+  return ACCOUNT_DELETION_RECENT_AUTH_READY
+    && explicitlyEnabled(env.ACCOUNT_DELETION_RECENT_AUTH_ENABLED);
 }

@@ -635,12 +635,46 @@ async function usersInStableIdentityComponent(
   return { users, closureComplete };
 }
 
+async function assertCurrentUserStableProviderIdentity(
+  tx,
+  privyDid,
+  identity,
+) {
+  const user = await tx.user.findUnique({
+    where: { privyDid },
+    select: {
+      id: true,
+      stableProviderIdentities: {
+        where: {
+          provider: identity.provider,
+          context: identity.context,
+        },
+        select: {
+          provider: true,
+          context: true,
+          providerIdentityHash: true,
+        },
+      },
+    },
+  });
+  const stored = user?.stableProviderIdentities?.[0];
+  if (!user || !stored) {
+    throw new AccountDeletionIdentityError('stable_provider_identity_missing');
+  }
+  if (stored.providerIdentityHash !== identity.providerIdentityHash) {
+    throw new AccountDeletionIdentityError('stable_provider_identity_conflict');
+  }
+  return user;
+}
+
 export async function requestAccountDeletion({
   prisma,
   privyDid,
   appleSubject = null,
   stableProviderIdentities = [],
   clientRequestId,
+  recentAuth = null,
+  consumeRecentAuth = null,
   env = process.env,
   now = new Date(),
   allowFoundationExecution = false,
@@ -667,6 +701,10 @@ export async function requestAccountDeletion({
   if (identities.length === 0) {
     throw new AccountDeletionIdentityError('stable_provider_identity_required');
   }
+  const appleStableIdentity = identities.find((identity) => (
+    identity.provider === APPLE_STABLE_IDENTITY_PROVIDER
+    && identity.context === APPLE_STABLE_IDENTITY_CONTEXT
+  ));
 
   return prisma.$transaction(async (tx) => {
     await assertAccountDeletionKeyFingerprint(tx, env);
@@ -674,6 +712,39 @@ export async function requestAccountDeletion({
     let request = await findRequestUnderLock(tx, subjectHash, identities, undefined);
     if (request && request.subjectHash !== subjectHash) {
       throw new AccountDeletionIdentityError('stable_provider_identity_component_conflict');
+    }
+
+    // A committed tombstone is the recovery authority. Lost-response retries
+    // must remain recoverable after the one-time recent-auth proof was consumed
+    // and even after the upstream Privy account no longer exists.
+    if (!request) {
+      if (!appleStableIdentity) {
+        throw new AccountDeletionIdentityError('stable_provider_identity_required');
+      }
+      // The interactive Apple proof must match the immutable identity already
+      // owned by this exact local User. Never backfill or replace a mapping in
+      // the deletion transaction: legacy/unmapped and relinked accounts fail
+      // closed before the one-time proof is consumed or any content is purged.
+      await assertCurrentUserStableProviderIdentity(
+        tx,
+        normalizedDid,
+        appleStableIdentity,
+      );
+      if (typeof consumeRecentAuth !== 'function') {
+        throw new AccountDeletionConfigurationError(
+          'account_deletion_recent_auth_not_configured',
+        );
+      }
+      await consumeRecentAuth(tx, {
+        privyDid: normalizedDid,
+        subjectHash,
+        sessionId: recentAuth?.sessionId,
+        clientRequestId,
+        challengeId: recentAuth?.challengeId,
+        reauthProof: recentAuth?.reauthProof,
+        stableProviderIdentity: appleStableIdentity,
+        env,
+      });
     }
 
     // Never auto-delete a second Privy principal (the provider worker only has
@@ -699,6 +770,9 @@ export async function requestAccountDeletion({
           encryptionKeyVersion: ENCRYPTION_KEY_VERSION,
           clientRequestId,
           state: 'REQUESTED',
+          ...(recentAuth?.challengeId
+            ? { recentAuthChallengeId: recentAuth.challengeId }
+            : {}),
         },
       });
       created = true;

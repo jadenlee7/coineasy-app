@@ -260,6 +260,76 @@ wallet private key, or login code.
   `ACCOUNT_DELETION_ENABLED=false`; full/social exports and sign-out must remain
   usable. Do not execute deletion on the primary tester account.
 
+## Dormant recent Apple reauthentication candidate
+
+Do not run these checks from Build 101 or a primary tester account. The current
+recent-auth, public-request, stable-identity, and provider-cleanup compile-time
+latches remain `false`, and all three Railway runtime deletion flags remain
+off. Because that correctly makes the Settings path unreachable, nonce/subject
+proof must first use a separately reviewed, internal-only, non-destructive QA
+harness against a disposable staging account. That harness must be incapable
+of calling `POST /me/account-deletion` and must not be included in a release
+candidate. The additive migration and PostgreSQL integration suite must pass
+before the harness is approved.
+
+- [ ] On a disposable physical iPhone, open the approved non-destructive
+  diagnostic and verify that native `AppleAuthentication.signInAsync` visibly
+  prompts after the Privy-authenticated session is already active. Cancelling
+  the Apple sheet must leave the session, account, local deletion marker, and
+  server data unchanged.
+- [ ] Prove the exact nonce representation returned in the real Apple identity
+  JWT: raw server nonce versus transformed nonce. Record only a sanitized
+  `raw`, `transformed`, or `mismatch` outcome from a reviewed one-shot staging
+  probe; never record the nonce, state, identity token, or JWT claims. Pin the
+  verified behavior in tests before any latch review.
+- [ ] For both a newly created and a returning Apple staging account, prove that
+  the RS256-verified native Apple JWT subject derives to the same immutable
+  Apple digest already stored for the local user. Confirm missing/changed
+  mappings fail before proof consumption. Record only match/mismatch and
+  internal request ID; never silently backfill or add a DID-only fallback.
+- [ ] Confirm challenge issuance and verification bind the authenticated DID,
+  expected DID, `clientRequestId`, challenge ID, nonce, and state. Switching
+  accounts, changing any bound field, presenting a token for the wrong native
+  audience, or using an expired challenge must produce fixed PII-free failure
+  copy and no deletion request.
+- [ ] Verify a successful challenge returns an opaque proof and that parallel
+  submission or replay can create at most one deletion tombstone. The proof is
+  consumed in the local-purge transaction; force one approved staging rollback
+  and confirm an idempotent retry can recover without authorizing another
+  account or request.
+- [ ] Issue a second request-bound challenge after the first proof is attested
+  and confirm bearer-only issuance cannot revoke that proof. Verify the
+  approved rate limit bounds challenge creation without logging any binding
+  value.
+- [ ] Confirm identity tokens, nonce/state, reauth proofs, Apple subjects,
+  Privy DIDs, and provider digests are absent from device logs, Railway logs,
+  analytics, crash reports, exports, and screenshots. Do not use a network
+  capture that persists credential bodies.
+- [ ] Confirm status and retry for a pre-existing deletion tombstone still work
+  after the challenge expires or the Apple credential is unavailable. This
+  recovery path must not issue a new challenge or create a second request.
+- [ ] Provision and review a dedicated Sign in with Apple key, Team ID, and Key
+  ID plus immediate authorization-code exchange, secure token storage, and
+  revocation handling. The dormant reauth flow sends no authorization code and
+  cannot satisfy this check by itself.
+- [ ] Add equivalent recent-auth coverage for Google-only accounts and Android,
+  or prove those account-creation methods are unavailable before deletion is
+  activated.
+- [ ] Re-run the migration on PostgreSQL staging and pass expiry, parallel
+  challenge, one-time consume, rollback, post-write race, and provider-worker
+  concurrency tests, plus the approved expired/consumed digest lifecycle, before
+  requesting physical destructive QA.
+- [ ] Switch from account A to B at every local-cleanup await boundary. Confirm
+  A's non-abortable AsyncStorage cleanup cannot remove B's search, safety-list,
+  or push-token state; this requires owner-scoped keys or one reviewed
+  auth-switch/cleanup serialization boundary.
+- [ ] Remove the non-destructive diagnostic from the release graph and inspect
+  the resulting bundle before building any deletion release candidate.
+- [ ] After all checks pass, verify all four compile-time latches are still
+  closed and all three Railway deletion flags are still off. Latch activation
+  and external TestFlight/App Store distribution require a separate reviewed
+  release.
+
 ## Pass and failure handling
 
 - [ ] `/auth/sync`, feed, profile, follow, notifications, Orange, and quote paths

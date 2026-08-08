@@ -89,6 +89,41 @@ enum AccountDeletionState {
   MANUAL_REVIEW
 }
 
+enum AccountDeletionReauthStatus {
+  ISSUED
+  ATTESTED
+  CONSUMED
+}
+
+// Short-lived proof that a fresh Apple interaction matched both the current
+// Privy session and the stable Apple identity already bound to the account.
+// Raw DIDs, session IDs, client request IDs, Apple subjects, JWTs, nonce/state,
+// and bearer proofs are never persisted.
+model AccountDeletionReauthChallenge {
+  id                       String                      @id @default(cuid())
+  subjectHash              String                      @db.Char(64)
+  subjectHashKeyVersion    Int                         @default(1)
+  subjectHashKeyFingerprint String                     @db.Char(64)
+  sessionHash              String                      @db.Char(64)
+  clientRequestHash        String                      @db.Char(64)
+  nonceHash                String                      @db.Char(64)
+  stateHash                String                      @db.Char(64)
+  providerIdentityHash     String?                     @db.Char(64)
+  proofHash                String?                     @unique @db.Char(64)
+  status                   AccountDeletionReauthStatus @default(ISSUED)
+  expiresAt                DateTime                    @db.Timestamptz(3)
+  attestedAt               DateTime?                   @db.Timestamptz(3)
+  consumedAt               DateTime?                   @db.Timestamptz(3)
+  createdAt                DateTime                    @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime                    @updatedAt @db.Timestamptz(3)
+
+  subjectKey      AccountDeletionKeyRegistry @relation("AccountDeletionReauthSubjectKey", fields: [subjectHashKeyVersion, subjectHashKeyFingerprint], references: [keyVersion, fingerprint], onDelete: Restrict, onUpdate: Restrict, map: "AccountDeletionReauthChallenge_subject_key_fkey")
+  deletionRequest AccountDeletionRequest?      @relation("AccountDeletionRequestReauth")
+
+  @@index([subjectHash, sessionHash, status, expiresAt], map: "idx_deletion_reauth_binding")
+  @@index([expiresAt], map: "idx_deletion_reauth_expiry")
+}
+
 // Pins each HMAC key version to one non-secret keyed fingerprint. Concurrent
 // first users race through INSERT ... ON CONFLICT DO NOTHING, then compare the
 // winner, so an accidental secret replacement fails closed without globally
@@ -100,6 +135,7 @@ model AccountDeletionKeyRegistry {
   deletionRequests           AccountDeletionRequest[]          @relation("AccountDeletionSubjectKey")
   userProviderIdentities     UserStableProviderIdentity[]      @relation("UserStableProviderIdentityKey")
   deletionProviderIdentities AccountDeletionProviderIdentity[] @relation("AccountDeletionProviderIdentityKey")
+  reauthChallenges           AccountDeletionReauthChallenge[]   @relation("AccountDeletionReauthSubjectKey")
 
   @@unique([keyVersion, fingerprint])
 }
@@ -115,6 +151,7 @@ model AccountDeletionRequest {
   privyDidCiphertext        String?              @db.Text
   encryptionKeyVersion      Int?
   clientRequestId           String               @db.Uuid
+  recentAuthChallengeId     String?              @unique
   state                     AccountDeletionState @default(REQUESTED)
   stateVersion              Int                  @default(0)
   attemptCount              Int                  @default(0)
@@ -134,6 +171,7 @@ model AccountDeletionRequest {
 
   subjectKey         AccountDeletionKeyRegistry        @relation("AccountDeletionSubjectKey", fields: [subjectHashKeyVersion, subjectHashKeyFingerprint], references: [keyVersion, fingerprint], onDelete: Restrict, onUpdate: Restrict, map: "AccountDeletionRequest_subject_key_fkey")
   providerIdentities AccountDeletionProviderIdentity[]
+  recentAuthChallenge AccountDeletionReauthChallenge?   @relation("AccountDeletionRequestReauth", fields: [recentAuthChallengeId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "AccountDeletionRequest_recent_auth_fkey")
 
   @@index([clientRequestId])
   @@index([state, nextAttemptAt])

@@ -6,6 +6,8 @@
  * GET    /me/data     — export the user's EasyGo-local database records
  * GET    /me/social-export — privacy-minimized legacy social export
  * GET    /me/account-deletion  — server-authoritative deletion capability/state
+ * POST   /me/account-deletion/reauth/challenge — issue a session-bound Apple nonce
+ * POST   /me/account-deletion/reauth/verify — verify the native Apple attestation
  * POST   /me/account-deletion  — idempotently request the deletion saga
  * DELETE /me/data     — retired unsafe local-only deletion endpoint
  */
@@ -44,6 +46,15 @@ import {
   findAccountDeletionRequest,
   requestAccountDeletion,
 } from '../lib/account-deletion.js';
+import { accountDeletionRecentAuthEnabled } from '../lib/account-deletion-gates.js';
+import {
+  AccountDeletionReauthError,
+  consumeAccountDeletionReauthChallenge,
+  findBoundAppleStableProviderIdentity,
+  issueAccountDeletionReauthChallenge,
+  requirePrivySessionId,
+  verifyAccountDeletionReauthChallenge,
+} from '../lib/account-deletion-reauth.js';
 
 export const meRouter = Router();
 export const DELETE_DATA_CONFIRMATION = 'DELETE_MY_EASYGO_DATA';
@@ -54,10 +65,32 @@ const deleteDataSchema = z.object({
 
 const accountDeletionSchema = z.object({
   confirmation: z.literal(DELETE_ACCOUNT_CONFIRMATION),
+  // Recovery of an already-committed tombstone must not depend on a replayable
+  // recent-auth credential. Validate these fields only after the tombstone
+  // fast path proves that this is a brand-new destructive request.
+  challengeId: z.unknown().optional(),
   clientRequestId: z.string().uuid(),
   expectedPrivyDid: z.string().trim().min(1).max(255),
+  reauthProof: z.unknown().optional(),
   walletRiskAcknowledged: z.literal(true),
 }).strict();
+
+const accountDeletionRecentAuthSchema = accountDeletionSchema.extend({
+  challengeId: z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/u),
+  reauthProof: z.string().trim().min(32).max(256).regex(/^[A-Za-z0-9_-]+$/u),
+});
+
+const accountDeletionReauthChallengeSchema = z.object({
+  clientRequestId: z.string().uuid(),
+  expectedPrivyDid: z.string().trim().min(1).max(255),
+}).strict();
+
+const accountDeletionReauthVerifySchema = accountDeletionReauthChallengeSchema.extend({
+  challengeId: z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/u),
+  identityToken: z.string().trim().min(32).max(16_384),
+  nonce: z.string().trim().min(32).max(256).regex(/^[A-Za-z0-9_-]+$/u),
+  state: z.string().trim().min(32).max(256).regex(/^[A-Za-z0-9_-]+$/u),
+});
 
 function accountDeletionStatusBody(request, available) {
   return {
@@ -80,6 +113,28 @@ function privyLookupFailure(req, res, error, action) {
   return res.status(configurationFailure ? 503 : 502).json({
     error: configurationFailure ? 'privy_not_configured' : 'privy_unavailable',
   });
+}
+
+function accountDeletionReauthFailure(req, res, error, action) {
+  if (error instanceof AccountDeletionReauthError) {
+    req.log?.warn?.(
+      { errorCode: error.code, errorType: error.name },
+      `account deletion recent authentication ${action} rejected`,
+    );
+    const status = [400, 401, 409, 503].includes(error.status) ? error.status : 409;
+    return res.status(status).json({ error: error.code });
+  }
+  if (error instanceof AccountDeletionConfigurationError) {
+    req.log?.error?.(
+      { errorType: error.name },
+      `account deletion recent authentication ${action} is not configured`,
+    );
+    return res.status(503).json({ error: 'account_deletion_not_configured' });
+  }
+  if (error instanceof AccountDeletionIdentityError) {
+    return res.status(409).json({ error: 'stable_provider_identity_unavailable' });
+  }
+  throw error;
 }
 
 function currentVersionOr503(req, res) {
@@ -302,6 +357,93 @@ export function createAccountDeletionStatusHandler({
   };
 }
 
+export function createAccountDeletionReauthChallengeHandler({
+  db = prisma,
+  env = process.env,
+  findBoundIdentity = findBoundAppleStableProviderIdentity,
+  recentAuthCapability = accountDeletionRecentAuthEnabled,
+  issueChallenge = issueAccountDeletionReauthChallenge,
+} = {}) {
+  return async function accountDeletionReauthChallenge(req, res) {
+    res.set('Cache-Control', 'no-store');
+    const parsed = accountDeletionReauthChallengeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'account_deletion_reauth_request_invalid' });
+    }
+    if (parsed.data.expectedPrivyDid !== req.user.privyDid) {
+      return res.status(409).json({ error: 'account_deletion_session_changed' });
+    }
+    if (!recentAuthCapability(env)) {
+      return res.status(503).json({ error: 'account_deletion_reauth_disabled' });
+    }
+
+    try {
+      const sessionId = requirePrivySessionId(req.user.claims);
+      // Do not prompt unless this DID already owns an immutable local Apple
+      // identity binding. Verification reloads it to close the TOCTOU window.
+      await findBoundIdentity(db, req.user.privyDid);
+      const challenge = await issueChallenge({
+        prisma: db,
+        privyDid: req.user.privyDid,
+        sessionId,
+        clientRequestId: parsed.data.clientRequestId,
+        env,
+      });
+      return res.status(201).json(challenge);
+    } catch (error) {
+      return accountDeletionReauthFailure(req, res, error, 'challenge');
+    }
+  };
+}
+
+export function createAccountDeletionReauthVerifyHandler({
+  db = prisma,
+  env = process.env,
+  findBoundIdentity = findBoundAppleStableProviderIdentity,
+  recentAuthCapability = accountDeletionRecentAuthEnabled,
+  verifyChallenge = verifyAccountDeletionReauthChallenge,
+} = {}) {
+  return async function accountDeletionReauthVerify(req, res) {
+    res.set('Cache-Control', 'no-store');
+    const parsed = accountDeletionReauthVerifySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'account_deletion_reauth_request_invalid' });
+    }
+    if (parsed.data.expectedPrivyDid !== req.user.privyDid) {
+      return res.status(409).json({ error: 'account_deletion_session_changed' });
+    }
+    if (!recentAuthCapability(env)) {
+      return res.status(503).json({ error: 'account_deletion_reauth_disabled' });
+    }
+
+    let sessionId;
+    try {
+      sessionId = requirePrivySessionId(req.user.claims);
+    } catch (error) {
+      return accountDeletionReauthFailure(req, res, error, 'verification');
+    }
+
+    try {
+      const appleIdentity = await findBoundIdentity(db, req.user.privyDid);
+      const proof = await verifyChallenge({
+        prisma: db,
+        privyDid: req.user.privyDid,
+        sessionId,
+        clientRequestId: parsed.data.clientRequestId,
+        challengeId: parsed.data.challengeId,
+        nonce: parsed.data.nonce,
+        state: parsed.data.state,
+        identityToken: parsed.data.identityToken,
+        stableProviderIdentity: appleIdentity,
+        env,
+      });
+      return res.json(proof);
+    } catch (error) {
+      return accountDeletionReauthFailure(req, res, error, 'verification');
+    }
+  };
+}
+
 export function createAccountDeletionRequestHandler({
   db = prisma,
   fetchPrivyUser = getUser,
@@ -309,6 +451,7 @@ export function createAccountDeletionRequestHandler({
   deletionCapability = accountDeletionEnabled,
   findDeletionRequest = findAccountDeletionRequest,
   requestDeletion = requestAccountDeletion,
+  consumeRecentAuth = consumeAccountDeletionReauthChallenge,
 } = {}) {
   return async function accountDeletionRequest(req, res) {
     res.set('Cache-Control', 'no-store');
@@ -353,6 +496,17 @@ export function createAccountDeletionRequestHandler({
     if (!deletionCapability(env)) {
       return res.status(503).json({ error: 'account_deletion_disabled' });
     }
+    const recentAuth = accountDeletionRecentAuthSchema.safeParse(parsed.data);
+    if (!recentAuth.success) {
+      return res.status(400).json({ error: 'account_deletion_reauth_required' });
+    }
+
+    let sessionId;
+    try {
+      sessionId = requirePrivySessionId(req.user.claims);
+    } catch (error) {
+      return accountDeletionReauthFailure(req, res, error, 'consumption');
+    }
 
     let privyUser;
     try {
@@ -386,6 +540,12 @@ export function createAccountDeletionRequestHandler({
         privyDid: req.user.privyDid,
         stableProviderIdentities: [appleIdentity],
         clientRequestId: parsed.data.clientRequestId,
+        recentAuth: {
+          sessionId,
+          challengeId: recentAuth.data.challengeId,
+          reauthProof: recentAuth.data.reauthProof,
+        },
+        consumeRecentAuth,
         env,
       });
       if (!result.localDataDeleted || result.state === 'MANUAL_REVIEW') {
@@ -409,6 +569,9 @@ export function createAccountDeletionRequestHandler({
       if (error instanceof AccountDeletionIdentityError) {
         return res.status(409).json({ error: 'stable_provider_identity_unavailable' });
       }
+      if (error instanceof AccountDeletionReauthError) {
+        return accountDeletionReauthFailure(req, res, error, 'consumption');
+      }
       if (error?.code === 'account_deletion_disabled') {
         return res.status(503).json({ error: error.code });
       }
@@ -421,6 +584,18 @@ meRouter.get(
   '/account-deletion',
   requireAuth,
   express4AsyncHandler(createAccountDeletionStatusHandler()),
+);
+
+meRouter.post(
+  '/account-deletion/reauth/challenge',
+  requireAuth,
+  express4AsyncHandler(createAccountDeletionReauthChallengeHandler()),
+);
+
+meRouter.post(
+  '/account-deletion/reauth/verify',
+  requireAuth,
+  express4AsyncHandler(createAccountDeletionReauthVerifyHandler()),
 );
 
 meRouter.post(
