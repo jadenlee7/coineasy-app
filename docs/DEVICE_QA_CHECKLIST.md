@@ -1,8 +1,8 @@
 # EasyGo staging device QA
 
-Use this checklist for the internal-only account-isolation TestFlight candidate
-`2.0.3 (102)`, its privacy-center predecessor `2.0.3 (101)`, and the existing
-Android preview build `versionCode 64`. All clients must target
+Use this checklist for the internal-only legal-consent TestFlight candidate
+`2.0.3 (103)`, its account-isolation predecessor `2.0.3 (102)`, and the
+existing Android preview build `versionCode 64`. All clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
@@ -334,9 +334,48 @@ wallet private key, or login code.
       verification window. This is an authentication regression result, not
       approval of the still-candidate legal documents or dormant deletion flow.
 
+## Build 103 legal-consent candidate
+
+- [x] On 2026-08-11, add the exact candidate version and two versioned EasyGo
+      URLs as public EAS `preview` variables only. The staging mobile preflight
+      passed with zero failures, the mobile suite passed 156/156, and Expo
+      Doctor passed 17/17. A preview-environment iOS export produced a
+      6,166,900-byte bundle with SHA-256
+      `564a02677c8f1816ccb7a0c00041929ca816d1237cef8a427c6cb69ed52bfd04`;
+      it contains the candidate version and both URLs, no Google Drive URL,
+      no complete private-key block, and no server-secret variable name.
+- [ ] Record the exact release commit and EAS build ID after the committed,
+      clean `testflight` profile build starts. Confirm the binary reports
+      `2.0.3 (103)`, uses the `preview` channel, targets staging, and retains the
+      `com.coineasy.coineasysocial` identifier and `coineasyapp` scheme.
+- [ ] Confirm the release bundle contains exact consent version
+      `2026-08-10-staging-v1` and both matching versioned EasyGo staging URLs.
+      It must not contain either legacy Google Drive policy URL or a private
+      server credential.
+- [ ] Confirm App Store Connect labels Build 103 `Internal`. The authoritative
+      API must report `buildAudienceType=INTERNAL_ONLY` and external state
+      `NOT_APPLICABLE`. Do not add it to an external group or App Store review.
+- [ ] Force-close and reopen Build 103, complete Sign in with Apple, and open
+      Settings. The policy card must show server version
+      `2026-08-10-staging-v1`, report that re-consent is required, and keep new
+      consent choices review-locked without a crash or login loop.
+- [ ] Open Privacy policy and Terms of service from Settings. Each control must
+      open its matching EasyGo staging document, never a legacy Google Drive
+      document, and returning to EasyGo must preserve the authenticated account.
+- [ ] Confirm the client cannot send a new consent grant while the server
+      reports `grantsEnabled=false`. If a prior consent exists, verify full
+      revocation remains available without enabling personalization or
+      marketing.
+- [ ] Re-check profile, `100` Orange balance, feed, full/social JSON export,
+      sign-out, and Apple sign-in after the legal-link flow. No prior-account
+      data, stale policy state, repeated `401`, or 5xx may appear.
+- [ ] Keep all deletion latches, consent grants, and optional Path C Railway
+      flags off. Build 103 is a legal-document integration candidate only; it
+      does not approve the documents or activate deletion or optional data use.
+
 ## Dormant recent Apple reauthentication candidate
 
-Do not run these checks from Build 102 or a primary tester account. The current
+Do not run these checks from Build 103 or a primary tester account. The current
 recent-auth, public-request, stable-identity, and provider-cleanup compile-time
 latches remain `false`, and all three Railway runtime deletion flags remain
 off. Because that correctly makes the Settings path unreachable, nonce/subject

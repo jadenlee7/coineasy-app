@@ -805,7 +805,7 @@ export default function SettingsModal() {
       </Text>
       {LEGAL_LINKS.map((item) => row(
         item.label,
-        item.document.configured || item.label === 'Help' ? undefined : 'Pending',
+        item.document.configured ? undefined : 'Pending',
         () => openLegalDocument(item.document, item.label),
       ))}
 
