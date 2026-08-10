@@ -322,6 +322,17 @@ wallet private key, or login code.
   failures. Account deletion, recent-auth, public-request, stable-identity,
   and provider cleanup remain outside Build 102; the previously verified
   exports and sign-out stay available.
+- [x] On 2026-08-11, repeat a focused Build 102 authentication regression after
+      staging moved to merged backend release
+      `5372bfcd424d8fb071a5c5022f43d33a61d32f05`. The owner force-closed the app,
+      signed out, completed Sign in with Apple, and confirmed profile, `100`
+      Orange balance, feed, and Settings navigation without a crash or login
+      loop. The matching Railway deployment
+      `85a4937a-41db-4f85-97f5-3831474437f3` was `SUCCESS`; unauthenticated
+      `/auth/sync` and `/auth/me` probes returned the expected PII-free
+      `401 missing_bearer`, and the deployment produced no HTTP 5xx during the
+      verification window. This is an authentication regression result, not
+      approval of the still-candidate legal documents or dormant deletion flow.
 
 ## Dormant recent Apple reauthentication candidate
 
