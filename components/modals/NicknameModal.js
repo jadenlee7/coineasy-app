@@ -1,427 +1,157 @@
-import React, { useState, useContext, useRef, useEffect, useMemo } from "react";
-import { Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity, Animated, Dimensions, StyleSheet, TouchableWithoutFeedback, Platform, TextInput, Easing } from 'react-native';
-
+import React, { useContext, useEffect, useMemo, useState } from 'react';
+import { Alert, ActivityIndicator, Image, Keyboard, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
-import * as ImagePicker from 'expo-image-picker';
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetModalProvider,
+} from '@gorhom/bottom-sheet';
 
-import Modal from "../Modal";
-import Button from "../Button";
-import { ArrowAccordionIcon, CloseIcon, PenIcon, SuccessIcon } from "../Icons";
-import { GlobalContext } from "../../contexts/GlobalContext";
-import { FloatingLabelInput } from "react-native-floating-label-input";
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import useStatusBarHeight from "../../hooks/useStatusBarHeight";
-import moment from "moment";
+import { GlobalContext } from '../../contexts/GlobalContext';
+import { useDeviceAccountOperationLease } from '../../contexts/DeviceAccountDataContext';
+import useStatusBarHeight from '../../hooks/useStatusBarHeight';
+import { api } from '../../utils/api';
+import { adaptSocialProfile } from '../../utils/socialPostAdapter';
+import { CloseIcon } from '../Icons';
 
+export default function NicknameModal() {
+  const { user, setUser, setUserData, setPushNotifsVis, modalNicknameRef } = useContext(GlobalContext);
+  const { lease, isCurrentLease } = useDeviceAccountOperationLease();
+  const tailwind = useTailwind();
+  const statusBarHeight = useStatusBarHeight();
+  const snapPoints = useMemo(() => ['62%'], []);
+  const [displayName, setDisplayName] = useState('');
+  const [loading, setLoading] = useState(false);
 
-export default function PostSettingsModal() {    
-    const { user, orbis, setUser, setUserData, setPushNotifsVis, modalNicknameRef } = useContext(GlobalContext);
-    const tailwind = useTailwind();
+  useEffect(() => {
+    setDisplayName(user?.profile?.data?.displayName || user?.profile?.username || '');
+    setLoading(false);
+  }, [lease, user?.did]);
 
-    const [showBack, setShowBack] = useState(false)
-    const [loading, setLoading] = useState(false)
-    const [loadingLater, setLoadingLater] = useState(false)
-    const [nickname, setNickname] = useState('');
+  const close = () => {
+    Haptics.selectionAsync();
+    Keyboard.dismiss();
+    modalNicknameRef.current?.close();
+  };
 
-    const [pfpLoading, setPfpLoading] = useState(false);
-    const [pfp, setPfp] = useState("")
-
-    const [inviteCode, setInviteCode] = useState('')
-
-    const windowSize = Dimensions.get('window')
-
-    const moveAnimation1 = useRef(new Animated.Value(0)).current;
-    const moveAnimation2 = useRef(new Animated.Value(windowSize.width)).current;
-
-    const snapPoints = useMemo(() => ['100%', '100%'], []);
-    const statusBarHeight = useStatusBarHeight();
-
-    
-    function hide() {
-        Haptics.selectionAsync();
-        modalNicknameRef.current?.close()
-        Keyboard.dismiss()
+  const save = async () => {
+    const expectedLease = lease;
+    if (!expectedLease || !isCurrentLease(expectedLease)) return;
+    const normalizedName = displayName.trim();
+    if (!normalizedName) {
+      Alert.alert('Choose a name', 'Enter the name people should see on EasyGo.');
+      return;
+    }
+    if (normalizedName.length > 50) {
+      Alert.alert('Name is too long', 'Use 50 characters or fewer.');
+      return;
     }
 
-    const showProfileImage = () => {
-        Haptics.selectionAsync();
-        Keyboard.dismiss()
-
-        Animated.parallel([
-            Animated.timing(moveAnimation1, {
-                toValue: -windowSize.width,
-                duration: 300,
-                useNativeDriver: true
-            }),
-            Animated.timing(moveAnimation2, {
-                toValue: 0,
-                duration: 300,
-                useNativeDriver: true
-            })
-        ]).start();
-
-        setShowBack(true)
+    Haptics.selectionAsync();
+    setLoading(true);
+    try {
+      const result = await api.profiles.updateMe(
+        { displayName: normalizedName },
+        { expectedAuthUserId: expectedLease.ownerUserId },
+      );
+      if (!isCurrentLease(expectedLease)) return;
+      const adapted = adaptSocialProfile(result?.profile);
+      if (!adapted) throw new Error('profile_update_failed');
+      setUser((current) => (isCurrentLease(expectedLease) ? ({
+        ...current,
+        id: adapted.id || current?.id,
+        did: adapted.did || current?.did,
+        profile: {
+          ...current?.profile,
+          ...adapted.profile,
+          data: {
+            ...current?.profile?.data,
+            ...adapted.profile?.data,
+          },
+        },
+      }) : current));
+      setUserData((current) => (
+        isCurrentLease(expectedLease)
+          ? { ...(current || {}), ...(adapted.profile.data || {}) }
+          : current
+      ));
+      if (!isCurrentLease(expectedLease)) return;
+      close();
+      setPushNotifsVis(true);
+    } catch {
+      if (!isCurrentLease(expectedLease)) return;
+      Alert.alert('Could not save profile', 'Connect the EasyGo backend and try again.');
+    } finally {
+      if (isCurrentLease(expectedLease)) setLoading(false);
     }
-    
-    function onBackPress() {
-        Haptics.selectionAsync();
+  };
 
-        Animated.parallel([
-            Animated.timing(moveAnimation1, {
-                toValue: 0,
-                duration: 300,
-                useNativeDriver: true
-            }),
-            Animated.timing(moveAnimation2, {
-                toValue: windowSize.width,
-                duration: 300,
-                useNativeDriver: true
-            })
-        ]).start(() => {
-            setShowBack(false)
-        });
-    }
+  const showPhotoNotice = () => {
+    Haptics.selectionAsync();
+    Alert.alert(
+      'Profile photo upload is coming next',
+      'EasyGo needs its own media storage endpoint before a device photo can be published. Your current photo was not changed.'
+    );
+  };
 
-    async function onChooseProfilePicture() {
-        try {
-            // No permissions request is necessary for launching the image library
-            let result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: "Images",
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.25,
-            });
+  return (
+    <BottomSheetModalProvider>
+      <BottomSheetModal
+        ref={modalNicknameRef}
+        index={0}
+        snapPoints={snapPoints}
+        enableContentPanningGesture={false}
+        handleIndicatorStyle={{ backgroundColor: 'black' }}
+        backdropComponent={(props) => <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />}
+        topInset={statusBarHeight + 20}
+      >
+        <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 36 }}>
+          <TouchableOpacity onPress={close} style={{ position: 'absolute', right: 20, top: 8, zIndex: 2 }}>
+            <CloseIcon />
+          </TouchableOpacity>
+          <Text style={{ fontFamily: 'GmarketBold', fontSize: 21, color: '#0F172A', textAlign: 'center' }}>
+            Your EasyGo name
+          </Text>
+          <Text style={{ color: '#64748B', fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 8 }}>
+            This is the name people will see on posts and profiles.
+          </Text>
 
-            if (!result.canceled) {
-                /** Handle Image picked */
-                let imagePath = result.assets[0].uri;
-                setPfpLoading(true);
-                setPfp(imagePath);
+          <TouchableOpacity onPress={showPhotoNotice} style={{ alignSelf: 'center', marginTop: 24 }}>
+            {user?.profile?.pfp ? (
+              <Image source={{ uri: user.profile.pfp }} style={{ width: 78, height: 78, borderRadius: 39 }} />
+            ) : (
+              <Image source={require('../../assets/add_profile_picture.png')} style={{ width: 78, height: 78 }} />
+            )}
+            <Text style={{ color: '#FF6B17', fontFamily: 'GmarketBold', fontSize: 11, textAlign: 'center', marginTop: 7 }}>
+              Photo
+            </Text>
+          </TouchableOpacity>
 
-                const imageType = mime.getType(imagePath)
+          <Text style={{ fontFamily: 'GmarketBold', color: '#334155', fontSize: 12, marginTop: 22, marginBottom: 8 }}>
+            Display name
+          </Text>
+          <TextInput
+            value={displayName}
+            onChangeText={setDisplayName}
+            autoCapitalize="words"
+            maxLength={50}
+            placeholder="EasyGo explorer"
+            placeholderTextColor="#94A3B8"
+            style={{ height: 50, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, paddingHorizontal: 15, color: '#0F172A', fontSize: 15 }}
+          />
 
-                /** Create file object */
-                let file = {
-                    name: "test",
-                    type: imageType,
-                    uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
-                }
-
-                /** Upload PFP to IPFS */
-                const resUpload = await orbis.uploadMedia(file);
-
-                /** Handle result returned by Orbis SDK */
-                if(resUpload.status == 200) {
-                    let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
-                    console.log("finalUrl:", finalUrl);
-                    setPfp(finalUrl);
-                    setPfpLoading(false);
-                } else {
-                    alert("Error uploading profile picture.");
-                    setPfpLoading(false);
-                }
-
-            }
-        } catch(e) {
-            console.log("Error selecting photo:", e);
-            setPfpLoading(false);
-        }
-    }
-
-    function getProfilePicture() {
-        if(pfp.includes("ipfs://")) {
-          return pfp.replace("ipfs://", "https://ipfs.io/ipfs")
-        } else {
-          return pfp
-        }
-    }
-
-    async function doConfirm(when) {
-        if(pfpLoading) {
-            alert("Your profile picture is currently being uploaded.");
-            return;
-        }
-        Haptics.selectionAsync();
-        when == 'now' ? setLoading(true) : setLoadingLater(true);
-
-        const tempData = user.profile?.data ?? {}
-
-        if(inviteCode == 'ORANGE50' && !tempData.claimedOrangeFifty){
-            if(tempData.listClaimedOranges){
-                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                if(index != -1){
-                    tempData.listClaimedOranges[index].listOranges.push({
-                        numberOranges: 50,
-                        type: 'Account Creation Reward'
-                    })
-                }else{
-                    tempData.listClaimedOranges.push({
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: [
-                            {
-                                numberOranges: 50,
-                                type: 'Account Creation Reward'
-                            },
-                        ]
-                    })
-                }
-            }else{
-                tempData.listClaimedOranges = [{
-                    date: moment().format('YYYY-MM-DD'),
-                    listOranges: [
-                        {
-                            numberOranges: 50,
-                            type: 'Account Creation Reward'
-                        },
-                    ]
-                }]
-            }
-
-            tempData.numberOranges ? tempData.numberOranges += 50 : tempData.numberOranges = 50
-            tempData.claimedOrangeFifty = true
-            tempData.rewardFirstPost = 'reward pending'
-
-            setUserData({...tempData})
-        }
-
-        let content = {
-            username: nickname,
-            description: '',
-            pfp: pfp,
-            data: tempData
-        };
-        const res = await orbis.updateProfile(content);
-        
-        let _user = {...user};
-        _user.profile = content;
-        setUser(_user);
-
-        when == 'now' ? setLoading(false) : setLoadingLater(false);
-
-        modalNicknameRef.current?.close()
-        setPushNotifsVis(true);
-    }
-
-
-      
-    const [collapsed, setCollapsed] = useState(true);
-    const [animationCollapse] = useState(new Animated.Value(0));
-
-    const heightInterpolate = animationCollapse.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 100]
-    });
-
-    const spinValue = new Animated.Value(0);
-    const spin = spinValue.interpolate({
-        inputRange: [0, 1],
-        outputRange: ["180deg", "0deg"]
-    })
-
-    const toggleCollapse = () => {
-        if (collapsed) {
-            Animated.parallel([
-                Animated.timing(spinValue,{
-                    toValue: 1,
-                    duration: 300,
-                    useNativeDriver: false 
-                }),
-                Animated.timing(animationCollapse, {
-                    toValue: 1,
-                    duration: 300,
-                    useNativeDriver: false
-                }),
-            ]).start(() => setCollapsed(!collapsed))
-        } else {
-            Animated.parallel([
-                Animated.timing(spinValue,{
-                    toValue: 0,
-                    duration: 300,
-                    easing: Easing.linear,
-                    useNativeDriver: false 
-                }),
-                Animated.timing(animationCollapse, {
-                    toValue: 0,
-                    duration: 300,
-                    useNativeDriver: false
-                }),
-            ]).start(() => setCollapsed(!collapsed))
-        }
-    };
-
-    return(
-        <BottomSheetModalProvider>
-            <BottomSheetModal
-                ref={modalNicknameRef}
-                index={1}
-                snapPoints={snapPoints}
-                enableContentPanningGesture={false}
-                handleIndicatorStyle={{backgroundColor: 'black',}}
-                handleStyle={{height: 2,justifyContent: 'center',marginTop: 10,}}
-                backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
-                topInset={65 + statusBarHeight}
-            >
-                <TouchableOpacity 
-                    activeOpacity={1}
-                    style={[
-                        tailwind('flex flex-col w-full'), 
-                        { height: windowSize.height - 250 }
-                    ]}
-                >
-                    {/* First part -  ask for a nickname */}
-                    <Animated.View style={[tailwind('flex flex-col'), {transform: [{ translateX: moveAnimation1 }],marginTop: 30,marginBottom: 50,}]}>
-                        <TouchableOpacity onPress={() => hide()} style={{position: 'absolute',left: 15, top: -15}}>
-                            <CloseIcon />
-                        </TouchableOpacity>
-
-                        <Text style={{fontWeight: 'bold',textAlign:'center',fontSize: Platform.OS == 'ios' ? 24 : 20,marginTop: Platform.OS == 'ios' ? 10 : 0,}}>Give Us Your Nickname</Text>
-                        <Text style={{textAlign:'center',fontSize: Platform.OS == 'ios' ? 16 : 14,marginTop: 5,}}>Let's Play with CoinEasyners!</Text>
-
-                        <View style={{alignSelf:'center',marginTop: Platform.OS == 'ios' ? 80 : 60, marginBottom: Platform.OS == 'ios' ? 40 : 30}}>
-                            <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',gap: 10, position: 'absolute',alignSelf:'center',width: 200,height: 40}}>
-                                {nickname == "" ? (
-                                    <>
-                                        <Text style={{color: '#959595',fontSize: Platform.OS == 'ios' ? 28 : 25,fontWeight: 'bold',}}>Nickname</Text>
-                                        <PenIcon style={{marginTop: 5,}} />
-                                    </>
-                                ) : (
-                                    <PenIcon style={{position: 'absolute',right: Platform.OS == 'ios' ? 25.5 : 21,top: Platform.OS == 'ios' ? 11.5 : 12}} />
-                                )}
-                            </View>
-                            <TextInput
-                                value={nickname}
-                                onChangeText={(text) => setNickname(text)}
-                                autoFocus
-                                style={{alignSelf:'center',width:170,height: 40,fontSize: 20,}}
-                            />
-                        </View>
-
-                        <View style={{marginVertical: 30,}}>
-                            <TouchableWithoutFeedback onPress={toggleCollapse}>
-                                <View style={{flexDirection:'row',justifyContent:'center',alignItems:'center',}}>
-                                    <Text style={{}}>Do you have an invitation code ?</Text>
-                                    <Animated.View style={{height: 40, justifyContent:'center',alignItems:'center', transform: [{ rotate: spin}]}}>
-                                        <ArrowAccordionIcon />
-                                    </Animated.View>
-                                </View>
-                            </TouchableWithoutFeedback>
-                            <Animated.View style={{ height: heightInterpolate, overflow: 'hidden', paddingHorizontal: 10}}>
-                                <View style={{height: 100}}>
-                                    <Text style={{width:'90%',alignSelf:'center',marginTop: 10,}}>Invite code</Text>
-                                    <TextInput
-                                        value={inviteCode}
-                                        onChangeText={(text) => setInviteCode(text)}
-                                        style={{alignSelf:'center',width:170,height: 40,fontSize: 15,borderRadius: 10,borderWidth: 1, borderColor: '#000',width:'90%',textAlign: 'center',}}
-                                    />
-                                </View>
-                            </Animated.View>
-                        </View>
-                        
-
-
-
-
-
-                        {user?.metadata?.address && (
-                            <Text style={{textAlign:'center',color:'rgba(85,85,85,0.33)'}}>Your Wallet Address : {user.metadata.address.slice(0, 4)}...{user.metadata.address.slice(user.metadata.address.length - 4, user.metadata.address.length)}</Text>
-                        )}
-
-                        <TouchableOpacity 
-                            activeOpacity={0.6} 
-                            style={[
-                                tailwind(`px-5 rounded-full border flex-row items-center`), 
-                                {borderColor: 'black',height: Platform.OS == 'ios' ? 60 : 50, justifyContent: 'center',alignItems: 'center',width: windowSize.width - 40,alignSelf: 'center',marginTop: 20,}
-                            ]} 
-                            onPress={() => {Haptics.selectionAsync();showProfileImage()}}
-                        >
-                            <Text style={[tailwind('text-main font-semibold items-center'), {fontSize: Platform.OS == 'ios' ? 16 : 13, lineHeight: 16,}]}>Next</Text>
-                        </TouchableOpacity>
-                    </Animated.View>
-
-                    {/* Second Part - ask for a profile image */}
-                    {showBack && (
-                        <Animated.View style={{transform: [{ translateX: moveAnimation2 }],position: 'absolute',width: '90%',marginTop: 50,alignSelf: 'center',}}>
-                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();onBackPress()}} style={{position: 'absolute',left: 0, top: -30}}>
-                                <Image
-                                    style={{width: 25,height: 25}}
-                                    resizeMode='contain'
-                                    source={require('../../assets/back_button.png')}
-                                    defaultSource={require('../../assets/back_button.png')}
-                                />
-                            </TouchableOpacity>
-
-                            <Text style={{fontWeight: 'bold',textAlign:'center',fontSize: Platform.OS == 'ios' ? 22 : 20,}}>Choose Your Profile Image</Text>
-                            <Text style={{textAlign:'center',fontSize: Platform.OS == 'ios' ? 16 : 14,marginTop: 5,}}>Let's Play with CoinEasyners!</Text>
-
-                            {nickname && (
-                                <Text style={{textAlign:'center',fontWeight: 'bold',fontSize: 18,marginTop: 10,marginBottom: -20,}}>{nickname}</Text>
-                            )}
-
-                            <TouchableOpacity onPress={() => {Haptics.selectionAsync();onChooseProfilePicture()}} style={{margin: 60,}}>
-
-                                {pfpLoading ? (
-                                    <View style={{width: 90,height: 90, borderWidth: 1}}>
-                                        <ActivityIndicator size="small" color="#000" style={[tailwind('absolute'), {bottom: 0, right: -5}]} />
-                                    </View>
-                                ) : pfp ? (
-                                    <Image
-                                        style={{alignSelf: 'center',width: 90,height: 90, borderRadius: 45}}
-                                        resizeMode='contain'
-                                        source={{
-                                            uri: getProfilePicture(),
-                                            cache: 'force-cache'
-                                        }}
-                                    />
-                                ) : (
-                                    <Image
-                                        style={{alignSelf: 'center',width: 90,height: 90}}
-                                        resizeMode='contain'
-                                        source={require('../../assets/add_profile_picture.png')}
-                                        defaultSource={require('../../assets/add_profile_picture.png')}
-                                    />
-                                )}
-
-                            </TouchableOpacity>
-
-
-
-                            {user?.metadata?.address && (
-                                <Text style={{textAlign:'center',color:'rgba(85,85,85,0.33)'}}>Your Wallet Address : {user.metadata.address.slice(0, 4)}...{user.metadata.address.slice(user.metadata.address.length - 4, user.metadata.address.length)}</Text>
-                            )}
-
-                            {loading ? (
-                                <View style={[tailwind('rounded-full py-4 px-8 flex-row items-center justify-center'), {alignSelf: 'center',width: '100%',backgroundColor: '#FF6E31',marginTop: 30,}]}>
-                                    <ActivityIndicator size="small" color="#020617" />
-                                </View>
-                            ) : (
-
-                                <TouchableOpacity 
-                                    activeOpacity={0.9}
-                                    style={[tailwind('px-7 py-4 rounded-full items-center'), {backgroundColor: "#FF6B17", height: Platform.OS == 'ios' ? 60 : 50,justifyContent:'center', marginBottom: 0, marginTop: 20,}]} 
-                                    onPress={() => doConfirm('now')}
-                                >
-                                    <Text style={[tailwind('text-white font-semibold'), {fontSize: Platform.OS == 'ios' ? 16 : 13, lineHeight: 16,}]}>Confirm</Text>
-                                </TouchableOpacity>
-                            )}
-                            
-                            {loadingLater ? (
-                                <View style={[tailwind('rounded-full py-4 px-8 flex-row items-center justify-center'), {borderColor: 'black',borderWidth:1,height: 50, justifyContent: 'center',alignItems: 'center',width: windowSize.width - 40,alignSelf: 'center',marginTop: 20,backgroundColor: 'white',}]}>
-                                    <ActivityIndicator size="small" color="#020617" />
-                                </View>
-                            ) : (
-
-                                <TouchableOpacity activeOpacity={0.6} style={[tailwind(`px-5 rounded-full border flex-row items-center`), {borderColor: 'black',height: Platform.OS == 'ios' ? 60 : 50, justifyContent: 'center',alignItems: 'center',width: windowSize.width - 40,alignSelf: 'center',marginTop: 20,}]} onPress={() => doConfirm('later')}>
-                                    <Text style={[tailwind('text-main font-semibold items-center'), {fontSize: Platform.OS == 'ios' ? 16 : 13, lineHeight: 16,}]}>Later</Text>
-                                </TouchableOpacity>
-                            )}
-
-                        </Animated.View>
-                    )}
-
-
-                </TouchableOpacity>
-            </BottomSheetModal>
-        </BottomSheetModalProvider>
-    )
+          <TouchableOpacity
+            disabled={loading}
+            onPress={save}
+            style={[tailwind('rounded-full items-center justify-center'), { height: 52, backgroundColor: '#FF6B17', marginTop: 24 }]}
+          >
+            {loading
+              ? <ActivityIndicator size="small" color="white" />
+              : <Text style={{ color: 'white', fontFamily: 'GmarketBold', fontSize: 14 }}>Continue</Text>}
+          </TouchableOpacity>
+        </View>
+      </BottomSheetModal>
+    </BottomSheetModalProvider>
+  );
 }

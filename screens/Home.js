@@ -11,19 +11,14 @@ import { GlobalContext } from "../contexts/GlobalContext";
 import Modal from "../components/Modal";
 import { AntDesign } from "@expo/vector-icons";
 import Button from "../components/Button";
+import useFeed from "../hooks/useFeed";
 
 
 const Home = ({ navigation, route }) => {
-    const { posts, 
-        currentRoute, 
+    const { currentRoute,
         selectedCategory, 
         setSelectedCategory,selectedNews,setSelectedNews, 
-        refreshing, 
-        setRefreshing, 
-        refreshingBottom, 
-        onRefresh, 
         showPostbox, 
-        loadMorePosts, 
         category, 
         setCategory, 
         setScrollAnim, 
@@ -34,57 +29,60 @@ const Home = ({ navigation, route }) => {
         setAdAlreadyClaimed
     } = useContext(GlobalContext);
     const tailwind = useTailwind();
+    const {
+        items: posts,
+        loading,
+        refreshing,
+        loadingMore,
+        error,
+        backendConfigured,
+        refresh,
+        loadMore,
+    } = useFeed('home', { limit: 20 });
 
     useFocusEffect(
         React.useCallback(() => {
             setCurrentRoute(route.name)
-        }, [])
+        }, [route.name, setCurrentRoute])
     );
-    const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
-        Haptics.selectionAsync()
-        if(currentRoute == 'Categories'){
-            if (selectedCategory) {
-                setSelectedCategory(null)
-                return true;
-            }else{
-                setScrollAnim(new Animated.Value(0))
-                setOffsetAnim(new Animated.Value(0))
-                navigation.goBack()
-                return true;
-            }
-        } else if(currentRoute == 'News'){
-            if (selectedNews) {
-                setSelectedNews(null)
-                return true;
-            }else{
-                setScrollAnim(new Animated.Value(0));
-                setOffsetAnim(new Animated.Value(0));
-                navigation.goBack()
-                return true;
-            }
-        } else if(currentRoute == 'Home'){
-            if (category) {
-                setCategory(null)
-            }
-            setScrollAnim(new Animated.Value(0));
-            setOffsetAnim(new Animated.Value(0));
-            navigation.replace('Navigator')
-            return true
-        }
-    });
 
     useEffect(() => {
-        return () => backhandler.remove();
-    }, [navigation])
+        const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
+            Haptics.selectionAsync()
+            if(currentRoute == 'Categories'){
+                if (selectedCategory) {
+                    setSelectedCategory(null)
+                    return true;
+                }else{
+                    setScrollAnim(new Animated.Value(0))
+                    setOffsetAnim(new Animated.Value(0))
+                    navigation.goBack()
+                    return true;
+                }
+            } else if(currentRoute == 'News'){
+                if (selectedNews) {
+                    setSelectedNews(null)
+                    return true;
+                }else{
+                    setScrollAnim(new Animated.Value(0));
+                    setOffsetAnim(new Animated.Value(0));
+                    navigation.goBack()
+                    return true;
+                }
+            } else if(currentRoute == 'Home'){
+                if (category) {
+                    setCategory(null)
+                }
+                setScrollAnim(new Animated.Value(0));
+                setOffsetAnim(new Animated.Value(0));
+                navigation.replace('Navigator')
+                return true
+            }
+            return false;
+        });
 
-    // useEffect(() => {
-    //     fecthFollowers()
-    // }, [])
-    
-    // const fecthFollowers = async () => {
-    //     const { data, error } = await orbis.getProfileFollowers(user.did);
-    //     setListFollowers([...data])
-    // }
+        return () => backhandler.remove();
+    }, [category, currentRoute, navigation, selectedCategory, selectedNews, setCategory, setOffsetAnim, setScrollAnim, setSelectedCategory, setSelectedNews])
 
     return(
         <>
@@ -94,11 +92,12 @@ const Home = ({ navigation, route }) => {
                 <View style={tailwind('flex flex-1 bg-white')}>
                     <Feed 
                         posts={posts} 
-                        refreshing={refreshing} 
-                        refreshingBottom={refreshingBottom} 
-                        onRefresh={onRefresh} 
-                        loadMore={loadMorePosts} 
-                        setRefreshing={setRefreshing}
+                        refreshing={loading || refreshing}
+                        refreshingBottom={loadingMore}
+                        onRefresh={refresh}
+                        loadMore={loadMore}
+                        error={error}
+                        backendConfigured={backendConfigured}
                     />
 
                     {/** Share button */}

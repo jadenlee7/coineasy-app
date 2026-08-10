@@ -1,5 +1,5 @@
-import React, { useState, useContext, useRef } from "react";
-import { Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity, Animated, Dimensions, Platform, StyleSheet, TouchableHighlight } from 'react-native';
+import React, { useState, useContext, useEffect, useLayoutEffect, useRef } from "react";
+import { Alert, Keyboard, Text, View, ActivityIndicator, Image, TouchableOpacity, Animated, Dimensions, Platform, StyleSheet, TouchableHighlight } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -8,13 +8,17 @@ import Modal from "../Modal";
 import Button from "../Button";
 import { sleep } from '../../utils';
 import { GlobalContext } from "../../contexts/GlobalContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+    useDeviceAccountData,
+    useDeviceAccountOperationLease,
+} from '../../contexts/DeviceAccountDataContext';
 import { showMessage } from "react-native-flash-message";
 import { SuccessIcon } from "../Icons";
 import { UserPfp } from "../User";
 import useDidToAddress from "../../hooks/useDidToAddress";
 import useGetUsername from "../../hooks/useGetUsername";
-import moment from "moment";
+import usePosts from "../../hooks/usePosts";
+import { getEasyGoUserId } from "../../utils/socialPostAdapter";
 
 const list_report = [
     {label: 'It\'s spam'},
@@ -26,26 +30,77 @@ const list_report = [
     {label: 'False information'},
 ];
 
+let nextPostSettingsOpenGeneration = 0;
+let activePostSettingsPresentation = null;
+
+function createPostSettingsTarget(source) {
+    const post = source?.value;
+    return Object.freeze({
+        postId: post?.easygo?.postId || post?.stream_id || null,
+        creatorDid: post?.creator_details?.did || post?.creator || null,
+    });
+}
+
+function beginPostSettingsPresentation(source) {
+    const target = createPostSettingsTarget(source);
+    const presentation = Object.freeze({
+        source,
+        postId: target.postId,
+        creatorDid: target.creatorDid,
+        openGeneration: ++nextPostSettingsOpenGeneration,
+    });
+    activePostSettingsPresentation = presentation;
+    return presentation;
+}
+
+function isCurrentPostSettingsPresentation(candidate) {
+    return Boolean(
+        candidate
+        && activePostSettingsPresentation === candidate
+        && activePostSettingsPresentation.postId === candidate.postId
+        && activePostSettingsPresentation.creatorDid === candidate.creatorDid
+        && activePostSettingsPresentation.openGeneration === candidate.openGeneration
+    );
+}
+
+function invalidatePostSettingsPresentation(candidate) {
+    if (activePostSettingsPresentation === candidate) {
+        activePostSettingsPresentation = null;
+    }
+}
+
+function isPostOwnedByUser(user, post) {
+    const ownUserId = getEasyGoUserId(user);
+    const authorUserId = post?.easygo?.authorId
+        || getEasyGoUserId(post?.creator_details)
+        || getEasyGoUserId(post?.creator);
+    if (ownUserId && authorUserId) return ownUserId === authorUserId;
+
+    const ownDid = user?.did || null;
+    const creatorDid = post?.creator_details?.did || post?.creator || null;
+    return Boolean(ownDid && creatorDid && ownDid === creatorDid);
+}
+
 export default function PostSettingsModal() {    
     const { 
-        orbis,
         user,
         showPostbox,
         postboxVis,
         editedPost,
         setEditedPost,
-        listBlockedUser,
-        setListBlockedUser,
-        listHiddenPost,
-        setListHiddenPost,
-        listMutedUsers,
-        setListMutedUsers,
         modalPostSettingsRef,
         showReportBack,
         setShowReportBack,
-        userData,
-        setUserData
     } = useContext(GlobalContext);
+    const {
+        blockedAccounts: listBlockedUser,
+        hiddenPosts: listHiddenPost,
+        mutedAccounts: listMutedUsers,
+        saveBlockedAccounts,
+        saveHiddenPosts,
+        saveMutedAccounts,
+    } = useDeviceAccountData();
+    const { isCurrentLease, lease } = useDeviceAccountOperationLease();
 
     const windowSize = Dimensions.get('window')
 
@@ -59,6 +114,7 @@ export default function PostSettingsModal() {
     const [showMuteBack, setShowMuteBack] = useState(false)
 
     const [loader, setLoader] = useState(false)
+    const { remove: removePost, backendConfigured } = usePosts({ autoLoad: false });
 
     const moveAnimation1 = useRef(new Animated.Value(0)).current;
     const moveAnimation2 = useRef(new Animated.Value(windowSize.width)).current;
@@ -66,81 +122,139 @@ export default function PostSettingsModal() {
     const moveAnimation4 = useRef(new Animated.Value(windowSize.width)).current;
     const moveAnimation5 = useRef(new Animated.Value(windowSize.width)).current;
 
+    const presentationSourceRef = useRef(null);
+    const livePresentationRef = useRef(null);
+    if (
+        presentationSourceRef.current !== editedPost
+        || !livePresentationRef.current
+    ) {
+        presentationSourceRef.current = editedPost;
+        livePresentationRef.current = beginPostSettingsPresentation(editedPost);
+    }
+    const openGeneration = livePresentationRef.current.openGeneration;
+
     const { address, chain } = useDidToAddress(editedPost?.value.creator_details.did);
     const username = useGetUsername(editedPost?.value.creator_details.profile, address, editedPost?.value.creator_details);
+    const ownsSelectedPost = isPostOwnedByUser(user, editedPost?.value);
 
-    function hide() {
-        setEditedPost(null);
+    const isCurrentOperation = (operation) => Boolean(
+        operation
+        && isCurrentLease(operation.expectedLease)
+        && isCurrentPostSettingsPresentation(operation.expectedPresentation)
+        && operation.expectedPostId === operation.expectedPresentation.postId
+        && operation.expectedCreatorDid === operation.expectedPresentation.creatorDid
+        && operation.expectedOpenGeneration === operation.expectedPresentation.openGeneration
+    );
+
+    const captureOperation = () => {
+        const expectedLease = lease;
+        const expectedPresentation = livePresentationRef.current;
+        if (
+            !expectedLease
+            || !isCurrentLease(expectedLease)
+            || !isCurrentPostSettingsPresentation(expectedPresentation)
+        ) {
+            return null;
+        }
+        return Object.freeze({
+            expectedLease,
+            expectedPresentation,
+            expectedPostId: expectedPresentation.postId,
+            expectedCreatorDid: expectedPresentation.creatorDid,
+            expectedOpenGeneration: expectedPresentation.openGeneration,
+            hiddenPostId: expectedPresentation.source?.value?.stream_id || expectedPresentation.postId,
+            source: expectedPresentation.source,
+            username,
+        });
+    };
+
+    const resetPresentationState = () => {
+        moveAnimation1.stopAnimation();
+        moveAnimation2.stopAnimation();
+        moveAnimation3.stopAnimation();
+        moveAnimation4.stopAnimation();
+        moveAnimation5.stopAnimation();
+        moveAnimation1.setValue(0);
+        moveAnimation2.setValue(windowSize.width);
+        moveAnimation3.setValue(windowSize.width);
+        moveAnimation4.setValue(windowSize.width);
+        moveAnimation5.setValue(windowSize.width);
+        setLoading(false);
+        setSuccess(false);
+        setChecked(undefined);
+        setShowBlockBack(false);
+        setShowHideBack(false);
+        setShowMuteBack(false);
+        setShowReportBack(false);
+        setLoader(false);
+    };
+
+    useEffect(() => {
+        if (!isCurrentPostSettingsPresentation(livePresentationRef.current)) {
+            const mountedPresentation = beginPostSettingsPresentation(editedPost);
+            presentationSourceRef.current = editedPost;
+            livePresentationRef.current = mountedPresentation;
+        }
+        return () => invalidatePostSettingsPresentation(livePresentationRef.current);
+    }, []);
+
+    useLayoutEffect(() => {
+        resetPresentationState();
+    }, [openGeneration]);
+
+    function hide(operation) {
+        if (!isCurrentOperation(operation)) return false;
+        invalidatePostSettingsPresentation(operation.expectedPresentation);
+        setEditedPost((current) => (current === operation.source ? null : current));
+        resetPresentationState();
         Keyboard.dismiss()
         Haptics.selectionAsync();
         modalPostSettingsRef.current?.close()
+        return true;
     }
     
     async function editPost() {
+        const operation = captureOperation();
+        if (!operation) return;
+        invalidatePostSettingsPresentation(operation.expectedPresentation);
         modalPostSettingsRef.current?.close()
         showPostbox();
     }
 
     async function deletePost() {
-
-        // if post newer than 06/09/2024 16:36:01
-        // remove 15 oranges awarded during creation
-        if(editedPost?.value.timestamp > 1725633361){
-            const tempData = userData ?? {}
-
-            if(tempData.listClaimedOranges){
-                const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                if(index != -1){
-                    tempData.listClaimedOranges[index].listOranges.push({
-                        numberOranges: -15,
-                        type: 'Post Deletion'
-                    })
-                }else{
-                    tempData.listClaimedOranges.push({
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: [
-                            {
-                                numberOranges: -15,
-                                type: 'Post Deletion'
-                            },
-                        ]
-                    })
-                }
-            }else{
-                tempData.listClaimedOranges = [{
-                    date: moment().format('YYYY-MM-DD'),
-                    listOranges: [
-                        {
-                            numberOranges: -15,
-                            type: 'Post Deletion'
-                        },
-                    ]
-                }]
-            }
-
-            tempData.numberOranges ? tempData.numberOranges -= 15 : tempData.numberOranges = 0
-
-            setUserData({...tempData})
-            console.log(JSON.stringify(tempData));
-            
-
-            var tempProfile = user.profile
-            tempProfile.data = tempData
-            const res = await orbis.updateProfile(tempProfile);
+        const operation = captureOperation();
+        if (!operation) return;
+        const postId = operation.expectedPostId;
+        if (!backendConfigured) {
+            Alert.alert('Backend not connected', 'Add EXPO_PUBLIC_BACKEND_URL to .env before deleting.');
+            return;
         }
-        
+        if (!postId) {
+            Alert.alert('Post unavailable', 'Close this menu and reopen the post.');
+            return;
+        }
+
         setLoading(true);
-        let res = await orbis.deletePost(editedPost?.value.stream_id);
-        setLoading(false);
-        setSuccess(true);
-        if(editPost.type != 'notCreatorReposted'){
-            editedPost.callbackDelete();
+        const removed = await removePost(postId);
+        if (removed && isCurrentLease(operation.expectedLease)) {
+            operation.source?.callbackDelete?.();
         }
+        if (!isCurrentOperation(operation)) return;
+        setLoading(false);
+        if (!removed) {
+            Alert.alert('Could not delete post', 'Check the backend connection and try again.');
+            return;
+        }
+
+        setSuccess(true);
         await sleep(1500);
-        setEditedPost(null);
+        if (!isCurrentOperation(operation)) return;
+        hide(operation);
     }
 
     const doAnimation = (ref1, ref2, value1, value2, return_function) => {
+        const expectedPresentation = livePresentationRef.current;
+        if (!isCurrentPostSettingsPresentation(expectedPresentation)) return;
         Animated.parallel([
             Animated.timing(ref1, {
                 toValue: value1,
@@ -152,7 +266,10 @@ export default function PostSettingsModal() {
                 duration: 300,
                 useNativeDriver: true
             })
-        ]).start(return_function);
+        ]).start(() => {
+            if (!isCurrentPostSettingsPresentation(expectedPresentation)) return;
+            return_function?.();
+        });
     }
 
     const showBlock = () => {
@@ -178,13 +295,15 @@ export default function PostSettingsModal() {
     }
 
     function sendReport () {
+        const operation = captureOperation();
+        if (!operation) return;
         Haptics.selectionAsync();
         setLoading(true);
 
         setTimeout(() => {
+            if (!isCurrentOperation(operation)) return;
             setLoading(false);
 
-            hide();
             showMessage({
                 message: "This post was reported !",
                 type: "success",
@@ -192,6 +311,7 @@ export default function PostSettingsModal() {
                 backgroundColor: "#3D3D3D",
                 icon: () => <SuccessIcon style={{marginRight: 10,}}/>
             });
+            hide(operation);
         }, 3000)
     }
 
@@ -217,99 +337,105 @@ export default function PostSettingsModal() {
     }
 
     const blockUser = async () => {
+        const operation = captureOperation();
+        if (!operation) return;
         Haptics.selectionAsync()
         try {
             setLoader(true)
     
-            const userInfo = editedPost.value.creator_details.did
-            let temp_list = listBlockedUser
-            if(listBlockedUser && !listBlockedUser?.includes(userInfo)){
-                temp_list.push(userInfo)
-            }else{
-                temp_list = [userInfo]
-            }
-
-            if(temp_list){
-                setListBlockedUser([...temp_list])
-                await AsyncStorage.setItem("list_blocked_user", JSON.stringify(temp_list));
+            const userInfo = operation.expectedCreatorDid;
+            const temp_list = listBlockedUser?.includes(userInfo)
+                ? listBlockedUser
+                : [...(listBlockedUser || []), userInfo];
+            const saved = await saveBlockedAccounts(temp_list);
+            if (!isCurrentOperation(operation)) return;
+            if (!saved) {
+                setLoader(false);
+                return;
             }
 
             setLoader(false)
-            hide()
-    
             showMessage({
-                message: "@"+username+" is now blocked !",
+                message: "@"+operation.username+" is now blocked !",
                 type: "success",
                 floating: true,
                 backgroundColor: "#3D3D3D",
                 icon: () => <SuccessIcon style={{marginRight: 10,}}/>
             });
-        } catch (error) {
-            Alert(error)            
+            hide(operation)
+        } catch {
+            if (isCurrentOperation(operation)) {
+                setLoader(false);
+                Alert.alert('Could not block account', 'Please try again.');
+            }
         }
     }
 
     const hidePost = async () => {
+        const operation = captureOperation();
+        if (!operation) return;
         try {
             setLoader(true)
     
-            const postInfo = editedPost.value.stream_id
-            let temp_list = listHiddenPost
-            if(listHiddenPost && !listHiddenPost?.includes(postInfo)){
-                temp_list.push(postInfo)
-            }else{
-                temp_list = [postInfo]
-            }
-
-            if(temp_list){
-                setListHiddenPost([...temp_list])
-                await AsyncStorage.setItem("list_hidden_post", JSON.stringify(temp_list));
+            const postInfo = operation.hiddenPostId;
+            const temp_list = listHiddenPost?.includes(postInfo)
+                ? listHiddenPost
+                : [...(listHiddenPost || []), postInfo];
+            const saved = await saveHiddenPosts(temp_list);
+            if (!isCurrentOperation(operation)) return;
+            if (!saved) {
+                setLoader(false);
+                return;
             }
 
             setLoader(false)
-            hide()
-    
             showMessage({
-                message: "This post by @"+username+" is now hidden !",
+                message: "This post by @"+operation.username+" is now hidden !",
                 type: "success",
                 floating: true,
                 backgroundColor: "#3D3D3D",
                 icon: () => <SuccessIcon style={{marginRight: 10,}}/>
             });
-        } catch (error) {
-            Alert(error)            
+            hide(operation)
+        } catch {
+            if (isCurrentOperation(operation)) {
+                setLoader(false);
+                Alert.alert('Could not hide post', 'Please try again.');
+            }
         }
     }
 
     const MuteUser = async () => {
+        const operation = captureOperation();
+        if (!operation) return;
         try {
             setLoader(true)
     
-            const userInfo = editedPost.value.creator_details.did
-            let temp_list = listMutedUsers
-            if(listMutedUsers && !listMutedUsers?.includes(userInfo)){
-                temp_list.push(userInfo)
-            }else{
-                temp_list = [userInfo]
-            }
-
-            if(temp_list){
-                setListMutedUsers([...temp_list])
-                await AsyncStorage.setItem("list_muted_users", JSON.stringify(temp_list));
+            const userInfo = operation.expectedCreatorDid;
+            const temp_list = listMutedUsers?.includes(userInfo)
+                ? listMutedUsers
+                : [...(listMutedUsers || []), userInfo];
+            const saved = await saveMutedAccounts(temp_list);
+            if (!isCurrentOperation(operation)) return;
+            if (!saved) {
+                setLoader(false);
+                return;
             }
 
             setLoader(false)
-            hide()
-    
             showMessage({
-                message: "@"+username+" is now muted !",
+                message: "@"+operation.username+" is now muted !",
                 type: "success",
                 floating: true,
                 backgroundColor: "#3D3D3D",
                 icon: () => <SuccessIcon style={{marginRight: 10,}}/>
             });
-        } catch (error) {
-            Alert(error)            
+            hide(operation)
+        } catch {
+            if (isCurrentOperation(operation)) {
+                setLoader(false);
+                Alert.alert('Could not mute account', 'Please try again.');
+            }
         }
     }
 
@@ -317,7 +443,7 @@ export default function PostSettingsModal() {
     /** We hide the repost modal if the postbox is also visible, (this means that the user is quote posting) */
     if(postboxVis) {
         return null;
-    } else if((editedPost?.type == 'notCreator' && user?.did !== editedPost?.value?.creator_details?.did) || editedPost?.type == 'notCreatorReposted'){
+    } else if((editedPost?.type == 'notCreator' && !ownsSelectedPost) || editedPost?.type == 'notCreatorReposted'){
         return(
             // <Modal hide={() => {hide();setSuccess(false);}} animateModal={true} bottomDuration={200} bottomStart={-100} type='small'>
             <>

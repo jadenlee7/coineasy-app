@@ -1,31 +1,90 @@
 import React, { useContext, useState, useEffect, useRef } from "react";
-import { Text, View, TouchableOpacity, TouchableHighlight, TextInput, ActivityIndicator, Platform, Image, ScrollView, BackHandler, Dimensions, KeyboardAvoidingView, Animated, Keyboard, ImageBackground } from 'react-native';
+import { Alert, Text, View, TouchableOpacity, TouchableHighlight, TextInput, ActivityIndicator, Platform, Image, ScrollView, BackHandler, Dimensions, KeyboardAvoidingView, Animated, Keyboard } from 'react-native';
 
-import mime from 'mime'
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
-import * as ImagePicker from 'expo-image-picker';
 
 import Post from "./Post";
 import Button from "./Button";
-import { getTimestamp } from "../utils";
-import { context } from '../utils/config.js';
 import User, { UserPfp, Username } from "./User";
 import { checkContextAccess, isOwner } from "../utils";
 import { GlobalContext } from "../contexts/GlobalContext";
 import { BackIcon, ImagePickerIcon, CaretDownIcon, CloseIcon, LockIcon, UnlockIcon, CameraIcon } from "./Icons";
-import moment from "moment";
-
-/** Init mentions object */
-let mentions = [];
+import usePosts from "../hooks/usePosts";
+import useReplies from "../hooks/useReplies";
+import { api } from "../utils/api";
+import { adaptSocialAuthor } from "../utils/socialPostAdapter";
+import { useDeviceAccountOperationLease } from "../contexts/DeviceAccountDataContext";
 
 const { width, height } = Dimensions.get('window')
 
-export default function Postbox({isReply = false}) {
+function postboxReplyParentId(replyTo) {
+    return replyTo?.easygo?.postId || replyTo?.stream_id || null;
+}
+
+function postboxEditedPostId(editedPost) {
+    return editedPost?.value?.easygo?.postId || editedPost?.value?.stream_id || null;
+}
+
+export function createPostboxComposeTarget({ editedPost, openGeneration = 0, replyTo, repost }) {
+    const editedPostId = postboxEditedPostId(editedPost);
+    const replyParentId = postboxReplyParentId(replyTo);
+    return Object.freeze({
+        mode: editedPostId ? 'edit' : replyParentId ? 'reply' : repost ? 'repost' : 'post',
+        editedPostId,
+        replyParentId,
+        openGeneration: Number.isFinite(openGeneration) ? openGeneration : 0,
+    });
+}
+
+export function samePostboxComposeTarget(left, right) {
+    return Boolean(
+        left
+        && right
+        && left.mode === right.mode
+        && left.editedPostId === right.editedPostId
+        && left.replyParentId === right.replyParentId
+        && left.openGeneration === right.openGeneration
+    );
+}
+
+export function postboxComposeTargetKey(target) {
+    return JSON.stringify([
+        target?.mode || 'post',
+        target?.editedPostId || null,
+        target?.replyParentId || null,
+        target?.openGeneration || 0,
+    ]);
+}
+
+function categoryIdentity(category) {
+    return category?.stream_id
+        || category?.id
+        || category?.content?.id
+        || category?.content?.displayName
+        || null;
+}
+
+export function createPostboxDraft(editedPost) {
+    const content = editedPost?.value?.content || {};
+    const category = editedPost ? {
+        content: editedPost.value?.context_details?.context_details
+            || content.context_details
+            || null,
+        stream_id: editedPost.value?.context || content.context || null,
+    } : false;
+    return {
+        category,
+        media: Array.isArray(content.media) ? [...content.media] : [],
+        mentions: Array.isArray(content.mentions) ? [...content.mentions] : [],
+        message: typeof content.body === 'string' ? content.body : '',
+    };
+}
+
+export default function Postbox({isReply = false, openGeneration = 0}) {
     const { 
         user, 
         userData,
-        orbis, 
         setShowConnectModal, 
         hidePostbox, 
         replyTo, 
@@ -39,49 +98,73 @@ export default function Postbox({isReply = false}) {
         selectedNews, 
         currentRoute,
         categoriesVis,
-        setCategoriesVis,
-        modalPostBoxRef,
-        setUserData
+        setCategoriesVis
     } = useContext(GlobalContext);
+    const { lease, isCurrentLease } = useDeviceAccountOperationLease();
     const tailwind = useTailwind();
+    const replyParentId = postboxReplyParentId(replyTo);
+    const composeTarget = createPostboxComposeTarget({
+        editedPost,
+        openGeneration,
+        replyTo,
+        repost,
+    });
+    const composeTargetKey = postboxComposeTargetKey(composeTarget);
+    const initialDraft = createPostboxDraft(editedPost);
+    const { create: createPost, update: updatePost, backendConfigured } = usePosts({ autoLoad: false });
+    const { create: createReply } = useReplies(replyParentId, { autoLoad: false });
 
     const textInputRef = useRef();
+    const mentionsRef = useRef(initialDraft.mentions);
+    const liveComposeTargetRef = useRef(composeTarget);
+    const liveMentionOwnerUserIdRef = useRef(user?.id || null);
+    const mentionRequestGenerationRef = useRef(0);
+    const accessRequestGenerationRef = useRef(0);
+    const selectedCategoryIdentityRef = useRef(categoryIdentity(initialDraft.category));
+    const composeOperationGenerationRef = useRef(0);
+    const composeOperationRef = useRef(null);
     const moveAnimation1 = useRef(new Animated.Value(0)).current;
     const moveAnimation2 = useRef(new Animated.Value(width)).current;
+    liveComposeTargetRef.current = composeTarget;
+    liveMentionOwnerUserIdRef.current = user?.id || null;
 
-    const [message, setMessage] = useState("");
+    const [message, setMessage] = useState(initialDraft.message);
     const [loading, setLoading] = useState(false);
-    const [imageLoading, setImageLoading] = useState(false);
-    const [cameraLoading, setCameraLoading] = useState(false);
-    const [categorySelected, setCategorySelected] = useState(false);
+    const [categorySelected, setCategorySelected] = useState(initialDraft.category);
     const [hasAccess, setHasAccess] = useState(false);
     const [mentionsBoxVis, setMentionsBoxVis] = useState(false);
     const [currentMention, setCurrentMention] = useState(null);
-    const [listMedia, setListMedia] = useState([]);
-    const [keepFocus, setKeepFocus] = useState(false)
+    const [listMedia, setListMedia] = useState(initialDraft.media);
     const [fullListFollow, setFullListFollow] = useState([])
     const [keyboardHeight, setKeyboardHeight] = useState(0);
 
     useEffect(() => {
-        /** Make sure mentions is reset */
-        mentions = [];
+        const nextDraft = createPostboxDraft(editedPost);
+        composeOperationGenerationRef.current += 1;
+        composeOperationRef.current = null;
+        accessRequestGenerationRef.current += 1;
+        mentionsRef.current = nextDraft.mentions;
+        selectedCategoryIdentityRef.current = categoryIdentity(nextDraft.category);
+        setMessage(nextDraft.message);
+        setListMedia(nextDraft.media);
+        setCategorySelected(nextDraft.category);
+        setHasAccess(false);
+        setMentionsBoxVis(false);
+        setCurrentMention(null);
+        setLoading(false);
+        setCategoriesVis(false);
+        moveAnimation1.setValue(0);
+        moveAnimation2.setValue(width);
+    }, [composeTargetKey, moveAnimation1, moveAnimation2, setCategoriesVis])
 
-        /** If user is editing a post we pre-fill the content */
-        if(editedPost) {
-            setMessage(editedPost.value.content.body);
-            setListMedia([...editedPost.value.content.media]);
+    useEffect(() => {
+        void getListFollow()
+        return () => {
+            mentionRequestGenerationRef.current += 1;
+        };
+    }, [backendConfigured, isCurrentLease, lease, user?.id])
 
-            mentions = editedPost.value.content.mentions
-
-            const temp_category = {}
-            temp_category.content = editedPost.value.context_details?.context_details ? editedPost.value.context_details?.context_details : editedPost.value.content?.context_details
-            temp_category.stream_id = editedPost.value.context ? editedPost.value.context : editedPost.value.content?.context
-
-            setCategorySelected(temp_category)
-        }
-
-        getListFollow()
-
+    useEffect(() => {
         function onKeyboardDidShow(e) {setKeyboardHeight(e.endCoordinates.height);}
         function onKeyboardDidHide(e) {setKeyboardHeight(0);}
 
@@ -93,142 +176,276 @@ export default function Postbox({isReply = false}) {
         };
     }, [])
 
+    function isCurrentComposeTarget(operationTarget, operationLease) {
+        return Boolean(
+            operationLease
+            && isCurrentLease(operationLease)
+            && samePostboxComposeTarget(liveComposeTargetRef.current, operationTarget)
+        );
+    }
+
+    function beginComposeOperation(operationLease, operationTarget) {
+        const existing = composeOperationRef.current;
+        if (existing && isCurrentComposeOperation(existing)) return null;
+        const operation = Object.freeze({
+            generation: ++composeOperationGenerationRef.current,
+            lease: operationLease,
+            target: operationTarget,
+        });
+        composeOperationRef.current = operation;
+        return operation;
+    }
+
+    function isCurrentComposeOperation(operation) {
+        return Boolean(
+            operation
+            && composeOperationRef.current === operation
+            && operation.generation === composeOperationGenerationRef.current
+            && isCurrentComposeTarget(operation.target, operation.lease)
+        );
+    }
+
+    function finishComposeOperation(operation) {
+        if (composeOperationRef.current !== operation) return;
+        composeOperationRef.current = null;
+        if (isCurrentComposeTarget(operation.target, operation.lease)) setLoading(false);
+    }
+
     async function getListFollow() {
-        const result_followers = await orbis.getProfileFollowers(user.did);
-        const result_following = await orbis.getProfileFollowing(user.did);
+        const operationLease = lease;
+        const operationUserId = user?.id || null;
+        const requestGeneration = ++mentionRequestGenerationRef.current;
+        const isCurrentRequest = () => Boolean(
+            operationLease
+            && isCurrentLease(operationLease)
+            && requestGeneration === mentionRequestGenerationRef.current
+            && liveMentionOwnerUserIdRef.current === operationUserId
+        );
+        if (!operationLease || !isCurrentLease(operationLease)) return;
+        setFullListFollow([]);
+        if (!operationUserId || !backendConfigured) return;
 
-        result_followers.data?.forEach(e => e.details.type = 'Followers');
-        result_following.data?.forEach(e => e.details.type = 'Following');
-
-        const full_list_follow = [...result_followers.data, ...result_following.data];
-        setFullListFollow([...full_list_follow])
+        try {
+            const [followersResult, followingResult] = await Promise.all([
+                api.follows.followers(operationUserId, { limit: 100 }),
+                api.follows.following(operationUserId, { limit: 100 }),
+            ]);
+            if (!isCurrentRequest()) return;
+            const followers = (followersResult?.rows || []).map((profile) => ({
+                details: { ...adaptSocialAuthor(profile), type: 'Followers' },
+            }));
+            const following = (followingResult?.rows || []).map((profile) => ({
+                details: { ...adaptSocialAuthor(profile), type: 'Following' },
+            }));
+            setFullListFollow([...followers, ...following]);
+        } catch (error) {
+            if (!isCurrentRequest()) return;
+            console.warn('[Postbox] unable to load mention suggestions', error);
+            setFullListFollow([]);
+        }
     }
 
     async function checkAccess(temp_cat) {
+        const operationLease = lease;
+        const operationTarget = composeTarget;
+        const operationCategoryIdentity = categoryIdentity(temp_cat);
+        const requestGeneration = ++accessRequestGenerationRef.current;
+        selectedCategoryIdentityRef.current = operationCategoryIdentity;
+        const isCurrentRequest = () => Boolean(
+            isCurrentComposeTarget(operationTarget, operationLease)
+            && requestGeneration === accessRequestGenerationRef.current
+            && selectedCategoryIdentityRef.current === operationCategoryIdentity
+        );
+        if (!operationLease || !isCurrentComposeTarget(operationTarget, operationLease)) return;
+        setHasAccess(false);
         if(temp_cat?.content.accessRules && temp_cat?.content.accessRules.length > 0) {
-            checkContextAccess(user, temp_cat.content.accessRules, () => setHasAccess(true)).catch(e => console.log(e))
+            try {
+                await checkContextAccess(user, temp_cat.content.accessRules, () => {
+                    if (isCurrentRequest()) setHasAccess(true);
+                });
+            } catch (error) {
+                if (isCurrentRequest()) console.log(error);
+            }
         } else {
-            setHasAccess(true);
+            if (isCurrentRequest()) setHasAccess(true);
         }
     }
 
     /** Pre-select category if one already selected in the feed */
     useEffect(() => {
-        if(category || selectedCategory || selectedNews) {
-            const temp_cat = currentRoute == 'Categories' ? selectedCategory : currentRoute == 'News' ? selectedNews : category
-            setCategorySelected(temp_cat);
-            checkAccess(temp_cat);
-        }else{
-            checkAccess(null)
-        }
-    }, [category, selectedCategory, selectedNews])
+        const editCategory = createPostboxDraft(editedPost).category;
+        const temp_cat = composeTarget.mode === 'edit'
+            ? editCategory
+            : category || selectedCategory || selectedNews
+                ? currentRoute == 'Categories'
+                    ? selectedCategory
+                    : currentRoute == 'News'
+                        ? selectedNews
+                        : category
+                : false;
+        selectedCategoryIdentityRef.current = categoryIdentity(temp_cat);
+        setCategorySelected(temp_cat);
+        void checkAccess(temp_cat || null);
+    }, [category, composeTargetKey, currentRoute, isCurrentLease, lease, selectedCategory, selectedNews])
 
     async function edit() {
+        const operationLease = lease;
+        const operationTarget = composeTarget;
+        if (!operationLease || !isCurrentComposeTarget(operationTarget, operationLease)) return;
+        if (composeOperationRef.current && isCurrentComposeOperation(composeOperationRef.current)) return;
+        Haptics.selectionAsync();
+        const operationEditedPost = editedPost;
+        const operationCategory = categorySelected;
+        const postId = operationTarget.editedPostId;
+        const body = message.trim();
+        if (!backendConfigured) {
+            Alert.alert('Backend not connected', 'Add EXPO_PUBLIC_BACKEND_URL to .env before editing.');
+            return;
+        }
+        if (!user || !postId) {
+            Alert.alert('Post unavailable', 'Sign in again and reopen the post before editing.');
+            return;
+        }
+        if (!body) {
+            Alert.alert('Write something first', 'A post needs some text.');
+            return;
+        }
+
+        const categoryTag = categorySelected?.tag || categorySelected?.content?.displayName;
+        const normalizedCategoryTag = typeof categoryTag === 'string' && categoryTag.startsWith('#') ? categoryTag : null;
+        const publishBody = normalizedCategoryTag && !body.toLowerCase().includes(normalizedCategoryTag.toLowerCase())
+            ? `${body}\n\n${normalizedCategoryTag}`
+            : body;
+        if (publishBody.length > 2000) {
+            Alert.alert('Post is too long', 'Shorten the post to 2,000 characters or fewer.');
+            return;
+        }
+
+        const firstMedia = listMedia?.[0];
+        const mediaUrl = firstMedia?.url || firstMedia?.[0]?.url || null;
+        const operation = beginComposeOperation(operationLease, operationTarget);
+        if (!operation) return;
+        setLoading(true);
         try {
-            Haptics.selectionAsync();
-            setLoading(true);
-            let content = {...editedPost.value.content};
-            content.body = message;
-            content.media = listMedia ? listMedia : null
-            content.mention = mentions
-
-            if(categorySelected){
-                content.context = categorySelected.stream_id
-                content.context_details = categorySelected.content
+            const updated = await updatePost(postId, { body: publishBody, mediaUrl });
+            if (!isCurrentComposeOperation(operation)) return;
+            if (!updated) {
+                Alert.alert('Could not edit post', 'Check the backend connection and try again.');
+                return;
             }
-            
-            /** Share edited post */
-            let res = await orbis.editPost(editedPost.value.stream_id, content);
-            console.log("res:", res);
-
-            if(res.status == 200) {
-                editedPost.callback(
-                    message,
-                    listMedia,
-                    categorySelected
-                );
-                setMessage("");
-                mentions = [];
-            } else {
-                console.log("res:", res);
-                alert("Error editing post.");
-            }
-
-            /** Stop loading indicator */
-            setLoading(false);
-            modalPostBoxRef.current?.close()
-        } catch(e) {
-            alert("Error editing post.");
-            setLoading(false);
+            operationEditedPost?.callback?.(
+                updated.content.body,
+                updated.content.media,
+                operationCategory || null
+            );
+            if (!operationEditedPost?.callback && isCurrentComposeOperation(operation)) hidePostbox();
+        } finally {
+            finishComposeOperation(operation);
         }
     }
 
-    /** Will share message with Orbis */
+    /** Create a root post or reply through the EasyGo backend. */
     async function send() {
+        const operationLease = lease;
+        const operationTarget = composeTarget;
+        if (!operationLease || !isCurrentComposeTarget(operationTarget, operationLease)) return;
+        let operation = null;
 
         try {
+            if (composeOperationRef.current && isCurrentComposeOperation(composeOperationRef.current)) return;
             Haptics.selectionAsync();
-            let _context = context;
+            const body = message.trim();
+
+            if (!backendConfigured) {
+                Alert.alert('Backend not connected', 'Add EXPO_PUBLIC_BACKEND_URL to .env before publishing.');
+                return;
+            }
+            if (!user) {
+                showConnect();
+                return;
+            }
+            if (repost) {
+                Alert.alert('Reposts are coming next', 'EasyGo repost publishing is not connected yet.');
+                return;
+            }
+            if (!body) {
+                Alert.alert('Write something first', 'A post or reply needs some text before it can be published.');
+                return;
+            }
+
+            const operationReplyTo = replyTo;
+            const operationRepost = repost;
+            const operationCategory = categorySelected;
+            const operationMentions = [...mentionsRef.current];
+            const operationCallback = callbackPostShared || defaultCallbackPostShared;
+            const categoryTag = operationCategory?.tag || operationCategory?.content?.displayName;
+            const normalizedCategoryTag = typeof categoryTag === 'string' && categoryTag.startsWith('#') ? categoryTag : null;
+            const publishBody = !operationReplyTo && normalizedCategoryTag && !body.toLowerCase().includes(normalizedCategoryTag.toLowerCase())
+                ? `${body}\n\n${normalizedCategoryTag}`
+                : body;
+            if (publishBody.length > 2000) {
+                Alert.alert('Post is too long', 'Shorten the post so the category hashtag fits within 2,000 characters.');
+                return;
+            }
+
+            let _context = null;
             let master;
-            if(replyTo) {
-                _context = replyTo.content.context;
-                if(replyTo.content.master) {
-                    master = replyTo.content.master;
+            if(operationReplyTo) {
+                _context = operationReplyTo.content.context;
+                if(operationReplyTo.content.master) {
+                    master = operationReplyTo.content.master;
                 } else {
-                    master = replyTo.stream_id;
+                    master = operationReplyTo.stream_id;
                 }
             }
-            else if(repost) {
-                _context = repost.context;
-            } else if(categorySelected) {
-                _context = categorySelected.stream_id;
+            else if(operationRepost) {
+                _context = operationRepost.context;
+            } else if(operationCategory) {
+                _context = operationCategory.stream_id;
             }
 
+            operation = beginComposeOperation(operationLease, operationTarget);
+            if (!operation) return;
             setLoading(true);
             let content = {
-                body: message != '' ? message : 'Message sans body',
+                body: publishBody,
                 context: _context,
                 media: listMedia ? listMedia : null,
-                repost: repost ? repost.stream_id : null,
-                reply_to: replyTo ? replyTo.stream_id : null,
+                repost: operationRepost ? operationRepost.stream_id : null,
+                reply_to: operationReplyTo ? operationReplyTo.stream_id : null,
                 master: master ? master : null,
-                mentions: mentions,
-                repost_details: repost
+                mentions: operationMentions,
+                repost_details: operationRepost
             };
 
-            let res = await orbis.createPost(content);
+            const firstMedia = listMedia?.[0];
+            const mediaUrl = firstMedia?.url || firstMedia?.[0]?.url || null;
+            const created = operationReplyTo
+                ? await createReply({ body: publishBody, mediaUrl })
+                : await createPost({ body: publishBody, mediaUrl });
+            if (!isCurrentComposeOperation(operation)) return;
 
-            /** Wait for new post to be indexed */
-            if(res.status == 200) {
+            if(created) {
                 setMessage("");
-                mentions = [];
+                mentionsRef.current = [];
 
                 const temp_details = {}
-                temp_details.context_details = categorySelected?.content
-                temp_details.context_id = categorySelected?.stream_id
+                temp_details.context_details = operationCategory?.content
+                temp_details.context_id = operationCategory?.stream_id
                 let _callbackContent = {
-                    creator: user.did,
-                    creator_details: {
-                        did: user.did,
-                        profile: user.profile
-                    },
-                    stream_id: res.doc,
-                    content: content,
-                    count_replies: 0,
-                    count_likes: 0,
-                    count_repost: 0,
-                    timestamp: getTimestamp(),
-                    repost_details: repost,
-                    context: categorySelected?.stream_id,
-                    context_details: categorySelected ? temp_details : null,
+                    ...created,
+                    content: { ...created.content, ...content },
+                    repost_details: operationRepost,
+                    context: operationCategory?.stream_id,
+                    context_details: operationCategory ? temp_details : null,
                 }
 
                 /** If any trigger callback after the post is shared */
-                if(callbackPostShared) {
-                    callbackPostShared(_callbackContent);
-                }else{
-                    defaultCallbackPostShared(_callbackContent)
-                }
+                await operationCallback?.(_callbackContent);
+                if (!isCurrentComposeOperation(operation)) return;
+
+                hidePostbox();
+                return;
 
             //     const tempData = userData ?? {}                
 
@@ -470,18 +687,20 @@ export default function Postbox({isReply = false}) {
 
             //     var tempProfile = user.profile
             //     tempProfile.data = tempData
-            //     await orbis.updateProfile(tempProfile);
+            //     Profile reward syncing moved to the backend.
 
             //     setLoading(false);
             } else {
-                console.log(res);
-                alert(res.result ?? 'An error occured, please try again later');
-                setLoading(false);
+                Alert.alert('Could not publish', 'Please check your connection and try again.');
             }
 
             // hidePostbox()
         } catch(e) {
+            if (!operation || !isCurrentComposeOperation(operation)) return;
             console.log("Error sharing post: ", e);
+            Alert.alert('Could not publish', 'Please check your connection and try again.');
+        } finally {
+            if (operation) finishComposeOperation(operation);
         }
     }
 
@@ -491,114 +710,9 @@ export default function Postbox({isReply = false}) {
         setShowConnectModal(true)
     }
 
-    /** Will open the media library and allow user to select a photo */
-    async function openCamera() {
-        setKeepFocus(true)
-
-        try {
-            const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-
-            console.log(permissionResult);
-
-            if (permissionResult.granted === false) {
-                alert("You have refused to allow this app to access your camera.");
-            } else {
-                let result = await ImagePicker.launchCameraAsync();
-    
-                if(!result.canceled){
-                    /** Handle Image picked */
-                    let imagePath = result.assets[0].uri;
-                    setCameraLoading(true);
-        
-                    const imageType = mime.getType(imagePath)
-        
-                    /** Create file object */
-                    let file = {
-                        name: "test",
-                        type: imageType,
-                        uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
-                    }
-        
-                    /** Upload Image to IPFS */
-                    const resUpload = await orbis.uploadMedia(file);
-        
-                    /** Handle result returned by Orbis SDK */
-                    if(resUpload.status == 200) {
-                        let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
-                        let media = [{
-                            gateway: resUpload.result.gateway,
-                            url: finalUrl
-                        }]
-                        listMedia.push(media)
-        
-                        setListMedia([...listMedia]);
-                        setCameraLoading(false);
-                    } else {
-                        alert("Error uploading image.");
-                        setCameraLoading(false);
-                    }
-                }
-            }
-
-            setKeepFocus(false)
-        } catch (error) {
-            console.log('ICI');
-            console.log(error);
-            setKeepFocus(false)
-        }
-
-    }
-
-
-
-    /** Will open the media library and allow user to select a photo */
-    async function selectPhoto() {
-        try {
-            /** Open Image library to allow user to select a picture */
-            let result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: "Images",
-                // allowsEditing: true,
-                // aspect: [1, 1],
-                quality: 0.25,
-            });
-
-            if (!result.canceled) {
-                /** Handle Image picked */
-                let imagePath = result.assets[0].uri;
-                setImageLoading(true);
-
-                const imageType = mime.getType(imagePath)
-
-                /** Create file object */
-                let file = {
-                    name: "test",
-                    type: imageType,
-                    uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
-                }
-
-                /** Upload Image to IPFS */
-                const resUpload = await orbis.uploadMedia(file);
-
-                /** Handle result returned by Orbis SDK */
-                if(resUpload.status == 200) {
-                    let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
-                    let media = [{
-                        gateway: resUpload.result.gateway,
-                        url: finalUrl
-                    }]
-                    listMedia.push(media)
-
-                    setListMedia([...listMedia]);
-                    setImageLoading(false);
-                } else {
-                    alert("Error uploading image.");
-                    setImageLoading(false);
-                }
-            }
-        } catch(e) {
-            console.log("Error selecting photo:", e);
-            setImageLoading(false);
-        }
+    function showMediaComingSoon() {
+        Haptics.selectionAsync();
+        Alert.alert('Media uploads are coming next', 'Text posts and replies work now. EasyGo media storage is the next backend step.');
     }
 
     function openCategory() {
@@ -694,7 +808,7 @@ export default function Postbox({isReply = false}) {
             username: "@" + _mentionName,
             did: mention.did
         }
-        mentions.push(new_mention);
+        mentionsRef.current.push(new_mention);
 
         // let seenObjects = [];
         // let listWithoutDuplicates = mentions.filter(objet => {
@@ -727,19 +841,22 @@ export default function Postbox({isReply = false}) {
         textInputRef?.current?.focus();
     }
 
-    BackHandler.addEventListener('hardwareBackPress', function () {
-        if(categoriesVis){
-            setCategoriesVis(false)
-            return true
-        }else{
+    useEffect(() => {
+        const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
+            if(categoriesVis){
+                setCategoriesVis(false)
+                return true
+            }
             hidePostbox()
             return true
-        }
-    })
+        })
+
+        return () => backhandler.remove()
+    }, [categoriesVis, hidePostbox, setCategoriesVis])
 
 
     const UserLoop = ({term, mentionUser}) => {
-        const { user, orbis } = useContext(GlobalContext);
+        const { user } = useContext(GlobalContext);
         const tailwind = useTailwind();
         const [users, setUsers] = useState([]);
         const [followUsers, setFollowUsers] = useState([]);
@@ -750,8 +867,6 @@ export default function Postbox({isReply = false}) {
 
             async function searchUsers() {
                 setUsersLoading(true);
-
-                const {data, error} = await orbis.getProfilesByUsername(term);
 
                 let result = term != '' ? fullListFollow.filter(e => e.details?.profile?.username?.startsWith(term)) : fullListFollow
 
@@ -764,13 +879,11 @@ export default function Postbox({isReply = false}) {
                     return false;
                 });
 
-                let listWithoutCommon = data.filter(elt1 => !result.some(elt2 => elt2.details.did === elt1.did));
-
-                setUsers(listWithoutCommon);
+                setUsers([]);
                 setFollowUsers(listWithoutDuplicates)
                 setUsersLoading(false);
             }
-        }, [term]);
+        }, [fullListFollow, term]);
 
         /** Show loasing state */
         if(usersLoading) {
@@ -785,7 +898,7 @@ export default function Postbox({isReply = false}) {
         return (
             <ScrollView keyboardShouldPersistTaps='handled'>
                 {/** Show everyone tag if user is admin */}
-                {(isOwner(user.did) && "everyone".includes(term)) &&
+                {(isOwner(user?.did) && "everyone".includes(term)) &&
                     <TouchableOpacity style={tailwind("p-2 px-4")} activeOpacity={0.6} onPress={() => mentionUser({did: "did:@:everyone", profile: {username: "everyone"}})}>
                         <View style={tailwind('flex flex-row items-center')}>
                             <Image
@@ -944,7 +1057,7 @@ export default function Postbox({isReply = false}) {
 
                         {replyTo && <View style={[tailwind('bg-slate-200 flex-1'), {width: 1, height:50,position: 'absolute',top: 45,left: 30}]} />}
 
-                        {!replyTo && userData.rewardFirstPost == 'reward pending' && (
+                        {!replyTo && userData?.rewardFirstPost == 'reward pending' && (
                             <View style={{backgroundColor: '#FFE9E3',width:'100%', alignSelf:'center',borderRadius: 10,paddingVertical: 10}}>
                                 <Text style={{color:'#FF6E31',fontWeight: 'bold',textAlign: 'center',}}>Receive 50 Oranges Reward for your first post!</Text>
                             </View>
@@ -974,7 +1087,6 @@ export default function Postbox({isReply = false}) {
                                 placeholder={replyTo ? "Post your reply" : "Tell us about your story!" }
                                 placeholderTextColor="#64748b"
                                 multiline={true}
-                                onBlur={e => {if(keepFocus){e.target.focus()}}}
                             />
                         }
 
@@ -1055,21 +1167,13 @@ export default function Postbox({isReply = false}) {
                     {Keyboard.isVisible() && Platform.OS == 'ios' && (
                         <View style={{position: 'absolute',bottom: keyboardHeight-20,width: width,flexDirection:'row',paddingHorizontal: 20, backgroundColor: 'white',height: 50,alignItems:'center',}}>
                             <View style={tailwind('flex flex-1 flex-row items-start')}>
-                                {imageLoading ?
-                                    <ActivityIndicator size="small" color="#FF6B17" />
-                                :
-                                    <TouchableOpacity onPress={() => selectPhoto()} style={{marginTop: 5}}>
-                                        <ImagePickerIcon />
-                                    </TouchableOpacity>
-                                }
+                                <TouchableOpacity onPress={showMediaComingSoon} style={{marginTop: 5}}>
+                                    <ImagePickerIcon />
+                                </TouchableOpacity>
         
-                                {cameraLoading ?
-                                    <ActivityIndicator size="small" color="#FF6B17" style={{marginLeft: 17,}}/>
-                                :
-                                    <TouchableOpacity onPress={() => {setKeepFocus(true);openCamera()}} style={{marginLeft: 15,}}>
-                                        <CameraIcon />
-                                    </TouchableOpacity>
-                                }
+                                <TouchableOpacity onPress={showMediaComingSoon} style={{marginLeft: 15,}}>
+                                    <CameraIcon />
+                                </TouchableOpacity>
                             </View>
         
                             {/** Post button */}
@@ -1086,21 +1190,13 @@ export default function Postbox({isReply = false}) {
 
                     {/** Image picker icon */}
                     <View style={tailwind('flex flex-1 flex-row items-start')}>
-                        {imageLoading ?
-                            <ActivityIndicator size="small" color="#FF6B17" />
-                        :
-                            <TouchableOpacity onPress={() => selectPhoto()} style={{marginTop: 5}}>
-                                <ImagePickerIcon />
-                            </TouchableOpacity>
-                        }
+                        <TouchableOpacity onPress={showMediaComingSoon} style={{marginTop: 5}}>
+                            <ImagePickerIcon />
+                        </TouchableOpacity>
 
-                        {cameraLoading ?
-                            <ActivityIndicator size="small" color="#FF6B17" style={{marginLeft: 17,}}/>
-                        :
-                            <TouchableOpacity onPress={() => {setKeepFocus(true);openCamera()}} style={{marginLeft: 15,}}>
-                                <CameraIcon />
-                            </TouchableOpacity>
-                        }
+                        <TouchableOpacity onPress={showMediaComingSoon} style={{marginLeft: 15,}}>
+                            <CameraIcon />
+                        </TouchableOpacity>
                     </View>
 
                     {/** Post button */}

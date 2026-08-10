@@ -1,10 +1,10 @@
 {
   "expo": {
     "name": "EasyGo",
-    "slug": "coineasy_app",
+    "slug": "easygo",
     "scheme": "coineasyapp",
-    "owner": "useorbis",
-    "version": "2.0.0",
+    "owner": "coineasy",
+    "version": "2.0.3",
     "orientation": "portrait",
     "icon": "./assets/logo_easygo_1024.png",
     "userInterfaceStyle": "light",
@@ -17,19 +17,21 @@
       "**/*"
     ],
     "ios": {
-      "icon": "./assets/logo_easygo_1064.png",
+      "icon": "./assets/logo_easygo_ios_1024.png",
+      "jsEngine": "jsc",
       "supportsTablet": false,
-      "buildNumber": "84",
+      "usesAppleSignIn": true,
+      "buildNumber": "101",
       "bundleIdentifier": "com.coineasy.coineasysocial",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Allow CoinEasy to access your photos. Photos will be used for profile picture and post with Media. This is not mandatory, user can leave the default profile picture. It can then be updated in the user Profil page. Example: You want to create a Post with a photo, we'll need to access your media library",
-        "NSPhotoLibraryAddUsageDescription": "Enable CoinEasy to save media to your gallery. Example: You want to download a media from a post into your phone",
-        "NSCameraUsageDescription": "Allow CoinEasy to access your camera. Camera will be used to create a media in your Post. Example: You want to share where you're at by taking a photo.",
+        "NSPhotoLibraryUsageDescription": "EasyGo uses your photo library when you choose a profile image or attach media to a post.",
+        "NSPhotoLibraryAddUsageDescription": "EasyGo saves media to your photo library only when you choose to download it.",
+        "NSCameraUsageDescription": "EasyGo uses the camera only when you choose to take a photo for a post.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "versionCode": 63,
+      "versionCode": 65,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo_easygo_1024.png",
         "backgroundColor": "#FFF8F0"
@@ -54,7 +56,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you share them with your friends."
+          "photosPermission": "EasyGo uses your photo library when you choose a profile image or attach media to a post.",
+          "cameraPermission": "EasyGo uses the camera only when you choose to take a photo for a post.",
+          "microphonePermission": false
         }
       ],
       [
@@ -66,23 +70,24 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
-          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
+          "photosPermission": "EasyGo uses your photo library when you choose media to share.",
+          "savePhotosPermission": "EasyGo saves media to your photo library only when you choose to download it.",
           "isAccessMediaLocationEnabled": true
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {
-        "projectId": "92489131-f028-4eb8-96ef-453311e899ec"
+        "projectId": "2297c440-2ab1-46d8-8c60-29e74977ed9f"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/92489131-f028-4eb8-96ef-453311e899ec"
+      "url": "https://u.expo.dev/2297c440-2ab1-46d8-8c60-29e74977ed9f"
     }
   }
 }

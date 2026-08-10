@@ -116,7 +116,7 @@ const OrangeReward = (props) => {
     };
 
     const ProgressBar = ({ current, max, label }) => {
-        const progress = (current / max) * 100;
+        const progress = Math.min((current / max) * 100, 100);
         
         return (
             <View style={{marginBottom: 16,}}>
@@ -183,12 +183,12 @@ const OrangeReward = (props) => {
                     description="Complete daily tasks and earn Orange. Stay active every day to claim your reward!"
                     points="30"
                     buttonText={!timeLeftDailyActivity ? `Claim` : timeLeftDailyActivity || "Wait..."}
-                    buttonType={userData?.todayActivities?.posts == 1 && userData?.todayActivities?.comments == 2 && userData?.todayActivities?.likes == 10 && !timeLeftDailyActivity ? "primary" : "secondary"}
+                    buttonType={userData?.todayActivities?.posts >= 1 && userData?.todayActivities?.comments >= 2 && userData?.todayActivities?.likes >= 10 && !timeLeftDailyActivity ? "primary" : "secondary"}
                     // buttonType={userData.todayActivities?.posts == 1 && userData.todayActivities?.comments == 2 && userData.todayActivities?.likes == 10 ? "primary" : "secondary"}
                     onPress={!timeLeftDailyActivity ? handleClaimDailyActivity : null}
                 >
                     <ProgressBar current={userData?.todayActivities?.posts ?? 0} max={1} label="Post" />
-                    <ProgressBar current={userData?.todayActivities?.comments ?? 0} max={5} label="Comments" />
+                    <ProgressBar current={userData?.todayActivities?.comments ?? 0} max={2} label="Comments" />
                     <ProgressBar current={userData?.todayActivities?.likes ?? 0} max={10} label="Likes" />
                 </RewardCard>
 

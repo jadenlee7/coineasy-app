@@ -1,0 +1,82 @@
+name: EasyGo CI
+
+on:
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: easygo-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Check out the release
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Run backend tests
+        run: npm test
+
+      - name: Validate Prisma schema
+        env:
+          DATABASE_URL: postgresql://easygo:easygo@127.0.0.1:5432/easygo
+        run: npx prisma validate
+
+      - name: Run local deploy preflight
+        run: npm run preflight
+
+  mobile:
+    name: Mobile
+    runs-on: ubuntu-latest
+    env:
+      EXPO_PUBLIC_PRIVY_APP_ID: cmfgz756i00hzjx0bfbwlttgz
+      EXPO_PUBLIC_PRIVY_CLIENT_ID: client-WY6QhUoEMuHH6mg6wtrDKqnUuL3dugLAPuoteto14yQEP
+      NODE_OPTIONS: --max-old-space-size=4096
+
+    steps:
+      - name: Check out the release
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      - name: Install mobile dependencies
+        run: npm ci
+
+      - name: Run mobile preflight tests
+        run: npm run test:preflight
+
+      - name: Run local mobile preflight
+        run: npm run preflight
+
+      - name: Check Expo project health
+        run: npx expo-doctor
+
+      - name: Export Android bundle
+        run: npx expo export --platform android --output-dir dist/ci-android
+
+      - name: Export iOS bundle
+        run: npx expo export --platform ios --output-dir dist/ci-ios

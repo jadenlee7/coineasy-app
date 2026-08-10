@@ -1,23 +1,15 @@
 module.exports = {
-  presets: [
-    [
-      'module:metro-react-native-babel-preset', {
-        unstable_disableES6Transforms: true
-      }
-    ]
-  ],
+  presets: ['babel-preset-expo'],
   plugins: [
     [
       'module-resolver',
       {
         alias: {
           'crypto': 'expo-crypto',
-          'stream': 'stream-browserify',
-          'buffer': '@craftzdog/react-native-buffer'
+          'stream': 'stream-browserify'
         },
       },
     ],
     ["@babel/plugin-transform-private-methods", { "loose": true }],
-    'react-native-reanimated/plugin',
   ],
 }

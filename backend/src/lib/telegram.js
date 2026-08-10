@@ -23,11 +23,17 @@ const WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL;
 
 let _bot = null;
 
+export function telegramStartupMode(env = process.env) {
+  if (!String(env.TELEGRAM_BOT_TOKEN || '').trim()) return 'disabled';
+  return String(env.TELEGRAM_WEBHOOK_URL || '').trim() ? 'webhook' : 'polling';
+}
+
 export function getBot() {
   if (_bot) return _bot;
   if (!TOKEN) throw new Error('TELEGRAM_BOT_TOKEN not set');
   // Polling=false here — we choose mode at start time.
   _bot = new TelegramBot(TOKEN, { polling: false });
+  registerHandlers(_bot);
   return _bot;
 }
 
@@ -37,12 +43,33 @@ export function getBot() {
 export async function startTelegramBot() {
   if (!TOKEN) {
     logger.warn('TELEGRAM_BOT_TOKEN missing — bot not started');
-    return;
+    return null;
   }
   const bot = new TelegramBot(TOKEN, { polling: true });
   _bot = bot;
   registerHandlers(bot);
   logger.info('telegram bot started (long-poll)');
+  return bot;
+}
+
+export async function configureTelegramWebhook() {
+  if (!TOKEN) {
+    logger.warn('TELEGRAM_BOT_TOKEN missing — webhook not configured');
+    return null;
+  }
+  if (!WEBHOOK_URL) throw new Error('TELEGRAM_WEBHOOK_URL not set');
+  const bot = getBot();
+  await bot.setWebHook(WEBHOOK_URL);
+  logger.info('telegram bot configured (webhook)');
+  return bot;
+}
+
+export async function stopTelegramBot() {
+  const bot = _bot;
+  _bot = null;
+  if (!bot) return;
+  await bot.stopPolling({ cancel: true, reason: 'EasyGo shutdown' });
+  logger.info('telegram bot client stopped');
 }
 
 /**
@@ -50,14 +77,6 @@ export async function startTelegramBot() {
  */
 export async function processUpdate(update) {
   const bot = getBot();
-  if (WEBHOOK_URL) {
-    // ensure webhook is set (idempotent on Telegram side)
-    try {
-      await bot.setWebHook(WEBHOOK_URL);
-    } catch (err) {
-      logger.error({ err }, 'setWebHook failed');
-    }
-  }
   // node-telegram-bot-api exposes processUpdate for webhook mode
   bot.processUpdate(update);
 }

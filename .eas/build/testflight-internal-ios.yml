@@ -1,0 +1,48 @@
+build:
+  name: EasyGo iOS TestFlight Internal Only
+  steps:
+    - eas/checkout
+    - run:
+        name: Verify EasyGo staging environment
+        command: node scripts/mobile-preflight.mjs --target=staging
+    - eas/install_node_modules
+    - eas/resolve_apple_team_id_from_credentials:
+        id: resolve_apple_team_id_from_credentials
+    - eas/prebuild:
+        inputs:
+          apple_team_id: ${ steps.resolve_apple_team_id_from_credentials.apple_team_id }
+    - run:
+        name: Install pods
+        working_directory: ./ios
+        command: pod install
+    - eas/configure_eas_update
+    - eas/configure_ios_credentials
+    - eas/generate_gymfile_from_template:
+        inputs:
+          credentials: ${ eas.job.secrets.buildCredentials }
+          template: |
+            suppress_xcode_output(true)
+            clean(<%- CLEAN %>)
+
+            scheme("<%- SCHEME %>")
+            <% if (BUILD_CONFIGURATION) { %>
+            configuration("<%- BUILD_CONFIGURATION %>")
+            <% } %>
+
+            export_options({
+              method: "<%- EXPORT_METHOD %>",
+              testFlightInternalTestingOnly: true,
+              provisioningProfiles: {<% _.forEach(PROFILES, function(profile) { %>
+                "<%- profile.BUNDLE_ID %>" => "<%- profile.UUID %>",<% }); %>
+              }<% if (ICLOUD_CONTAINER_ENVIRONMENT) { %>,
+              iCloudContainerEnvironment: "<%- ICLOUD_CONTAINER_ENVIRONMENT %>"
+              <% } %>
+            })
+
+            export_xcargs "OTHER_CODE_SIGN_FLAGS=\"--keychain <%- KEYCHAIN_PATH %>\""
+            disable_xcpretty(true)
+            buildlog_path("<%- LOGS_DIRECTORY %>")
+            output_directory("<%- OUTPUT_DIRECTORY %>")
+            output_name("App")
+    - eas/run_fastlane
+    - eas/find_and_upload_build_artifacts

@@ -14,14 +14,18 @@ import {
 import HeaderImage from '../../../components/HeaderImage';
 import HeaderActions from '../../../components/HeaderActions';
 import { GlobalContext } from '../../../contexts/GlobalContext';
+import {
+    useDeviceAccountData,
+    useDeviceAccountOperationLease,
+} from '../../../contexts/DeviceAccountDataContext';
 import { QuizCheckIcon, QuizErrorIcon } from '../../../components/Icons';
 
 import { useTailwind } from 'tailwind-rn';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import moment from 'moment';
 import Header from '../../../components/Header';
 import useStatusBarHeight from '../../../hooks/useStatusBarHeight';
+import { api, ApiError } from '../../../utils/api';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -182,7 +186,12 @@ const NavigationButtons = ({
 
 const CourseDetailScreen = ({ navigation, route }) => {
 
-    const { orbis, user, userData, setUserData } = useContext(GlobalContext);
+    const { userData, setUserData } = useContext(GlobalContext);
+    const { ownerUserId, saveCourseProgress } = useDeviceAccountData();
+    const {
+        lease: courseLease,
+        isCurrentLease: isCurrentCourseLease,
+    } = useDeviceAccountOperationLease();
 
     const {parentCourse, course, courseId} = route.params
     
@@ -210,9 +219,59 @@ const CourseDetailScreen = ({ navigation, route }) => {
         }).start();
     }, [courseProgress]);
 
+    const persistCourseProgress = useCallback(async (tempData) => {
+        try {
+            if (!ownerUserId || tempData.courseProgressOwner !== ownerUserId) return false;
+            return await saveCourseProgress(tempData.courses || []);
+        } catch (error) {
+            console.warn('[courses] unable to save local progress', error);
+            return false;
+        }
+    }, [ownerUserId, saveCourseProgress]);
+
+    const updateUserProgress = useCallback((tempData, newProgress) => {
+        const userCourse = Array.isArray(tempData.courses) ? tempData.courses.find(c => c.id === parentCourse.id) : null;
+        if (!userCourse) {
+            const newCourse = {
+                id: parentCourse.id,
+                status: 'in-progress',
+                sections: [{ id: course.id, progress: newProgress, status: 'in-progress' }],
+            };
+            if (Array.isArray(tempData.courses)) tempData.courses.push(newCourse);
+            else tempData.courses = [newCourse];
+        } else {
+            const userSection = userCourse.sections?.find(s => s.id === course.id);
+            if (userSection) {
+                userSection.progress = newProgress;
+            } else {
+                if (!Array.isArray(userCourse.sections)) userCourse.sections = [];
+                userCourse.sections.push({ id: course.id, progress: newProgress, status: 'in-progress' });
+            }
+        }
+    }, [parentCourse.id, course.id]);
+
+    const updateOrangesAndProgress = useCallback((tempData, serverBalance) => {
+        updateUserProgress(tempData, course.pages.length);
+        if (Number.isFinite(serverBalance)) tempData.numberOranges = serverBalance;
+
+        const userCourse = tempData.courses.find(c => c.id === parentCourse.id);
+        const userSection = userCourse.sections.find(s => s.id === course.id);
+        if (userSection) {
+            userSection.status = 'completed';
+            userSection.progress = course.pages.length;
+        }
+
+        const allSectionsCompleted = parentCourse.sections.every(sec =>
+            userCourse.sections?.some(us => us.id === sec.id && us.status === 'completed')
+        );
+        if (allSectionsCompleted) userCourse.status = 'completed';
+    }, [course.id, course.pages.length, parentCourse.id, parentCourse.sections, updateUserProgress]);
+
     const handleNext = useCallback(async () => {
+        const expectedLease = courseLease;
+        if (!isCurrentCourseLease(expectedLease)) return;
         Haptics.selectionAsync();
-        const tempData = { ...userData };
+        const tempData = { ...(userData || {}) };
         if (courseProgress < course.pages.length) {
             const newProgress = courseProgress + 1;
             setCurrentPage(newProgress);
@@ -222,9 +281,10 @@ const CourseDetailScreen = ({ navigation, route }) => {
             setQuizTime(true);
         }
 
+        if (!await persistCourseProgress(tempData)) return;
+        if (!isCurrentCourseLease(expectedLease)) return;
         setUserData(tempData);
-        const res = await updateOrbisProfile(tempData);
-    }, [courseProgress, course.pages.length, userData]);
+    }, [courseLease, courseProgress, course.pages.length, isCurrentCourseLease, persistCourseProgress, updateUserProgress, userData]);
 
     const handleBack = useCallback(() => {
         Haptics.selectionAsync();
@@ -250,83 +310,51 @@ const CourseDetailScreen = ({ navigation, route }) => {
     }, [selectedOption, course.question.options]);
 
     const onValidateQuiz = useCallback(async () => {
+        const expectedLease = courseLease;
+        if (!isCurrentCourseLease(expectedLease)) return;
         Haptics.selectionAsync();
-        const tempData = { ...userData };
-
-        if (tempData) {
-            const addNumber = 5 * course.pages.length;
-            updateOrangesAndProgress(tempData, addNumber);
-            setUserData(tempData);
-            const res = await updateOrbisProfile(tempData);
+        const tempData = { ...(userData || {}) };
+        let claimResult = null;
+        try {
+            try {
+                claimResult = await api.completeQuest(`course-${course.id}`, {
+                    answer: String(selectedOption),
+                }, {
+                    expectedAuthUserId: ownerUserId,
+                });
+            } catch (error) {
+                if (!isCurrentCourseLease(expectedLease)) return;
+                if (!(error instanceof ApiError) || error.status !== 404) throw error;
+            }
+            if (!isCurrentCourseLease(expectedLease)) return;
+            if (!claimResult) {
+                claimResult = await api.orangeClaimCourseQuiz({
+                    courseId: parentCourse.id,
+                    sectionId: course.id,
+                    expectedAuthUserId: ownerUserId,
+                });
+            }
+            if (!isCurrentCourseLease(expectedLease)) return;
+            if (!claimResult) {
+                Alert.alert(
+                    'Progress saved on this device',
+                    'Connect EXPO_PUBLIC_BACKEND_URL to receive the 60 Orange quiz reward.',
+                );
+            }
+        } catch (error) {
+            if (!isCurrentCourseLease(expectedLease)) return;
+            Alert.alert(
+                'Progress saved on this device',
+                'The Orange reward could not be claimed. You can retry after the backend is available.',
+            );
         }
+        if (!isCurrentCourseLease(expectedLease)) return;
+        updateOrangesAndProgress(tempData, claimResult?.reward?.balance ?? claimResult?.balance);
+        if (!await persistCourseProgress(tempData)) return;
+        if (!isCurrentCourseLease(expectedLease)) return;
+        setUserData(tempData);
         navigation.navigate('CourseSelector', { course: parentCourse });
-    }, [userData, course.pages.length, parentCourse]);
-
-    const updateUserProgress = useCallback((tempData, newProgress) => {
-        const userCourse = Array.isArray(tempData.courses) ? tempData.courses.find(c => c.id === parentCourse.id) : null;
-        if (!userCourse) {
-            if (tempData.courses) {
-                tempData.courses.push({
-                id: parentCourse.id,
-                status: 'in-progress',
-                sections: [{ id: course.id, progress: newProgress, status: 'in-progress' }],
-                });
-            } else {
-                tempData.courses = [{
-                id: parentCourse.id,
-                status: 'in-progress',
-                sections: [{ id: course.id, progress: newProgress, status: 'in-progress' }],
-                }];
-            }
-        } else {
-            const userSection = userCourse.sections?.find(s => s.id === course.id);
-            if (userSection) {
-                userSection.progress = newProgress;
-            } else {
-                userCourse.sections.push({ id: course.id, progress: newProgress, status: 'in-progress' });
-            }
-        }
-    }, [parentCourse.id, course.id]);
-
-
-    const updateOrangesAndProgress = useCallback((tempData, addNumber) => {
-        tempData.numberOranges = (tempData.numberOranges || 0) + addNumber;
-        if (tempData.listClaimedOranges) {
-            const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'));
-            if (index != -1) {
-                tempData.listClaimedOranges[index].listOranges.push({ numberOranges: addNumber, type: 'Quiz completed' });
-            } else {
-                tempData.listClaimedOranges.push({
-                date: moment().format('YYYY-MM-DD'),
-                listOranges: [{ numberOranges: addNumber, type: 'Quiz completed' }],
-                });
-            }
-        } else {
-            tempData.listClaimedOranges = [{
-                date: moment().format('YYYY-MM-DD'),
-                listOranges: [{ numberOranges: addNumber, type: 'Quiz completed' }],
-            }];
-        }
-
-        const userCourse = tempData.courses.find(c => c.id === parentCourse.id);
-        const userSection = userCourse.sections.find(s => s.id === course.id);
-        if (userSection) {
-            userSection.status = "completed";
-            userSection.progress = course.pages.length;
-        }
-
-        const allSectionsCompleted = parentCourse.sections.every(sec =>userCourse.sections?.some(us => us.id === sec.id && us.status === "completed"));
-        if (allSectionsCompleted) {
-            userCourse.status = "completed";
-        }
-    }, [parentCourse.sections, course.id, course.pages.length]);
-
-
-    const updateOrbisProfile = useCallback(async (tempData) => {
-        const tempProfile = user.profile;
-        tempProfile.data = tempData;
-        return await orbis.updateProfile(tempProfile);
-    }, [user.profile, orbis]);
+    }, [course.id, courseLease, isCurrentCourseLease, navigation, ownerUserId, parentCourse, persistCourseProgress, selectedOption, updateOrangesAndProgress, userData]);
 
     const statusBarHeight = useStatusBarHeight()
 
@@ -435,7 +463,7 @@ const CompletedView = ({ course, pages, onValidateQuiz }) => {
                     resizeMode='contain'
                     source={require('../../../assets/trophy/trophy_icon_orange.png')}
                 />
-                <Text style={{ color: '#FB5100', fontFamily: 'GmarketBold', fontSize: 20 }}>+{5 * pages.length}</Text>
+                <Text style={{ color: '#FB5100', fontFamily: 'GmarketBold', fontSize: 20 }}>+{course.points || 60}</Text>
             </View>
 
             <View style={{ position: 'absolute', bottom: 40, width: screenWidth }}>

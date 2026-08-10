@@ -8,7 +8,7 @@ import HeaderImage from "./HeaderImage";
 import { useNavigation } from "@react-navigation/core";
 
 import * as Haptics from 'expo-haptics';
-import { NotificationsIcon } from "./Icons";
+import { NotificationsIcon, SmallSearchIcon } from "./Icons";
 
 
 export default function Header(props) {
@@ -64,6 +64,13 @@ export default function Header(props) {
                     gap: 10,
                 }}
             >
+                <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => {Haptics.selectionAsync();navigation.navigate('Search')}}
+                    style={{width: 34, height: 34, borderRadius: 17, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center'}}
+                >
+                    <SmallSearchIcon color="#0F172A" />
+                </TouchableOpacity>
                 <TouchableOpacity 
                     onPress={() => {Haptics.selectionAsync();navigation.navigate('OrangeNavigation', {back: true})}}
                     style={{

@@ -1,5 +1,5 @@
-import React, { useState, useContext, useEffect, useCallback } from "react";
-import { Text, View, Image, TouchableHighlight, Dimensions, Share, BackHandler } from 'react-native';
+import React, { useContext, useEffect } from "react";
+import { Alert, Text, View, Image, TouchableHighlight, Dimensions, Share, BackHandler } from 'react-native';
 
 import * as Linking from 'expo-linking';
 import * as Haptics from 'expo-haptics';
@@ -13,6 +13,7 @@ import { GlobalContext } from "../../contexts/GlobalContext";
 import useStatusBarHeight from "../../hooks/useStatusBarHeight";
 import useGetUsername from "../../hooks/useGetUsername";
 import useDidToAddress from "../../hooks/useDidToAddress";
+import { normalizeEasyGoRouteId } from '../../utils/navigationIntent.mjs';
 
 export default function QR({hide}) {
     const { user, setShareProfileVis } = useContext(GlobalContext);
@@ -20,23 +21,27 @@ export default function QR({hide}) {
     const { width } = Dimensions.get('window');
     const statusBarHeight = useStatusBarHeight();
 
-    const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
-        Haptics.selectionAsync()
-        setShareProfileVis(false)
-        return true
-    });
-
     useEffect(() => {
-        return () => backhandler.remove();
-    }, [])
+        const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+            Haptics.selectionAsync();
+            setShareProfileVis(false);
+            return true;
+        });
+        return () => subscription.remove();
+    }, [setShareProfileVis]);
 
-    /** Will build follow link */
-    let link = Linking.createURL('user', {
-        queryParams: { did: user.did },
-    });
+    /** Share only the public EasyGo database id, never the private Privy subject. */
+    const easyGoUserId = normalizeEasyGoRouteId(user?.profile?.data?.easygoUserId);
+    const link = easyGoUserId
+        ? Linking.createURL('user', { queryParams: { userId: easyGoUserId } })
+        : null;
 
     /** Will open the native sharing modal */
     const shareProfile = async () => {
+        if (!link) {
+            Alert.alert('Profile link unavailable', 'Refresh your EasyGo profile and try again.');
+            return;
+        }
         try {
             const result = await Share.share({ 
                 message: link, 
@@ -50,6 +55,10 @@ export default function QR({hide}) {
 
     /** Will copy link in Clipboard */
     async function copyLink() {
+        if (!link) {
+            Alert.alert('Profile link unavailable', 'Refresh your EasyGo profile and try again.');
+            return;
+        }
         await Clipboard.setStringAsync(link);
         showMessage({
             message: "Profile link copied!",
@@ -59,8 +68,6 @@ export default function QR({hide}) {
             icon: () => <SuccessIcon style={{marginRight: 10,}}/>
         });
     }
-
-    let logo = require('../../assets/qr_code_logo.png');
 
     const { address, chain } = useDidToAddress(user.did);
     const username = useGetUsername(user.profile, address, user.did);
@@ -83,13 +90,19 @@ export default function QR({hide}) {
                 <View style={[tailwind('items-center justify-center'), {marginTop: 100}]}>
                     <View style={[tailwind('bg-white rounded-lg shadow-lg overflow-hidden items-center justify-center'), {width: width -90, height: width / 1.14}]}>
                         <View style={tailwind("rounded-lg overflow-hidden")}>
-                            <SvgQRCode
-                                value={link}
-                                logoSize={65}
-                                size={width / 1.4 - 50}
-                                color="#FF6B17" 
-                                // logo={logo} 
-                            />
+                            {link ? (
+                                <SvgQRCode
+                                    value={link}
+                                    logoSize={65}
+                                    size={width / 1.4 - 50}
+                                    color="#FF6B17"
+                                    // logo={logo}
+                                />
+                            ) : (
+                                <Text style={{color: '#64748B', textAlign: 'center'}}>
+                                    Profile link unavailable
+                                </Text>
+                            )}
 
                             <Text style={{color: '#FF6B17',fontWeight: 'bold',textAlign:'center',fontSize: 18,marginTop: 30,}}>@{username.toUpperCase()}</Text>
                         </View>

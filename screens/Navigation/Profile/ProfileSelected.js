@@ -1,55 +1,41 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { ActivityIndicator, BackHandler, Image, Text, TouchableOpacity, View } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from "tailwind-rn";
 
 import HeaderImage from "../../../components/HeaderImage";
-import { GlobalContext } from "../../../contexts/GlobalContext";
 import ProfileDetails from "../../../components/ProfileDetails";
-import { BackIcon, NotificationsIcon } from "../../../components/Icons";
+import { NotificationsIcon } from "../../../components/Icons";
+import useSocialProfile from "../../../hooks/useSocialProfile";
+import { adaptSocialProfile, getEasyGoUserId } from "../../../utils/socialPostAdapter";
+import { normalizeEasyGoRouteId } from '../../../utils/navigationIntent.mjs';
 
 const ProfileSelected = ({navigation, route}) => {
 
-    const { did, back } = route.params
-    const { orbis } = useContext(GlobalContext);
+    const { did, back, userId: routeUserId } = route.params || {}
     const tailwind = useTailwind();
-
-    const [ profile, setProfile ] = useState();
-    const [loadProfile, setLoadProfile] = useState(false)
-
-    useEffect(() => {
-        getProfile();
-    }, [did]);
+    const userId = normalizeEasyGoRouteId(routeUserId || getEasyGoUserId(did));
+    const { profile: backendProfile, loading, error, refresh } = useSocialProfile(userId);
+    const profile = adaptSocialProfile(backendProfile);
 
     useEffect(() => {
+        const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
+            if(back == 'search'){
+                Haptics.selectionAsync()
+                navigation.navigate('Search')
+                return true;
+            }
+            return false;
+        })
         return () => backhandler.remove();
-    }, [navigation])
-
-    const backhandler = BackHandler.addEventListener('hardwareBackPress', function () {
-        if(back == 'search'){
-            Haptics.selectionAsync()
-
-            navigation.navigate('Navigator', {
-                screen: 'Search',
-                params: {screen: 'Search'},
-            })
-            return true;
-        }
-    })
-
-    async function getProfile() {
-        setLoadProfile(true)
-        const { data, error } = await orbis.getProfile(did);
-        setProfile(data);
-        setLoadProfile(false)
-    }
+    }, [back, navigation])
 
     return(
         <View style={{flex: 1}}>
 
-            {!loadProfile && profile ? (
-                <ProfileDetails profile={profile?.details} pfpMarginTop={0} type='selected'/>
+            {!loading && profile ? (
+                <ProfileDetails profile={profile} refreshProfile={refresh} pfpMarginTop={0} type='selected'/>
             ) : (
                 <View style={tailwind('w-full flex-1 bg-white')}>
                     <HeaderImage />
@@ -70,7 +56,21 @@ const ProfileSelected = ({navigation, route}) => {
                         </TouchableOpacity>
                     </View>
 
-                    <ActivityIndicator style={{marginTop: 25}} size="small" color="#020617" />
+                    {loading ?
+                        <ActivityIndicator style={{marginTop: 25}} size="small" color="#020617" />
+                    :
+                        <View style={tailwind('mx-6 mt-8 rounded-md bg-slate-50 px-5 py-5 items-center')}>
+                            <Text style={{fontFamily: 'GmarketBold', color: '#0F172A'}}>Profile unavailable</Text>
+                            <Text style={[tailwind('text-secondary text-center'), {marginTop: 8}]}>
+                                {!userId ? 'This legacy profile has not migrated to EasyGo yet.' : "We couldn't load this EasyGo profile."}
+                            </Text>
+                            {error &&
+                                <TouchableOpacity onPress={refresh} style={{marginTop: 14, borderRadius: 18, backgroundColor: '#FF6B17', paddingHorizontal: 18, paddingVertical: 9}}>
+                                    <Text style={{color: 'white', fontFamily: 'GmarketBold'}}>Try again</Text>
+                                </TouchableOpacity>
+                            }
+                        </View>
+                    }
                 </View>
             )}
         </View>

@@ -1,25 +1,44 @@
 {
+  "cli": {
+    "appVersionSource": "local",
+    "requireCommit": true
+  },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "channel": "development"
+      "channel": "development",
+      "environment": "development",
+      "env": {
+        "EASYGO_DEPLOY_TARGET": "local"
+      }
     },
     "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "node": "20.19.4",
+      "env": {
+        "EASYGO_DEPLOY_TARGET": "staging"
+      },
       "android": {
         "buildType": "apk"
       },
       "channel": "preview"
     },
-    "production": {
-      "channel": "production",
-        "ios": {
-            "image": "macos-sequoia-15.3-xcode-16.2"
-        }
+    "testflight": {
+      "channel": "preview",
+      "environment": "preview",
+      "env": {
+        "EASYGO_DEPLOY_TARGET": "staging"
+      },
+      "ios": {
+        "image": "macos-sequoia-15.6-xcode-26.0",
+        "config": "testflight-internal-ios.yml"
+      }
     }
   },
   "submit": {
-    "production": {
+    "testflight": {
       "ios": {
         "appleId": "guillaume.lamboley@yahoo.com",
         "ascAppId": "6463145391",

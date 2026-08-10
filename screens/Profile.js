@@ -1,53 +1,42 @@
-import React, { useState, useContext, useEffect } from "react";
-import { View, Image, ActivityIndicator, Dimensions } from 'react-native';
+import React, { useContext } from "react";
+import { View, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 
 import { useTailwind } from 'tailwind-rn';
 
 import { GlobalContext } from "../contexts/GlobalContext";
 import ProfileDetails from "../components/ProfileDetails";
-import useStatusBarHeight from "../hooks/useStatusBarHeight";
-import HeaderImage from "../components/HeaderImage";
 import Header from "../components/Header";
+import useSocialProfile from "../hooks/useSocialProfile";
+import { adaptSocialProfile, getEasyGoUserId } from "../utils/socialPostAdapter";
 
 const Profile = ({ navigation, route }) => {
-    const { user, setUser, orbis } = useContext(GlobalContext);
+    const { user } = useContext(GlobalContext);
     const tailwind = useTailwind();
-    const statusBarHeight = useStatusBarHeight();
-
-    const [profile, setProfile] = useState();
-
-    useEffect(() => {
-        getProfile();
-    }, [user]);
-
-    const delay = ms => new Promise(res => setTimeout(res, ms));
-
-    async function getProfile() {
-        const { data, error } = await orbis.getProfile(user.did);
-
-        if(error?.message == 'FetchError: Network request failed'){
-            await delay(2000);
-            const resultRetry = await orbis.getProfile(user.did);
-            if(resultRetry.error?.message == 'FetchError: Network request failed'){
-                alert('FetchError: Network request failed')
-            }else{
-                setProfile(resultRetry.data)
-            }
-        }else{
-            setProfile(data);
-        }
-    }
+    const userId = getEasyGoUserId(user);
+    const { profile: backendProfile, loading, error, refresh } = useSocialProfile(userId);
+    const profile = backendProfile ? adaptSocialProfile(backendProfile) : user;
 
 
     return(
         <>
             {profile ?
-                <ProfileDetails profile={profile.details} />
+                <ProfileDetails profile={profile} refreshProfile={refresh} />
             :
                 <View style={tailwind('flex-1 bg-white')}>
                     <Header />
-                    
-                    <ActivityIndicator style={{marginTop: 60}} size="small" color="#020617" />
+                    {loading ?
+                        <ActivityIndicator style={{marginTop: 60}} size="small" color="#020617" />
+                    :
+                        <View style={tailwind('mx-6 mt-20 rounded-md bg-slate-50 px-5 py-5 items-center')}>
+                            <Text style={[tailwind('text-slate-900 text-center'), {fontFamily: 'GmarketBold'}]}>Profile unavailable</Text>
+                            <Text style={[tailwind('text-secondary text-center'), {marginTop: 8}]}>We couldn't load your EasyGo profile.</Text>
+                            {error &&
+                                <TouchableOpacity onPress={refresh} style={{marginTop: 14, borderRadius: 18, backgroundColor: '#FF6B17', paddingHorizontal: 18, paddingVertical: 9}}>
+                                    <Text style={{color: 'white', fontFamily: 'GmarketBold'}}>Try again</Text>
+                                </TouchableOpacity>
+                            }
+                        </View>
+                    }
                 </View>
             }
 

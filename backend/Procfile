@@ -1,0 +1,3 @@
+web: node src/index.js
+worker: node src/worker.js
+account-deletion-worker: node src/account-deletion-worker.js

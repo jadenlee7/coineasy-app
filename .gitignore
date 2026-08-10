@@ -7,6 +7,7 @@ npm-debug.*
 *.p12
 *.key
 *.mobileprovision
+credentials.json
 *.orig.*
 web-build/
 
@@ -55,10 +56,10 @@ yarn-error.*
 .env
 .env.*
 .env*.local
+.secure-backups/
 
 # typescript
 *.tsbuildinfo
 
 # @end expo-cli
 yarn.lock
-package-lock.json

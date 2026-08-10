@@ -32,28 +32,6 @@ export function getUrls(body) {
   return urls;
 }
 
-/** Retrieve NFTs for a user and network */
-export async function getNFTs(address, page, network) {
-  let res = await fetch('https://api.orbis.club/get-nfts', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      account: address,
-      page: page,
-      network: network
-    })
-  });
-  let result = await res.json();
-  console.log("result nfts:", result);
-  if(result && result.nfts && result.nfts.length > 0) {
-    return result.nfts;
-  } else {
-    return [];
-  }
-}
-
 /** Replace mentions in post */
 function replaceMentions(post) {
   /** Get body from post */
@@ -126,31 +104,6 @@ export function checkCredentialOwnership(user_credentials, cred_identifier) {
   return has_vc;
 }
 
-/** Check if user has the required amount of tokens using the Orbis API */
-export async function getTokenBalance(token, account, successCallback) {
-  try {
-    let res = await fetch('https://api.orbis.club/get-balance', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        token: token,
-        account: account
-      })
-    });
-    let balanceResult = await res.json();
-    if(balanceResult && balanceResult.balance && token.minBalance) {
-      if(balanceResult.balance >= parseFloat(token.minBalance)) {
-        successCallback();
-      }
-    }
-  } catch(e) {
-    console.log("Error retrieving user's balance for this token:", e);
-    return 0;
-  }
-}
-
 /** Will check if an email address is valid or not */
 export function isValidEmail(email) {
   // Regular expression to validate email format
@@ -211,31 +164,8 @@ export function isAdmin(did) {
 }
 
 
-/** Will call our API to verify if user owns the required POAP */
+/** POAP gating is deferred until EasyGo has a server-side ownership verifier. */
 export async function getPoapOwnership(event_id, did, successCallback) {
-  console.log("Enter getPoapOwnership with account:");
-  console.log("did:", did);
-  console.log("event_id:", event_id);
-    try {
-      let res = await fetch('https://api.orbis.club/get-poap-ownership', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          event_id: event_id,
-          did: did
-        })
-      });
-      let owns = await res.json();
-      console.log("owns:", owns);
-      return owns.result
-    //   if(owns.result == true) {
-    //     successCallback();
-    //     return true
-    //   }
-    } catch(e) {
-      console.log("Error retrieving user's balance for this token:", e);
-      return 0;
-    }
-  }
+  console.warn('[access] POAP ownership verification is not available yet', { event_id, did });
+  return false;
+}

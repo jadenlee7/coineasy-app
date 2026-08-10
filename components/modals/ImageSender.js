@@ -1,7 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
-import { View, Image, TouchableHighlight, Dimensions, BackHandler, TouchableOpacity, TextInput, KeyboardAvoidingView } from 'react-native';
+import { Alert, View, Image, TouchableHighlight, Dimensions, BackHandler, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 
-import mime from 'mime';
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 
@@ -12,7 +11,7 @@ export default function ImageSender(props) {
 
     const { hide, media, updateListMessage } = props
 
-    const { user, orbis, setShowImageSender, listMessages } = useContext(GlobalContext);
+    const { setShowImageSender } = useContext(GlobalContext);
     const tailwind = useTailwind();
 
     const [message, setMessage] = useState('')
@@ -34,46 +33,11 @@ export default function ImageSender(props) {
     const newHeight = media[0].height*ratioWidth
 
     const onSendPress = async () => {
-        console.log('ici');
-        const content = {
-            conversation_id: media[0].conversation.stream_id,
-            body: message
-        }
-
-        const new_message = {
-            'message': message,
-            'creator': user.did
-        }
-
-        const data = {}
-
-        /** Handle Image picked */
-        let imagePath = media[0].item;
-        const imageType = mime.getType(imagePath)
-
-        /** Create file object */
-        let file = {
-            name: "test",
-            type: imageType,
-            uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
-        }
-
-        /** Upload image to IPFS */
-        const resUpload = await orbis.uploadMedia(file);
-
-        /** Handle result returned by Orbis SDK */
-        if(resUpload.status == 200) {
-            let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
-            data = {'media': finalUrl}
-        } else {
-            alert("Error uploading image.");
-        }
-
-        const res = await orbis.sendMessage(content, data);
-        console.log(res);
-
-        updateListMessage([...listMessages, new_message])
-        hide()
+        Haptics.selectionAsync();
+        Alert.alert(
+            'Messaging media is unavailable',
+            'EasyGo chat storage has not been migrated yet. The image and message were not sent.'
+        );
     }
 
     return(

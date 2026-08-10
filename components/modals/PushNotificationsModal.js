@@ -1,10 +1,13 @@
 import React, { useContext, useState } from "react";
-import { Text, View, Image, Platform } from 'react-native';
+import { Alert, Text, View, Image, Platform } from 'react-native';
 
 import Modal from "../Modal";
 import Button from "../Button";
-import { context } from "../../utils/config"
 import { GlobalContext } from "../../contexts/GlobalContext";
+import {
+    useDeviceAccountData,
+    useDeviceAccountOperationLease,
+} from '../../contexts/DeviceAccountDataContext';
 import { registerForPushNotificationsAsync } from "../../utils/push";
 
 import moment from "moment";
@@ -13,55 +16,69 @@ import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// These cooldown dates are intentionally device-wide UI preferences. They do
+// not contain an account identifier, notification token, or profile data.
+
 
 export default function PushNotificationsModal() {
-    const { user, setUser, orbis, setPushNotifsVis, setNewFeatureVis } = useContext(GlobalContext);
+    const { setPushNotifsVis, setNewFeatureVis } = useContext(GlobalContext);
+    const { saveExpoPushToken } = useDeviceAccountData();
+    const { lease: renderLease, isCurrentLease } = useDeviceAccountOperationLease();
     const tailwind = useTailwind();
 
     const [toggleCheckBox, setToggleCheckBox] = useState(false)
-
-    /** Will enable push notifications and save the token with Orbis */
+    /** Request device permission and retain the Expo token until server-side delivery ships. */
     async function enablePushNotifications() {
+        const expectedLease = renderLease;
+        if (!isCurrentLease(expectedLease)) return;
         Haptics.selectionAsync();
 
         let res;
         try {
             res = await registerForPushNotificationsAsync();
-        } catch (error) {
-            console.log(error);
+        } catch {
+            if (isCurrentLease(expectedLease)) {
+                Alert.alert('Notifications unavailable', 'EasyGo could not request device notification permission. Please try again.');
+            }
+            return;
         }
 
-        if(res) {
-            try {
-                let result = await orbis.addNotificationsSubscription({
-                    type: "push",
-                    value: res.data,
-                    scopes: ["follow", "replies", "messages", "reposts", "reactions"],
-                    context: context
-                });
-            } catch (error) {
-                console.log(error);
+        if (!isCurrentLease(expectedLease)) return;
+        if(res?.data) {
+            const tokenSaved = await saveExpoPushToken(res.data);
+            if (!isCurrentLease(expectedLease)) return;
+            if (!tokenSaved) {
+                Alert.alert('Notifications unavailable', 'EasyGo could not protect this account’s notification registration. Please try again.');
+                return;
             }
 
             if(toggleCheckBox){
                 await AsyncStorage.setItem("showNotificationDate", moment().add(7, 'days').format('YYYY-MM-DD'))
             }
+            if (!isCurrentLease(expectedLease)) return;
             const showNewFeatureDate = await AsyncStorage.getItem('showNewFeatureDate')
+            if (!isCurrentLease(expectedLease)) return;
             if(moment().format('YYYY-MM-DD') >= showNewFeatureDate || !showNewFeatureDate){
                 setNewFeatureVis(true);
             }
             
             setPushNotifsVis(false);
+            Alert.alert(
+                'Notifications enabled',
+                'Device permission is ready. Remote EasyGo delivery will activate when backend token registration ships.'
+            );
         } else {
-            alert("Error retrieving push notifications token.");
+            Alert.alert('Notifications unavailable', 'EasyGo could not retrieve a notification token. Please try again.');
         }
     }
 
     /** Won't ask for the push notifications token and will close modal */
     async function skipNotifications() {
+        const expectedLease = renderLease;
+        if (!isCurrentLease(expectedLease)) return;
         Haptics.selectionAsync();
         const showNewFeatureDate = await AsyncStorage.getItem('showNewFeatureDate')
-        console.log('ICIII : '+showNewFeatureDate);
+        if (!isCurrentLease(expectedLease)) return;
         
         if(moment().format('YYYY-MM-DD') >= showNewFeatureDate || !showNewFeatureDate){
             setNewFeatureVis(true);

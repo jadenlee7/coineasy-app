@@ -25,7 +25,9 @@ import { InterpunctIcon, PostMenuIcon, RepostIcon2, CommentIcon2, LikeIcon2, Suc
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import moment from "moment";
+import { useDeviceAccountOperationLease } from "../contexts/DeviceAccountDataContext";
+import { api } from "../utils/api";
+import { getEasyGoUserId } from '../utils/socialPostAdapter';
 
 // const listPost = [
 //     1712122694, 
@@ -111,6 +113,19 @@ const PostDisplay = (props) => {
     const [showSuccessMessage, setShowSuccessMessage] = useState(false)
     const [currentIndex, setCurrentIndex] = useState(0)
     const [lengthMore,setLengthMore] = useState(false);
+    const currentEasyGoUserId = getEasyGoUserId(user);
+    const postAuthorUserId = post?.easygo?.authorId
+        || getEasyGoUserId(post?.creator_details)
+        || getEasyGoUserId(post?.creator);
+    const repostAuthorUserId = post?.content?.repost_details?.easygo?.authorId
+        || getEasyGoUserId(post?.content?.repost_details?.creator_details);
+    const isCurrentUserPost = currentEasyGoUserId
+        ? [postAuthorUserId, repostAuthorUserId].includes(currentEasyGoUserId)
+        : Boolean(
+            user?.did
+            && [post?.creator, post?.content?.repost_details?.creator_details?.did]
+                .includes(user.did)
+        );
 
     const onTextLayout = useCallback(e => {
         var count_lines = 0
@@ -161,17 +176,19 @@ const PostDisplay = (props) => {
     function callbackEditPost(_body, _listMedia, _selectedCategory) {
         setBody(_body);
         setListMedia(_listMedia);
-        setPostContext(_selectedCategory.stream_id)
+        if (_selectedCategory?.stream_id) {
+            setPostContext(_selectedCategory.stream_id)
 
-        const temp_details = {}
-        temp_details.context_details = _selectedCategory.content
-        temp_details.context_id = _selectedCategory.stream_id
-        setPostContextDetails({...temp_details})
+            const temp_details = {}
+            temp_details.context_details = _selectedCategory.content
+            temp_details.context_id = _selectedCategory.stream_id
+            setPostContextDetails({...temp_details})
+            post.context = _selectedCategory.stream_id
+            post.context_details = temp_details
+        }
         
         post.content.body = _body
         post.content.media = _listMedia
-        post.context = _selectedCategory.stream_id
-        post.context_details = temp_details
 
         hidePostbox();
     }
@@ -417,7 +434,7 @@ const PostDisplay = (props) => {
                             {/** Show post menu */}
                             <TouchableOpacity 
                                 onPress={() => 
-                                    {(user?.did == post.creator || user?.did == post.content?.repost_details?.creator_details?.did) ? 
+                                    {isCurrentUserPost ?
                                         setEditedPost({value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost}) 
                                         : setEditedPost({type:'notCreator',value: post, callback: callbackEditPost, callbackDelete: callbackDeletePost});
                                         handleModalPostBoxPress()
@@ -664,76 +681,64 @@ export const CommentCTA = ({post, isReply}) => {
 
 
 export const LikeCTA = ({post, isReply}) => {
-  const [hasLiked, setHasLiked] = useState(false);
   const numLikes = 
     isReply && typeof post.reply_to_details?.count_likes !== 'undefined' && post.reply_to_details?.count_likes ? 
         post.reply_to_details?.count_likes 
     : isReply && (post.content.count_likes || post.content.count_likes == 0) ? 
         post.content.count_likes 
     : post.count_likes
+  const [hasLiked, setHasLiked] = useState(Boolean(post.likedByMe));
   const [countLikes, setCountLikes] = useState(numLikes ?? 0);
-  const { user,setUser,userData,setUserData, orbis, showConnectModal, setShowConnectModal } = useContext(GlobalContext);
+  const [likeLoading, setLikeLoading] = useState(false);
+  const { user } = useContext(GlobalContext);
+  const { lease, isCurrentLease } = useDeviceAccountOperationLease();
   const tailwind = useTailwind();
 
-  /** Check if user liked this post */
   useEffect(() => {
-    if(user) {
-      getReaction();
-    }
+    setHasLiked(Boolean(post.likedByMe));
+    setCountLikes(numLikes ?? 0);
+  }, [numLikes, post.likedByMe, post.stream_id]);
 
-    async function getReaction() {
-      let { data, error } = await orbis.getReaction(post.stream_id, user.did);
-      if(data && data.type && data.type == "like") {
-        setHasLiked(true);
-      }else{
-        setHasLiked(false);
-      }
-    }
-  }, [user]);
-
-  /** Will like the post */
-  async function like() {
-    if(hasLiked == true) {
-      console.log("User already liked post.");
+  async function toggleLike() {
+    const operationLease = lease;
+    if (!user) {
+      Alert.alert('Sign in required', 'Connect your EasyGo account to like posts.');
       return;
     }
-    if(user) {
-        Haptics.selectionAsync();
-        setHasLiked(true);
-        setCountLikes(countLikes ? countLikes+1 : numLikes+1)
+    if (!operationLease || !isCurrentLease(operationLease)) return;
+    if (likeLoading) return;
 
-        // Orange Reward
-        const today = moment().format('YYYY-MM-DD');
-        const tempData = userData ?? {};
-        if (!tempData.todayActivities || tempData.todayActivities.date !== today) {
-            // Reset activities if date has changed
-            tempData.todayActivities = {
-                date: today,
-                posts: 0,
-                comments: 0,
-                likes: 0,
-            };
-        }
+    Haptics.selectionAsync();
+    const previousLiked = hasLiked;
+    const previousCount = countLikes;
+    const nextLiked = !previousLiked;
+    setLikeLoading(true);
+    setHasLiked(nextLiked);
+    setCountLikes(Math.max(0, previousCount + (nextLiked ? 1 : -1)));
 
-        if (tempData.todayActivities.likes < 5) {
-            tempData.todayActivities.likes += 1;
-        }
-        
-        setUserData({...tempData})
-
-        var tempProfile = user.profile
-        tempProfile.data = tempData
-
-        await orbis.react(post.stream_id, "like");
-        await orbis.updateProfile(tempProfile);
-
-    } else {
-      alert("You must be connected to react to posts.");
+    try {
+      const result = nextLiked
+        ? await api.posts.like(post.stream_id, {
+          expectedAuthUserId: operationLease.ownerUserId,
+        })
+        : await api.posts.unlike(post.stream_id, {
+          expectedAuthUserId: operationLease.ownerUserId,
+        });
+      if (!isCurrentLease(operationLease)) return;
+      if (!result) throw new Error('backend_not_configured');
+      if (Number.isFinite(Number(result.likes))) setCountLikes(Number(result.likes));
+    } catch {
+      if (!isCurrentLease(operationLease)) return;
+      setHasLiked(previousLiked);
+      setCountLikes(previousCount);
+      Alert.alert('Could not update like', 'Check the backend connection and try again.');
+    } finally {
+      if (isCurrentLease(operationLease)) setLikeLoading(false);
     }
   }
 
   return(
-    <TouchableOpacity activeOpacity={0.7} style={[tailwind('flex flex-row items-center ml-1 rounded-md py-1 px-2')]} onPress={() => like()} underlayColor="#f1f5f9">
+    <TouchableOpacity disabled={likeLoading} activeOpacity={0.7} style={[tailwind('flex flex-row items-center ml-1 rounded-md py-1 px-2')]} onPress={toggleLike} underlayColor="#f1f5f9">
       <>
         {hasLiked ?
           <LikeIcon2 active={true} />
@@ -750,8 +755,7 @@ export const LikeCTA = ({post, isReply}) => {
 }
 
 export const RepostCTA = ({post, isReply}) => {
-  const { user, orbis, showConnectModal, setShowConnectModal, setRepost } = useContext(GlobalContext);
-  const [hasLiked, setHasLiked] = useState(false);
+  const { setRepost } = useContext(GlobalContext);
   const numRepost = 
     isReply && typeof post.reply_to_details?.count_repost !== 'undefined' && post.reply_to_details?.count_repost ? 
         post.reply_to_details?.count_repost 
@@ -760,20 +764,6 @@ export const RepostCTA = ({post, isReply}) => {
     : post.count_repost
   const [countReposts, setCountReposts] = useState(numRepost ? numRepost : 0);
   const tailwind = useTailwind();
-
-  /** Check if user liked this post */
-  useEffect(() => {
-    if(user) {
-      getReaction();
-    }
-
-    async function getReaction() {
-      let { data, error } = await orbis.getReaction(post.stream_id, user.did);
-      if(data && data.type && data.type == "like") {
-        //setHasLiked(true);
-      }
-    }
-  }, [user]);
 
   /** Will render the repost pane */
   function showRepostPane() {
@@ -784,13 +774,9 @@ export const RepostCTA = ({post, isReply}) => {
   return(
     <TouchableOpacity activeOpacity={0.7} style={[tailwind('flex flex-row items-center ml-1 rounded-md py-1 px-2')]} onPress={() => showRepostPane()} underlayColor="#f1f5f9">
       <>
-        {hasLiked ?
-          <RepostIcon2 color="#FF6B17" />
-        :
-          <RepostIcon2 />
-        }
+        <RepostIcon2 />
 
-        <Text style={[tailwind('text-sm font-normal ml-1'), { fontFamily: "GmarketMedium", color: hasLiked ? "#FF6B17" : "#0F172A" }]}>
+        <Text style={[tailwind('text-sm font-normal ml-1'), { fontFamily: "GmarketMedium", color: "#0F172A" }]}>
             {(countReposts || countReposts == 0) ? countReposts : numRepost}
         </Text>
       </>

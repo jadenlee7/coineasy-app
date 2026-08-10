@@ -1,28 +1,21 @@
 // hooks/useFeed.js
 //
-// Replacement for Orbis-based category/feed listing (e.g. Categories, News).
-// Backend wiring lands in PR #8.
+// Screen-facing feed wrapper. Home, author, category, search, and news screens
+// share the same EasyGo post state while supplying their own filter options.
 // See docs/MIGRATION_NOTES.md.
 
-import { useCallback, useState } from "react";
+import usePosts from "./usePosts";
 
-export function useFeed(_feedKey) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+export function useFeed(feedKey = "home", options = {}) {
+  const normalizedOptions =
+    feedKey && typeof feedKey === "object" ? feedKey : options;
+  const postState = usePosts(normalizedOptions);
 
-  const refresh = useCallback(async () => {
-    if (__DEV__) console.warn("[useFeed] refresh: backend not wired (PR #8)");
-    setItems([]);
-    return [];
-  }, []);
-
-  const loadMore = useCallback(async () => {
-    if (__DEV__) console.warn("[useFeed] loadMore: backend not wired (PR #8)");
-    return [];
-  }, []);
-
-  return { items, loading, error, refresh, loadMore };
+  return {
+    ...postState,
+    items: postState.posts,
+    feedKey: typeof feedKey === "string" ? feedKey : "home",
+  };
 }
 
 export default useFeed;

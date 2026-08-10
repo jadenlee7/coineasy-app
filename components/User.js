@@ -1,5 +1,6 @@
-import { Text, View, TouchableOpacity, Image as RNImage } from 'react-native';
+import { ActivityIndicator, Alert, Text, View, TouchableOpacity, Image as RNImage } from 'react-native';
 import { useTailwind } from 'tailwind-rn';
+import * as Haptics from 'expo-haptics';
 
 import useDidToAddress from "../hooks/useDidToAddress";
 import useGetUsername from "../hooks/useGetUsername";
@@ -7,22 +8,93 @@ import { isAdmin } from "../utils";
 import { useContext } from 'react';
 import { GlobalContext } from '../contexts/GlobalContext';
 import { FollowIcon, UnfollowIcon } from './Icons';
+import useFollow from '../hooks/useFollow';
+import { getEasyGoUserId } from '../utils/socialPostAdapter';
+import { useDeviceAccountOperationLease } from '../contexts/DeviceAccountDataContext';
 
 // import { Image } from 'expo-image';
 
-export default function User({height = 40, details, isFollow}) {
+export default function User({
+  height = 40,
+  details,
+  isFollow,
+  subtitle,
+  showFollowButton = false,
+  initialFollowing = false,
+  onFollowChange,
+}) {
   const tailwind = useTailwind();
   return(
-    <View style={tailwind('flex flex-row items-center')}>
+    <View style={[tailwind('flex flex-row items-center'), {flex: 1}]}>
       <UserPfp height={height} details={details} />
-      <View>
+      <View style={{flex: 1}}>
         <Text style={tailwind('text-slate-900 font-medium ml-2 text-sm')}>
             <Username details={details} />
         </Text>
-        {isFollow && <Text style={tailwind("text-secondary ml-2")}>{details.type == 'Followers' ? 'Followed Friend' : 'Following Friend'}</Text>}
+        {subtitle
+          ? <Text style={tailwind("text-secondary ml-2")}>{subtitle}</Text>
+          : isFollow && <Text style={tailwind("text-secondary ml-2")}>{details.type == 'Followers' ? 'Followed Friend' : 'Following Friend'}</Text>}
       </View>
+      {showFollowButton && (
+        <UserFollowButton
+          details={details}
+          initialFollowing={initialFollowing}
+          onFollowChange={onFollowChange}
+        />
+      )}
     </View>
   )
+}
+
+function UserFollowButton({details, initialFollowing, onFollowChange}) {
+  const { user } = useContext(GlobalContext);
+  const { lease, isCurrentLease } = useDeviceAccountOperationLease();
+  const targetUserId = getEasyGoUserId(details);
+  const ownUserId = getEasyGoUserId(user);
+  const enabled = Boolean(targetUserId && ownUserId && targetUserId !== ownUserId);
+  const {
+    isFollowing,
+    loading,
+    follow,
+    unfollow,
+  } = useFollow(targetUserId, {
+    enabled,
+    initialFollowing,
+    loadStatus: false,
+  });
+
+  if (!enabled) return null;
+
+  const toggleFollow = async (event) => {
+    const operationLease = lease;
+    if (!operationLease || !isCurrentLease(operationLease)) return;
+    event?.stopPropagation?.();
+    Haptics.selectionAsync();
+    const nextFollowing = !isFollowing;
+    const succeeded = nextFollowing ? await follow() : await unfollow();
+    if (!isCurrentLease(operationLease)) return;
+    if (succeeded == null) return;
+    if (!succeeded) {
+      Alert.alert('Could not update follow', 'Check the backend connection and try again.');
+      return;
+    }
+    onFollowChange?.(targetUserId, nextFollowing);
+  };
+
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel={isFollowing ? 'Unfollow user' : 'Follow user'}
+      disabled={loading}
+      onPress={toggleFollow}
+      hitSlop={{top: 10, right: 10, bottom: 10, left: 10}}
+      style={{width: 42, height: 42, alignItems: 'center', justifyContent: 'center'}}
+    >
+      {loading
+        ? <ActivityIndicator size="small" color="#FF6B17" />
+        : isFollowing ? <FollowIcon /> : <UnfollowIcon />}
+    </TouchableOpacity>
+  );
 }
 
 /** Will render the user's pfp or empty state */

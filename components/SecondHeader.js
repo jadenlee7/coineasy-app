@@ -17,7 +17,7 @@ const SecondHeader = (props) => {
     const navigation = useNavigation();
 
     const HeaderLabel = ({label, showBack, back}) => {
-        const { orbis, postDetailsVis, setPostDetailsVis, profileSelected, setProfileSelected } = useContext(GlobalContext);
+        const { postDetailsVis, setPostDetailsVis, profileSelected, setProfileSelected } = useContext(GlobalContext);
         const tailwind = useTailwind();
     
         function hidePostPane() {

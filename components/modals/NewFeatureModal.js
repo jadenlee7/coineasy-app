@@ -1,24 +1,28 @@
-import React, { useContext, useEffect, useState } from "react";
-import { Text, View, Image, TouchableOpacity, Animated, Easing, Platform, Dimensions, StyleSheet } from 'react-native';
+import React, { useContext, useEffect, useRef, useState } from "react";
+import { Alert, Text, View, Image, TouchableOpacity, Animated, Easing, Platform, Dimensions, StyleSheet } from 'react-native';
 
 import Modal from "../Modal";
 import Button from "../Button";
-import { context } from "../../utils/config"
 import { GlobalContext } from "../../contexts/GlobalContext";
-import { registerForPushNotificationsAsync } from "../../utils/push";
+import { useDeviceAccountOperationLease } from '../../contexts/DeviceAccountDataContext';
+import { api } from "../../utils/api";
 
 import moment from "moment";
 import Checkbox from 'expo-checkbox';
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// The seven-day dismissal is intentionally device-wide and contains only a
+// date. Reward ownership and claim state remain server/account-bound.
 import { AntDesign } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/core";
 
 const {width, height} = Dimensions.get('window')
 
 export default function NewFeatureModal() {
-    const { user, userData, setUserData, orbis, setNewFeatureVis, newFeatureAlertVis, setNewFeatureAlertVis } = useContext(GlobalContext);
+    const { setUserData, setNewFeatureVis, newFeatureAlertVis, setNewFeatureAlertVis } = useContext(GlobalContext);
+    const { lease, isCurrentLease } = useDeviceAccountOperationLease();
     const tailwind = useTailwind();
 
     const navigation = useNavigation()
@@ -26,6 +30,7 @@ export default function NewFeatureModal() {
     const [toggleCheckBox, setToggleCheckBox] = useState(false)
     const [isClaimed, setIsClaimed] = useState(false)
     const [showOrangesAdded, setShowOrangesAdded] = useState(false)
+    const rewardLeaseRef = useRef(null)
 
     const [fadeAnim] = useState(new Animated.Value(0));
 
@@ -45,12 +50,19 @@ export default function NewFeatureModal() {
 
     useEffect(() => {
         if(showOrangesAdded){
-            handleAds()
+            handleAds(rewardLeaseRef.current)
         }
-    }, [showOrangesAdded])
+    }, [lease, showOrangesAdded])
+
+    useEffect(() => {
+        rewardLeaseRef.current = null
+        setIsClaimed(false)
+        setShowOrangesAdded(false)
+    }, [lease])
 
 
-    const handleAds = async () => {
+    const handleAds = (expectedLease) => {
+        if (!expectedLease || !isCurrentLease(expectedLease)) return;
         Animated.sequence([
             Animated.timing(opacity, {
                 toValue: 1,
@@ -67,6 +79,7 @@ export default function NewFeatureModal() {
                 useNativeDriver: false,
             }),
         ]).start(() => {
+            if (!isCurrentLease(expectedLease)) return;
             setShowOrangesAdded(false)
             setIsClaimed(true)
             Animated.timing(fadeAnim, {
@@ -74,72 +87,61 @@ export default function NewFeatureModal() {
                 duration: 1000,
                 easing: Easing.linear,
                 useNativeDriver:false
-            }).start();
+            }).start(() => {
+                if (!isCurrentLease(expectedLease)) return;
+            });
         })
     }
 
     async function goToRewardPage(isNavigating) {
+        const expectedLease = lease;
+        if (!expectedLease || !isCurrentLease(expectedLease)) return;
         Haptics.selectionAsync();
         if(toggleCheckBox){
             await AsyncStorage.setItem("showNewFeatureDate", moment().add(7, 'days').format('YYYY-MM-DD'))
+            if (!isCurrentLease(expectedLease)) return;
         }
+        if (!isCurrentLease(expectedLease)) return;
         setNewFeatureVis(false);
 
         isNavigating && navigation.navigate('OrangeNavigation')
     }
 
     async function claimFirstReward(){
+        const expectedLease = lease;
+        if (!expectedLease || !isCurrentLease(expectedLease)) return;
         Haptics.selectionAsync()
 
         if(isClaimed){
             setNewFeatureVis(false)
             setNewFeatureAlertVis(false)
         }else{
-            const tempData = userData
-    
-            if(tempData){
-                tempData.numberOranges ? tempData.numberOranges += 50 : tempData.numberOranges = 50
-    
-                if(tempData.listClaimedOranges){
-                    const index = tempData.listClaimedOranges.findIndex(e => e.date == moment().format('YYYY-MM-DD'))
-                    if(index != -1){
-                        tempData.listClaimedOranges[index].listOranges.push({
-                            numberOranges: 50,
-                            type: 'First Orange Rewards'
-                        })
-                    }else{
-                        tempData.listClaimedOranges.push({
-                            date: moment().format('YYYY-MM-DD'),
-                            listOranges: [
-                                {
-                                    numberOranges: 50,
-                                    type: 'First Orange Rewards'
-                                },
-                            ]
-                        })
-                    }
-                }else{
-                    tempData.listClaimedOranges = [{
-                        date: moment().format('YYYY-MM-DD'),
-                        listOranges: [
-                                {
-                                    numberOranges: 50,
-                                    type: 'First Orange Rewards'
-                                },
-                        ]
-                    }]
+            try {
+                const result = await api.orangeClaimFirstReward({
+                    expectedAuthUserId: expectedLease.ownerUserId,
+                });
+                if (!isCurrentLease(expectedLease)) return;
+                if (!result) throw new Error('backend_not_configured');
+                setUserData((current) => (
+                    isCurrentLease(expectedLease)
+                        ? {
+                            ...(current || {}),
+                            numberOranges: result.balance,
+                            firstTime: 'done',
+                        }
+                        : current
+                ));
+                if (!result.claimed) {
+                    setNewFeatureVis(false)
+                    setNewFeatureAlertVis(false)
+                    Alert.alert('Reward already claimed', `Your EasyGo balance is ${result.balance} Oranges.`);
+                    return;
                 }
-    
-                userData.firstTime = 'done'
-                setUserData({...tempData})
-                
-                var tempProfile = user.profile
-                tempProfile.data = tempData
-
-                const res = await orbis.updateProfile(tempProfile);
-                await AsyncStorage.setItem('FirstTimeReward', 'false')
-
+                rewardLeaseRef.current = expectedLease
                 setShowOrangesAdded(true)
+            } catch {
+                if (!isCurrentLease(expectedLease)) return;
+                Alert.alert('Could not claim reward', 'Connect the EasyGo backend and try again.');
             }
         }
     }

@@ -1,0 +1,31 @@
+node_modules/
+.expo/
+dist/
+web-build/
+ios/
+android/
+
+# The Railway API is deployed separately and is not part of the Expo app.
+backend/
+
+# Local configuration and signing material must never enter an EAS archive.
+.env
+.env.*
+.secure-backups/
+credentials.json
+*.jks
+*.p8
+*.p12
+*.pem
+*.key
+*.mobileprovision
+
+# Local/editor artifacts.
+.DS_Store
+.metro-health-check*
+*.orig.*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.tsbuildinfo
+yarn.lock

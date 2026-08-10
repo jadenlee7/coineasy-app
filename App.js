@@ -1,8 +1,8 @@
-import './utils/polyfill';
+import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from "react";
-import { StyleSheet, View, Keyboard, Platform, Animated, Image, Dimensions } from 'react-native';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, useContext } from "react";
+import { StyleSheet, View, Keyboard, Platform, Animated, Image, Dimensions, Text, SafeAreaView } from 'react-native';
 
 import { StatusBar } from 'expo-status-bar';
 import { TailwindProvider } from 'tailwind-rn';
@@ -10,41 +10,71 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useSharedValue } from 'react-native-reanimated';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createNavigationContainerRef } from '@react-navigation/native';
 
-import { sleep } from './utils';
 import Login from "./screens/Login";
+import AccountDeletionPending from './screens/AccountDeletionPending';
 import utilities from './tailwind.json';
 import QR from "./components/modals/QR.js";
 import AppNavigator from './navigation/AppNavigator';
 import { GlobalContext } from "./contexts/GlobalContext";
+import {
+  DeviceAccountDataProvider,
+  useDeviceAccountData,
+} from './contexts/DeviceAccountDataContext';
 import RepostModal from "./components/modals/RepostModal";
 import PostboxModal from "./components/modals/PostboxModal";
-import NotificationsPane from "./components/panes/NotificationsPane";
 import PostSettingsModal from "./components/modals/PostSettingsModal";
 import UpdateProfileModal from "./components/modals/UpdateProfileModal";
-import { context, onboard_context, edu_context } from './utils/config.js';
 import PushNotificationsModal from "./components/modals/PushNotificationsModal";
 import NicknameModal from "./components/modals/NicknameModal";
+import StartupErrorBoundary from './components/StartupErrorBoundary';
+import { SOCIAL_CATEGORIES } from './data/socialCategories';
 
-// Privy integration (Phase 1: Base chain only; EasyChain is Phase 2-gated)
-import 'fast-text-encoding';
-import 'react-native-get-random-values';
-import '@ethersproject/shims';
-
+// Privy integration (Phase 1: Base chain only; EasyChain is Phase 2-gated).
+// Required polyfills load before this module from entrypoint.js.
 import { PrivyProvider, usePrivy } from '@privy-io/expo';
 import useAuthSync from './hooks/useAuthSync';
+import useAccountDeletionSessionGate from './hooks/useAccountDeletionSessionGate';
+import {
+  fallbackPresentationData,
+  profilePresentationData,
+} from './hooks/authPresentation.mjs';
+import {
+  EASYGO_BASE_CHAIN,
+  EASYGO_PRIVY_CONFIG,
+  getEasyGoPrivyClient,
+} from './utils/privyClient';
+import { easyGoPrivyStorage } from './utils/privyStorage';
+import {
+  accountDeletionMarkerStore,
+  createAccountDeletionClientRequestId,
+} from './utils/accountDeletionStorage';
+import {
+  navigationIntentFromNotificationData,
+  navigationIntentFromParsedUrl,
+  routeForEasyGoNavigationIntent,
+} from './utils/navigationIntent.mjs';
 
 // Phase 1 chain: Base mainnet (chainId 8453). EasyChain is gated by
 // PHASE.EASYCHAIN_ENABLED in EASYGO_BUILD_PLAN.md and added in Phase 2.
-const baseChain = {
-  id: 8453,
-  name: 'Base',
-  rpcUrls: { default: { http: ['https://mainnet.base.org'] } },
-  blockExplorers: { default: { name: 'BaseScan', url: 'https://basescan.org' } },
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-};
-
 const PRIVY_APP_ID = process.env.EXPO_PUBLIC_PRIVY_APP_ID;
+const PRIVY_CLIENT_ID = process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID;
+const STARTUP_CONFIG_CODE = 'STARTUP-CONFIG-01';
+const isSet = (value) => typeof value === 'string' && value.trim().length > 0;
+const collectMissingPrivyEnvVars = () => {
+  const missing = [];
+
+  if (!isSet(PRIVY_APP_ID)) {
+    missing.push('EXPO_PUBLIC_PRIVY_APP_ID');
+  }
+
+  if (!isSet(PRIVY_CLIENT_ID)) {
+    missing.push('EXPO_PUBLIC_PRIVY_CLIENT_ID');
+  }
+
+  return missing;
+};
 
 /** Expo */
 import { useFonts } from 'expo-font';
@@ -55,68 +85,294 @@ import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
 
 
-/**
- * Orbis SDK was discontinued. We swap in a noop shim (utils/orbisCompat.js)
- * so legacy screens/components that still call orbis.<x>(...) via
- * GlobalContext do not crash. Subsequent PRs replace each callsite with
- * the new social hooks (usePosts/useReplies/useSocialProfile/useFollow/
- * useFeed) wired to the EasyGo backend, and then this shim is removed.
- * See docs/MIGRATION_NOTES.md.
- */
-import { createOrbisCompat } from './utils/orbisCompat';
 import moment from 'moment';
-import { useWalletConnectModal } from '@walletconnect/modal-react-native';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
 // import { Asset } from 'expo-asset';
 
-// Orbis is no longer initialized. Hardcoded Pinata keys removed (revoked
-// upstream). The compat shim has the same surface as the old SDK so existing
-// GlobalContext consumers continue to work without changes.
-let orbis = createOrbisCompat();
-
 /**
  * AuthBridge — runs inside <PrivyProvider> so usePrivy() is available.
  * Watches Privy auth state, syncs to backend via useAuthSync, and writes
- * the resulting profile back into GlobalContext (Orbis-compatible shape)
- * so existing screens that read user/userData keep working.
- * Subsequent PRs will read from useAuthSync directly and remove this bridge.
+ * the resulting profile into the shared presentation state.
  */
-function AuthBridge() {
+function AccountDeletionSessionGate({ children }) {
   const privy = usePrivy();
-  const { profile } = useAuthSync(privy);
-  const { setUser, setUserData } = useContext(GlobalContext);
+  const privyUserId = privy?.user?.id || null;
+  const markerGuard = useAccountDeletionSessionGate(privyUserId);
+  const [serverBlock, setServerBlock] = useState(null);
 
   useEffect(() => {
-    if (profile) {
-      // Map backend profile → Orbis-compatible shape for legacy screens
+    setServerBlock((current) => (
+      current?.ownerUserId === privyUserId ? current : null
+    ));
+  }, [privyUserId]);
+
+  const reportDeletionBlock = useCallback((code) => {
+    if (!privyUserId || ![
+      'account_deletion_in_progress',
+      'account_deletion_guard_unavailable',
+    ].includes(code)) return;
+
+    setServerBlock({ ownerUserId: privyUserId, code });
+    if (code === 'account_deletion_in_progress') {
+      void accountDeletionMarkerStore.begin({
+        userId: privyUserId,
+        clientRequestId: createAccountDeletionClientRequestId(),
+        // A 410 tombstone can still be MANUAL_REVIEW with local data intact.
+        // Keep a recovery marker until an authenticated status response proves
+        // localDataDeleted === true.
+        phase: 'requesting',
+      }).catch(() => {
+        // The in-memory server block remains fail-closed if SecureStore fails.
+      });
+    }
+  }, [privyUserId]);
+
+  const activeServerBlock = serverBlock?.ownerUserId === privyUserId
+    ? serverBlock
+    : null;
+  const retryDeletionGuard = useCallback(() => {
+    markerGuard.retry?.();
+    if (!activeServerBlock) return;
+
+    if (activeServerBlock.code === 'account_deletion_in_progress' && privyUserId) {
+      void accountDeletionMarkerStore.begin({
+        userId: privyUserId,
+        clientRequestId: createAccountDeletionClientRequestId(),
+        phase: 'requesting',
+      }).catch(() => {
+        // Keep the in-memory tombstone block until SecureStore recovers.
+      });
+      return;
+    }
+
+    setServerBlock((current) => (
+      current?.ownerUserId === privyUserId ? null : current
+    ));
+  }, [activeServerBlock, markerGuard.retry, privyUserId]);
+  const effectiveGuard = markerGuard.status === 'clear' && activeServerBlock
+    ? {
+        ...markerGuard,
+        status: activeServerBlock.code === 'account_deletion_in_progress'
+          ? 'server-blocked'
+          : 'server-error',
+        errorCode: activeServerBlock.code,
+        retry: retryDeletionGuard,
+      }
+    : markerGuard;
+
+  return children(effectiveGuard, reportDeletionBlock);
+}
+
+function AuthBridge({ accountDeletionGuard, onDeletionBlocked }) {
+  const privy = usePrivy();
+  const privyUserId = privy?.user?.id ?? null;
+  const markerBlocked = Boolean(
+    privyUserId && accountDeletionGuard?.status !== 'clear',
+  );
+  const {
+    profile,
+    canUseFallback,
+    deletionBlocked,
+    error,
+  } = useAuthSync(privy, { enabled: !markerBlocked });
+  const { setUser, setUserData } = useContext(GlobalContext);
+  const deviceAccountData = useDeviceAccountData();
+  const privyReady = Boolean(privy?.isReady);
+
+  useEffect(() => {
+    if (deletionBlocked && error?.code) onDeletionBlocked?.(error.code);
+  }, [deletionBlocked, error?.code, onDeletionBlocked]);
+
+  useEffect(() => {
+    const profileMatchesPrivy = !profile?.privyDid
+      || !privyUserId
+      || profile.privyDid === privyUserId;
+    const activeProfile = profileMatchesPrivy ? profile : null;
+    const courseProgressOwner = privyUserId;
+    const localCourses = deviceAccountData.status === 'ready'
+      && deviceAccountData.ownerUserId === privyUserId
+      ? deviceAccountData.courseProgress
+      : [];
+
+    if (markerBlocked || (privyReady && (!privyUserId || deletionBlocked))) {
+      setUser(null);
+      setUserData(null);
+      return;
+    }
+
+    if (activeProfile) {
+      const profileData = profilePresentationData(activeProfile, {
+        courseProgressOwner,
+        localCourses,
+      });
       setUser({
-        id: profile.id,
-        did: profile.privyDid || `privy:${profile.id}`,
+        id: activeProfile.id,
+        did: activeProfile.privyDid || `privy:${activeProfile.id}`,
         profile: {
-          username: profile.username || null,
-          pfp: profile.pfp || null,
-          description: profile.description || null,
-          data: profile.data || {},
+          username: activeProfile.displayName || activeProfile.username || null,
+          pfp: activeProfile.pfp || null,
+          description: activeProfile.bio || activeProfile.description || null,
+          data: profileData,
         },
       });
-      setUserData(profile.data || {});
-    } else if (privy?.ready && !privy?.authenticated) {
+      setUserData(profileData);
+    } else if (privyReady && privyUserId && canUseFallback) {
+      // Keep the app usable while a bounded backend retry is in progress. Never
+      // retain another account's fallback presentation state.
+      const fallbackData = fallbackPresentationData({
+        courseProgressOwner,
+        localCourses,
+      });
+      const fallbackUser = {
+        id: privyUserId,
+        did: `privy:${privyUserId}`,
+        profile: { username: null, pfp: null, description: null, data: fallbackData },
+      };
+      setUser((current) => (
+        current?.profile?.data?.courseProgressOwner === courseProgressOwner
+          ? current
+          : fallbackUser
+      ));
+      setUserData((current) => (
+        current?.courseProgressOwner === courseProgressOwner ? current : fallbackData
+      ));
+    } else if (privyReady && privyUserId) {
+      // Do not publish authenticated fallback UI until the first backend sync
+      // resolves. In particular, a tombstoned account must never flash open
+      // before its 410 deletion guard response arrives.
       setUser(null);
       setUserData(null);
     }
-  }, [profile, privy?.ready, privy?.authenticated]);
+  }, [
+    canUseFallback,
+    deletionBlocked,
+    deviceAccountData.courseProgress,
+    deviceAccountData.ownerUserId,
+    deviceAccountData.status,
+    markerBlocked,
+    profile,
+    privyReady,
+    privyUserId,
+    setUser,
+    setUserData,
+  ]);
 
   return null;
 }
 
+function DeviceAccountDataRender({ children }) {
+  return children(useDeviceAccountData());
+}
+
+function AccountTransitionResetSignal({ onTransition }) {
+  const { ownerUserId, sessionEpoch } = useDeviceAccountData();
+  useLayoutEffect(() => {
+    onTransition?.({ ownerUserId, sessionEpoch });
+  }, [onTransition, ownerUserId, sessionEpoch]);
+  return null;
+}
+
+function AccountNavigationReplaySignal({ ready, ownerUserId, sessionEpoch, onReplay }) {
+  useLayoutEffect(() => {
+    if (ready) onReplay?.();
+  }, [onReplay, ownerUserId, ready, sessionEpoch]);
+  return null;
+}
+
+function sameAccountTransition(left, right) {
+  return Boolean(
+    left
+    && right
+    && left.ownerUserId === right.ownerUserId
+    && left.sessionEpoch === right.sessionEpoch,
+  );
+}
+
+function DeviceAccountDataUnavailable({ retry }) {
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.configContainer}>
+        <Text style={styles.brand}>EasyGo</Text>
+        <Text style={styles.configCode}>LOCAL-DATA-01</Text>
+        <Text style={styles.configTitle}>기기 데이터 보호를 준비하지 못했습니다.</Text>
+        <Text style={styles.configText}>
+          계정별 로컬 저장소를 확인할 때까지 앱을 열지 않았습니다. 계정 데이터는 다른 사용자에게 표시되지 않습니다.
+        </Text>
+        <Text style={styles.retryText} onPress={retry}>다시 시도</Text>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function FullStartupSignal({ onStartupStatus }) {
+  const privy = usePrivy();
+  const readyRef = useRef(Boolean(privy?.isReady));
+  readyRef.current = Boolean(privy?.isReady);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      await onStartupStatus?.({ step: 'full-provider-child', status: 'passed' });
+      if (active) {
+        await onStartupStatus?.({
+          step: 'full-provider-ready',
+          status: readyRef.current ? 'passed' : 'pending',
+        });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [onStartupStatus]);
+
+  useEffect(() => {
+    if (privy?.isReady) {
+      onStartupStatus?.({ step: 'full-provider-ready', status: 'passed' });
+    }
+  }, [onStartupStatus, privy?.isReady]);
+
+  return null;
+}
+
+function EasyGoPrivyBoundary({ alreadyMounted, children }) {
+  if (alreadyMounted) return children;
+
+  return (
+    <PrivyProvider
+      appId={PRIVY_APP_ID}
+      client={getEasyGoPrivyClient()}
+      clientId={PRIVY_CLIENT_ID}
+      config={EASYGO_PRIVY_CONFIG}
+      storage={easyGoPrivyStorage}
+      supportedChains={[EASYGO_BASE_CHAIN]}
+    >
+      {children}
+    </PrivyProvider>
+  );
+}
+
 // Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch((error) => {
+  console.warn('[startup] unable to retain splash screen', error);
+});
 
 let callbackPostShared;
 let page = 0;
-export default function App() {
+export default function App({ onStartupStatus, privyAlreadyMounted = false }) {
+  return (
+    <StartupErrorBoundary>
+      <EasyGoApp
+        onStartupStatus={onStartupStatus}
+        privyAlreadyMounted={privyAlreadyMounted}
+      />
+    </StartupErrorBoundary>
+  );
+}
+
+function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
+  const missingPrivyEnv = collectMissingPrivyEnvVars();
   const [user, setUser] = useState();
   const [userData, setUserData] = useState();
   const [userConnecting, setUserConnecting] = useState(false);
@@ -149,19 +405,14 @@ export default function App() {
   const [shareProfileVis, setShareProfileVis] = useState(false);
   const [showImageSender, setShowImageSender] = useState(null);
   const [listMessages, setListMessages] = useState([])
-  const [notificationsVis, setNotificationsVis] = useState(false);
   const [nicknameVis, setNicknameVis] = useState(false)
   const [connectType, setConnectType] = useState('')
   const [connectModalVis, setConnectModalVis] = useState(false);
 
-  const [listBlockedUser, setListBlockedUser] = useState(null)
-  const [listHiddenPost, setListHiddenPost] = useState(null)
-  const [listMutedUsers, setListMutedUsers] = useState(null)
-
   const [listAccount, setListAccount] = useState([])
 
   const [posts, setPosts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(SOCIAL_CATEGORIES);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshingBottom, setRefreshingBottom] = useState(false);
   const [profileSelected, setProfileSelected] = useState();
@@ -181,6 +432,11 @@ export default function App() {
   const modalProfileRef = useRef(null); 
   const modalPostBoxRef = useRef(null); 
   const modalNicknameRef = useRef(null); 
+  const accountTransitionRef = useRef(null);
+  const accountUiReadyRef = useRef(false);
+  const navigationRef = useMemo(() => createNavigationContainerRef(), []);
+  const pendingNavigationIntentRef = useRef(null);
+  const processedNotificationResponseIdsRef = useRef(new Set());
 
   const snapPoints = useMemo(() => ['50%', '50%'], []);
   const snapPointsLarge = useMemo(() => [Platform.OS == 'ios' ? '87%' : '95%', Platform.OS == 'ios' ? '87%' : '95%'], []);
@@ -200,8 +456,6 @@ export default function App() {
 
   const [tabViewHeight, setTabViewHeight] = useState(500)
   const [newGiftsCount, setNewGiftsCount] = useState(false)
-
-  const { provider } = useWalletConnectModal();    
 
   const [scrollAnim, setScrollAnim] = useState(new Animated.Value(0));
   const [offsetAnim, setOffsetAnim] = useState(new Animated.Value(0));
@@ -228,161 +482,184 @@ export default function App() {
     'GmarketBold': Platform.OS == 'ios' ? require('./assets/fonts/GmarketSansBold_ios.ttf') : require('./assets/fonts/GmarketSansBold.ttf'),
   });
 
-  useEffect(() => {
-    saveUserInStorage();
-
-    async function saveUserInStorage() {
-      if(user) {
-        if(!user?.profile || !user?.profile?.username){
-            const { data, error } = await orbis.getProfile(user.did);
-            user.profile = data.details.profile
-        }
-
-        const listDid = await AsyncStorage.getItem("user-connected")
-        const currentCeramicSession = await AsyncStorage.getItem("ceramic-session")
-        var listConnected = JSON.parse(listDid)
-        const indexUser = listConnected?.findIndex(e => e.user.did == user.did)
-
-        if(listConnected && listConnected.length > 0){
-            if(typeof indexUser !== 'undefined' && indexUser != -1){
-                listConnected[indexUser].time = moment().format('YYYY-MM-DD HH:mm:ss')
-                listConnected[indexUser].user = user
-            }else{
-                listConnected.push({
-                    'user': user, 
-                    'time': moment().format('YYYY-MM-DD HH:mm:ss'),
-                    'ceramicSession': currentCeramicSession
-                })
-            }
-        }else{
-            listConnected = [{
-                'user': user,
-                'time': moment().format('YYYY-MM-DD HH:mm:ss'),
-                'ceramicSession': currentCeramicSession
-            }]
-        }
-
-        await AsyncStorage.setItem("user-connected", JSON.stringify(listConnected));
-
-        if(typeof indexUser !== 'undefined' && indexUser != -1){
-            await orbis.isConnected(listConnected[indexUser].ceramicSession);
-        }else if(currentCeramicSession){
-            await orbis.isConnected(currentCeramicSession);
-        }else{
-            await orbis.isConnected();
-        }
-  
-        setListAccount([...listConnected])
-        setSwitchLoading(false)
-        setSettingsVis(false);
-        setSwitchAccountVis(false)
-
-        modalSwitchRef.current?.close()
-      }else{
-        let res = await orbis.logout();
-        
-        provider?.disconnect().then(async res => {
-            setUser(null);
-            setUserData(null);
-        }).catch(e => {
-            console.log(e);
-            setUser(null);
-            setUserData(null);
+  const resetAccountTransientUi = useCallback((nextTransition) => {
+    const normalizedNextTransition = nextTransition?.ownerUserId
+      ? Object.freeze({
+          ownerUserId: nextTransition.ownerUserId,
+          sessionEpoch: nextTransition.sessionEpoch,
         })
-
-        modalSwitchRef.current?.close()
+      : null;
+    const pendingNavigation = pendingNavigationIntentRef.current;
+    if (pendingNavigation) {
+      if (!pendingNavigation.accountTransition && normalizedNextTransition) {
+        pendingNavigationIntentRef.current = Object.freeze({
+          ...pendingNavigation,
+          accountTransition: normalizedNextTransition,
+        });
+      } else if (
+        pendingNavigation.accountTransition
+        && !sameAccountTransition(
+          pendingNavigation.accountTransition,
+          normalizedNextTransition,
+        )
+      ) {
+        pendingNavigationIntentRef.current = null;
       }
     }
-  }, [user]);
+    accountTransitionRef.current = normalizedNextTransition;
+    accountUiReadyRef.current = false;
+    callbackPostShared = undefined;
+    page = 0;
+    translateY.value = 0;
+    setScreen('home');
+    setPreviousScreen('home');
+    setCategory(null);
+    setRepost(false);
+    setPostDetailsVis(null);
+    setUpdateProfileVis(false);
+    setPushNotifsVis(false);
+    setNewFeatureVis(false);
+    setNewFeatureAlertVis(false);
+    setShowClaimOranges(false);
+    setTodayOranges(0);
+    setSwitchLoading(false);
+    setLoading(false);
+    setSettingsVis(false);
+    setSwitchAccountVis(false);
+    setAdAlreadyClaimed(false);
+    setAddressCopied(false);
+    setPostSettingsModalVis(false);
+    setPostboxVis(false);
+    setReplyTo(null);
+    setEditedPost(null);
+    setShareProfileVis(false);
+    setShowImageSender(null);
+    setListMessages([]);
+    setNicknameVis(false);
+    setConnectType('');
+    setConnectModalVis(false);
+    setListAccount([]);
+    setPosts([]);
+    setProfileSelected(null);
+    setCategoriesVis(false);
+    setShowReportBack(false);
+    setActivityClaim(false);
+    setInviteClaim(false);
+    setCategoryPosts(null);
+    setSelectedCategory(null);
+    setNewsPosts(null);
+    setSelectedNews(null);
+    setCurrentRoute(null);
+    setNewGiftsCount(false);
+    setUserConnecting(false);
+    modalSwitchRef.current?.close();
+    modalSettingsRef.current?.close();
+    modalPostSettingsRef.current?.close();
+    modalProfileRef.current?.close();
+    modalPostBoxRef.current?.close();
+    modalNicknameRef.current?.close();
+  }, [translateY]);
+
+  const dismissNavigationOverlays = useCallback(() => {
+    translateY.value = 0;
+    setShareProfileVis(false);
+    setPostDetailsVis(null);
+    setProfileSelected(null);
+    modalPostSettingsRef.current?.close();
+    modalProfileRef.current?.close();
+    modalPostBoxRef.current?.close();
+  }, [translateY]);
+
+  const tryNavigatePendingIntent = useCallback(() => {
+    const pendingNavigation = pendingNavigationIntentRef.current;
+    const currentTransition = accountTransitionRef.current;
+    if (!pendingNavigation || !pendingNavigation.accountTransition) return false;
+    if (!sameAccountTransition(pendingNavigation.accountTransition, currentTransition)) {
+      pendingNavigationIntentRef.current = null;
+      return false;
+    }
+    if (!accountUiReadyRef.current || !navigationRef.isReady()) return false;
+
+    const route = routeForEasyGoNavigationIntent(pendingNavigation.intent);
+    if (!route) {
+      pendingNavigationIntentRef.current = null;
+      return false;
+    }
+
+    try {
+      dismissNavigationOverlays();
+      navigationRef.navigate(route.name, route.params);
+      if (pendingNavigationIntentRef.current === pendingNavigation) {
+        pendingNavigationIntentRef.current = null;
+      }
+      return true;
+    } catch (error) {
+      console.warn('[navigation] deferred intent is still waiting for the navigator', error);
+      return false;
+    }
+  }, [dismissNavigationOverlays, navigationRef]);
+
+  const queueNavigationIntent = useCallback((intent) => {
+    if (!routeForEasyGoNavigationIntent(intent)) return false;
+    pendingNavigationIntentRef.current = Object.freeze({
+      intent,
+      accountTransition: accountTransitionRef.current,
+    });
+    return tryNavigatePendingIntent();
+  }, [tryNavigatePendingIntent]);
+
+  const handleNavigationReady = useCallback(() => {
+    tryNavigatePendingIntent();
+  }, [tryNavigatePendingIntent]);
+
+  const handleNotificationResponse = useCallback((response) => {
+    const responseId = response?.notification?.request?.identifier;
+    if (typeof responseId === 'string' && responseId) {
+      const processed = processedNotificationResponseIdsRef.current;
+      if (processed.has(responseId)) return;
+      if (processed.size >= 64) processed.clear();
+      processed.add(responseId);
+    }
+
+    const data = response?.notification?.request?.content?.data;
+    const intent = navigationIntentFromNotificationData(data);
+    if (intent) queueNavigationIntent(intent);
+    void Notifications.clearLastNotificationResponseAsync().catch(() => {});
+  }, [queueNavigationIntent]);
+
+  const handleURL = useCallback(async (incomingUrl) => {
+    const parsed = Linking.parse(incomingUrl);
+    const intent = navigationIntentFromParsedUrl(parsed);
+    if (intent) {
+      queueNavigationIntent(intent);
+      return;
+    }
+
+    // Legacy OAuth callback URLs are never authentication inputs. Privy owns
+    // OAuth state and token exchange inside screens/Login.js.
+    if (parsed.path === 'google-auth' || incomingUrl.includes('google-auth')) {
+      if (Platform.OS === 'ios') await WebBrowser.dismissBrowser();
+      console.warn('[auth] ignored legacy google-auth callback; use Privy login instead');
+      setLoading(false);
+    }
+  }, [queueNavigationIntent]);
 
 
     const onLayoutRootView = useCallback(async () => {
         if (isLayoutReady) {
-            await SplashScreen.hideAsync();
+            try {
+                await SplashScreen.hideAsync();
+            } catch (error) {
+                console.warn('[startup] unable to hide splash screen', error);
+            }
         }
     }, [isLayoutReady]);
     
 
-  /** Will check if user is connected on load to automatically re-connect user */
-    useEffect(() => {
-        connect();
-        loadContexts();
-        fecthBlockedUser();
-        fecthHiddenPost();
-        fecthMuteUser();
-
-        /** Will re-connect automatically the user to the account found in local storage */
-        async function connect() {
-            /** Check if user exists in local storage */
-            //   await AsyncStorage.removeItem("user-connected");
-
-            let _userDid = await AsyncStorage.getItem("user-connected");
-            let listDid = []
-            if(_userDid){
-                if(_userDid.charAt(0) != '['){
-                    await AsyncStorage.removeItem("user-connected");
-                }else{
-                    listDid = JSON.parse(_userDid)
-                }
-            }
-            
-            if(listDid && listDid.length != 0) {
-                if(listDid.length > 1){
-                    listDid.sort((a, b) => (a.time < b.time) ? 1 : -1)
-                }
-
-                const { data, error } = await orbis.getProfile(listDid[0]?.user?.did);                
-
-                setUser({...listDid[0].user})
-                if(data.details?.profile?.data){
-                    setUserData({...data.details.profile.data})
-                }else{
-                    setUserData({...listDid[0].user.profile?.data})
-                }
-                setIsLayoutReady(true);
-                
-            }else{
-                /** Retrieve user details */
-                let res = await orbis.isConnected();
-
-                if(res.status == 200) {
-                    setUser(res.details);
-                    setUserData(res.details.profile?.data);
-                }
-                
-                setIsLayoutReady(true);
-            }
-
-        }
-
-        // Will fetch all blocked user
-        async function fecthBlockedUser() {
-            let temp_list = await AsyncStorage.getItem("list_blocked_user");
-            const list_blocked_user = JSON.parse(temp_list)
-
-            if(list_blocked_user) {
-                setListBlockedUser([...list_blocked_user])
-            }
-        }
-        // Will fetch Hidden post
-        async function fecthHiddenPost() {
-            let temp_list = await AsyncStorage.getItem("list_hidden_post");
-            const list_hidden_post = JSON.parse(temp_list)
-
-            if(list_hidden_post) {
-                setListHiddenPost([...list_hidden_post])
-            }
-        }
-        // Will fetch mute users
-        async function fecthMuteUser() {
-            let temp_list = await AsyncStorage.getItem("list_muted_users");
-            const list_muted_users = JSON.parse(temp_list)
-
-            if(list_muted_users) {
-                setListMutedUsers([...list_muted_users])
-            }
-        }
-    }, []);
+  useEffect(() => {
+    setCategories(SOCIAL_CATEGORIES);
+    setIsLayoutReady(true);
+  }, []);
 
     useEffect(() => {
         page = 0;
@@ -391,287 +668,66 @@ export default function App() {
 
     /** Will be triggered when a new deeplink is received */
     useEffect(() => {
-        url && handleURL(url)
-    }, [url]);
+        if (url) void handleURL(url);
+    }, [handleURL, url]);
 
     /** Handle notifications received, will open right screen or pane based on the notification received */
     useEffect(() => {
-        responseListener.current = Notifications.addNotificationResponseReceivedListener(async (response) => {
-            try {
-                let data = response.notification?.request?.content?.data;
-
-                switch (data?.type) {
-                    /** Open post pane for reactions */
-                    case "reaction":
-                        hideModals();
-                        setPostDetailsVis(data.post_id);
-                        break;
-                    /** Open post pane for replies */
-                    case "reply":
-                        hideModals();
-                        setPostDetailsVis(data.master ? data.master : data.post_id);
-
-                        await sleep(4000);
-                        if(feedRef?.current && data.master) {
-                            //setScrolled(0);
-                            feedRef.current.scrollToItem({ animated: true, item: data.post_id });
-                        }
-                        break;
-
-                    /** Open post pane for mentions */
-                    case "mention":
-                        hideModals();
-                        setPostDetailsVis(data.post_id);
-
-                        await sleep(4000);
-                        if(feedRef?.current && data.master) {
-                            //setScrolled(0);
-                            feedRef.current.scrollToItem({ animated: true, item: data.post_id });
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            } catch(e) {
-                console.log("Error addNotificationResponseReceivedListener:", e);
-            }
-        });
+        let active = true;
+        responseListener.current = Notifications.addNotificationResponseReceivedListener(
+          handleNotificationResponse,
+        );
+        void Notifications.getLastNotificationResponseAsync()
+          .then((response) => {
+            if (active && response) handleNotificationResponse(response);
+          })
+          .catch(() => {});
 
         return () => {
+            active = false;
             Notifications.removeNotificationSubscription(responseListener.current);
         };
-    }, []);
-
-    /** Will handle links opened with the coineasy:// sheme */
-    async function handleURL(url) {
-        const { path, queryParams } = Linking.parse(url);
-        let token;
-        switch (path) {
-            case "user":
-                setScreen("profile");
-                setProfileSelected(queryParams.did);
-                hideModals();
-                break;
-            case "google-auth":
-                token = queryParams.token;
-
-                /** Dismiss browser if on iOS */
-                Platform.OS === 'ios' && WebBrowser.dismissBrowser()
-
-                if(token) {
-                    try {
-                        googleConnect(token);
-                    } catch(e) {
-                        console.log("Error authenticating with Google:", e);
-                        //setLoading(false);
-                    }
-                }
-                break;
-            default:
-                try {
-                    if(url.includes("google-auth")) {
-                        console.log("URL contains google-auth")
-                        token = queryParams.token;
-                        googleConnect(token);
-                    } else if(url.includes("profile")) {
-                        setScreen("profile");
-                        setProfileSelected(queryParams.did);
-                        hideModals();
-                    }
-                } catch(e) {
-                    console.log("Error authenticating with Google:", e);
-                }
-                break;
-        }
-    }
-
-    async function googleConnect(token) {
-        let resUser = await orbis.connect_v2({
-            provider: "oauth",
-            oauth: {
-                type: "google",
-                token: token
-            }
-        });
-
-        if(resUser.status == 200) {
-            const { data, error } = await orbis.getProfile(resUser.details.did);
-            if(connectType == "signin" && (!data.details.profile?.data?.alreadyLogin && (!data.details.profile?.username || !data.details.profile?.pfp || !data.details.profile?.description))){
-
-                let options= {
-                    did: resUser.details.did,
-                    context,
-                    include_child_contexts: true
-                };
-        
-                let { data } = await orbis.getPosts(options);
-                if(data.length == 0){
-                    provider?.disconnect().then(async res => {
-                        await AsyncStorage.removeItem("provider-type");       
-                        setUser(null);
-                        setUserData(null);
-                        setLoading(false)
-                    }).catch(e => {
-                        setUser(null);
-                        setUserData(null);
-                        setLoading(false)
-                    })
-                    
-                    if(!provider){
-                        setUser(null);
-                        setUserData(null);
-                    }
-        
-                    setLoading(false)
-                    setConnectModalVis(false)
-                    alert("You haven't signed up with this account before, do you want to sign up ?")
-                }else{
-                    setUser(resUser.details);
-                    setUserData(resUser.details.profile?.data);
-                    AsyncStorage.setItem("provider-type", "google");
-                    setLoading(false)
-                    callbackConnect(resUser.details);
-                }
-            }else{
-                setUser(resUser.details);
-                setUserData(resUser.details.profile?.data);
-                AsyncStorage.setItem("provider-type", "google");
-                setLoading(false)
-                callbackConnect(resUser.details);
-            }
-        }
-    }
-
-    function hideModals() {
-        translateY.value = 0;
-        setShareProfileVis(false);
-        setPostDetailsVis(null);
-        setProfileSelected(null);
-    }
+    }, [handleNotificationResponse]);
 
     /** Will retrieve all posts shared in the global context */
     async function loadPosts() {
-        setPosts([]);
-        setRefreshing(true);
-        let _contexts = [context, onboard_context, edu_context];
-        let { data } = await orbis.getPosts({
-            contexts: category ? [category.stream_id] : _contexts,
-            include_child_contexts: true
-        });
-
-        if(data) {
-            data.map(async (e, indexPost) => {
-                if(e.content.media?.length > 0){
-                    e.content.media.map(async (elt, indexImage) => {
-                        if(elt.url){
-                            await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
-                        }else if(elt[0].url){
-                            await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
-                        }else{
-                            console.log(elt);
-                        }        
-
-                        if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
-                            setPosts(data);
-                            setRefreshing(false);
-                        }
-                    })
-                }else{
-                    if(indexPost == data.length -1){
-                        setPosts(data);
-                        setRefreshing(false);
-                    }
-                }
-            })
-        }else{
-            setRefreshing(false);
-        }
+        // Screen feeds own their server state through useFeed/usePosts.
+        setRefreshing(false);
     }
 
     /** This will load more posts and add those to the current list */
     async function loadMorePosts() {
-        if(refreshingBottom) {
-            return;
-        }
-        if (posts.length % 50 === 0) {
-            setRefreshingBottom(true);
-            page++;
-            let { data } = await orbis.getPosts({
-                contexts: category ? [category.stream_id] : [context, onboard_context, edu_context],
-                include_child_contexts: true
-            }, page);
-
-            if(data){
-                data.map(async (e, indexPost) => {
-                    if(e.content.media?.length > 0){
-                        e.content.media.map(async (elt, indexImage) => {
-                            if(elt.url){
-                                await Image.getSize(elt.url, (width, height) => {elt.width = width; elt.height = height});
-                            }else if(elt[0].url){
-                                await Image.getSize(elt[0].url, (width, height) => {elt[0].width = width; elt[0].height = height});
-                            }
-            
-                            if(indexImage == e.content.media.length-1 && indexPost == data.length -1){
-                                let _posts = [...posts, ...data];
-                                setRefreshingBottom(false);
-                                setPosts(_posts);
-                            }
-                        })
-                    }else{
-                        if(indexPost == data.length -1){
-                            let _posts = [...posts, ...data];
-                            setRefreshingBottom(false);
-                            setPosts(_posts);
-                        }
-                    }
-                })
-            }
-        } else {
-            console.log("Reached the end.");
-        }
+        setRefreshingBottom(false);
     }
 
     /** Load all categories / contexts under the global context */
     async function loadContexts() {
-        let { data, error } = await orbis.api.from("orbis_contexts").select().eq('context', context).order('created_at', { ascending: false });
-        setCategories(data);
+        setCategories(SOCIAL_CATEGORIES);
     }
 
     const onRefresh = useCallback(async () => {
-        page = 0;
-        setRefreshing(true);
-        let { data, error } = await orbis.getPosts({
-            contexts: category ? [category.stream_id] : [context, onboard_context, edu_context],
-            include_child_contexts: true
-        });
-
-        error && console.log("Error getPosts:", error);
-        data && setPosts(data)
-
         setRefreshing(false);
-    }, [category]);
+    }, []);
 
     async function callbackConnect(detailUser) {
-
-        console.log('CALLBACK CONNECT');
-        console.log(detailUser);
+        const expectedTransition = accountTransitionRef.current;
+        const isCurrentTransition = () => sameAccountTransition(
+            accountTransitionRef.current,
+            expectedTransition,
+        );
+        if (!expectedTransition || !isCurrentTransition()) return;
         
         if(connectType == "signup"){
             handleModalNicknamePress()
-
-            if(detailUser && detailUser?.profile){
-                if(detailUser?.profile?.data){
-                    detailUser.profile.data.alreadyLogin = true
-                }else{
-                    detailUser.profile.data = {alreadyLogin: true}
-                }
-
-                const res = await orbis.updateProfile(detailUser.profile);
-            }
             setLoading(false);
         }else{
-            const showNotificationDate = await AsyncStorage.getItem("showNotificationDate")
-            const showNewFeatureDate = await AsyncStorage.getItem("showNewFeatureDate")
+            // These two dates are intentionally device-wide modal-dismissal
+            // preferences. They contain no account identifier or user data.
+            const [showNotificationDate, showNewFeatureDate] = await Promise.all([
+                AsyncStorage.getItem("showNotificationDate"),
+                AsyncStorage.getItem("showNewFeatureDate"),
+            ]);
+            if (!isCurrentTransition()) return;
 
             if(moment().format('YYYY-MM-DD') >= showNotificationDate || !showNotificationDate){
                 setPushNotifsVis(true);
@@ -688,11 +744,7 @@ export default function App() {
 
     /** Show postbox while saving the callback function */
     function showPostbox(callback) {
-        console.log("Enter showPostbox with:", callback);
         callbackPostShared = callback ?? defaultCallbackPostShared;
-
-        console.log('la');
-        console.log(callbackPostShared);
 
         handleModalPostBoxPress()
         Haptics.selectionAsync();
@@ -742,10 +794,6 @@ export default function App() {
         
         setUserData({...tempData})
         
-        var tempProfile = user.profile
-        tempProfile.data = tempData
-        const res = await orbis.updateProfile(tempProfile);
-
         hidePostbox()
     }
 
@@ -928,10 +976,6 @@ export default function App() {
         
     //     setUserData({...tempData})
         
-    //     var tempProfile = user.profile
-    //     tempProfile.data = tempData
-    //     const res = await orbis.updateProfile(tempProfile);
-
     //     hidePostbox()
     // }
 
@@ -963,6 +1007,22 @@ export default function App() {
         return null
     }
 
+    if (missingPrivyEnv.length > 0) {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <View style={styles.configContainer}>
+                    <Text style={styles.brand}>EasyGo</Text>
+                    <Text style={styles.configCode}>{STARTUP_CONFIG_CODE}</Text>
+                    <Text style={styles.configTitle}>필수 환경변수가 설정되지 않았습니다.</Text>
+                    <Text style={styles.configText}>
+                        앱이 즉시 종료되지 않도록 부팅을 중단했습니다. 아래 값이 현재 EAS 빌드 환경과 앱 번들에 포함되어야 합니다.
+                    </Text>
+                    <Text style={styles.configBullets}>- {missingPrivyEnv.join('\n- ')}</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
 
     /** Wait for app to be ready before rendering it */
     if (!isLayoutReady) {
@@ -970,12 +1030,24 @@ export default function App() {
     }
 
     return (
-        <PrivyProvider appId={PRIVY_APP_ID} supportedChains={[baseChain]}>
+        <EasyGoPrivyBoundary alreadyMounted={privyAlreadyMounted}>
+        <DeviceAccountDataProvider>
+        <AccountDeletionSessionGate>
+        {(accountDeletionGuard, reportDeletionBlock) => (
+        <DeviceAccountDataRender>
+        {(deviceAccountData) => {
+        const presentedOwner = user?.profile?.data?.courseProgressOwner || null;
+        const accountUiReady = Boolean(
+          presentedOwner
+          && presentedOwner === deviceAccountData.ownerUserId
+          && deviceAccountData.status === 'ready',
+        );
+        accountUiReadyRef.current = accountUiReady;
+        return (
         <>
             <StatusBar translucent={true} backgroundColor="#00000000" style="black"/>
             <GestureHandlerRootView onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
                 <GlobalContext.Provider value={{ 
-                        orbis,
                         confetti,
                         refreshing,
                         categories,
@@ -1012,7 +1084,6 @@ export default function App() {
                         setSettingsVis,
                         setShareProfileVis,
                         setSwitchAccountVis,
-                        setNotificationsVis,
                         setPostSettingsModalVis,
 
                         category, setCategory,
@@ -1055,85 +1126,103 @@ export default function App() {
                         categoriesVis, setCategoriesVis,
                         activityClaim, setActivityClaim,
                         newGiftsCount, setNewGiftsCount,
-                        listHiddenPost, setListHiddenPost,
-                        listMutedUsers, setListMutedUsers,
                         showReportBack, setShowReportBack,
                         showImageSender, setShowImageSender,
-                        listBlockedUser, setListBlockedUser,
                         connectModalVis, setConnectModalVis,
                         selectedCategory, setSelectedCategory,
                         showClaimOranges, setShowClaimOranges,
                         adAlreadyClaimed, setAdAlreadyClaimed,
                     }}
                 >
+                    <AccountTransitionResetSignal onTransition={resetAccountTransientUi} />
+                    <AccountNavigationReplaySignal
+                      ready={accountUiReady}
+                      ownerUserId={deviceAccountData.ownerUserId}
+                      sessionEpoch={deviceAccountData.sessionEpoch}
+                      onReplay={tryNavigatePendingIntent}
+                    />
+                    <FullStartupSignal onStartupStatus={onStartupStatus} />
+                    <AuthBridge
+                      accountDeletionGuard={accountDeletionGuard}
+                      onDeletionBlocked={reportDeletionBlock}
+                    />
 
                     <TailwindProvider utilities={utilities}>
-                        {user ?
-                            <AppNavigator />
-                        :
-                            <Login />
-                        }
-
-                        {/** Display the edit profile details modal */}
-                        <UpdateProfileModal />
-
-                        {/** Display push notifications pane */}
-                        {pushNotifsVis &&
-                            <PushNotificationsModal />
-                        }
-
-                        {/** Display nickname pane */}
-                        <NicknameModal />
-
-                        {/** Render repost modal */}
-                        {repost !== false &&
-                            <RepostModal />
-                        }
-
-                        {/** Share post container */}
-                        <PostboxModal />
-
-                        {/** Show post settings modal */}
-                        <BottomSheetModalProvider>
-                            <BottomSheetModal
-                                ref={modalPostSettingsRef}
-                                index={1}
-                                snapPoints={showReportBack ? snapPointsLarge : snapPoints}
-                                handleIndicatorStyle={{backgroundColor: 'black',}}
-                                handleStyle={{height: 40,justifyContent: 'center',}}
-                                backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
-                            >
-                                <PostSettingsModal />
-                            </BottomSheetModal>
-                        </BottomSheetModalProvider>
-
-                        {/** QR modal container */}
-                        {shareProfileVis &&
-                            <QR hide={() => setShareProfileVis(false)} />
-                        }
-
-                        {/** Show notifications pane */}
-                        {notificationsVis &&
-                            <NotificationsPane />
-                        }
-
-                        {addressCopied && (
-                            <View style={{backgroundColor: 'rgba(0,0,0,0.5)',width: '100%', height: '100%',position: 'absolute',justifyContent:'center',alignItems:'center',}}>
-                                <Image
-                                    style={{width: 150, height: 150,alignSelf:'center',}}
-                                    resizeMode='contain'
-                                    source={require('./assets/link_copied.png')}
+                        {accountDeletionGuard.status !== 'clear' ? (
+                            <AccountDeletionPending guard={accountDeletionGuard} />
+                        ) : deviceAccountData.status === 'storage-error' ? (
+                            <DeviceAccountDataUnavailable retry={deviceAccountData.retry} />
+                        ) : user && accountUiReady ? (
+                            <>
+                                <AppNavigator
+                                  navigationRef={navigationRef}
+                                  onNavigationReady={handleNavigationReady}
                                 />
-                            </View>
-                        )}
+
+                                {/** Display the edit profile details modal */}
+                                <UpdateProfileModal />
+
+                                {/** Display push notifications pane */}
+                                {pushNotifsVis &&
+                                    <PushNotificationsModal />
+                                }
+
+                                {/** Display nickname pane */}
+                                <NicknameModal />
+
+                                {/** Render repost modal */}
+                                {repost !== false &&
+                                    <RepostModal />
+                                }
+
+                                {/** Share post container */}
+                                <PostboxModal />
+
+                                {/** Show post settings modal */}
+                                <BottomSheetModalProvider>
+                                    <BottomSheetModal
+                                        ref={modalPostSettingsRef}
+                                        index={1}
+                                        snapPoints={showReportBack ? snapPointsLarge : snapPoints}
+                                        handleIndicatorStyle={{backgroundColor: 'black',}}
+                                        handleStyle={{height: 40,justifyContent: 'center',}}
+                                        backdropComponent={(backdropProps) => <BottomSheetBackdrop {...backdropProps} enableTouchThrough={true} />}
+                                    >
+                                        <PostSettingsModal />
+                                    </BottomSheetModal>
+                                </BottomSheetModalProvider>
+
+                                {/** QR modal container */}
+                                {shareProfileVis &&
+                                    <QR hide={() => setShareProfileVis(false)} />
+                                }
+
+                                {addressCopied && (
+                                    <View style={{backgroundColor: 'rgba(0,0,0,0.5)',width: '100%', height: '100%',position: 'absolute',justifyContent:'center',alignItems:'center',}}>
+                                        <Image
+                                            style={{width: 150, height: 150,alignSelf:'center',}}
+                                            resizeMode='contain'
+                                            source={require('./assets/link_copied.png')}
+                                        />
+                                    </View>
+                                )}
+                            </>
+                        ) : !deviceAccountData.ownerUserId ? (
+                            <Login />
+                        ) : null}
 
                         {/* <Confetti confetti={confetti}/> */}
                     </TailwindProvider>
                 </GlobalContext.Provider>
             </GestureHandlerRootView>
-          <AuthBridge />
         </>
-      </PrivyProvider>
+        );
+        }}
+        </DeviceAccountDataRender>
+        )}
+        </AccountDeletionSessionGate>
+        </DeviceAccountDataProvider>
+      </EasyGoPrivyBoundary>
     );
 }
 
@@ -1143,4 +1232,55 @@ const Confetti = ({confetti}) => {
     )
 }
 
-const styles = StyleSheet.create();
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFF8F0',
+  },
+  configContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 28,
+  },
+  brand: {
+    color: '#FF6813',
+    fontSize: 40,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  configCode: {
+    color: '#C2410C',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  configTitle: {
+    color: '#0F172A',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  configText: {
+    color: '#334155',
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryText: {
+    color: '#C2410C',
+    fontSize: 16,
+    fontWeight: '700',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  configBullets: {
+    color: '#334155',
+    fontSize: 13,
+    lineHeight: 22,
+    textAlign: 'left',
+  },
+});

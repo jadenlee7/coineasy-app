@@ -1,27 +1,26 @@
-import React, { useState, useRef, useContext, useMemo } from "react";
-import { Text, View, TextInput, TouchableHighlight, Platform, ActivityIndicator, TouchableOpacity, Image, Animated, Dimensions, Keyboard, ImageBackground } from 'react-native';
+import React, { useState, useRef, useContext, useEffect, useMemo } from "react";
+import { Alert, Text, View, TextInput, TouchableHighlight, Platform, ActivityIndicator, TouchableOpacity, Image, Animated, Dimensions, Keyboard } from 'react-native';
 
-import Modal from "../Modal";
 import Button from "../Button";
 import { UserPfp } from "../User";
-import { CancelIcon, LinkIcon, PlusIcon, SuccessIcon, TelegramIcon, TwitterIcon } from "../Icons";
+import { CancelIcon, LinkIcon, PlusIcon, TelegramIcon, TwitterIcon } from "../Icons";
 import { GlobalContext } from "../../contexts/GlobalContext";
+import { useDeviceAccountOperationLease } from '../../contexts/DeviceAccountDataContext';
 
-import mime from 'mime'
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
-import * as ImagePicker from 'expo-image-picker';
-import { showMessage } from "react-native-flash-message";
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import useStatusBarHeight from "../../hooks/useStatusBarHeight";
+import { api } from "../../utils/api";
+import { adaptSocialProfile } from "../../utils/socialPostAdapter";
 
 export default function UpdateProfileModal({callback}) {
-    const { user, setUser, orbis, setUpdateProfileVis, modalProfileRef } = useContext(GlobalContext);
+    const { user, setUser, modalProfileRef } = useContext(GlobalContext);
+    const { lease, isCurrentLease } = useDeviceAccountOperationLease();
     const tailwind = useTailwind();
 
     const [saving, setSaving] = useState(false);
     const [savingLink, setSavingLink] = useState(false);
-    const [pfpLoading, setPfpLoading] = useState(false);
     const [pfp, setPfp] = useState(user?.profile?.pfp ? user.profile.pfp : "");
     const [name, setName] = useState(user?.profile?.username ? user.profile.username : "");
     const [description, setDescription] = useState(user?.profile?.description ? user.profile.description : "");
@@ -29,8 +28,6 @@ export default function UpdateProfileModal({callback}) {
     const [showLinks, setShowLinks] = useState(false)
     const [showDetailLink, setShowDetailLink] = useState(false)
     const [linkIndex, setLinkIndex] = useState(null)
-    const [link, setLink] = useState("")
-
     const [linkText, setLinkText] = useState("")
     const [titleText, setTitleText] = useState("")
 
@@ -43,6 +40,17 @@ export default function UpdateProfileModal({callback}) {
     const moveAnimation3 = useRef(new Animated.Value(Dimensions.get('window').width)).current;
 
     const [numberLink, setnumberLink] = useState(user?.profile && user?.profile.data && user?.profile.data.list_link ? user.profile.data.list_link.length : 0)
+
+    useEffect(() => {
+        setPfp(user?.profile?.pfp || '');
+        setName(user?.profile?.username || '');
+        setDescription(user?.profile?.description || '');
+        setnumberLink(user?.profile?.data?.list_link?.length || 0);
+    }, [user]);
+
+    useEffect(() => {
+        setSaving(false);
+    }, [lease]);
 
     const onBackSocialLinks = () => {
         Haptics.selectionAsync();
@@ -109,175 +117,69 @@ export default function UpdateProfileModal({callback}) {
     }
 
     async function saveProfile() {
-        if(pfpLoading) {
-            alert("Your profile picture is currently being uploaded.");
+        if (saving) return;
+        const expectedLease = lease;
+        if (!expectedLease || !isCurrentLease(expectedLease)) return;
+        Haptics.selectionAsync();
+        const displayName = name.trim();
+        const bio = description.trim();
+
+        if (displayName.length > 50 || bio.length > 280) {
+            Alert.alert('Profile is too long', 'Name can be up to 50 characters and bio up to 280.');
             return;
         }
-        Haptics.selectionAsync();
-        setSaving(true);
-        let content = {
-            username: name,
-            description: description,
-            pfp: pfp,
-            data: user?.profile?.data ? user.profile.data : {}
-        };
-        const res = await orbis.updateProfile(content);
-        
-        let _user = {...user};
-        _user.profile = content;
-        setUser(_user);
-        setSaving(false);
-        modalProfileRef.current?.close()
 
-        if(callback) {
-            callback(_user);
+        setSaving(true);
+        try {
+            const payload = {
+                displayName,
+                bio: bio || null,
+            };
+            if (/^https?:\/\//i.test(pfp)) payload.pfp = pfp;
+
+            const result = await api.profiles.updateMe(payload, {
+                expectedAuthUserId: expectedLease.ownerUserId,
+            });
+            if (!isCurrentLease(expectedLease)) return;
+            const details = adaptSocialProfile(result?.profile || result);
+            if (!details) throw new Error('Profile update returned no data');
+
+            const nextUser = {
+                ...user,
+                id: details.id || user?.id,
+                did: details.did || user?.did,
+                profile: {
+                    ...user?.profile,
+                    ...details.profile,
+                    data: {
+                        ...user?.profile?.data,
+                        ...details.profile?.data,
+                    },
+                },
+            };
+            setUser((current) => (isCurrentLease(expectedLease) ? nextUser : current));
+            if (!isCurrentLease(expectedLease)) return;
+            modalProfileRef.current?.close();
+            callback?.(nextUser);
+        } catch (error) {
+            if (!isCurrentLease(expectedLease)) return;
+            console.warn('[UpdateProfileModal] update failed', error);
+            Alert.alert('Could not save profile', 'Check the backend connection and try again.');
+        } finally {
+            if (isCurrentLease(expectedLease)) setSaving(false);
         }
     }
 
     async function saveLinks() {
         Haptics.selectionAsync();
         setSavingLink(true);
-
-        const temp_link = typeof linkText !== 'undefined' ? linkText : ''
-        const temp_title = typeof titleText !== 'undefined' ? titleText : ''
-    
-        let content = {
-            username: name,
-            description: description,
-            pfp: pfp,
-            data: user?.profile?.data ? user?.profile.data : {}
-        }
-
-        if(temp_title != '' && temp_link == ''){
-            showMessage({
-                message: 'URL can not be empty with a title.',
-                type: "danger",
-                floating: true,
-                backgroundColor: "#3D3D3D",
-                icon: () => <CancelIcon style={{marginRight: 10,}}/>
-            });
-            setSavingLink(false);
-        }else if(temp_title == '' && temp_link == '' && linkIndex == null ){
-            showMessage({
-                message: 'URL can not be empty.',
-                type: "danger",
-                floating: true,
-                backgroundColor: "#3D3D3D",
-                icon: () => <CancelIcon style={{marginRight: 10,}}/>
-            });
-            setSavingLink(false);
-        }else{
-            if(linkIndex == null){
-                if(content.data.list_link){
-                    content.data.list_link.push({
-                        link: temp_link,
-                        title: temp_title
-                    })
-                }else{
-                    content.data.list_link = [
-                        {
-                            link: temp_link,
-                            title: temp_title
-                        }
-                    ]
-                }
-            }else{
-                if(temp_link != ''){
-                    content.data.list_link[linkIndex] = {
-                        link: temp_link,
-                        title: temp_title
-                    }
-                }else{
-                    content.data.list_link.splice(linkIndex, 1)
-                }       
-            }   
-
-
-            const res = await orbis.updateProfile(content);
-
-            if(res.status == 300){
-                showMessage({
-                    message: 'An unexpected error occured. Please try again later.',
-                    type: "danger",
-                    floating: true,
-                });
-                setSavingLink(false);
-            }else{
-                let _user = {...user};
-                if(user?.profile){
-                    _user.profile.data = content.data;
-                }else{
-                    _user.profile = {
-                        data: content.data
-                    }
-                }
-                setUser(_user);
-                setSavingLink(false);
-        
-                if(callback) {
-                    callback(_user);
-                }
-
-                showMessage({
-                    message: linkText && linkText != '' ? 'Social link added with success' : 'Social link removed with success',
-                    type: "success",
-                    floating: true,
-                    backgroundColor: "#3D3D3D",
-                    icon: () => <SuccessIcon style={{marginRight: 10,}}/>
-                });
-
-                setLinkIndex(null)
-                setTitleText('')
-                setLinkText('')
-                onBackDetailSocialLink()
-            }    
-        }
+        Alert.alert('Social links are coming next', 'The EasyGo profile API does not store social links yet.');
+        setSavingLink(false);
     }
 
     async function selectPhoto() {
         Haptics.selectionAsync();
-        try {
-            // No permissions request is necessary for launching the image library
-            let result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: "Images",
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.25,
-            });
-
-            if (!result.canceled) {
-                /** Handle Image picked */
-                let imagePath = result.assets[0].uri;
-                setPfpLoading(true);
-                setPfp(imagePath);
-
-                const imageType = mime.getType(imagePath)
-
-                /** Create file object */
-                let file = {
-                    name: "test",
-                    type: imageType,
-                    uri: Platform.OS === 'ios' ? imagePath.replace('file://', '') : imagePath,
-                }
-
-                /** Upload PFP to IPFS */
-                const resUpload = await orbis.uploadMedia(file);
-
-                /** Handle result returned by Orbis SDK */
-                if(resUpload.status == 200) {
-                    let finalUrl = resUpload.result.url.replace("ipfs://", resUpload.result.gateway);
-                    setPfp(finalUrl);
-                    setPfpLoading(false);
-                } else {
-                    alert("Error uploading profile picture.");
-                    setPfpLoading(false);
-                }
-
-            }
-        } catch(e) {
-            console.log("Error selecting photo:", e);
-            setPfpLoading(false);
-        }
+        Alert.alert('Profile photo upload is coming next', 'The backend needs a media upload endpoint before local photos can be saved safely.');
     }
 
     return(
@@ -304,17 +206,10 @@ export default function UpdateProfileModal({callback}) {
                     <View style={tailwind('w-full flex flex-col items-center')}>
                         <TouchableHighlight style={tailwind('rounded-full')} onPress={() => selectPhoto()}>
                             <>
-                                {pfpLoading ?
-                                <>
-                                    <UserPfp details={{ profile: { pfp: pfp }}} height={50} />
-                                    <ActivityIndicator size="small" color="#000" style={[tailwind('absolute'), {bottom: 0, right: -5}]} />
-                                </>
-                                :
                                 <>
                                     <UserPfp details={{ profile: { pfp: pfp }}} height={50} />
                                     <PlusIcon />
                                 </>
-                                }
 
                             </>
                         </TouchableHighlight>

@@ -19,7 +19,7 @@ const IndicatorWidth = 50
 const windowSize = Dimensions.get('window')
 
 const Trophies = ({ navigation, route }) => {
-    const { orbis, 
+    const {
         userData,
         currentRoute, 
         selectedNews,setSelectedNews, 
