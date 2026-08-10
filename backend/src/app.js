@@ -20,6 +20,7 @@ import { segmentsRouter } from './routes/segments.js';
 import { questsRouter } from './routes/quests.js';
 import { adminRouter } from './routes/admin.js';
 import { socialRouter } from './routes/social.js';
+import { legalRouter } from './routes/legal.js';
 import { createLegacySocialGate } from './middleware/legacy-social.js';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{8,128}$/;
@@ -135,6 +136,7 @@ export function createApp({
 
   app.get('/health', createLivenessHandler({ env }));
   app.get('/ready', createReadinessHandler({ db, env, appLogger }));
+  app.use('/legal', legalRouter);
 
   app.use('/auth', authRouter);
   app.use('/orange', orangeRouter);

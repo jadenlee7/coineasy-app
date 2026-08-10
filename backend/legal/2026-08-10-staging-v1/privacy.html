@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="easygo-policy-version" content="2026-08-10-staging-v1">
+  <title>EasyGo 개인정보 처리방침 · 2026-08-10-staging-v1</title>
+  <style>
+    :root { color-scheme: light; --ink:#111827; --muted:#5f6b7c; --orange:#ff6813; --paper:#fff8f0; --line:#eadfd4; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(860px,100%); margin:0 auto; padding:40px 22px 72px; }
+    h1 { margin:0; font-size:clamp(34px,8vw,58px); line-height:1; letter-spacing:-.04em; color:var(--orange); }
+    h2 { margin:42px 0 12px; font-size:24px; letter-spacing:-.02em; }
+    h3 { margin:25px 0 8px; font-size:18px; }
+    p,li { color:#273244; }
+    a { color:#b33f00; font-weight:700; }
+    .meta { margin:12px 0 28px; color:var(--muted); }
+    .notice { margin:24px 0 34px; padding:18px; border:2px solid var(--orange); border-radius:18px; background:#fff; }
+    .notice strong { display:block; margin-bottom:6px; color:#9a3412; }
+    .card { margin:16px 0; padding:20px; border:1px solid var(--line); border-radius:18px; background:#fff; }
+    table { width:100%; border-collapse:collapse; background:#fff; font-size:14px; }
+    th,td { padding:12px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { background:#fff0e3; }
+    code { padding:2px 5px; border-radius:6px; background:#f3f4f6; }
+    .en { margin-top:56px; padding-top:30px; border-top:3px solid var(--ink); }
+    .small { font-size:14px; color:var(--muted); }
+    @media (max-width:620px) { table,thead,tbody,tr,th,td { display:block; } th { border-bottom:0; } td { margin-bottom:8px; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>EasyGo</h1>
+  <p class="meta"><strong>개인정보 처리방침 후보</strong><br>문서 버전: <code>2026-08-10-staging-v1</code> · 작성일: 2026-08-10</p>
+
+  <section class="notice" aria-label="검토 상태">
+    <strong>내부 TestFlight staging 검토본</strong>
+    이 문서는 EasyGo의 실제 데이터 흐름을 검토하기 위한 후보이며 공개 서비스의 최종 법률 문서가 아닙니다.
+    운영자 주소, 개인정보 보호책임자, 국가별 국외이전 표, 확정 보유기간 및 계정 삭제 운영절차에 대한
+    운영자·법률 검토가 끝날 때까지 신규 동의 저장과 선택형 개인정보 처리는 비활성화됩니다.
+  </section>
+
+  <h2>1. 운영자와 적용 범위</h2>
+  <p>The Pivot Co., Ltd.(이하 “회사”)는 EasyGo 모바일 앱과 관련 백엔드 서비스(이하 “EasyGo”)의 개인정보 처리자입니다. 이 방침은 EasyGo 계정, 소셜 기능, Orange 보상 기록, Base 지갑 연결, 데이터 내보내기 및 향후 사용자가 명시적으로 선택하는 퀘스트·개인화 기능에 적용됩니다.</p>
+  <div class="card">
+    <strong>문의 및 권리 행사</strong><br>
+    EasyGo Privacy Team · <a href="mailto:contact@coineasy.xyz">contact@coineasy.xyz</a><br>
+    <span class="small">운영자의 등록 주소와 지정 개인정보 보호책임자 정보는 공개 출시 전에 추가 확인해야 합니다.</span>
+  </div>
+
+  <h2>2. 처리하는 정보</h2>
+  <table>
+    <thead><tr><th>범주</th><th>예시</th><th>수집 경로</th></tr></thead>
+    <tbody>
+      <tr><td>인증 및 계정</td><td>Privy 사용자 식별자, Apple 또는 Google 로그인 연결 상태, 로그인 세션, 서버가 생성한 내부 사용자 ID. EasyGo는 제공자 원문 subject 대신 계정 삭제 보호용 키 기반 해시를 저장할 수 있습니다.</td><td>사용자의 로그인과 Privy 인증 서비스</td></tr>
+      <tr><td>프로필 및 소셜</td><td>사용자명, 표시 이름, 소개, 프로필 이미지 URL, 게시물·답글·좋아요·팔로우 및 신고·차단·숨김·뮤트 상태. 안전 목록 일부는 기기에만 저장됩니다.</td><td>사용자가 직접 입력하거나 EasyGo 내에서 수행한 활동</td></tr>
+      <tr><td>지갑 및 블록체인</td><td>공개 EVM 지갑 주소, Base 체인 ID, 지갑 검증 시각, 사용자가 요청한 트랜잭션 해시와 공개 온체인 결과. EasyGo는 개인키나 복구 구문을 요청하거나 저장하지 않습니다.</td><td>Privy 지갑, 사용자의 서명, 공개 블록체인</td></tr>
+      <tr><td>보상·스왑·퀘스트</td><td>Orange 증감과 사유, 스왑 토큰·수량·체인·트랜잭션 해시, 퀘스트 시작·검증 결과. 선택형 기능은 별도 gate와 필요한 동의가 있을 때만 활성화됩니다.</td><td>EasyGo 이용 기록과 사용자가 요청한 기능</td></tr>
+      <tr><td>동의 및 개인정보 요청</td><td>동의 문서 버전, 필수 문서 확인 시각, 개인화·마케팅 선택, 변경 감사 기록, 데이터 내보내기와 계정 삭제 처리 상태</td><td>설정 화면과 서버 처리 기록</td></tr>
+      <tr><td>기기 및 운영 보안</td><td>앱/OS 버전, 푸시 알림 권한과 Expo 푸시 토큰(현재 서버 전송 전 기기 계정 범위에 보관), 요청 ID, 경로, 응답 코드, 제한된 오류 유형. 호스팅 사업자는 네트워크 연결 과정에서 IP 주소를 처리할 수 있습니다.</td><td>앱, 운영 로그 및 인프라</td></tr>
+    </tbody>
+  </table>
+  <p>카메라와 사진 보관함은 사용자가 사진을 촬영·선택하거나 저장할 때만 기기 권한을 통해 접근합니다. 현재 EasyGo 백엔드는 미디어 업로드 기능을 활성화하지 않았습니다.</p>
+
+  <h2>3. 처리 목적과 근거</h2>
+  <ul>
+    <li><strong>계약 이행:</strong> 로그인, 계정 동기화, 프로필·피드·알림, Orange 기록, 데이터 내보내기 등 사용자가 요청한 서비스를 제공합니다.</li>
+    <li><strong>보안 및 정당한 이익:</strong> 인증, 중복 보상 방지, 악용 방지, 장애 대응, 계정 격리 및 삭제 요청의 무결성을 보호합니다.</li>
+    <li><strong>동의:</strong> 지갑 활동 기반 개인화, 세그먼트 분석, 마케팅 측정 또는 퀘스트별 지갑 공유는 명확한 선택이 있을 때만 처리합니다. 현재 staging에서는 이 신규 동의 저장이 꺼져 있습니다.</li>
+    <li><strong>법적 의무:</strong> 적용되는 법률상 보관·대응 의무가 있는 최소 정보만 처리합니다.</li>
+  </ul>
+
+  <h2>4. 공개 정보와 블록체인</h2>
+  <p>프로필의 사용자명·표시 이름·소개와 사용자가 공개한 게시물은 다른 이용자에게 표시될 수 있습니다. EasyGo는 다른 사용자의 지갑 주소를 공개 프로필 응답에 포함하지 않습니다. 다만 사용자가 서명하거나 전송한 블록체인 거래와 공개 주소는 Base 등 공개 원장에 영구 기록될 수 있으며 EasyGo가 이를 삭제하거나 되돌릴 수 없습니다.</p>
+
+  <h2>5. 서비스 제공자와 제3자</h2>
+  <p>필요한 기능을 제공하기 위해 다음 범주의 사업자가 정보를 처리할 수 있습니다. 실제 공개 출시 전 계약 주체, 처리 국가, 이전 근거와 보관기간을 확정한 표가 추가되어야 합니다.</p>
+  <ul>
+    <li><strong>Privy:</strong> Apple·Google 인증, 세션 확인, 임베디드 지갑 생성과 지갑 운영</li>
+    <li><strong>Apple 및 Google:</strong> 사용자가 선택한 OAuth 로그인과 앱 배포·푸시 관련 플랫폼 기능</li>
+    <li><strong>Railway 및 PostgreSQL 인프라:</strong> EasyGo API, 데이터베이스와 운영 로그 호스팅</li>
+    <li><strong>Expo:</strong> 앱 빌드·업데이트 인프라 및 사용자가 허용한 경우 푸시 토큰 발급</li>
+    <li><strong>Squid:</strong> 사용자가 스왑 견적을 요청할 때 경로와 공개 지갑·거래 관련 정보 처리</li>
+    <li><strong>Base RPC, BaseScan 및 공개 블록체인:</strong> 네트워크 상태와 공개 거래 조회</li>
+    <li><strong>조건부 공급자:</strong> JustaName/ENS, Etherscan, EFP, Sentry, Better Stack, Telegram. 각 기능과 별도 gate가 승인되어 활성화된 경우에만 사용합니다.</li>
+  </ul>
+  <p>회사는 개인정보를 판매하지 않습니다. 광고주 기능은 현재 비활성화되어 있으며, 활성화되더라도 기본적으로 집계 결과만 제공하고 개별 지갑 주소 공유는 해당 퀘스트에서 별도 동의를 받아야 합니다.</p>
+
+  <h2>6. 국외 처리</h2>
+  <p>위 서비스 제공자의 인프라 위치에 따라 정보가 사용자의 국가 밖에서 처리될 수 있습니다. 공개 출시 전 각 수탁자·이전 국가·이전 시점과 방법·보유기간·보호조치를 확인하여 국가별 필수 고지를 추가합니다. 적절한 보호조치가 확인되지 않은 선택형 처리는 활성화하지 않습니다.</p>
+
+  <h2>7. 보유, 삭제 및 계정 삭제</h2>
+  <ul>
+    <li>계정·프로필·소셜·Orange·스왑·동의 정보는 서비스 제공과 법적 의무에 필요한 기간 동안 보관합니다. 공개 출시 전 각 범주의 확정 기간을 이 문서에 기재합니다.</li>
+    <li>게시물 삭제 시 본문과 미디어 연결은 즉시 비우고 작성자 연결을 제거하며, 답글 구조를 유지하기 위한 빈 삭제 표식과 시각만 남을 수 있습니다.</li>
+    <li>계정 삭제 시 로컬 사용자 데이터와 사용자 생성 콘텐츠를 삭제 또는 비식별화하고, 연결 제공자에도 필요한 삭제를 요청합니다. 법적 보관 의무와 사기 방지에 필요한 최소 정보는 사유와 기간을 고지한 뒤 분리 보관해야 합니다.</li>
+    <li>삭제된 계정이 오래된 세션으로 다시 생성되지 않도록 원문 로그인 식별자가 아닌 키 기반 해시 tombstone을 보관할 수 있습니다.</li>
+    <li>공개 블록체인 기록은 EasyGo가 삭제할 수 없습니다.</li>
+  </ul>
+  <p><strong>현재 상태:</strong> 계정 삭제 기능은 내부 staging에서 안전 검증 중이며 모든 공개 삭제 gate는 꺼져 있습니다. 사용자는 앱에서 전체 EasyGo JSON 또는 소셜 JSON을 내보내고 로그아웃할 수 있습니다. 공개 출시 전 앱 내 삭제 경로, 웹 요청 경로, 예상 처리 기간, Apple 토큰 해지 및 Google/Android 절차를 검증해야 합니다. 그 전에는 <a href="mailto:contact@coineasy.xyz?subject=EasyGo%20data%20request">contact@coineasy.xyz</a>로 요청할 수 있습니다.</p>
+
+  <h2>8. 이용자의 선택과 권리</h2>
+  <p>사용자는 설정에서 보유 정보의 JSON 사본을 내보내고, 동의를 철회하며, 프로필을 수정할 수 있습니다. 적용 법률에 따라 열람, 정정, 삭제, 처리정지, 동의 철회, 이동성 또는 이의 제기를 요청할 수 있습니다. 요청은 위 이메일로 접수하며, 본인 확인은 요청의 위험도에 필요한 범위로 제한합니다.</p>
+
+  <h2>9. 아동</h2>
+  <p>EasyGo는 만 18세 미만을 대상으로 하지 않으며 그러한 이용자의 개인정보를 의도적으로 수집하지 않습니다. 미성년자의 정보가 처리되었다고 판단되면 연락해 주세요. 공개 국가 범위와 연령 정책은 출시 전에 스토어 연령 등급과 함께 재검토합니다.</p>
+
+  <h2>10. 보안</h2>
+  <p>EasyGo는 전송 구간 암호화, 인증 토큰 기반 접근제어, 계정별 기기 저장소 격리, 서버 비밀과 공개 앱 식별자의 분리, PII 로그 최소화 및 데이터베이스 접근 제한을 사용합니다. 어떤 시스템도 절대적으로 안전할 수는 없으며, 사고가 확인되면 적용 법률에 따라 조사·통지합니다.</p>
+
+  <h2>11. 변경</h2>
+  <p>처리 목적이나 범위가 중요한 방식으로 변경되면 새 문서 버전을 발행하고 앱에서 재동의를 요청합니다. 이전 버전의 선택형 동의는 새 버전에 자동 승계되지 않습니다.</p>
+
+  <section class="en" lang="en">
+    <h2>English review copy</h2>
+    <p><strong>Status.</strong> This is an internal TestFlight staging candidate, version <code>2026-08-10-staging-v1</code>, not a final production legal notice. New consent grants and optional processing remain disabled until operator and qualified legal review is complete.</p>
+    <p><strong>Controller.</strong> The Pivot Co., Ltd. operates EasyGo. Privacy requests may be sent to <a href="mailto:contact@coineasy.xyz">contact@coineasy.xyz</a>. The registered address and named privacy officer must be confirmed before public launch.</p>
+    <p><strong>Data.</strong> EasyGo may process Privy and internal account identifiers; Apple/Google login state; profile and social content; public wallet addresses and Base transaction data; Orange, swap and quest records; consent/audit records; app and security diagnostics; and an Expo push token when the user enables notifications. EasyGo does not ask for or store wallet private keys or recovery phrases.</p>
+    <p><strong>Purposes.</strong> Data is used to provide requested account, social, wallet, reward, export and support features; secure the service and prevent abuse; meet legal obligations; and, only after a separate opt-in, provide personalization or aggregate campaign measurement.</p>
+    <p><strong>Providers and transfers.</strong> Privy, Apple, Google, Railway/PostgreSQL, Expo, Squid and public Base infrastructure may process data needed for their respective features. JustaName/ENS, Etherscan, EFP, Sentry, Better Stack and Telegram remain conditional on separate feature and privacy approval. A production processor/transfer table must be approved before launch.</p>
+    <p><strong>Sharing.</strong> EasyGo does not sell personal data. Public profile/content is visible by design, but another user's wallet address is excluded from EasyGo's public profile API. Public blockchain records cannot be erased by EasyGo. Advertisers receive aggregates by default; any future per-quest wallet disclosure requires a separate opt-in.</p>
+    <p><strong>Retention and deletion.</strong> Account data is kept only as needed to provide the service, meet law and protect security; exact production schedules remain an approval item. Deleted posts are redacted while a blank topology marker may remain. Account deletion must remove or de-identify associated EasyGo data and request provider deletion, subject to disclosed legal retention. A keyed, non-raw identity tombstone may remain to prevent deleted accounts from being recreated. The public deletion flow is still disabled during internal safety QA; exports and sign-out remain available, and requests can be sent to the contact address above.</p>
+    <p><strong>Rights and changes.</strong> Users can export data, revoke consent and request applicable access, correction, deletion, restriction, portability or objection rights. Material scope changes receive a new version and require re-consent. EasyGo is not directed to users under 18.</p>
+  </section>
+</main>
+</body>
+</html>

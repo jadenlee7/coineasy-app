@@ -150,6 +150,12 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   linked terms PDF has no explicit effective date, and the deployed consent
   version does not match that privacy date. Publish matched, EasyGo-branded
   policy documents before enabling any consent-gated Path C feature.
+  Candidate `2026-08-10-staging-v1` now has versioned backend routes and a
+  fail-closed client/server contract, documented in
+  [`../../docs/LEGAL_CONSENT_RELEASE.md`](../../docs/LEGAL_CONSENT_RELEASE.md).
+  It remains review-only: `CONSENT_GRANTS_ENABLED=false`, its manifest says
+  `publishedForConsent=false`, and the operator/legal approval blockers are
+  intentionally open.
 - [ ] Approve or remediate the remaining Squid, Privy/Solana, and Expo audit
   findings; never use `npm audit fix --force` during release.
   The 2026-08-10 backend remediation in PR #23 upgraded

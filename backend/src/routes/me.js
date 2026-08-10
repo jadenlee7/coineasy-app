@@ -147,6 +147,15 @@ function currentVersionOr503(req, res) {
   }
 }
 
+function consentEnvelope(record, currentVersion) {
+  return {
+    consent: {
+      ...consentView(record, currentVersion),
+      grantsEnabled: consentGrantsEnabled(),
+    },
+  };
+}
+
 meRouter.get('/consent', requireAuth, async (req, res) => {
   res.set('Cache-Control', 'no-store');
   const currentVersion = currentVersionOr503(req, res);
@@ -158,7 +167,7 @@ meRouter.get('/consent', requireAuth, async (req, res) => {
   });
   if (!user) return res.status(404).json({ error: 'not_found' });
 
-  return res.json({ consent: consentView(user.consent, currentVersion) });
+  return res.json(consentEnvelope(user.consent, currentVersion));
 });
 
 meRouter.put('/consent', requireAuth, async (req, res) => {
@@ -224,7 +233,7 @@ meRouter.put('/consent', requireAuth, async (req, res) => {
     });
 
     if (!consent) return res.status(404).json({ error: 'not_found' });
-    return res.json({ consent: consentView(consent, currentVersion) });
+    return res.json(consentEnvelope(consent, currentVersion));
   } catch (error) {
     if (error?.code === 'consent_version_mismatch') {
       return res.status(409).json({ error: error.code, currentVersion });

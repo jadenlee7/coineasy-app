@@ -87,11 +87,14 @@ test('staging preflight requires an HTTPS backend and preserves native identity'
     EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
     EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
     EXPO_PUBLIC_BACKEND_URL: 'https://api.easygo.example',
+    EXPO_PUBLIC_EASYGO_CONSENT_VERSION: '2026-08-10-staging-v1',
+    EXPO_PUBLIC_EASYGO_PRIVACY_URL: 'https://api.easygo.example/legal/2026-08-10-staging-v1/privacy',
+    EXPO_PUBLIC_EASYGO_TERMS_URL: 'https://api.easygo.example/legal/2026-08-10-staging-v1/terms',
   }, appConfig, { target: 'staging' });
   assert.deepEqual(ready.errors, []);
   assert.equal(
     ready.warnings.some((item) => item.name === 'EasyGo privacy policy URL'),
-    true,
+    false,
   );
 });
 
@@ -136,6 +139,17 @@ test('legal policy configuration is fail-closed and mandatory for production', (
   assert.equal(
     configured.errors.some((item) => item.name.startsWith('EasyGo ')),
     false,
+  );
+
+  const mismatchedPath = validateMobileEnvironment({
+    ...baseEnv,
+    EXPO_PUBLIC_EASYGO_CONSENT_VERSION: '2026-08-02-v1',
+    EXPO_PUBLIC_EASYGO_PRIVACY_URL: 'https://easygo.example/privacy/old-version',
+    EXPO_PUBLIC_EASYGO_TERMS_URL: 'https://easygo.example/terms/2026-08-02-v1',
+  }, appConfig, { target: 'staging' });
+  assert.equal(
+    mismatchedPath.errors.some((item) => item.name === 'EasyGo privacy policy URL'),
+    true,
   );
 });
 

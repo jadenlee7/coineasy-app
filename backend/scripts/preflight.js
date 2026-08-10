@@ -7,6 +7,10 @@ import {
   ACCOUNT_DELETION_RECENT_AUTH_READY,
   ACCOUNT_DELETION_STABLE_IDENTITY_GUARD_READY,
 } from '../src/lib/account-deletion-gates.js';
+import {
+  legalDocumentsApproved,
+  LEGAL_DOCUMENT_VERSION,
+} from '../src/lib/legal.js';
 
 const BOOLEAN_FLAGS = [
   'SIWE_AUTH_ENABLED',
@@ -132,6 +136,19 @@ export function validateDeployEnvironment(
         'RELEASE_SHA must identify the deployed revision',
       );
     }
+    add(
+      clean(env.EASYGO_CONSENT_VERSION) === LEGAL_DOCUMENT_VERSION,
+      'consent document version alignment',
+      `EASYGO_CONSENT_VERSION must exactly match bundled legal document version ${LEGAL_DOCUMENT_VERSION}`,
+    );
+  }
+
+  if (enabled(env, 'CONSENT_GRANTS_ENABLED')) {
+    add(
+      legalDocumentsApproved(),
+      'legal document approval',
+      'CONSENT_GRANTS_ENABLED cannot be true while the bundled legal documents remain a staging candidate',
+    );
   }
 
   if (enabled(env, 'SIWE_AUTH_ENABLED')) {

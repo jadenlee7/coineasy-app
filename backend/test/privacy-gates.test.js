@@ -13,7 +13,7 @@ const base = {
   ADMIN_SECRET: 'a'.repeat(32),
   SERVICE_NAME: 'easygo-web-staging',
   RELEASE_SHA: 'abcdef1',
-  EASYGO_CONSENT_VERSION: '2026-07-21-staging-v1',
+  EASYGO_CONSENT_VERSION: '2026-08-10-staging-v1',
   ACCOUNT_DELETION_SUBJECT_HMAC_KEY: 'h'.repeat(32),
   ACCOUNT_DELETION_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
   LEGACY_SOCIAL_MODE: 'active',
