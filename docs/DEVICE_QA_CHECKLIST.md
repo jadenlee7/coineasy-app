@@ -271,10 +271,15 @@ wallet private key, or login code.
 
 ## Build 102 account-isolation candidate
 
-- [ ] Record the exact release commit and EAS build ID after the committed,
-  clean `testflight` profile build starts. Confirm the binary reports
-  `2.0.3 (102)`, uses the `preview` channel, targets staging, and retains the
-  `com.coineasy.coineasysocial` identifier and `coineasyapp` scheme.
+- [x] EAS build `a07e8c29-721c-4c3d-b953-d62bf86e588a` completed from exact
+  clean commit `0b526cb2984131dcd865b40a0a5d7a7d63de12c0` with the `testflight`
+  profile, `preview` channel, and staging target. The 27,044,813-byte IPA has
+  SHA-256 `5a3dddf784fe0dcf057d33c345d178edf051e68f7b48f27f5bc35ade8df8ce58`
+  and reports `2.0.3 (102)`, `com.coineasy.coineasysocial`, and `coineasyapp`.
+  Its JSC bundle exactly matches the clean local export at SHA-256
+  `dc0576e272e6293df4fe1c743ead193340e3b1497d2252f0e78b1b6bed4a72f6`;
+  the expected public runtime values are present and no private-key payload is
+  bundled.
 - [ ] Confirm App Store Connect labels Build 102 `Internal`. The authoritative
   API must report `buildAudienceType=INTERNAL_ONLY` and external state
   `NOT_APPLICABLE`. Do not add it to an external group or App Store review.
