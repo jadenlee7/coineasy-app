@@ -59,7 +59,7 @@ export async function configureTelegramWebhook() {
   }
   if (!WEBHOOK_URL) throw new Error('TELEGRAM_WEBHOOK_URL not set');
   const bot = getBot();
-  await bot.setWebHook(WEBHOOK_URL);
+  await bot.setWebhook(WEBHOOK_URL);
   logger.info('telegram bot configured (webhook)');
   return bot;
 }
