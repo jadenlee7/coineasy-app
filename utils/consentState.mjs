@@ -37,7 +37,16 @@ export function parseConsentEnvelope(envelope) {
       throw consentError('invalid_consent_response');
     }
   }
-  return { ...consent, currentVersion: consent.currentVersion.trim() };
+  if (consent.grantsEnabled !== undefined && typeof consent.grantsEnabled !== 'boolean') {
+    throw consentError('invalid_consent_response');
+  }
+  return {
+    ...consent,
+    currentVersion: consent.currentVersion.trim(),
+    // Older servers omit this capability. Defaulting to false keeps new
+    // clients fail-closed during a rolling backend/mobile deployment.
+    grantsEnabled: consent.grantsEnabled === true,
+  };
 }
 
 export function createConsentDraft(consent) {
@@ -83,6 +92,7 @@ export function buildConsentPayload({
   documents = EASYGO_LEGAL_DOCUMENTS,
 }) {
   if (!consent?.currentVersion) throw consentError('consent_not_loaded');
+  if (consent.grantsEnabled !== true) throw consentError('consent_grants_disabled');
   const readiness = getConsentDocumentReadiness(consent.currentVersion, documents);
   if (!readiness.ready) throw consentError(readiness.reason);
   return {
@@ -127,6 +137,12 @@ export function safeConsentError(error) {
     return {
       code: error.code,
       message: '앱의 정책 문서 버전과 서버 버전이 일치하지 않아 동의 저장을 중단했습니다.',
+    };
+  }
+  if (error?.code === 'consent_grants_disabled') {
+    return {
+      code: error.code,
+      message: '운영자·법률 검토가 끝날 때까지 새 동의 저장은 잠겨 있습니다. 기존 동의 철회는 가능합니다.',
     };
   }
   return {

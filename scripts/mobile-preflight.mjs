@@ -297,6 +297,12 @@ function validHttpsUrl(value) {
   }
 }
 
+function validVersionedHttpsUrl(value, version) {
+  if (!validHttpsUrl(value) || !version) return false;
+  const segments = new URL(value).pathname.split('/').filter(Boolean);
+  return segments.includes(version);
+}
+
 export function versionedLegalEnvironment(env = {}) {
   const consentVersion = clean(env.EXPO_PUBLIC_EASYGO_CONSENT_VERSION);
   const privacyUrl = clean(env.EXPO_PUBLIC_EASYGO_PRIVACY_URL);
@@ -306,8 +312,9 @@ export function versionedLegalEnvironment(env = {}) {
     privacyUrl,
     termsUrl,
     versionValid: /^[A-Za-z0-9._-]{1,50}$/.test(consentVersion),
-    privacyUrlValid: Boolean(privacyUrl) && validHttpsUrl(privacyUrl),
-    termsUrlValid: Boolean(termsUrl) && validHttpsUrl(termsUrl),
+    privacyUrlValid: validVersionedHttpsUrl(privacyUrl, consentVersion),
+    termsUrlValid: validVersionedHttpsUrl(termsUrl, consentVersion)
+      && termsUrl !== privacyUrl,
   };
 }
 
@@ -343,7 +350,7 @@ export function validateMobileEnvironment(env, appConfig, {
   }
 
   const legal = versionedLegalEnvironment(env);
-  const legalMayRemainDormant = target !== 'production';
+  const legalMayRemainDormant = target === 'local';
   add(
     legal.versionValid,
     'EasyGo consent document version',

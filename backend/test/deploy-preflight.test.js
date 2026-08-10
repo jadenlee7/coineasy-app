@@ -13,7 +13,7 @@ function stagingEnv(overrides = {}) {
     ADMIN_SECRET: 'a'.repeat(32),
     SERVICE_NAME: 'easygo-web',
     RELEASE_SHA: 'abcdef1234567890',
-    EASYGO_CONSENT_VERSION: '2026-07-21',
+    EASYGO_CONSENT_VERSION: '2026-08-10-staging-v1',
     ACCOUNT_DELETION_SUBJECT_HMAC_KEY: 'h'.repeat(32),
     ACCOUNT_DELETION_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
     SIWE_AUTH_ENABLED: 'false',
@@ -64,6 +64,24 @@ test('enabled features require their server-only provider configuration', () => 
   }), { target: 'staging' });
   assert.equal(result.errors.some((item) => item.failure.includes('BASE_RPC_URL')), true);
   assert.equal(result.errors.some((item) => item.failure.includes('ETHERSCAN_API_KEY')), true);
+});
+
+test('staging consent version must match the bundled documents and grants stay review-locked', () => {
+  const mismatch = validateDeployEnvironment(stagingEnv({
+    EASYGO_CONSENT_VERSION: '2026-07-21-staging-v1',
+  }), { target: 'staging' });
+  assert.equal(
+    mismatch.errors.some((item) => item.name === 'consent document version alignment'),
+    true,
+  );
+
+  const unapproved = validateDeployEnvironment(stagingEnv({
+    CONSENT_GRANTS_ENABLED: 'true',
+  }), { target: 'staging' });
+  assert.equal(
+    unapproved.errors.some((item) => item.name === 'legal document approval'),
+    true,
+  );
 });
 
 test('account deletion cannot activate before worker, marker, and recent auth ship', () => {

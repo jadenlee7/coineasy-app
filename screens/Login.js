@@ -34,6 +34,17 @@ const BRAND = {
   sheet: '#FFFEFC',
 };
 
+function openLegalDocument(document, label) {
+  if (!document?.url) {
+    Alert.alert(
+      '정책 문서 준비 중',
+      `${label}의 승인된 EasyGo 문서가 아직 설정되지 않았습니다.`,
+    );
+    return;
+  }
+  WebBrowser.openBrowserAsync(document.url);
+}
+
 function LoginOption({ Icon, label, onPress, disabled, loading }) {
   return (
     <TouchableOpacity
@@ -162,11 +173,11 @@ export default function Login() {
 
         <Text style={styles.termsText}>
           계속하기 전에{' '}
-          <Text onPress={() => WebBrowser.openBrowserAsync(EASYGO_LEGAL_DOCUMENTS.terms.url)} style={styles.termsLink}>
+          <Text onPress={() => openLegalDocument(EASYGO_LEGAL_DOCUMENTS.terms, '이용약관')} style={styles.termsLink}>
             이용약관
           </Text>
           {' '}및{' '}
-          <Text onPress={() => WebBrowser.openBrowserAsync(EASYGO_LEGAL_DOCUMENTS.privacy.url)} style={styles.termsLink}>
+          <Text onPress={() => openLegalDocument(EASYGO_LEGAL_DOCUMENTS.privacy, '개인정보 처리방침')} style={styles.termsLink}>
             개인정보 처리방침
           </Text>
           을 확인해 주세요. 동의 선택은 설정에서 별도로 관리됩니다.

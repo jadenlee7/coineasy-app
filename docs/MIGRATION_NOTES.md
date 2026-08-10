@@ -416,6 +416,11 @@ screen. No social rows or tables are deleted by S8.
       with EasyGo-branded documents that share an explicit effective version,
       then set the backend and mobile consent versions to that exact published
       version. Enable `CONSENT_GRANTS_ENABLED` only after that review.
+      The `2026-08-10-staging-v1` implementation removes those two fallbacks,
+      adds versioned EasyGo review routes, and locks the mobile UI to the
+      server's explicit grant capability. Deployment, operator fact approval,
+      final legal review, and store-disclosure reconciliation remain open; see
+      `docs/LEGAL_CONSENT_RELEASE.md`.
 
 ## Privy + AuthBridge data flow (Phase 1)
 

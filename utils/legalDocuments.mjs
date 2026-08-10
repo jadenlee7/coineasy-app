@@ -1,8 +1,5 @@
-const LEGACY_DOCUMENT_URLS = {
-  help: 'https://drive.google.com/file/d/1x8ZvprutJSuv96KVz3vLyXHWXwi8AaVS/view?usp=sharing',
-  privacy: 'https://drive.google.com/file/d/1Dhijs_O61shJEKNy6Sga16Iu3vgqwc8I/view?usp=sharing',
-  terms: 'https://drive.google.com/file/d/17_d1L3-qBYKk3vAK9_P-zd2PKW3fNDiX/view?usp=sharing',
-};
+const LEGACY_HELP_URL =
+  'https://drive.google.com/file/d/1x8ZvprutJSuv96KVz3vLyXHWXwi8AaVS/view?usp=sharing';
 
 function clean(value) {
   return String(value || '').trim();
@@ -19,6 +16,14 @@ export function normalizeHttpsUrl(value) {
   }
 }
 
+export function legalUrlIncludesVersion(value, version) {
+  const normalized = normalizeHttpsUrl(value);
+  const expectedVersion = clean(version);
+  if (!normalized || !expectedVersion) return false;
+  const segments = new URL(normalized).pathname.split('/').filter(Boolean);
+  return segments.includes(expectedVersion);
+}
+
 export function createLegalDocuments({
   consentVersion = '',
   helpUrl = '',
@@ -29,22 +34,30 @@ export function createLegalDocuments({
   const configuredPrivacyUrl = normalizeHttpsUrl(privacyUrl);
   const configuredTermsUrl = normalizeHttpsUrl(termsUrl);
   const version = clean(consentVersion);
+  const privacyVersioned = legalUrlIncludesVersion(configuredPrivacyUrl, version);
+  const termsVersioned = legalUrlIncludesVersion(configuredTermsUrl, version);
 
   return {
     version,
     help: {
-      url: configuredHelpUrl || LEGACY_DOCUMENT_URLS.help,
+      url: configuredHelpUrl || LEGACY_HELP_URL,
       configured: Boolean(configuredHelpUrl),
     },
     privacy: {
-      url: configuredPrivacyUrl || LEGACY_DOCUMENT_URLS.privacy,
+      url: configuredPrivacyUrl,
       configured: Boolean(configuredPrivacyUrl),
+      versioned: privacyVersioned,
     },
     terms: {
-      url: configuredTermsUrl || LEGACY_DOCUMENT_URLS.terms,
+      url: configuredTermsUrl,
       configured: Boolean(configuredTermsUrl),
+      versioned: termsVersioned,
     },
-    versioned: Boolean(version && configuredPrivacyUrl && configuredTermsUrl),
+    versioned: Boolean(
+      privacyVersioned
+      && termsVersioned
+      && configuredPrivacyUrl !== configuredTermsUrl
+    ),
   };
 }
 

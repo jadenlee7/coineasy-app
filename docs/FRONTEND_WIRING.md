@@ -192,8 +192,10 @@ Already defined in repo-root `.env.example` (PR #4):
 - `EXPO_PUBLIC_EASYGO_CONSENT_VERSION` — exact version shared by the published
   EasyGo Terms and Privacy documents.
 - `EXPO_PUBLIC_EASYGO_TERMS_URL` / `EXPO_PUBLIC_EASYGO_PRIVACY_URL` — versioned
-  HTTPS documents. Consent editing stays locked while either is missing or the
-  version differs from the backend.
+  HTTPS documents whose URL path contains the exact consent version. Consent
+  editing stays locked while either is missing, both resolve to the same URL,
+  the version differs from the backend, or the backend returns
+  `consent.grantsEnabled=false`.
 - `EXPO_PUBLIC_EASYGO_HELP_URL` — optional replacement for the current help link.
 
 Run `npm run preflight` before local builds and `npm run preflight:staging`
@@ -212,6 +214,9 @@ mobile client if that client is used on both platforms.
   staging policy version exists. Revocation remains available. This is the
   required state until the EasyGo documents and App Store privacy disclosures
   are approved.
+  `GET /me/consent` exposes this as `consent.grantsEnabled`; clients must treat
+  a missing field as `false` during rolling deployments. Revocation does not
+  depend on this capability.
 - **Account deletion gates off**: Settings keeps new deletion unavailable;
   challenge/verification and `POST /me/account-deletion` fail closed while the
   compile-time or Railway gates are closed. `GET /me/account-deletion` can

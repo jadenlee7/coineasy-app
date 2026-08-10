@@ -35,6 +35,7 @@ function consentEnvelope(overrides = {}) {
       privacyAccepted: false,
       segmentingOptIn: false,
       marketingOptIn: false,
+      grantsEnabled: true,
       termsAcceptedAt: null,
       privacyAcceptedAt: null,
       updatedAt: null,
@@ -56,11 +57,17 @@ test('versioned legal documents require two HTTPS URLs and an exact server versi
   assert.equal(missing.versioned, false);
   assert.equal(getConsentDocumentReadiness(VERSION, missing).reason, 'documents_not_versioned');
   assert.equal(legalDocuments({ termsUrl: 'http://insecure.example' }).versioned, false);
+  assert.equal(legalDocuments({ termsUrl: 'https://easygo.example/terms/wrong-version' }).versioned, false);
+  assert.equal(legalDocuments({
+    termsUrl: 'https://easygo.example/privacy/2026-08-02-v1',
+  }).versioned, false);
 });
 
 test('consent responses are validated before they reach UI state', () => {
   const parsed = parseConsentEnvelope(consentEnvelope());
   assert.equal(parsed.currentVersion, VERSION);
+  assert.equal(parsed.grantsEnabled, true);
+  assert.equal(parseConsentEnvelope(consentEnvelope({ grantsEnabled: undefined })).grantsEnabled, false);
   assert.throws(
     () => parseConsentEnvelope(consentEnvelope({ marketingOptIn: 'yes' })),
     (error) => error.code === 'invalid_consent_response',
@@ -69,6 +76,19 @@ test('consent responses are validated before they reach UI state', () => {
     () => parseConsentEnvelope(null),
     (error) => error.code === 'invalid_consent_response',
   );
+});
+
+test('new consent grants fail closed when the server capability is absent or disabled', () => {
+  const locked = parseConsentEnvelope(consentEnvelope({ grantsEnabled: false }));
+  assert.throws(
+    () => buildConsentPayload({
+      consent: locked,
+      documents: legalDocuments(),
+      draft: createConsentDraft(locked),
+    }),
+    (error) => error.code === 'consent_grants_disabled',
+  );
+  assert.equal(safeConsentError({ code: 'consent_grants_disabled' }).code, 'consent_grants_disabled');
 });
 
 test('missing mandatory consent always forces optional processing off', () => {
@@ -132,7 +152,15 @@ test('consent updates are exact full replacements bound to the published version
   });
 
   assert.throws(
-    () => buildConsentPayload({ consent, draft: payload, documents: legalDocuments({ consentVersion: 'old' }) }),
+    () => buildConsentPayload({
+      consent,
+      draft: payload,
+      documents: legalDocuments({
+        consentVersion: 'old',
+        privacyUrl: 'https://easygo.example/privacy/old',
+        termsUrl: 'https://easygo.example/terms/old',
+      }),
+    }),
     (error) => error.code === 'version_mismatch',
   );
 });

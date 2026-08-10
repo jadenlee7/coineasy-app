@@ -54,6 +54,17 @@ const LEGAL_LINKS = [
   { label: 'Terms of service', document: EASYGO_LEGAL_DOCUMENTS.terms },
 ];
 
+function openLegalDocument(document, label) {
+  if (!document?.url) {
+    Alert.alert(
+      'Policy document pending',
+      `The approved EasyGo ${label.toLowerCase()} has not been configured yet.`,
+    );
+    return;
+  }
+  WebBrowser.openBrowserAsync(document.url);
+}
+
 const EXPORTS = {
   full: {
     scope: EXPORT_SCOPE.full,
@@ -171,6 +182,8 @@ export default function SettingsModal() {
   const consentReadiness = getConsentDocumentReadiness(
     consentState.consent?.currentVersion,
   );
+  const consentEditingReady = consentReadiness.ready
+    && consentState.consent?.grantsEnabled === true;
   const hasStoredConsent = Boolean(
     consentState.consent?.termsAccepted
     || consentState.consent?.privacyAccepted
@@ -721,7 +734,12 @@ export default function SettingsModal() {
                 EasyGo 전용 약관·개인정보 문서와 서버 버전이 정확히 일치할 때까지 새 동의 저장과 선택형 처리는 잠겨 있습니다.
               </Text>
             )}
-            {consentReadiness.ready && consentState.draft && (
+            {consentReadiness.ready && !consentEditingReady && (
+              <Text style={{ color: '#B45309', fontSize: 11, lineHeight: 17, marginTop: 8 }}>
+                버전이 일치하는 staging 문서 후보를 불러왔습니다. 운영자·법률 검토가 끝날 때까지 새 동의 저장과 선택형 처리는 계속 잠겨 있습니다.
+              </Text>
+            )}
+            {consentEditingReady && consentState.draft && (
               <View style={{ marginTop: 8 }}>
                 {consentToggle('Terms of service', 'Required for versioned consent.', 'termsAccepted')}
                 {consentToggle('Privacy policy', 'Required for versioned consent.', 'privacyAccepted')}
@@ -787,8 +805,8 @@ export default function SettingsModal() {
       </Text>
       {LEGAL_LINKS.map((item) => row(
         item.label,
-        item.document.configured || item.label === 'Help' ? undefined : 'Legacy',
-        () => WebBrowser.openBrowserAsync(item.document.url),
+        item.document.configured || item.label === 'Help' ? undefined : 'Pending',
+        () => openLegalDocument(item.document, item.label),
       ))}
 
       <View style={{ marginTop: 28 }}>
