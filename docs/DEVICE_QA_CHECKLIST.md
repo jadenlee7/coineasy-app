@@ -286,10 +286,12 @@ wallet private key, or login code.
   `buildAudienceType=INTERNAL_ONLY`, internal state `IN_BETA_TESTING`, and
   external state `NOT_APPLICABLE`. It was not added to an external group or
   App Store review.
-- [ ] On a physical iPhone, sign in as account A, sign out, then sign in as
-  account B. After a cold launch, confirm B's profile, feed, Orange balance,
-  safety lists, export state, and wallet are shown without any flash or reuse
-  of A's account-scoped state.
+- [x] On 2026-08-10, the owner installed Build 102 on a physical iPhone and
+  confirmed the account A sign-out to account B sign-in transition. After a
+  cold launch, B's profile, feed, Orange balance, and wallet remained correct
+  without a visible flash or reuse of A's account-scoped state.
+- [ ] Repeat the account A to B transition while explicitly checking safety
+  lists and export state; neither may reuse A's account-scoped data.
 - [ ] From a cold launch, open an own-profile link and a notification for a
   post. Confirm the profile link resolves to the correct public profile and
   the post notification opens the matching PostDetails route only after the
