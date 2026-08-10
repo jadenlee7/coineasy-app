@@ -356,6 +356,23 @@ screen. No social rows or tables are deleted by S8.
       its AES-256 passphrase is stored in macOS Keychain service
       `easygo-staging-postgres-backup-20260722T090134Z`. An in-memory decrypt
       verified the `PGDMP` header and exact 41,032-byte round trip.
+- [x] Take a fresh migration-gate backup immediately before applying the
+      account-deletion schema on 2026-08-11. Backup
+      `easygo-staging-20260810T201413Z.dump.enc` is 42,064 encrypted bytes with
+      SHA-256
+      `a47d54283632cd64f8c5bf36cbbde1031734429f2bd132a36ba975b28894c11f`;
+      its passphrase is stored in macOS Keychain service
+      `easygo-staging-postgres-backup-20260810T201413Z`. An in-memory decrypt
+      verified the PostgreSQL custom-format header and exact 42,043-byte
+      round trip before any schema write.
+- [x] Apply the three pending additive Prisma migrations from the verified
+      `5372bfcd424d8fb071a5c5022f43d33a61d32f05` tree to Railway staging:
+      `20260802120000_safe_account_deletion`,
+      `20260808120000_stable_provider_deletion_identity`, and
+      `20260808153000_account_deletion_recent_reauth`. A post-deploy
+      `prisma migrate status` reports all five repository migrations up to
+      date. The five new deletion, reauthentication, and stable-provider
+      tables exist and each contained zero rows at verification time.
 - [x] Verify the Apple staging user's post-secret device sync. The single
       `/auth/sync` request returned HTTP 200; one EasyGo user now matches the
       Privy identity, its stored address matches the user's only embedded EVM
@@ -418,9 +435,10 @@ screen. No social rows or tables are deleted by S8.
       version. Enable `CONSENT_GRANTS_ENABLED` only after that review.
       The `2026-08-10-staging-v1` implementation removes those two fallbacks,
       adds versioned EasyGo review routes, and locks the mobile UI to the
-      server's explicit grant capability. Deployment, operator fact approval,
-      final legal review, and store-disclosure reconciliation remain open; see
-      `docs/LEGAL_CONSENT_RELEASE.md`.
+      server's explicit grant capability. The matching staging backend is
+      deployed and technically verified; the matching mobile artifact,
+      operator fact approval, final legal review, and store-disclosure
+      reconciliation remain open; see `docs/LEGAL_CONSENT_RELEASE.md`.
 
 ## Privy + AuthBridge data flow (Phase 1)
 

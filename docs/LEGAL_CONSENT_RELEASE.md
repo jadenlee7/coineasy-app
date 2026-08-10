@@ -125,8 +125,8 @@ fail-closed. Revocation remains available independently of the grant gate.
 
 ## Staging verification after an approved deployment
 
-- [ ] `/legal/manifest.json` reports the exact deployed candidate and no secret.
-- [ ] Privacy and terms return HTTP 200, HTML UTF-8, CSP, no-referrer, nosniff,
+- [x] `/legal/manifest.json` reports the exact deployed candidate and no secret.
+- [x] Privacy and terms return HTTP 200, HTML UTF-8, CSP, no-referrer, nosniff,
       and the exact version in visible copy and metadata.
 - [ ] Login and Settings open the configured EasyGo URLs, never the legacy
       Google Drive documents.
@@ -134,4 +134,21 @@ fail-closed. Revocation remains available independently of the grant gate.
       consent remains review-locked.
 - [ ] A new grant attempt cannot be sent by the UI and is rejected server-side.
 - [ ] An existing consent can still be fully revoked.
-- [ ] No optional Path C worker or provider is activated.
+- [x] No optional Path C worker or provider is activated.
+
+On 2026-08-11, Railway staging deployment
+`85a4937a-41db-4f85-97f5-3831474437f3` reached `SUCCESS` from exact merged
+release `5372bfcd424d8fb071a5c5022f43d33a61d32f05`. `/health`, `/ready`, and
+`/social/status` returned HTTP 200. The manifest returned
+`status=staging_candidate`, `publishedForConsent=false`, and exact version
+`2026-08-10-staging-v1`; both HTML documents returned HTTP 200 with the
+required review and security headers. Deployment and HTTP logs contained no
+application error or 5xx response during the check. `CONSENT_GRANTS_ENABLED`
+and every optional Path C web flag remained `false` or unset; the dormant
+worker also kept its optional flags `false` or unset.
+
+The owner then passed a Build 102 cold-start and Apple sign-out/sign-in
+regression against this backend, including profile, Orange balance, feed, and
+Settings navigation without a crash or login loop. Build 102 predates the
+matching mobile legal-URL configuration, so this result does not complete the
+unchecked next-artifact URL, grant-rejection, or revocation checks above.
