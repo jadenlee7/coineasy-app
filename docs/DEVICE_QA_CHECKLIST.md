@@ -290,21 +290,38 @@ wallet private key, or login code.
   confirmed the account A sign-out to account B sign-in transition. After a
   cold launch, B's profile, feed, Orange balance, and wallet remained correct
   without a visible flash or reuse of A's account-scoped state.
-- [ ] Repeat the account A to B transition while explicitly checking safety
-  lists and export state; neither may reuse A's account-scoped data.
-- [ ] From a cold launch, open an own-profile link and a notification for a
-  post. Confirm the profile link resolves to the correct public profile and
-  the post notification opens the matching PostDetails route only after the
-  authenticated account is ready.
-- [ ] Publish one clearly labelled staging post. Confirm its author menu shows
-  Edit/Delete, another account sees only non-owner safety actions, and editing
-  then deleting the post completes without exposing the previous account.
-- [ ] Type text, attach media, and choose a category, then cancel the composer.
-  Immediately open a new post and reply composer and confirm no stale draft or
-  attachment flashes during presentation.
-- [ ] Keep all deletion activation latches and Railway deletion flags off.
-  Account deletion, recent-auth, public-request, stable-identity, and provider
-  cleanup remain outside Build 102; exports and sign-out must stay available.
+- [x] On 2026-08-10, repeat the account A to B transition while explicitly
+  checking safety lists and export state. Account A showed one muted account;
+  account B showed zero blocked, muted, and hidden entries after the switch.
+  The owner confirmed both full and social export actions opened normally for
+  each account, while screenshots independently showed newly generated full
+  export share sheets with distinct timestamps. No A-scoped safety or export
+  presentation state appeared under B, and no exported payload was retained.
+- [x] On 2026-08-10, force-close Build 102 and open the signed-in account's
+  copied profile link from Notes. The owner confirmed EasyGo restored to the
+  correct public profile without a blank, wrong-account, or crash state. After
+  another account created post activity, the owner cold-launched the signed-in
+  account and confirmed the matching in-app notification opened the intended
+  PostDetails route only after the authenticated UI was ready.
+- [x] On 2026-08-10, publish a clearly labelled Build 102 staging post from
+  account B. The owner confirmed B's menu exposed Edit/Delete, editing updated
+  the post, account A's menu exposed only non-owner safety actions, and B could
+  delete the post after switching back. No previous-account state appeared
+  during the create, edit, account-switch, or delete sequence.
+- [x] On 2026-08-10, enter unique Build 102 text, attach media, and choose a
+  category, then cancel without publishing. The owner confirmed the immediately
+  reopened new-post composer contained no prior text, media, or category, and a
+  subsequently opened reply composer showed no stale draft or attachment flash.
+- [x] On 2026-08-10, verify all four deletion activation latches remain `false`.
+  Railway staging web reports `ACCOUNT_DELETION_ENABLED=false` with the provider
+  cleanup and recent-auth flags unset; the staging worker reports all three
+  flags unset. The focused account-isolation, export, navigation, post-menu,
+  and composer regression suite passed 67/67 tests; the final full mobile suite
+  passed 155/155, and the backend suite passed 209/209 with two existing
+  database integration skips. Mobile staging preflight passed with zero
+  failures. Account deletion, recent-auth, public-request, stable-identity,
+  and provider cleanup remain outside Build 102; the previously verified
+  exports and sign-out stay available.
 
 ## Dormant recent Apple reauthentication candidate
 
