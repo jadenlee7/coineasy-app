@@ -280,9 +280,12 @@ wallet private key, or login code.
   `dc0576e272e6293df4fe1c743ead193340e3b1497d2252f0e78b1b6bed4a72f6`;
   the expected public runtime values are present and no private-key payload is
   bundled.
-- [ ] Confirm App Store Connect labels Build 102 `Internal`. The authoritative
-  API must report `buildAudienceType=INTERNAL_ONLY` and external state
-  `NOT_APPLICABLE`. Do not add it to an external group or App Store review.
+- [x] EAS submission `741333df-a058-49c2-a62e-22d6ca421fad` finished
+  successfully. App Store Connect build
+  `ae94d1c5-a98d-4fcd-a928-4d868faebf38` is `VALID`, unexpired, and reports
+  `buildAudienceType=INTERNAL_ONLY`, internal state `IN_BETA_TESTING`, and
+  external state `NOT_APPLICABLE`. It was not added to an external group or
+  App Store review.
 - [ ] On a physical iPhone, sign in as account A, sign out, then sign in as
   account B. After a cold launch, confirm B's profile, feed, Orange balance,
   safety lists, export state, and wallet are shown without any flash or reuse
@@ -303,7 +306,7 @@ wallet private key, or login code.
 
 ## Dormant recent Apple reauthentication candidate
 
-Do not run these checks from Build 101 or a primary tester account. The current
+Do not run these checks from Build 102 or a primary tester account. The current
 recent-auth, public-request, stable-identity, and provider-cleanup compile-time
 latches remain `false`, and all three Railway runtime deletion flags remain
 off. Because that correctly makes the Settings path unreachable, nonce/subject
