@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-test('Build 101 TestFlight path is Apple Internal Only', () => {
+test('Build 102 TestFlight path is Apple Internal Only', () => {
   const eas = JSON.parse(
     readFileSync(new URL('../eas.json', import.meta.url), 'utf8'),
   );

@@ -1,8 +1,8 @@
 # EasyGo staging device QA
 
-Use this checklist for the internal-only privacy-center TestFlight build
-`2.0.3 (101)`, its staged Base-runtime predecessor `2.0.3 (100)`, and the
-existing Android preview build `versionCode 64`. All clients must target
+Use this checklist for the internal-only account-isolation TestFlight candidate
+`2.0.3 (102)`, its privacy-center predecessor `2.0.3 (101)`, and the existing
+Android preview build `versionCode 64`. All clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
@@ -268,6 +268,33 @@ wallet private key, or login code.
 - [x] Confirm account deletion is visibly unavailable while Railway
   `ACCOUNT_DELETION_ENABLED=false`; full/social exports and sign-out must remain
   usable. Do not execute deletion on the primary tester account.
+
+## Build 102 account-isolation candidate
+
+- [ ] Record the exact release commit and EAS build ID after the committed,
+  clean `testflight` profile build starts. Confirm the binary reports
+  `2.0.3 (102)`, uses the `preview` channel, targets staging, and retains the
+  `com.coineasy.coineasysocial` identifier and `coineasyapp` scheme.
+- [ ] Confirm App Store Connect labels Build 102 `Internal`. The authoritative
+  API must report `buildAudienceType=INTERNAL_ONLY` and external state
+  `NOT_APPLICABLE`. Do not add it to an external group or App Store review.
+- [ ] On a physical iPhone, sign in as account A, sign out, then sign in as
+  account B. After a cold launch, confirm B's profile, feed, Orange balance,
+  safety lists, export state, and wallet are shown without any flash or reuse
+  of A's account-scoped state.
+- [ ] From a cold launch, open an own-profile link and a notification for a
+  post. Confirm the profile link resolves to the correct public profile and
+  the post notification opens the matching PostDetails route only after the
+  authenticated account is ready.
+- [ ] Publish one clearly labelled staging post. Confirm its author menu shows
+  Edit/Delete, another account sees only non-owner safety actions, and editing
+  then deleting the post completes without exposing the previous account.
+- [ ] Type text, attach media, and choose a category, then cancel the composer.
+  Immediately open a new post and reply composer and confirm no stale draft or
+  attachment flashes during presentation.
+- [ ] Keep all deletion activation latches and Railway deletion flags off.
+  Account deletion, recent-auth, public-request, stable-identity, and provider
+  cleanup remain outside Build 102; exports and sign-out must stay available.
 
 ## Dormant recent Apple reauthentication candidate
 
