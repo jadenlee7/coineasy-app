@@ -91,6 +91,11 @@ document URLs. Backend staging preflight rejects a server version that differs
 from the bundled candidate. It also rejects `CONSENT_GRANTS_ENABLED=true` while
 the bundled document status is not `approved`.
 
+On 2026-08-11, the three mobile values above were added as public variables to
+the EAS `preview` environment only. The `production` environment was not given
+the candidate legal values. An EAS-preview-injected staging preflight passed
+with zero failures before preparing Build 103.
+
 `GET /me/consent` now returns `consent.grantsEnabled`. New clients treat a
 missing field as `false`, so a backend/mobile rolling deployment remains
 fail-closed. Revocation remains available independently of the grant gate.

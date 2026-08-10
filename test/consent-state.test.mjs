@@ -55,6 +55,7 @@ test('versioned legal documents require two HTTPS URLs and an exact server versi
 
   const missing = createLegalDocuments({ consentVersion: VERSION });
   assert.equal(missing.versioned, false);
+  assert.deepEqual(missing.help, { url: null, configured: false });
   assert.equal(getConsentDocumentReadiness(VERSION, missing).reason, 'documents_not_versioned');
   assert.equal(legalDocuments({ termsUrl: 'http://insecure.example' }).versioned, false);
   assert.equal(legalDocuments({ termsUrl: 'https://easygo.example/terms/wrong-version' }).versioned, false);
@@ -206,6 +207,10 @@ test('Login and Settings share one legal-document source', () => {
   );
   assert.match(consentHook, /!mountedRef\.current/);
   assert.match(consentHook, /expectedAuthUserId: authOwnerUserId/);
+  assert.equal(readFileSync(
+    new URL('../utils/legalDocuments.mjs', import.meta.url),
+    'utf8',
+  ).includes('drive.google.com/file/d/'), false);
   assert.equal(login.includes('drive.google.com/file/d/'), false);
   assert.equal(settings.includes('drive.google.com/file/d/'), false);
 });

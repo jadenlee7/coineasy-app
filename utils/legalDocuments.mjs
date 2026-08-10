@@ -1,6 +1,3 @@
-const LEGACY_HELP_URL =
-  'https://drive.google.com/file/d/1x8ZvprutJSuv96KVz3vLyXHWXwi8AaVS/view?usp=sharing';
-
 function clean(value) {
   return String(value || '').trim();
 }
@@ -40,7 +37,7 @@ export function createLegalDocuments({
   return {
     version,
     help: {
-      url: configuredHelpUrl || LEGACY_HELP_URL,
+      url: configuredHelpUrl,
       configured: Boolean(configuredHelpUrl),
     },
     privacy: {
