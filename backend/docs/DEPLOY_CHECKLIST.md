@@ -150,13 +150,16 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   linked terms PDF has no explicit effective date, and the deployed consent
   version does not match that privacy date. Publish matched, EasyGo-branded
   policy documents before enabling any consent-gated Path C feature.
-- [ ] Approve or remediate the known Squid, Telegram, and Privy/Solana audit
+- [ ] Approve or remediate the remaining Squid, Privy/Solana, and Expo audit
   findings; never use `npm audit fix --force` during release.
-  The 2026-07-21 audit reduced mobile findings from 95 to 36 (one critical)
-  without a framework migration. The remainder requires reviewed Expo 51,
-  React Native, and Privy upgrades. Backend still reports 25 transitive
-  findings (two critical) rooted in Squid, Privy/Solana, and Telegram; npm's
-  suggested resolutions are breaking changes and are not approved here.
+  The 2026-08-10 backend remediation in PR #23 upgraded
+  `node-telegram-bot-api` to 1.2.0 and pinned `brace-expansion` to 2.1.4. It
+  reduced backend findings from 26 to 18, high findings from six to five, and
+  critical findings from two to zero. The remaining backend findings require a
+  reviewed Squid dependency update and migration from deprecated
+  `@privy-io/server-auth` to `@privy-io/node`. The current mobile audit reports
+  45 findings, including one critical finding in the Expo 51 build-tool chain;
+  that framework migration requires a separate native release and device QA.
 - [x] Document release SHA `f252761a217094942bc18e57e09467c01a8bc8ba`
   and previous known-good SHA `b1850d0`.
 - [x] Confirm an operator is available for the deployment and 15-minute watch.
@@ -200,6 +203,27 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Notify the product/support owner that staging is ready for device QA and
   provide the exact TestFlight/device checklist.
 - [ ] Close the release only after the monitoring window completes.
+
+### 2026-08-10 Telegram dependency security rollout
+
+- PR #23 merged as `3c7b9bdd316a37f66d2a9405de4a91a9645ef0c5` after
+  Backend and Mobile CI passed. The deploy tree exactly matched that merge
+  commit and contained no database migration.
+- Railway web deployment `dfb0711a-c44a-4c00-82d2-fa4ceb3cf3c1` completed
+  with `SUCCESS`; `/health` reported the exact merge SHA and `/ready` passed
+  Railway's configured health check.
+- Railway worker deployment `85a2ae8a-7f22-4136-a8d8-aaf6be25ce34`
+  completed with `SUCCESS` and duration zero, matching the expected dormant
+  contract while `SEGMENTS_ENABLED=false`.
+- Both services retained `SEGMENTS_ENABLED=false` and report the same
+  `RELEASE_SHA`. The read-only smoke passed `/health`, `/ready`, and
+  `/social/status`; `/telegram/health` also returned HTTP 200. The immediate
+  post-deploy review found no application error logs or HTTP 5xx responses.
+- The rollback release remains `f252761a217094942bc18e57e09467c01a8bc8ba`.
+  Its last known-good web and worker deployments are
+  `97b8294a-767e-4d32-a7f9-df77f1387c83` and
+  `e5017999-52ee-4880-931d-d7a641f26e14`, respectively. Extended monitoring
+  is not claimed by this immediate smoke record.
 
 ## Rollback Triggers
 
