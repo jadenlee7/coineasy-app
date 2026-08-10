@@ -1,8 +1,8 @@
 # EasyGo staging device QA
 
-Use this checklist for the internal-only privacy-center TestFlight build
-`2.0.3 (101)`, its staged Base-runtime predecessor `2.0.3 (100)`, and the
-existing Android preview build `versionCode 64`. All clients must target
+Use this checklist for the internal-only account-isolation TestFlight candidate
+`2.0.3 (102)`, its privacy-center predecessor `2.0.3 (101)`, and the existing
+Android preview build `versionCode 64`. All clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
@@ -269,9 +269,46 @@ wallet private key, or login code.
   `ACCOUNT_DELETION_ENABLED=false`; full/social exports and sign-out must remain
   usable. Do not execute deletion on the primary tester account.
 
+## Build 102 account-isolation candidate
+
+- [x] EAS build `a07e8c29-721c-4c3d-b953-d62bf86e588a` completed from exact
+  clean commit `0b526cb2984131dcd865b40a0a5d7a7d63de12c0` with the `testflight`
+  profile, `preview` channel, and staging target. The 27,044,813-byte IPA has
+  SHA-256 `5a3dddf784fe0dcf057d33c345d178edf051e68f7b48f27f5bc35ade8df8ce58`
+  and reports `2.0.3 (102)`, `com.coineasy.coineasysocial`, and `coineasyapp`.
+  Its JSC bundle exactly matches the clean local export at SHA-256
+  `dc0576e272e6293df4fe1c743ead193340e3b1497d2252f0e78b1b6bed4a72f6`;
+  the expected public runtime values are present and no private-key payload is
+  bundled.
+- [x] EAS submission `741333df-a058-49c2-a62e-22d6ca421fad` finished
+  successfully. App Store Connect build
+  `ae94d1c5-a98d-4fcd-a928-4d868faebf38` is `VALID`, unexpired, and reports
+  `buildAudienceType=INTERNAL_ONLY`, internal state `IN_BETA_TESTING`, and
+  external state `NOT_APPLICABLE`. It was not added to an external group or
+  App Store review.
+- [x] On 2026-08-10, the owner installed Build 102 on a physical iPhone and
+  confirmed the account A sign-out to account B sign-in transition. After a
+  cold launch, B's profile, feed, Orange balance, and wallet remained correct
+  without a visible flash or reuse of A's account-scoped state.
+- [ ] Repeat the account A to B transition while explicitly checking safety
+  lists and export state; neither may reuse A's account-scoped data.
+- [ ] From a cold launch, open an own-profile link and a notification for a
+  post. Confirm the profile link resolves to the correct public profile and
+  the post notification opens the matching PostDetails route only after the
+  authenticated account is ready.
+- [ ] Publish one clearly labelled staging post. Confirm its author menu shows
+  Edit/Delete, another account sees only non-owner safety actions, and editing
+  then deleting the post completes without exposing the previous account.
+- [ ] Type text, attach media, and choose a category, then cancel the composer.
+  Immediately open a new post and reply composer and confirm no stale draft or
+  attachment flashes during presentation.
+- [ ] Keep all deletion activation latches and Railway deletion flags off.
+  Account deletion, recent-auth, public-request, stable-identity, and provider
+  cleanup remain outside Build 102; exports and sign-out must stay available.
+
 ## Dormant recent Apple reauthentication candidate
 
-Do not run these checks from Build 101 or a primary tester account. The current
+Do not run these checks from Build 102 or a primary tester account. The current
 recent-auth, public-request, stable-identity, and provider-cleanup compile-time
 latches remain `false`, and all three Railway runtime deletion flags remain
 off. Because that correctly makes the Settings path unreachable, nonce/subject
