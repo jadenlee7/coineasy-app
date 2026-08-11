@@ -192,6 +192,15 @@ test('privacy exports, consent writes, and course rewards are owner-bound before
       () => api.updateConsent({}, { expectedAuthUserId: 'privy:owner-a' }),
       () => api.exportMyData({ expectedAuthUserId: 'privy:owner-a' }),
       () => api.exportMySocialData({ expectedAuthUserId: 'privy:owner-a' }),
+      () => api.registerPushToken({
+        token: 'ExponentPushToken[test]',
+        platform: 'ios',
+        expectedAuthUserId: 'privy:owner-a',
+      }),
+      () => api.unregisterPushToken({
+        token: 'ExponentPushToken[test]',
+        expectedAuthUserId: 'privy:owner-a',
+      }),
       () => api.accountDeletionStatus({ expectedAuthUserId: 'privy:owner-a' }),
       () => api.accountDeletionReauthChallenge({
         clientRequestId: 'request-id',

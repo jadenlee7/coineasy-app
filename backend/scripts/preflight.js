@@ -11,6 +11,7 @@ import {
   legalDocumentsApproved,
   LEGAL_DOCUMENT_VERSION,
 } from '../src/lib/legal.js';
+import { PUSH_TOKEN_REGISTRATION_READY } from '../src/lib/push-token-gates.js';
 
 const BOOLEAN_FLAGS = [
   'SIWE_AUTH_ENABLED',
@@ -22,6 +23,7 @@ const BOOLEAN_FLAGS = [
   'ACCOUNT_DELETION_ENABLED',
   'ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED',
   'ACCOUNT_DELETION_RECENT_AUTH_ENABLED',
+  'PUSH_TOKEN_REGISTRATION_ENABLED',
 ];
 
 function clean(value) {
@@ -148,6 +150,14 @@ export function validateDeployEnvironment(
       legalDocumentsApproved(),
       'legal document approval',
       'CONSENT_GRANTS_ENABLED cannot be true while the bundled legal documents remain a staging candidate',
+    );
+  }
+
+  if (enabled(env, 'PUSH_TOKEN_REGISTRATION_ENABLED')) {
+    add(
+      PUSH_TOKEN_REGISTRATION_READY,
+      'push-token registration approval',
+      'PUSH_TOKEN_REGISTRATION_ENABLED cannot be true until the matching privacy version and device QA are approved',
     );
   }
 

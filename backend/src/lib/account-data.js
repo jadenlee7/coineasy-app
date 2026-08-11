@@ -32,6 +32,18 @@ const userDataSelect = {
       createdAt: true,
     },
   },
+  // Delivery tokens are credential-like addresses. The full export describes
+  // each registration without exposing the raw value that could be abused to
+  // target the device outside EasyGo.
+  expoPushTokens: {
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    select: {
+      platform: true,
+      createdAt: true,
+      updatedAt: true,
+      lastSeenAt: true,
+    },
+  },
   consent: true,
   consentAudits: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
   ledger: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },

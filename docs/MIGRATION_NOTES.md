@@ -78,8 +78,12 @@ rows through `GET /notifications`, so it needs no additional database model.
 Likes, post editing/deletion, notification-to-thread navigation, Privy account
 settings, profile naming, and the first-reward ledger claim now use EasyGo
 APIs. All `components/modals` Orbis callsites are removed. Repost/quote,
-message media, profile-photo upload, and server-side Expo push-token
-registration remain honest unavailable states until those backend models ship.
+message media and profile-photo upload remain honest unavailable states until
+those backend models ship. The separate owner-bound `PUT`/`DELETE
+/me/push-token` surface, globally unique token row, and account-deletion
+cascade are implemented, but registration is compile-time locked until a new
+privacy version and device QA are approved. No remote notification sender is
+active.
 
 ### PR final — Drop the shim
 

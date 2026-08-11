@@ -11,6 +11,13 @@ const pathCMigration = readFileSync(
   ),
   'utf8',
 );
+const pushTokenMigration = readFileSync(
+  new URL(
+    '../prisma/migrations/20260811110000_expo_push_tokens/migration.sql',
+    import.meta.url,
+  ),
+  'utf8',
+);
 
 function model(name) {
   const result = dmmfModels.find((item) => item.name === name);
@@ -107,4 +114,16 @@ test('user-owned privacy data cascades but campaign history is restricted', () =
   assert.equal(relationDelete('Quest', 'campaign'), 'Restrict');
   assert.equal(relationDelete('Campaign', 'advertiser'), 'Restrict');
   assert.equal(relationDelete('Campaign', 'targetSegment'), 'Restrict');
+});
+
+test('Expo push registrations are unique, account-owned, and additively migrated', () => {
+  assert.equal(field('ExpoPushToken', 'token').isUnique, true);
+  assert.equal(field('ExpoPushToken', 'platform').isRequired, true);
+  assert.equal(field('ExpoPushToken', 'user').relationOnDelete, 'Cascade');
+  assert.match(pushTokenMigration, /CREATE TABLE "ExpoPushToken"/u);
+  assert.match(pushTokenMigration, /CREATE UNIQUE INDEX "ExpoPushToken_token_key"/u);
+  assert.match(pushTokenMigration, /ON DELETE CASCADE/u);
+  assert.doesNotMatch(pushTokenMigration, /\bDROP\s+(?:TABLE|COLUMN|TYPE)\b/iu);
+  assert.doesNotMatch(pushTokenMigration, /\bDELETE\s+FROM\b/iu);
+  assert.doesNotMatch(pushTokenMigration, /\bTRUNCATE\b/iu);
 });

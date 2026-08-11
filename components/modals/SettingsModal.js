@@ -98,9 +98,11 @@ export default function SettingsModal() {
     accountLease: deviceAccountLease,
     blockedAccounts: listBlockedUser,
     clearBlockedAccounts,
+    clearExpoPushToken,
     clearHiddenPosts,
     clearMutedAccounts,
     hiddenPosts: listHiddenPost,
+    expoPushToken,
     mutedAccounts: listMutedUsers,
     ownerUserId: deviceOwnerUserId,
     isCurrentAccountLease,
@@ -272,6 +274,21 @@ export default function SettingsModal() {
     Haptics.selectionAsync();
     setLoadingAction('logout');
     try {
+      if (expoPushToken) {
+        try {
+          await api.unregisterPushToken({
+            token: expoPushToken,
+            expectedAuthUserId: expectedOperation.ownerUserId,
+          });
+          if (isCurrentAccountOperation(expectedOperation)) {
+            await clearExpoPushToken();
+          }
+        } catch {
+          // Logout remains available offline. A future registration on this
+          // device atomically moves the unique token to the active account.
+        }
+      }
+      if (!isCurrentAccountOperation(expectedOperation)) return;
       await logout();
       if (!isCurrentAccountOperation(expectedOperation)) return;
       setUser(null);

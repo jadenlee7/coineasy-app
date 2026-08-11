@@ -43,6 +43,13 @@ test('local data export is versioned and excludes ephemeral SIWE secrets', async
     query.select.stableProviderIdentities.select.keyFingerprint,
     undefined,
   );
+  assert.deepEqual(query.select.expoPushTokens.select, {
+    platform: true,
+    createdAt: true,
+    updatedAt: true,
+    lastSeenAt: true,
+  });
+  assert.equal(query.select.expoPushTokens.select.token, undefined);
   assert.equal(query.select.consent, true);
   assert.ok(query.select.questCompletions);
   assert.ok(query.select.segments);

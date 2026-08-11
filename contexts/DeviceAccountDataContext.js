@@ -234,6 +234,35 @@ export function DeviceAccountDataProvider({ children }) {
     }
   }, [isCurrentLease]);
 
+  const clearValue = useCallback(async (expectedLease, slot, field) => {
+    const current = visibleSnapshotRef.current;
+    if (
+      !expectedLease
+      || current.status !== 'ready'
+      || !sameDeviceAccountLease(current.lease, expectedLease)
+    ) return false;
+    try {
+      await ownerDataStore.remove(expectedLease, slot, { isCurrentLease });
+      if (!isCurrentLease(expectedLease)) return false;
+      setSnapshot((existing) => {
+        if (!sameDeviceAccountLease(existing.lease, expectedLease)) return existing;
+        return Object.freeze({
+          ...existing,
+          data: Object.freeze({ ...existing.data, [field]: null }),
+        });
+      });
+      return true;
+    } catch (error) {
+      if (currentLeaseError(error) || !isCurrentLease(expectedLease)) return false;
+      setSnapshot(emptySnapshot(
+        expectedLease,
+        'storage-error',
+        error?.code || 'device_account_remove_failed',
+      ));
+      return false;
+    }
+  }, [isCurrentLease]);
+
   const purgeOwnerData = useCallback((ownerUserId) => {
     const operation = ownerDataStore.purge(ownerUserId);
     const currentLease = leaseRef.current;
@@ -270,6 +299,11 @@ export function DeviceAccountDataProvider({ children }) {
       lease,
       DEVICE_ACCOUNT_DATA_SLOT.blockedAccounts,
       'blockedAccounts',
+    ),
+    clearExpoPushToken: () => clearValue(
+      lease,
+      DEVICE_ACCOUNT_DATA_SLOT.expoPushToken,
+      'expoPushToken',
     ),
     clearHiddenPosts: () => clearList(
       lease,
@@ -326,6 +360,7 @@ export function DeviceAccountDataProvider({ children }) {
     sealOwnerData,
   }), [
     clearList,
+    clearValue,
     isCurrentLease,
     lease,
     purgeOwnerData,

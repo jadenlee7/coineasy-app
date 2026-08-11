@@ -84,6 +84,16 @@ test('staging consent version must match the bundled documents and grants stay r
   );
 });
 
+test('push-token registration cannot activate before a matching privacy release', () => {
+  const result = validateDeployEnvironment(stagingEnv({
+    PUSH_TOKEN_REGISTRATION_ENABLED: 'true',
+  }), { target: 'staging' });
+  assert.equal(
+    result.errors.some((item) => item.name === 'push-token registration approval'),
+    true,
+  );
+});
+
 test('account deletion cannot activate before worker, marker, and recent auth ship', () => {
   const missing = validateDeployEnvironment(stagingEnv({
     ACCOUNT_DELETION_ENABLED: 'true',

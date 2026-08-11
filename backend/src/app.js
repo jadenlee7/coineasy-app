@@ -15,6 +15,7 @@ import { postsRouter } from './routes/posts.js';
 import { followsRouter } from './routes/follows.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { meRouter } from './routes/me.js';
+import { pushTokensRouter } from './routes/push-tokens.js';
 import { identityRouter } from './routes/identity.js';
 import { segmentsRouter } from './routes/segments.js';
 import { questsRouter } from './routes/quests.js';
@@ -152,6 +153,7 @@ export function createApp({
   app.use('/profiles', profilesRouter);
   app.use('/posts', postsRouter);
   app.use('/notifications', notificationsRouter);
+  app.use('/me/push-token', pushTokensRouter);
   app.use('/me', meRouter);
   app.use('/identity', identityRouter);
   app.use('/segments', segmentsRouter);
