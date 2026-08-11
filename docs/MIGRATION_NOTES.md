@@ -391,8 +391,14 @@ screen. No social rows or tables are deleted by S8.
 - [x] Verify Build 100 cold-launch session restoration, the visible
       `Base · Connected` result, copy-only address control, BaseScan routing,
       and public-profile wallet privacy on the affected iPhone 16 Pro Max.
-- [ ] Verify Google OAuth, logout/relogin wallet stability, and the remaining
-      core API paths against staging.
+- [x] Verify Google OAuth and logout/relogin wallet stability against staging.
+      On 2026-08-11, Build 103 returned through `coineasyapp`, retained the same
+      Base-attested wallet and profile across a full restart and Google
+      relogin, and restored the separate Apple account afterward. Anonymous
+      staging counts increased exactly once from four to five users, wallets,
+      and welcome rewards; five `/auth/sync` requests returned HTTP 200 with no
+      `401`, 5xx, or application error in the checked window.
+- [ ] Verify the remaining core API paths against staging.
 - [x] Add the Build 101 mobile privacy-center candidate: authenticated
       account-bound consent reads, version-bound fail-closed drafting,
       full/social JSON export, temporary iOS file cleanup, Android SAF saving,

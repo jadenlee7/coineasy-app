@@ -172,11 +172,13 @@ wallet private key, or login code.
   `3836d8004117de3242a13e844533d7847a396592c27acb9f2ea0ba71c7c88a7c`,
   includes both privacy export scopes, and contains no complete private-key
   block.
-- [ ] Complete one new Google sign-in. Its OAuth return through `coineasyapp`
-  must succeed without showing a raw Privy error.
-- [ ] Confirm the expected session state. Builds 95 through 101 preserve the same
-  versioned `easygo-privy-v2-` SecureStore namespace; only upgrades from a
-  pre-build-94 client should require the one-time sign-in again.
+- [x] On 2026-08-11, complete one new Google sign-in on Build 103. Its OAuth
+  return through `coineasyapp` succeeded without a raw Privy error. The owner
+  then signed out, returned with the same Google account, and finally restored
+  the original Apple account without cross-account profile or Orange state.
+- [x] Confirm the expected session state. Build 103 preserved the versioned
+  `easygo-privy-v2-` SecureStore namespace, survived a full app restart, and
+  returned the same Google profile and wallet after logout/relogin.
 
 ## Android readiness
 
@@ -193,14 +195,19 @@ wallet private key, or login code.
 - [x] Cold-launch EasyGo twice; the splash and login/feed screen render without
   a crash, blank screen, configuration warning, or `STARTUP-JS-01` safe-mode
   screen.
-- [ ] Complete one configured Privy sign-in. Returning to EasyGo through the
-  `coineasyapp` scheme succeeds and the session survives an app restart.
-- [ ] For a new Apple or Google user, confirm exactly one embedded EVM wallet
+- [x] Complete one configured Privy sign-in. Both Apple and Google returned to
+  EasyGo through the `coineasyapp` scheme, and the Google session survived an
+  app restart on Build 103.
+- [x] For a new Apple or Google user, confirm exactly one embedded EVM wallet
   is created, the backend profile stores the same address, and the wallet
   provider reports Base chain ID `0x2105`. On Build 100 or newer, the own
   profile must show `Base · Connected`; tapping the address still copies it,
   while tapping the separate Base badge opens that address on BaseScan. Logout
-  and relogin must not create a second address.
+  and relogin must not create a second address. For the new Google user, the
+  owner confirmed the same private address before and after relogin without
+  disclosing it. Privacy-preserving staging counts moved exactly from four to
+  five users, wallets, and `WELCOME_BONUS` rows; no user lacked a wallet and no
+  welcome row had a missing reference or non-`100` delta.
 - [x] Open another user's profile; its public response and selected-profile UI
   do not expose that user's wallet address.
 - [ ] Open another user's search result and confirm its public response and UI
@@ -215,7 +222,10 @@ wallet private key, or login code.
   only. Railway has exactly one `WELCOME_BONUS` row bound to that user, its
   delta totals `100`, and the user's full Orange balance is `100`; no manual
   ledger insert or repair was performed.
-- [ ] Load the home feed, open one post/thread, and paginate or refresh once.
+- [x] Load the home feed, open one post/thread, and refresh once. Build 103
+  completed this across the Apple/Google account regression, and Railway
+  recorded only successful feed/post and `/auth/sync` responses in the checked
+  window.
 - [ ] Publish one clearly labelled staging text post, edit it, and delete it.
 - [ ] On that post, open the overflow menu and confirm Edit/Delete appear for
   the signed-in author, while another account sees only Report/Block/Hide/Mute.
