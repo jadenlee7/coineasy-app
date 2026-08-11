@@ -371,16 +371,23 @@ wallet private key, or login code.
       Settings. Each control opened its matching versioned EasyGo staging
       document rather than a legacy Google Drive document, and returning to
       EasyGo preserved the authenticated account.
-- [ ] Confirm the client cannot send a new consent grant while the server
-      reports `grantsEnabled=false`. If a prior consent exists, verify full
-      revocation remains available without enabling personalization or
-      marketing.
+- [x] Confirm the client cannot send a new consent grant while the server
+      reports `grantsEnabled=false`. The owner observed the review-locked
+      Build 103 controls, the deployed service reported the gate as disabled,
+      and the complete mobile regression suite passed the matching fail-closed
+      client contract on 2026-08-11.
+- [ ] If a prior consent exists, verify full revocation remains available
+      without enabling personalization or marketing. A privacy-preserving
+      staging aggregate found no consent rows on 2026-08-11, so this check was
+      not manufactured by creating or altering user data.
 - [ ] Re-check profile, `100` Orange balance, feed, full/social JSON export,
       sign-out, and Apple sign-in after the legal-link flow. No prior-account
       data, stale policy state, repeated `401`, or 5xx may appear.
-- [ ] Keep all deletion latches, consent grants, and optional Path C Railway
+- [x] Keep all deletion latches, consent grants, and optional Path C Railway
       flags off. Build 103 is a legal-document integration candidate only; it
       does not approve the documents or activate deletion or optional data use.
+      A value-safe Railway check reconfirmed the web latches as false or unset;
+      the legal manifest remained `publishedForConsent=false`.
 
 ## Dormant recent Apple reauthentication candidate
 

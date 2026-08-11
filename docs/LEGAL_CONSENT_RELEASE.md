@@ -169,3 +169,16 @@ matching server version and review lock in Settings, and opened both matching
 versioned EasyGo documents without a crash, login loop, or legacy Google Drive
 fallback. Server-side grant rejection and existing-consent revocation remain
 separate unchecked gates above.
+
+Later on 2026-08-11, a non-mutating Railway staging check reconfirmed
+`CONSENT_GRANTS_ENABLED=false`, exact consent version
+`2026-08-10-staging-v1`, and every deletion or optional Path C latch as false
+or unset. The deployed consent module classified a new grant as adding
+permission while classifying an all-false replacement as a revocation; the
+grant capability remained disabled. `/health`, `/ready`, and the legal manifest
+returned HTTP 200, while unauthenticated `GET` and `PUT /me/consent` requests
+both returned `401 missing_bearer`. A privacy-preserving aggregate found no
+consent rows in staging, so no existing user consent was created or altered and
+the real authenticated grant-rejection and revocation checks remain unchecked.
+The complete mobile suite passed 156/156; the backend suite passed 215 tests
+with its two PostgreSQL-only integration cases skipped by the local harness.
