@@ -380,9 +380,14 @@ wallet private key, or login code.
       without enabling personalization or marketing. A privacy-preserving
       staging aggregate found no consent rows on 2026-08-11, so this check was
       not manufactured by creating or altering user data.
-- [ ] Re-check profile, `100` Orange balance, feed, full/social JSON export,
-      sign-out, and Apple sign-in after the legal-link flow. No prior-account
-      data, stale policy state, repeated `401`, or 5xx may appear.
+- [x] On 2026-08-11, re-check profile, `100` Orange balance, feed,
+      full/social JSON export, sign-out, and Apple sign-in after the legal-link
+      flow. The owner confirmed that the same profile, balance, feed, and
+      review-locked consent version remained after Apple reauthentication and
+      that both iOS share sheets opened. Railway recorded successful
+      `/auth/sync`, consent, Orange, feed/post, `/me/data`, and
+      `/me/social-export` responses. The checked QA window contained no `401`,
+      5xx, or application error log.
 - [x] Keep all deletion latches, consent grants, and optional Path C Railway
       flags off. Build 103 is a legal-document integration candidate only; it
       does not approve the documents or activate deletion or optional data use.
