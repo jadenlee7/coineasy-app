@@ -5,7 +5,10 @@
  * risky, all-at-once rewrite of the card UI.
  */
 
-import { normalizeSocialAuthor } from './socialAuthor.mjs';
+import {
+  normalizeSocialAuthor,
+  socialAuthorDisplayName,
+} from './socialAuthor.mjs';
 
 function toUnixTimestamp(value) {
   const milliseconds = value ? new Date(value).getTime() : NaN;
@@ -15,7 +18,7 @@ function toUnixTimestamp(value) {
 export function adaptSocialAuthor(author = {}) {
   const safeAuthor = normalizeSocialAuthor(author);
   const id = safeAuthor.id || 'deleted';
-  const displayName = safeAuthor.displayName || safeAuthor.username || 'Deleted account';
+  const displayName = socialAuthorDisplayName(safeAuthor);
 
   return {
     did: `easygo:${id}`,

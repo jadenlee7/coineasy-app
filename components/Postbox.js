@@ -65,6 +65,13 @@ function categoryIdentity(category) {
         || null;
 }
 
+export function postboxCategoryRequiresAccess(category) {
+    return Boolean(
+        category?.content?.accessRules
+        && category.content.accessRules.length > 0
+    );
+}
+
 export function createPostboxDraft(editedPost) {
     const content = editedPost?.value?.content || {};
     const category = editedPost ? {
@@ -111,6 +118,7 @@ export default function Postbox({isReply = false, openGeneration = 0}) {
     });
     const composeTargetKey = postboxComposeTargetKey(composeTarget);
     const initialDraft = createPostboxDraft(editedPost);
+    const initialHasAccess = !postboxCategoryRequiresAccess(initialDraft.category);
     const { create: createPost, update: updatePost, backendConfigured } = usePosts({ autoLoad: false });
     const { create: createReply } = useReplies(replyParentId, { autoLoad: false });
 
@@ -131,7 +139,7 @@ export default function Postbox({isReply = false, openGeneration = 0}) {
     const [message, setMessage] = useState(initialDraft.message);
     const [loading, setLoading] = useState(false);
     const [categorySelected, setCategorySelected] = useState(initialDraft.category);
-    const [hasAccess, setHasAccess] = useState(false);
+    const [hasAccess, setHasAccess] = useState(initialHasAccess);
     const [mentionsBoxVis, setMentionsBoxVis] = useState(false);
     const [currentMention, setCurrentMention] = useState(null);
     const [listMedia, setListMedia] = useState(initialDraft.media);
@@ -148,7 +156,7 @@ export default function Postbox({isReply = false, openGeneration = 0}) {
         setMessage(nextDraft.message);
         setListMedia(nextDraft.media);
         setCategorySelected(nextDraft.category);
-        setHasAccess(false);
+        setHasAccess(!postboxCategoryRequiresAccess(nextDraft.category));
         setMentionsBoxVis(false);
         setCurrentMention(null);
         setLoading(false);
@@ -251,23 +259,27 @@ export default function Postbox({isReply = false, openGeneration = 0}) {
         const operationCategoryIdentity = categoryIdentity(temp_cat);
         const requestGeneration = ++accessRequestGenerationRef.current;
         selectedCategoryIdentityRef.current = operationCategoryIdentity;
-        const isCurrentRequest = () => Boolean(
-            isCurrentComposeTarget(operationTarget, operationLease)
+        const isCurrentSelection = () => Boolean(
+            samePostboxComposeTarget(liveComposeTargetRef.current, operationTarget)
             && requestGeneration === accessRequestGenerationRef.current
             && selectedCategoryIdentityRef.current === operationCategoryIdentity
         );
+        const isCurrentRequest = () => Boolean(
+            isCurrentComposeTarget(operationTarget, operationLease)
+            && isCurrentSelection()
+        );
+        if (!postboxCategoryRequiresAccess(temp_cat)) {
+            if (isCurrentSelection()) setHasAccess(true);
+            return;
+        }
         if (!operationLease || !isCurrentComposeTarget(operationTarget, operationLease)) return;
-        setHasAccess(false);
-        if(temp_cat?.content.accessRules && temp_cat?.content.accessRules.length > 0) {
-            try {
-                await checkContextAccess(user, temp_cat.content.accessRules, () => {
-                    if (isCurrentRequest()) setHasAccess(true);
-                });
-            } catch (error) {
-                if (isCurrentRequest()) console.log(error);
-            }
-        } else {
-            if (isCurrentRequest()) setHasAccess(true);
+        if (isCurrentRequest()) setHasAccess(false);
+        try {
+            await checkContextAccess(user, temp_cat.content.accessRules, () => {
+                if (isCurrentRequest()) setHasAccess(true);
+            });
+        } catch (error) {
+            if (isCurrentRequest()) console.log(error);
         }
     }
 

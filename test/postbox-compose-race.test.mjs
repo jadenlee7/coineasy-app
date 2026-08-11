@@ -81,7 +81,7 @@ test('compose identity includes mode, edit id, reply parent, and every open gene
 });
 
 test('a reopened post or reply draft contains none of the prior edit body, media, category, or mentions', async () => {
-  const { createPostboxDraft } = await loadComposeHelpers();
+  const { createPostboxDraft, postboxCategoryRequiresAccess } = await loadComposeHelpers();
   const media = [{ url: 'https://cdn.easygo.example/x.png' }];
   const mentions = [{ did: 'did:privy:x', username: '@x' }];
   const editDraft = createPostboxDraft({
@@ -105,6 +105,11 @@ test('a reopened post or reply draft contains none of the prior edit body, media
     mentions: [],
     message: '',
   });
+  assert.equal(postboxCategoryRequiresAccess(editDraft.category), false);
+  assert.equal(postboxCategoryRequiresAccess(cleanDraft.category), false);
+  assert.equal(postboxCategoryRequiresAccess({
+    content: { accessRules: [{ type: 'token' }] },
+  }), true);
 });
 
 test('an X completion fails the same comparator after Y opens and performs no continuation effects', async () => {
@@ -194,9 +199,13 @@ test('mention and access completions require their captured identity and request
     'const operationTarget = composeTarget;',
     'const operationCategoryIdentity = categoryIdentity(temp_cat);',
     'const requestGeneration = ++accessRequestGenerationRef.current;',
+    'const isCurrentSelection = () => Boolean(',
     'requestGeneration === accessRequestGenerationRef.current',
     'selectedCategoryIdentityRef.current === operationCategoryIdentity',
-    'setHasAccess(false);',
+    'if (!postboxCategoryRequiresAccess(temp_cat)) {',
+    'if (isCurrentSelection()) setHasAccess(true);',
+    'if (!operationLease || !isCurrentComposeTarget(operationTarget, operationLease)) return;',
+    'if (isCurrentRequest()) setHasAccess(false);',
     'await checkContextAccess',
     'if (isCurrentRequest()) setHasAccess(true);',
   ], 'category access ownership');
@@ -213,7 +222,7 @@ test('send and edit fence every clear, callback, close, error, and loading compl
     'setMessage(nextDraft.message);',
     'setListMedia(nextDraft.media);',
     'setCategorySelected(nextDraft.category);',
-    'setHasAccess(false);',
+    'setHasAccess(!postboxCategoryRequiresAccess(nextDraft.category));',
     'setMentionsBoxVis(false);',
     'setCurrentMention(null);',
     'setLoading(false);',

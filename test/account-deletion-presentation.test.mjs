@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { normalizeSocialAuthor } from '../utils/socialAuthor.mjs';
+import {
+  ACTIVE_SOCIAL_AUTHOR_LABEL,
+  DELETED_SOCIAL_AUTHOR_LABEL,
+  normalizeSocialAuthor,
+  socialAuthorDisplayName,
+} from '../utils/socialAuthor.mjs';
 
 test('a redacted post with no author remains renderable as a deleted account', () => {
   assert.deepEqual(normalizeSocialAuthor(null), {});
@@ -14,8 +19,20 @@ test('a redacted post with no author remains renderable as a deleted account', (
     'utf8',
   );
   assert.match(adapter, /normalizeSocialAuthor\(author\)/);
-  assert.match(adapter, /Deleted account/);
+  assert.match(adapter, /socialAuthorDisplayName\(safeAuthor\)/);
   assert.match(adapter, /deleted: Boolean\(row\.deleted \|\| row\.deletedAt\)/);
+});
+
+test('active unnamed authors are never presented as deleted accounts', () => {
+  assert.equal(
+    socialAuthorDisplayName({ id: 'active-user', displayName: null, username: null }),
+    ACTIVE_SOCIAL_AUTHOR_LABEL,
+  );
+  assert.equal(socialAuthorDisplayName(null), DELETED_SOCIAL_AUTHOR_LABEL);
+  assert.equal(
+    socialAuthorDisplayName({ id: 'named-user', displayName: '  Jaden  ' }),
+    'Jaden',
+  );
 });
 
 test('authenticated fallback UI waits for sync and never opens for a deletion guard', () => {

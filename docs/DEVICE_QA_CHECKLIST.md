@@ -398,6 +398,23 @@ wallet private key, or login code.
       `/auth/sync`, consent, Orange, feed/post, `/me/data`, and
       `/me/social-export` responses. The checked QA window contained no `401`,
       5xx, or application error log.
+- [x] On 2026-08-11, verify social post ownership across the Apple and Google
+      staging accounts. The Apple account created and edited the test post;
+      the Google account's menu exposed only Report, Block, Hide, and Mute,
+      with none of those safety actions executed. Returning to Apple completed
+      one server-backed deletion. The checked requests returned successful
+      create, update, and delete responses without an HTTP error; the deleted
+      row retained no author, body, or media data.
+- [ ] Re-run the same post flow on the follow-up internal candidate. Build 103
+      exposed two presentation defects: an active account with no chosen
+      profile name was labelled `Deleted account`, and a category-free edit
+      draft did not expose its text input until Category was opened. The local
+      fix now reserves `Deleted account` for a missing/deleted author and makes
+      category-free or public drafts editable on first render. The 157-test
+      mobile suite and iOS export pass, but physical-device verification is
+      still required. A privacy-safe staging aggregate remains one active root
+      post above the pre-test baseline after the observed duplicate create, so
+      remove that test post through the owning account UI during this rerun.
 - [x] Keep all deletion latches, consent grants, and optional Path C Railway
       flags off. Build 103 is a legal-document integration candidate only; it
       does not approve the documents or activate deletion or optional data use.
