@@ -447,6 +447,26 @@ screen. No social rows or tables are deleted by S8.
       both reached the iOS share sheet. Railway confirmed successful auth sync,
       consent, Orange, feed/post, and both export requests with no `401`, 5xx,
       or application error in the checked QA window.
+- [x] Build, inspect, upload, and process internal-only iOS `2.0.3 (104)` from
+      exact commit `f7feefc619ab71e1f3fb3870e6cae41683492d50`. EAS build
+      `a8bc6dbf-0976-4eed-8c03-b9ab36729e4c` and submission
+      `6d9cf786-a3bf-4412-9eac-af6e80639afc` finished without an error. The
+      27,045,298-byte IPA has SHA-256
+      `0a236c2f383bedaad85d971f4c8f30a1fe551d3d502f9e7185283b6adf2c2d10`
+      and reports the intended bundle identity, version, and URL scheme. App
+      Store Connect build `d04e4c42-d141-4d7e-9990-0c4950094d59` is `VALID`,
+      `INTERNAL_ONLY`, `IN_BETA_TESTING`, and unavailable to external testing.
+- [x] Complete the Build 104 social-author/edit regression on the physical
+      iPhone. The owner confirmed the active unnamed Apple account displays
+      `EasyGo user`, a category-free post is writable immediately on Edit, the
+      non-owner Google menu exposes only Report, Block, Hide, and Mute without
+      executing those actions, and the Apple owner can delete the staging post.
+      The final privacy-safe aggregate returned active roots to baseline at
+      three, with zero active authorless posts and zero deleted rows retaining
+      an author, body, or media. The checked Railway window contained no
+      repeated `401`, HTTP 5xx, or application error, and all deletion,
+      consent-grant, segment, external-TestFlight, and App Review gates stayed
+      off.
 
 ## Owner action items (outside this PR)
 
