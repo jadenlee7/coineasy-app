@@ -433,32 +433,46 @@ wallet private key, or login code.
       `22da87bf932709299eeebcb780d599ef660db47d7af6bd52fb1c534c12b6d64b`
       and contains no complete private-key payload or server-secret variable
       name.
-- [ ] Record the exact clean release commit and EAS build ID after the
-      committed `testflight` profile build starts. Confirm the binary reports
-      `2.0.3 (104)`, uses the `preview` channel, targets staging, and retains
-      `com.coineasy.coineasysocial` plus the `coineasyapp` scheme.
-- [ ] Confirm App Store Connect labels Build 104 `Internal`. The authoritative
-      API must report `buildAudienceType=INTERNAL_ONLY` and external state
-      `NOT_APPLICABLE`. Do not add it to an external group or App Store review.
-- [ ] On the physical iPhone, cold-launch and restore the Apple account. An
-      active account with no chosen profile name must show `EasyGo user`; only
-      a genuinely deleted post may show `Deleted account`.
-- [ ] Open the remaining Apple-owned staging test post, choose Edit, change its
-      text without opening Category, and save. Reload the feed and confirm the
-      same post changed without creating a duplicate root post.
-- [ ] Switch to Google and open the same post. Confirm the non-owner menu shows
-      only Report, Block, Hide, and Mute, but do not execute any of those
-      actions. Switch back to Apple and delete the test post through the app.
-- [ ] Re-check the privacy-safe staging aggregate after deletion. Active root
-      posts must return to the pre-test baseline, active posts must retain an
-      author, and every deleted row must retain no author, body, or media data.
-- [ ] Re-check profile, `100` Orange balance, Base wallet status, locked consent
-      state, both versioned legal links, and full/social JSON export. The QA
-      window must contain no repeated `401`, HTTP 5xx, application error, crash,
-      or login loop.
-- [ ] Keep deletion latches, consent grants, optional Path C flags, external
-      TestFlight distribution, and App Store review off. Build 104 is an
-      internal regression candidate only.
+- [x] EAS build `a8bc6dbf-0976-4eed-8c03-b9ab36729e4c` completed from exact
+      clean commit `f7feefc619ab71e1f3fb3870e6cae41683492d50` with the
+      `testflight` profile, `preview` channel, and staging target. The
+      27,045,298-byte IPA has SHA-256
+      `0a236c2f383bedaad85d971f4c8f30a1fe551d3d502f9e7185283b6adf2c2d10`,
+      passes its ZIP integrity check, and reports `2.0.3 (104)`,
+      `com.coineasy.coineasysocial`, and the `coineasyapp` scheme.
+- [x] EAS submission `6d9cf786-a3bf-4412-9eac-af6e80639afc` finished
+      successfully. App Store Connect build
+      `d04e4c42-d141-4d7e-9990-0c4950094d59` is `VALID`, unexpired, and reports
+      `buildAudienceType=INTERNAL_ONLY`, internal state `IN_BETA_TESTING`, and
+      external state `NOT_APPLICABLE`. It was not added to an external group or
+      App Store review.
+- [x] On 2026-08-11, the owner installed Build 104 on the physical iPhone,
+      cold-launched the Apple account, and confirmed an active account without
+      a chosen profile name displays `EasyGo user`; the deleted-post
+      presentation remains `Deleted account`.
+- [x] The owner opened the Apple-owned staging test post, selected Edit, changed
+      and saved its text without opening Category, and reloaded the feed. The
+      existing post updated on first render without leaving a duplicate active
+      root post.
+- [x] The owner switched to Google and confirmed the non-owner menu exposed
+      only Report, Block, Hide, and Mute without executing any of those safety
+      actions. After switching back to Apple, the owner deleted the remaining
+      `Fm` staging test post through the app.
+- [x] The final privacy-safe staging aggregate reports `total=10`, `active=6`,
+      `deleted=4`, `activeRoots=3`, `activeAuthorless=0`, and
+      `deletedResidual=0`. Active roots returned to the pre-test baseline,
+      every active post retains an author, and every deleted row retains no
+      author, body, or media data.
+- [x] The owner confirmed the Build 104 profile, `100` Orange balance, Base
+      wallet status, locked consent state, both versioned legal links, and
+      full/social JSON export remained operational without a crash or login
+      loop. The checked Railway window contained no repeated `401`, HTTP 5xx,
+      or application error log.
+- [x] Both staging services retained account deletion, provider cleanup,
+      recent-auth deletion, consent grants, and segments as false. All source
+      deletion readiness latches remain false; external TestFlight distribution
+      and App Store review remain off. Build 104 is an internal regression
+      candidate only.
 
 ## Dormant recent Apple reauthentication candidate
 
