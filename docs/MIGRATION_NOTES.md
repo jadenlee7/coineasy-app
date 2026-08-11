@@ -435,6 +435,12 @@ screen. No social rows or tables are deleted by S8.
       completed Sign in with Apple, confirmed the matching Settings version and
       review lock, and opened both versioned documents without a crash or login
       loop.
+- [x] Complete the Build 103 post-legal-link regression on the physical iPhone.
+      The same profile, `100` Orange balance, feed, and locked policy state
+      survived sign-out and Apple reauthentication; full and social JSON export
+      both reached the iOS share sheet. Railway confirmed successful auth sync,
+      consent, Orange, feed/post, and both export requests with no `401`, 5xx,
+      or application error in the checked QA window.
 
 ## Owner action items (outside this PR)
 

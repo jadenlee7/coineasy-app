@@ -182,3 +182,14 @@ consent rows in staging, so no existing user consent was created or altered and
 the real authenticated grant-rejection and revocation checks remain unchecked.
 The complete mobile suite passed 156/156; the backend suite passed 215 tests
 with its two PostgreSQL-only integration cases skipped by the local harness.
+
+The owner then completed the remaining Build 103 account regression on the
+physical iPhone. The same profile, `100` Orange balance, feed, and locked policy
+state survived sign-out and a fresh Sign in with Apple. Both full and social
+JSON exports opened the iOS share sheet. Privacy-minimized Railway HTTP
+evidence recorded one successful `GET /me/data` and one successful
+`GET /me/social-export`, alongside successful auth sync, consent, Orange, and
+feed/post requests; the checked window contained no `401`, 5xx, or application
+error log. This does not change the two consent mutation gates above, which
+remain unchecked until a designated authenticated staging account has suitable
+consent state.
