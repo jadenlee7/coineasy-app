@@ -133,9 +133,9 @@ fail-closed. Revocation remains available independently of the grant gate.
 - [x] `/legal/manifest.json` reports the exact deployed candidate and no secret.
 - [x] Privacy and terms return HTTP 200, HTML UTF-8, CSP, no-referrer, nosniff,
       and the exact version in visible copy and metadata.
-- [ ] Login and Settings open the configured EasyGo URLs, never the legacy
+- [x] Login and Settings open the configured EasyGo URLs, never the legacy
       Google Drive documents.
-- [ ] Settings shows the matching server version but clearly states that new
+- [x] Settings shows the matching server version but clearly states that new
       consent remains review-locked.
 - [ ] A new grant attempt cannot be sent by the UI and is rejected server-side.
 - [ ] An existing consent can still be fully revoked.
@@ -157,3 +157,15 @@ regression against this backend, including profile, Orange balance, feed, and
 Settings navigation without a crash or login loop. Build 102 predates the
 matching mobile legal-URL configuration, so this result does not complete the
 unchecked next-artifact URL, grant-rejection, or revocation checks above.
+
+On 2026-08-11, internal-only Build 103 completed from exact release commit
+`c8732b1c67b3bedade78fe057d7907221bc057f8`. EAS build
+`f2a3aa79-31bb-41e7-b9de-fdf573422c6d` and submission
+`90463ef8-67ad-40bb-8570-bb91b2d58794` finished successfully; App Store Connect
+build `37314fb9-8f11-4dcb-adf3-ea509ff920a7` is `VALID`,
+`buildAudienceType=INTERNAL_ONLY`, and unavailable to external testing. The
+owner installed it from TestFlight, completed Sign in with Apple, confirmed the
+matching server version and review lock in Settings, and opened both matching
+versioned EasyGo documents without a crash, login loop, or legacy Google Drive
+fallback. Server-side grant rejection and existing-consent revocation remain
+separate unchecked gates above.

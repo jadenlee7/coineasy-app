@@ -418,6 +418,23 @@ screen. No social rows or tables are deleted by S8.
       6,067,878-byte JavaScript bundle has SHA-256
       `3836d8004117de3242a13e844533d7847a396592c27acb9f2ea0ba71c7c88a7c`
       and no complete private-key block.
+- [x] Build, inspect, upload, and process internal-only iOS `2.0.3 (103)` from
+      exact commit `c8732b1c67b3bedade78fe057d7907221bc057f8`. EAS build
+      `f2a3aa79-31bb-41e7-b9de-fdf573422c6d` and submission
+      `90463ef8-67ad-40bb-8570-bb91b2d58794` finished without an error. App
+      Store Connect build `37314fb9-8f11-4dcb-adf3-ea509ff920a7` is `VALID`,
+      `INTERNAL_ONLY`, and unavailable to external testing.
+- [x] Verify the 27,045,118-byte Build 103 IPA at SHA-256
+      `6be03dfc97634d739471bed4eb2d3cc1f42ef3a886d3bfb78ae083f09fe7544f`.
+      Its JSC bundle exactly matches the clean preview-environment export at
+      SHA-256
+      `564a02677c8f1816ccb7a0c00041929ca816d1237cef8a427c6cb69ed52bfd04`
+      and contains the exact candidate consent version and both matching
+      EasyGo staging URLs without a legacy Google Drive URL, complete private
+      key, or server-secret variable name. The owner then installed Build 103,
+      completed Sign in with Apple, confirmed the matching Settings version and
+      review lock, and opened both versioned documents without a crash or login
+      loop.
 
 ## Owner action items (outside this PR)
 

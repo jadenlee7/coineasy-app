@@ -344,24 +344,33 @@ wallet private key, or login code.
       `564a02677c8f1816ccb7a0c00041929ca816d1237cef8a427c6cb69ed52bfd04`;
       it contains the candidate version and both URLs, no Google Drive URL,
       no complete private-key block, and no server-secret variable name.
-- [ ] Record the exact release commit and EAS build ID after the committed,
-      clean `testflight` profile build starts. Confirm the binary reports
-      `2.0.3 (103)`, uses the `preview` channel, targets staging, and retains the
-      `com.coineasy.coineasysocial` identifier and `coineasyapp` scheme.
-- [ ] Confirm the release bundle contains exact consent version
-      `2026-08-10-staging-v1` and both matching versioned EasyGo staging URLs.
-      It must not contain either legacy Google Drive policy URL or a private
-      server credential.
-- [ ] Confirm App Store Connect labels Build 103 `Internal`. The authoritative
-      API must report `buildAudienceType=INTERNAL_ONLY` and external state
-      `NOT_APPLICABLE`. Do not add it to an external group or App Store review.
-- [ ] Force-close and reopen Build 103, complete Sign in with Apple, and open
-      Settings. The policy card must show server version
-      `2026-08-10-staging-v1`, report that re-consent is required, and keep new
-      consent choices review-locked without a crash or login loop.
-- [ ] Open Privacy policy and Terms of service from Settings. Each control must
-      open its matching EasyGo staging document, never a legacy Google Drive
-      document, and returning to EasyGo must preserve the authenticated account.
+- [x] EAS build `f2a3aa79-31bb-41e7-b9de-fdf573422c6d` completed from exact
+      clean commit `c8732b1c67b3bedade78fe057d7907221bc057f8` with the
+      `testflight` profile, `preview` channel, and staging target. The
+      27,045,118-byte IPA has SHA-256
+      `6be03dfc97634d739471bed4eb2d3cc1f42ef3a886d3bfb78ae083f09fe7544f`
+      and reports `2.0.3 (103)`, `com.coineasy.coineasysocial`, and
+      `coineasyapp`.
+- [x] The inspected release artifact links JavaScriptCore and its 6,166,900-byte
+      bundle exactly matches the clean preview-environment export at SHA-256
+      `564a02677c8f1816ccb7a0c00041929ca816d1237cef8a427c6cb69ed52bfd04`.
+      It contains exact consent version `2026-08-10-staging-v1` and both matching
+      versioned EasyGo staging URLs, with no legacy Google Drive URL, complete
+      private-key block, or server-secret variable name.
+- [x] EAS submission `90463ef8-67ad-40bb-8570-bb91b2d58794` finished
+      successfully. App Store Connect build
+      `37314fb9-8f11-4dcb-adf3-ea509ff920a7` is `VALID`, unexpired, and reports
+      `buildAudienceType=INTERNAL_ONLY`, internal state `IN_BETA_TESTING`, and
+      external state `NOT_APPLICABLE`. It was not added to an external group or
+      App Store review.
+- [x] On 2026-08-11, the owner installed Build 103 from TestFlight, completed
+      Sign in with Apple, and opened Settings. The policy card showed server
+      version `2026-08-10-staging-v1`, reported that re-consent is required, and
+      kept new consent choices review-locked without a crash or login loop.
+- [x] On 2026-08-11, the owner opened Privacy policy and Terms of service from
+      Settings. Each control opened its matching versioned EasyGo staging
+      document rather than a legacy Google Drive document, and returning to
+      EasyGo preserved the authenticated account.
 - [ ] Confirm the client cannot send a new consent grant while the server
       reports `grantsEnabled=false`. If a prior consent exists, verify full
       revocation remains available without enabling personalization or
