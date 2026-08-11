@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-test('Build 103 TestFlight path is Apple Internal Only', () => {
+test('Build 104 TestFlight path is Apple Internal Only', () => {
   const app = JSON.parse(
     readFileSync(new URL('../app.json', import.meta.url), 'utf8'),
   );
@@ -14,7 +14,7 @@ test('Build 103 TestFlight path is Apple Internal Only', () => {
     'utf8',
   );
 
-  assert.equal(app.expo.ios.buildNumber, '103');
+  assert.equal(app.expo.ios.buildNumber, '104');
   assert.equal(eas.cli.requireCommit, true);
   assert.equal(eas.build.testflight.env.EASYGO_DEPLOY_TARGET, 'staging');
   assert.equal(
