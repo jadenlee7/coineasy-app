@@ -21,6 +21,7 @@ import { GlobalContext } from '../../contexts/GlobalContext';
 import { useDeviceAccountData } from '../../contexts/DeviceAccountDataContext';
 import useConsent from '../../hooks/useConsent';
 import { api } from '../../utils/api';
+import { unregisterPushTokenBeforeLogout } from '../../utils/pushTokenRegistration.mjs';
 import {
   canConfirmAccountDeletion,
   reconcileAccountDeletionStatus,
@@ -274,20 +275,13 @@ export default function SettingsModal() {
     Haptics.selectionAsync();
     setLoadingAction('logout');
     try {
-      if (expoPushToken) {
-        try {
-          await api.unregisterPushToken({
-            token: expoPushToken,
-            expectedAuthUserId: expectedOperation.ownerUserId,
-          });
-          if (isCurrentAccountOperation(expectedOperation)) {
-            await clearExpoPushToken();
-          }
-        } catch {
-          // Logout remains available offline. A future registration on this
-          // device atomically moves the unique token to the active account.
-        }
-      }
+      await unregisterPushTokenBeforeLogout({
+        token: expoPushToken,
+        ownerUserId: expectedOperation.ownerUserId,
+        unregister: api.unregisterPushToken,
+        clearLocal: clearExpoPushToken,
+        isCurrent: () => isCurrentAccountOperation(expectedOperation),
+      });
       if (!isCurrentAccountOperation(expectedOperation)) return;
       await logout();
       if (!isCurrentAccountOperation(expectedOperation)) return;

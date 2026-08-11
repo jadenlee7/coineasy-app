@@ -10,6 +10,7 @@ import {
   useDeviceAccountOperationLease,
 } from '../../contexts/DeviceAccountDataContext';
 import { api } from '../../utils/api';
+import { unregisterPushTokenBeforeLogout } from '../../utils/pushTokenRegistration.mjs';
 import Button from '../Button';
 import { UserPfp, Username } from '../User';
 
@@ -35,17 +36,13 @@ export default function SwitchAccountModal() {
             if (!isCurrentLease(expectedLease)) return;
             setLoading(true);
             try {
-              if (expoPushToken) {
-                try {
-                  await api.unregisterPushToken({
-                    token: expoPushToken,
-                    expectedAuthUserId: expectedLease.ownerUserId,
-                  });
-                  if (isCurrentLease(expectedLease)) await clearExpoPushToken();
-                } catch {
-                  // Account switching must remain possible while offline.
-                }
-              }
+              await unregisterPushTokenBeforeLogout({
+                token: expoPushToken,
+                ownerUserId: expectedLease.ownerUserId,
+                unregister: api.unregisterPushToken,
+                clearLocal: clearExpoPushToken,
+                isCurrent: () => isCurrentLease(expectedLease),
+              });
               if (!isCurrentLease(expectedLease)) return;
               await logout();
               setUser(null);

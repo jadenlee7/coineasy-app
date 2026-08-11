@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   PUSH_TOKEN_REGISTRATION_READY,
   pushTokenRegistrationEnabled,
+  unregisterPushTokenBeforeLogout,
 } from '../utils/pushTokenRegistration.mjs';
 
 function read(path) {
@@ -30,17 +31,67 @@ test('mobile registration is owner-bound and persists only after server acceptan
   assert.doesNotMatch(source, /backend token registration ships/);
 });
 
-test('both ordinary sign-out paths attempt an owner-bound remote unregister', () => {
+test('both ordinary sign-out paths use bounded owner-bound cleanup', () => {
   for (const path of [
     '../components/modals/SettingsModal.js',
     '../components/modals/SwitchAccountModal.js',
   ]) {
     const source = read(path);
-    assert.match(source, /await api\.unregisterPushToken\(\{/);
-    assert.match(source, /expectedAuthUserId: expected(?:Operation|Lease)\.ownerUserId/);
-    assert.match(source, /await clearExpoPushToken\(\)/);
-    assert.ok(source.indexOf('await api.unregisterPushToken({') < source.indexOf('await logout()'));
+    assert.match(source, /await unregisterPushTokenBeforeLogout\(\{/);
+    assert.match(source, /ownerUserId: expected(?:Operation|Lease)\.ownerUserId/);
+    assert.match(source, /unregister: api\.unregisterPushToken/);
+    assert.match(source, /clearLocal: clearExpoPushToken/);
+    assert.ok(source.indexOf('await unregisterPushTokenBeforeLogout({') < source.indexOf('await logout()'));
   }
+});
+
+test('dormant registration performs no logout network or local cleanup', async () => {
+  let remoteCalls = 0;
+  let localCalls = 0;
+  const outcome = await unregisterPushTokenBeforeLogout({
+    token: 'ExponentPushToken[test_token_123456]',
+    ownerUserId: 'did:privy:owner',
+    unregister: async () => { remoteCalls += 1; },
+    clearLocal: async () => { localCalls += 1; },
+    isCurrent: () => true,
+  });
+  assert.equal(outcome, 'skipped');
+  assert.equal(remoteCalls, 0);
+  assert.equal(localCalls, 0);
+});
+
+test('enabled logout cleanup is owner-bound and clears locally after remote success', async () => {
+  let request;
+  let localCalls = 0;
+  const outcome = await unregisterPushTokenBeforeLogout({
+    registrationEnabled: true,
+    token: 'ExponentPushToken[test_token_123456]',
+    ownerUserId: 'did:privy:owner',
+    unregister: async (options) => { request = options; },
+    clearLocal: async () => { localCalls += 1; return true; },
+    isCurrent: () => true,
+  });
+  assert.equal(outcome, 'unregistered');
+  assert.equal(request.expectedAuthUserId, 'did:privy:owner');
+  assert.equal(request.signal instanceof AbortSignal, true);
+  assert.equal(localCalls, 1);
+});
+
+test('unregister timeout fails soft and leaves the local token for a later retry', async () => {
+  let localCalls = 0;
+  const outcome = await unregisterPushTokenBeforeLogout({
+    registrationEnabled: true,
+    timeoutMs: 1,
+    token: 'ExponentPushToken[test_token_123456]',
+    ownerUserId: 'did:privy:owner',
+    unregister: ({ signal }) => new Promise((resolve, reject) => {
+      signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+    }),
+    clearLocal: async () => { localCalls += 1; return true; },
+    isCurrent: () => true,
+  });
+  assert.equal(outcome, 'failed');
+  assert.equal(localCalls, 0);
 });
 
 test('the owner-scoped device store can clear its locally retained delivery address', () => {
