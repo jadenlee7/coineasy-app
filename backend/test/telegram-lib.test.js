@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getTelegramBalanceById, registerHandlers } from '../src/lib/telegram.js';
+import {
+  getTelegramBalanceById,
+  getTelegramWalletById,
+  registerHandlers,
+} from '../src/lib/telegram.js';
 
 function makeMockBot() {
   const events = [];
@@ -34,6 +38,16 @@ function makeDb({ userById = null, balance = null } = {}) {
     },
     orangeLedger: {
       aggregate: async () => ({ _sum: { delta: balance } }),
+    },
+  };
+}
+
+function makeDbWithWallet({
+  user = null,
+} = {}) {
+  return {
+    user: {
+      findUnique: async () => user,
     },
   };
 }
@@ -110,4 +124,78 @@ test('registerHandlers blocks /invite when bot username is missing', async () =>
   const handler = getHandler(bot.events, '/invite');
   await handler({ from: { id: 1001 }, chat: { id: 2002 } });
   assert.equal(bot.messages[0].text, '초대 링크 설정이 아직 준비되지 않았어요. 나중에 다시 시도해 주세요.');
+});
+
+test('getTelegramWalletById returns null when no wallet exists', async () => {
+  const result = await getTelegramWalletById(
+    makeDbWithWallet({ user: null }),
+    '12345',
+  );
+  assert.equal(result, null);
+});
+
+test('getTelegramWalletById returns userId and walletAddress', async () => {
+  const result = await getTelegramWalletById(
+    makeDbWithWallet({ user: { id: 'user-1', walletAddress: '0xabc' } }),
+    '12345',
+  );
+  assert.equal(result.userId, 'user-1');
+  assert.equal(result.walletAddress, '0xabc');
+});
+
+test('registerHandlers handles /wallet for linked users with wallet address', async () => {
+  const bot = makeMockBot();
+  registerHandlers(bot, {
+    db: makeDbWithWallet({
+      user: {
+        id: 'user-1',
+        walletAddress: '0xabc123',
+      },
+    }),
+    env: {},
+    appLogger: { info: () => {}, error: () => {} },
+  });
+
+  const handler = getHandler(bot.events, '/wallet');
+  await handler({ from: { id: 1001 }, chat: { id: 2002 } });
+  assert.equal(bot.messages[0].text, '연동된 지갑 주소: 0xabc123');
+});
+
+test('registerHandlers explains /wallet when user is not linked', async () => {
+  const bot = makeMockBot();
+  registerHandlers(bot, {
+    db: makeDbWithWallet({
+      user: null,
+    }),
+    env: {},
+    appLogger: { info: () => {}, error: () => {} },
+  });
+
+  const handler = getHandler(bot.events, '/wallet');
+  await handler({ from: { id: 1001 }, chat: { id: 2002 } });
+  assert.equal(
+    bot.messages[0].text,
+    'EasyGo 연동 계정이 아직 없어서 지갑 주소를 조회할 수 없어요. 앱에서 먼저 연동해주세요.',
+  );
+});
+
+test('registerHandlers explains /wallet when wallet missing', async () => {
+  const bot = makeMockBot();
+  registerHandlers(bot, {
+    db: makeDbWithWallet({
+      user: {
+        id: 'user-1',
+        walletAddress: null,
+      },
+    }),
+    env: {},
+    appLogger: { info: () => {}, error: () => {} },
+  });
+
+  const handler = getHandler(bot.events, '/wallet');
+  await handler({ from: { id: 1001 }, chat: { id: 2002 } });
+  assert.equal(
+    bot.messages[0].text,
+    '지갑이 아직 발급되지 않았어요. 앱에서 지갑 생성/연결을 완료한 뒤 다시 시도해 주세요.',
+  );
 });

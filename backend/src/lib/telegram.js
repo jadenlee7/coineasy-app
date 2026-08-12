@@ -10,6 +10,7 @@
  *   /start    - greeting + 🍊 Orange welcome bonus (handled in routes/orange.js)
  *   /balance  - 🍊 Orange balance lookup
  *   /invite   - referral link
+ *   /wallet   - linked wallet address
  *
  * The bot module deliberately keeps business logic OUT of here —
  * it just routes commands to handlers.
@@ -51,6 +52,21 @@ export async function getTelegramBalanceById(db, telegramId) {
   return {
     userId: user.id,
     balance: aggregate._sum.delta || 0,
+  };
+}
+
+export async function getTelegramWalletById(db, telegramId) {
+  const normalized = String(telegramId || '').trim();
+  if (!normalized) return null;
+  const user = await db.user.findUnique({
+    where: { telegramId: normalized },
+    select: { id: true, walletAddress: true },
+  });
+  if (!user) return null;
+
+  return {
+    userId: user.id,
+    walletAddress: user.walletAddress || null,
   };
 }
 
@@ -216,6 +232,33 @@ export function registerHandlers(bot, {
     }
 
     await bot.sendMessage(msg.chat.id, `초대 링크가 준비되었어요.\n${inviteUrl}`);
+  });
+
+  bot.onText(/^\/wallet$/, async (msg) => {
+    const telegramId = String(msg?.from?.id || '').trim();
+    if (!telegramId) {
+      await bot.sendMessage(msg.chat.id, '테레그램 사용자 정보가 없어 지갑 주소를 조회할 수 없어요.');
+      return;
+    }
+
+    const result = await getTelegramWalletById(db, telegramId);
+    if (!result) {
+      await bot.sendMessage(
+        msg.chat.id,
+        'EasyGo 연동 계정이 아직 없어서 지갑 주소를 조회할 수 없어요. 앱에서 먼저 연동해주세요.',
+      );
+      return;
+    }
+
+    if (!result.walletAddress) {
+      await bot.sendMessage(
+        msg.chat.id,
+        '지갑이 아직 발급되지 않았어요. 앱에서 지갑 생성/연결을 완료한 뒤 다시 시도해 주세요.',
+      );
+      return;
+    }
+
+    await bot.sendMessage(msg.chat.id, `연동된 지갑 주소: ${result.walletAddress}`);
   });
 
   bot.on('polling_error', (err) => logger.error({ err }, 'telegram polling error'));
