@@ -9,13 +9,23 @@ test('installed Telegram client exposes every API used by the EasyGo wrapper', (
     'onText',
     'processUpdate',
     'sendMessage',
-    'setWebhook',
     'stopPolling',
   ];
 
   for (const method of requiredMethods) {
     assert.equal(typeof TelegramBot.prototype[method], 'function', `${method} must be available`);
   }
+
+  const webhookMethod = TelegramBot.prototype.setWebHook
+    ? 'setWebHook'
+    : TelegramBot.prototype.setWebhook
+      ? 'setWebhook'
+      : null;
+  assert.notEqual(
+    webhookMethod,
+    null,
+    'Telegram client must expose setWebhook or setWebHook',
+  );
 });
 
 test('Telegram is disabled without a token', () => {
