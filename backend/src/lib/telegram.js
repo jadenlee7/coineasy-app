@@ -16,12 +16,18 @@
  */
 
 import TelegramBot from 'node-telegram-bot-api';
+import { buildAmaConfig } from './ama-config.js';
+import { createAmaService } from './ama-service.js';
+import { createAmaTranslator } from './ama-translation.js';
+import { prisma } from './db.js';
 import { logger } from './logger.js';
+import { createTelegramAmaController } from './telegram-ama.js';
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL;
 
 let _bot = null;
+let _amaController = null;
 
 export function telegramStartupMode(env = process.env) {
   if (!String(env.TELEGRAM_BOT_TOKEN || '').trim()) return 'disabled';
@@ -67,6 +73,8 @@ export async function configureTelegramWebhook() {
 export async function stopTelegramBot() {
   const bot = _bot;
   _bot = null;
+  _amaController?.dispose();
+  _amaController = null;
   if (!bot) return;
   await bot.stopPolling({ cancel: true, reason: 'EasyGo shutdown' });
   logger.info('telegram bot client stopped');
@@ -81,12 +89,56 @@ export async function processUpdate(update) {
   bot.processUpdate(update);
 }
 
-function registerHandlers(bot) {
-  bot.onText(/^\/start(?:@\w+)?$/, async (msg) => {
-    await bot.sendMessage(
-      msg.chat.id,
-      '안녕하세요! EasyGo입니다 🍊\n앱을 통해 가입하시면 환영 🍊 Orange 100개를 드려요.',
+export function registerHandlers(bot, {
+  db = prisma,
+  env = process.env,
+  appLogger = logger,
+} = {}) {
+  const amaConfig = buildAmaConfig(env);
+  let amaController = null;
+
+  if (amaConfig.enabled && !amaConfig.valid) {
+    appLogger.error(
+      { errors: amaConfig.errors },
+      'Squid Korea AMA is enabled but configuration is invalid',
     );
+  } else if (amaConfig.enabled) {
+    const service = createAmaService({ prisma: db, config: amaConfig });
+    const translator = createAmaTranslator({ config: amaConfig });
+    amaController = createTelegramAmaController({
+      bot,
+      service,
+      translator,
+      config: amaConfig,
+      appLogger,
+    });
+    amaController.register();
+    amaController.initialize().catch((error) => {
+      appLogger.error(
+        { errorType: error?.name || 'Error' },
+        'Squid Korea AMA initialization failed',
+      );
+    });
+    _amaController = amaController;
+  }
+
+  bot.onText(/^\/start(?:@\w+)?(?:\s+(\S+))?$/, async (msg, match) => {
+    try {
+      if (amaController) {
+        await amaController.handleStart(msg, match?.[1]);
+        return;
+      }
+      await bot.sendMessage(
+        msg.chat.id,
+        '안녕하세요! EasyGo입니다 🍊\n앱을 통해 가입하시면 환영 🍊 Orange 100개를 드려요.',
+      );
+    } catch (error) {
+      appLogger.error(
+        { errorType: error?.name || 'Error' },
+        'telegram start command failed',
+      );
+      await bot.sendMessage(msg.chat.id, '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    }
   });
 
   bot.onText(/^\/balance$/, async (msg) => {

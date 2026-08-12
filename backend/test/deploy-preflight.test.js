@@ -64,6 +64,34 @@ test('enabled features require their server-only provider configuration', () => 
   assert.equal(result.errors.some((item) => item.failure.includes('ETHERSCAN_API_KEY')), true);
 });
 
+test('enabled AMA validates its server-side Telegram, schedule, and translation config', () => {
+  const result = validateDeployEnvironment(stagingEnv({
+    AMA_CAMPAIGN_ENABLED: 'true',
+    AMA_CHAT_ID: '-1001234567890',
+    AMA_SPEAKER_TELEGRAM_ID: '12345678',
+    AMA_OPERATOR_TELEGRAM_IDS: '11,22',
+    AMA_START_AT: '2026-08-05T11:00:00Z',
+    AMA_END_AT: '2026-08-05T11:30:00Z',
+    OPENAI_API_KEY: 'server-only-key',
+    AMA_TRANSLATION_MODEL: 'translation-model',
+  }), { target: 'staging' });
+  assert.deepEqual(result.errors, []);
+
+  const invalid = validateDeployEnvironment(stagingEnv({
+    AMA_CAMPAIGN_ENABLED: 'true',
+    AMA_CHAT_ID: '@squid_kor',
+    AMA_SPEAKER_TELEGRAM_ID: '@fig',
+    AMA_OPERATOR_TELEGRAM_IDS: 'operator',
+    AMA_START_AT: '2026-08-05T11:30:00Z',
+    AMA_END_AT: '2026-08-05T11:00:00Z',
+    OPENAI_API_KEY: '',
+    AMA_TRANSLATION_MODEL: '',
+  }), { target: 'staging' });
+  assert.equal(invalid.errors.some((item) => item.name === 'AMA chat ID'), true);
+  assert.equal(invalid.errors.some((item) => item.name === 'AMA time window'), true);
+  assert.equal(invalid.errors.some((item) => item.name === 'OPENAI_API_KEY'), true);
+});
+
 test('partial Better Stack configuration and malformed flags fail closed', () => {
   const result = validateDeployEnvironment(stagingEnv({
     BETTER_STACK_INGESTING_HOST: '',

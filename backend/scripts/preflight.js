@@ -10,6 +10,7 @@ const BOOLEAN_FLAGS = [
   'ADVERTISER_ADMIN_ENABLED',
   'CONSENT_GRANTS_ENABLED',
   'ACCOUNT_DELETION_ENABLED',
+  'AMA_CAMPAIGN_ENABLED',
 ];
 
 function clean(value) {
@@ -142,6 +143,41 @@ export function validateDeployEnvironment(
     } catch {
       add(false, 'advertiser key digests', 'ADVERTISER_API_KEY_HASHES_JSON must be valid JSON');
     }
+  }
+
+  if (enabled(env, 'AMA_CAMPAIGN_ENABLED')) {
+    for (const name of [
+      'TELEGRAM_BOT_TOKEN',
+      'AMA_CHAT_ID',
+      'AMA_SPEAKER_TELEGRAM_ID',
+      'AMA_OPERATOR_TELEGRAM_IDS',
+      'AMA_START_AT',
+      'AMA_END_AT',
+      'OPENAI_API_KEY',
+      'AMA_TRANSLATION_MODEL',
+    ]) requireValue(name);
+    add(/^-?\d+$/.test(clean(env.AMA_CHAT_ID)), 'AMA chat ID', 'AMA_CHAT_ID must be numeric');
+    add(
+      /^\d+$/.test(clean(env.AMA_SPEAKER_TELEGRAM_ID)),
+      'AMA Fig user ID',
+      'AMA_SPEAKER_TELEGRAM_ID must be numeric',
+    );
+    add(
+      clean(env.AMA_OPERATOR_TELEGRAM_IDS)
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .every((item) => /^\d+$/.test(item)),
+      'AMA operator IDs',
+      'AMA_OPERATOR_TELEGRAM_IDS must be comma-separated numeric IDs',
+    );
+    const amaStart = Date.parse(clean(env.AMA_START_AT));
+    const amaEnd = Date.parse(clean(env.AMA_END_AT));
+    add(
+      Number.isFinite(amaStart) && Number.isFinite(amaEnd) && amaStart < amaEnd,
+      'AMA time window',
+      'AMA_START_AT and AMA_END_AT must be valid ISO timestamps in chronological order',
+    );
   }
 
   const betterToken = Boolean(clean(env.BETTER_STACK_SOURCE_TOKEN));

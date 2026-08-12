@@ -234,6 +234,39 @@ enum CampaignStatus {
   ARCHIVED
 }
 
+enum AmaQuestionStatus {
+  SUBMITTED
+  ACCEPTED
+  DUPLICATE
+  FILTERED
+  ANSWERED_LIVE
+  ANSWERED_FOLLOWUP
+}
+
+enum AmaPreparedQuestionStatus {
+  DRAFT
+  APPROVED
+  POSTED
+  ANSWERED
+  TRANSLATED
+  FAILED
+}
+
+enum AmaAnswerMode {
+  APPROVED_SCRIPT
+  LIVE_FREEFORM
+}
+
+enum AmaSessionStatus {
+  DRAFT
+  READY
+  FROZEN
+  LIVE
+  OPEN_FLOOR
+  RESTORED
+  FAILED
+}
+
 model UserConsent {
   userId            String    @id
   consentVersion    String?   @db.VarChar(50)
@@ -370,4 +403,157 @@ model Campaign {
   @@index([advertiserId, status])
   @@index([targetSegmentId, status])
   @@index([status, startsAt, endsAt])
+}
+
+// =====================================================================
+// Telegram campaign + Squid Korea AMA operations
+//
+// These records are intentionally separate from the Orange ledger. AMA XP
+// is a campaign-scoped engagement score and must never mint Orange or change
+// an EasyGo account balance. Telegram IDs are stored as strings because Bot
+// API IDs can exceed JavaScript's safe integer range.
+// =====================================================================
+
+model TelegramCampaignParticipant {
+  id                String    @id @default(cuid())
+  campaignId        String    @db.VarChar(100)
+  telegramId        String    @db.VarChar(32)
+  telegramUsername  String?   @db.VarChar(64)
+  displayName       String?   @db.VarChar(200)
+  xp                Int       @default(0)
+  raffleEntries     Int       @default(0)
+  communityJoinedAt DateTime?
+  referralCode       String?   @unique @db.VarChar(32)
+  referredByParticipantId String?
+  referralQualifiedAt DateTime?
+  dmOptOutAt        DateTime?
+  lastDmAt          DateTime?
+  dmFailureCount    Int       @default(0)
+  lastSeenAt        DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  events      TelegramCampaignEvent[]
+  rewards     TelegramCampaignReward[]
+  questions   AmaQuestion[]
+  referredBy  TelegramCampaignParticipant?  @relation("TelegramCampaignReferrals", fields: [referredByParticipantId], references: [id], onDelete: SetNull)
+  referrals   TelegramCampaignParticipant[] @relation("TelegramCampaignReferrals")
+
+  @@unique([campaignId, telegramId])
+  @@index([campaignId, xp])
+  @@index([campaignId, lastSeenAt])
+  @@index([campaignId, referredByParticipantId, referralQualifiedAt])
+}
+
+model TelegramCampaignEvent {
+  id            String   @id @default(cuid())
+  campaignId    String   @db.VarChar(100)
+  participantId String?
+  eventType     String   @db.VarChar(100)
+  eventKey      String?  @unique @db.VarChar(255)
+  source        String?  @db.VarChar(100)
+  payload       Json?
+  xpDelta       Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  participant TelegramCampaignParticipant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId, eventType, createdAt])
+  @@index([participantId, createdAt])
+}
+
+model TelegramCampaignReward {
+  id            String   @id @default(cuid())
+  campaignId    String   @db.VarChar(100)
+  participantId String
+  reason        String   @db.VarChar(100)
+  refId         String   @db.VarChar(255)
+  amount        Int
+  createdAt     DateTime @default(now())
+
+  participant TelegramCampaignParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, reason, refId])
+  @@index([participantId, createdAt])
+}
+
+model AmaQuestion {
+  id             String            @id @default(cuid())
+  campaignId     String            @db.VarChar(100)
+  participantId  String
+  questionText   String            @db.VarChar(1000)
+  normalizedHash String            @db.VarChar(64)
+  status         AmaQuestionStatus @default(SUBMITTED)
+  filterReason   String?           @db.VarChar(200)
+  answeredAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  participant          TelegramCampaignParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  livePreparedQuestion AmaPreparedQuestion?
+
+  @@unique([campaignId, normalizedHash])
+  @@index([campaignId, status, createdAt])
+  @@index([participantId, createdAt])
+}
+
+model AmaPreparedQuestion {
+  id                   String                    @id @default(cuid())
+  campaignId           String                    @db.VarChar(100)
+  position             Int
+  topic                String?                   @db.VarChar(100)
+  questionKo           String                    @db.VarChar(1000)
+  questionEn           String                    @db.VarChar(1000)
+  sourceQuestionId     String?                   @unique
+  answerMode           AmaAnswerMode             @default(APPROVED_SCRIPT)
+  approvedAnswerEn     String?                   @db.Text
+  status               AmaPreparedQuestionStatus @default(DRAFT)
+  approvedAt           DateTime?
+  postedMessageId      String?                   @db.VarChar(32)
+  answerMessageId      String?                   @db.VarChar(32)
+  translationMessageId String?                   @db.VarChar(32)
+  answerReceivedAt     DateTime?
+  translatedAt         DateTime?
+  translationLatencyMs Int?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+
+  sourceQuestion AmaQuestion? @relation(fields: [sourceQuestionId], references: [id], onDelete: SetNull)
+
+  @@unique([campaignId, position])
+  @@index([campaignId, status, position])
+}
+
+model AmaQuestionPack {
+  id                String   @id @default(cuid())
+  campaignId        String   @db.VarChar(100)
+  version           Int
+  questionCount     Int
+  sourceQuestionIds Json
+  contentEn         String   @db.Text
+  createdAt         DateTime @default(now())
+
+  @@unique([campaignId, version])
+  @@index([campaignId, createdAt])
+}
+
+model AmaSession {
+  campaignId               String           @id @db.VarChar(100)
+  chatId                   String           @db.VarChar(32)
+  speakerTelegramId        String           @db.VarChar(32)
+  status                   AmaSessionStatus @default(DRAFT)
+  savedPermissions         Json?
+  currentPosition          Int              @default(0)
+  currentQuestionMessageId String?          @db.VarChar(32)
+  pinnedMessageId          String?          @db.VarChar(32)
+  frozenAt                 DateTime?
+  startedAt                DateTime?
+  openFloorStartedAt       DateTime?
+  openFloorEndedAt         DateTime?
+  openFloorQuestionCount   Int              @default(0)
+  restoredAt               DateTime?
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+
+  @@index([status, updatedAt])
 }
