@@ -237,9 +237,12 @@ wallet private key, or login code.
     account-switch flow.
   - 2026-08-11/Build 104: owner confirmed non-owner menu exposure was exactly
     Report, Block, Hide, and Mute with no safety action executed.
-- [ ] Type text, attach media, and select a category in the composer; cancel it,
+- [x] Type text, attach media, and select a category in the composer; cancel it,
   immediately open a new post/reply composer, and confirm no prior draft flashes
   or survives into the new presentation.
+  - 2026-08-10/Build 102: owner entered unique text/media/category, cancelled,
+    reopened a new composer immediately, and confirmed no stale draft or
+    attachment remained in either post/reply composition flows.
 - [ ] Open another staging profile, follow then unfollow it, and confirm both
   profile counts and state update.
 - [ ] Share the own-profile QR/link and open its `coineasyapp://user?userId=…`
