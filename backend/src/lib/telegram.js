@@ -25,9 +25,40 @@ import { createTelegramAmaController } from './telegram-ama.js';
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL;
+const BOT_USERNAME = String(
+  process.env.TELEGRAM_BOT_USERNAME || process.env.EXPO_PUBLIC_TG_BOT_USERNAME || '',
+).trim();
 
 let _bot = null;
 let _amaController = null;
+
+export async function getTelegramBalanceById(db, telegramId) {
+  const normalized = String(telegramId || '').trim();
+  if (!normalized) return null;
+  const user = await db.user.findUnique({
+    where: { telegramId: normalized },
+  });
+  if (!user) return null;
+
+  const aggregate = await db.orangeLedger.aggregate({
+    where: { userId: user.id },
+    _sum: { delta: true },
+  });
+
+  return {
+    userId: user.id,
+    balance: aggregate._sum.delta || 0,
+  };
+}
+
+function buildTelegramInviteLink() {
+  if (!BOT_USERNAME) return null;
+  return `https://t.me/${BOT_USERNAME}?start=invite`;
+}
+
+function formatBalance(balance) {
+  return `${Intl.NumberFormat('en-US').format(balance)} Orange`;
+}
 
 export function telegramStartupMode(env = process.env) {
   if (!String(env.TELEGRAM_BOT_TOKEN || '').trim()) return 'disabled';
@@ -142,13 +173,45 @@ export function registerHandlers(bot, {
   });
 
   bot.onText(/^\/balance$/, async (msg) => {
-    // TODO: fetch from /orange/:telegramId
-    await bot.sendMessage(msg.chat.id, '잔액 조회는 곧 지원됩니다.');
+    const telegramId = String(msg?.from?.id || '').trim();
+    if (!telegramId) {
+      await bot.sendMessage(msg.chat.id, '테레그램 사용자 정보가 없어 잔액을 조회할 수 없어요.');
+      return;
+    }
+    const result = await getTelegramBalanceById(db, telegramId);
+    if (!result) {
+      await bot.sendMessage(msg.chat.id, 'EasyGo 연동 계정이 아직 없어서 잔액을 조회할 수 없어요. 앱에서 먼저 연동해주세요.');
+      return;
+    }
+    await bot.sendMessage(msg.chat.id, `현재 보유 🍊 잔액: ${formatBalance(result.balance)}.`);
   });
 
   bot.onText(/^\/invite$/, async (msg) => {
-    // TODO: generate referral code from DB
-    await bot.sendMessage(msg.chat.id, '초대 링크 기능 준비 중입니다.');
+    const telegramId = String(msg?.from?.id || '').trim();
+    if (!telegramId) {
+      await bot.sendMessage(msg.chat.id, '테레그램 사용자 정보가 없어 초대 링크를 만들 수 없어요.');
+      return;
+    }
+
+    const result = await getTelegramBalanceById(db, telegramId);
+    if (!result) {
+      await bot.sendMessage(
+        msg.chat.id,
+        'EasyGo 연동 계정이 아직 없어서 초대 링크를 만들 수 없어요. 앱에서 먼저 연동해주세요.',
+      );
+      return;
+    }
+
+    const inviteUrl = buildTelegramInviteLink();
+    if (!inviteUrl) {
+      await bot.sendMessage(
+        msg.chat.id,
+        '초대 링크 설정이 아직 준비되지 않았어요. 나중에 다시 시도해 주세요.',
+      );
+      return;
+    }
+
+    await bot.sendMessage(msg.chat.id, `초대 링크가 준비되었어요.\n${inviteUrl}`);
   });
 
   bot.on('polling_error', (err) => logger.error({ err }, 'telegram polling error'));

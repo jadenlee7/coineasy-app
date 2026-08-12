@@ -26,3 +26,24 @@
 - "미완료 항목(privacy/legal, audits, path-c enablement)은 배포 전 게이트로 유지."
 - "물리 기기 기반 기능 QA 및 worker enabled 경로는 다음 실행 블록에서 분리 실행."
 - "문서/버전/규정 정합성 항목(148/153)은 외부 문서/감사 환경 승인 후 즉시 반영."
+
+## Device QA residual (checklist-only, operator execution block)
+
+The checklist `docs/DEVICE_QA_CHECKLIST.md` still has 기기 검증 중심 항목 that are currently blocked by missing physical devices in this environment.
+
+- 상태 요약 (2026-08-12): iOS/Android 실기기 실행 미완료
+- 영향: `/auth/sync`, 피드/프로필/팔로우/알림/Orange/quote/JSON export/딥링크/재로그인 재확인 항목은 실제 배포 전까지 미완료로 둡니다.
+- 선행 증거(현재 환경):
+  - `docs/DEVICE_QA_RESIDUAL_EXECUTION_2026-08-12.md`에 실행된 항목과 미실행 항목 라인 번호 기록
+  - 물리 기기 미보유로 `기기 기반 항목 전체`가 보류됨
+
+미완료 핵심 라인(현 시점):
+- iOS: 175, 177, 196, 198, 207, 218, 219, 220, 222, 224, 227, 229, 230, 249, 252, 255, 257, 265, 267, 269, 271, 275
+- Android: 187
+
+다음 실행 블록에서 PR용으로 넣을 최소 체크 항목:
+1. 1회 Google sign-in + 딥링크 복귀 + 앱 재시작 후 세션 재개
+2. 1회 iOS/Android 물리 설치 검증 (앱 시작, 재시작, `/auth/sync` 실패/재시도 포함)
+3. feed/profile/follow/notification/quote 경로 401/404/5xx 무반복, 한 번 재시도 통과
+4. full/external JSON export 1회 생성·공유·삭제/취소 회귀
+5. `Build 101` 기기 로그(`/ready`, `/lifecycle`) 보존
