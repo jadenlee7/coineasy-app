@@ -230,8 +230,13 @@ wallet private key, or login code.
   - 2026-08-10/Build 102: owner created a labelled staging post, edited and
     deleted it successfully; there was no account leakage or stale draft during
     account-switch flow.
-- [ ] On that post, open the overflow menu and confirm Edit/Delete appear for
+- [x] On that post, open the overflow menu and confirm Edit/Delete appear for
   the signed-in author, while another account sees only Report/Block/Hide/Mute.
+  - 2026-08-10/Build 102: post-menu checks passed for owner (Edit/Delete) and
+    non-owner (Report/Block/Hide/Mute only), then owner deleted the post after
+    account-switch flow.
+  - 2026-08-11/Build 104: owner confirmed non-owner menu exposure was exactly
+    Report, Block, Hide, and Mute with no safety action executed.
 - [ ] Type text, attach media, and select a category in the composer; cancel it,
   immediately open a new post/reply composer, and confirm no prior draft flashes
   or survives into the new presentation.
