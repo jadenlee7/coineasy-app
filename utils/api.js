@@ -147,6 +147,22 @@ export const api = {
       expectedAuthUserId,
     })
   ),
+  registerPushToken: ({ token, platform, signal, expectedAuthUserId }) => (
+    request('PUT', '/me/push-token', {
+      body: { token, platform },
+      signal,
+      boundAuth: true,
+      expectedAuthUserId,
+    })
+  ),
+  unregisterPushToken: ({ token, signal, expectedAuthUserId }) => (
+    request('DELETE', '/me/push-token', {
+      body: { token },
+      signal,
+      boundAuth: true,
+      expectedAuthUserId,
+    })
+  ),
   accountDeletionStatus: ({ signal, expectedAuthUserId } = {}) => (
     request('GET', '/me/account-deletion', {
       signal,

@@ -21,6 +21,7 @@ import { GlobalContext } from '../../contexts/GlobalContext';
 import { useDeviceAccountData } from '../../contexts/DeviceAccountDataContext';
 import useConsent from '../../hooks/useConsent';
 import { api } from '../../utils/api';
+import { unregisterPushTokenBeforeLogout } from '../../utils/pushTokenRegistration.mjs';
 import {
   canConfirmAccountDeletion,
   reconcileAccountDeletionStatus,
@@ -98,9 +99,11 @@ export default function SettingsModal() {
     accountLease: deviceAccountLease,
     blockedAccounts: listBlockedUser,
     clearBlockedAccounts,
+    clearExpoPushToken,
     clearHiddenPosts,
     clearMutedAccounts,
     hiddenPosts: listHiddenPost,
+    expoPushToken,
     mutedAccounts: listMutedUsers,
     ownerUserId: deviceOwnerUserId,
     isCurrentAccountLease,
@@ -272,6 +275,14 @@ export default function SettingsModal() {
     Haptics.selectionAsync();
     setLoadingAction('logout');
     try {
+      await unregisterPushTokenBeforeLogout({
+        token: expoPushToken,
+        ownerUserId: expectedOperation.ownerUserId,
+        unregister: api.unregisterPushToken,
+        clearLocal: clearExpoPushToken,
+        isCurrent: () => isCurrentAccountOperation(expectedOperation),
+      });
+      if (!isCurrentAccountOperation(expectedOperation)) return;
       await logout();
       if (!isCurrentAccountOperation(expectedOperation)) return;
       setUser(null);

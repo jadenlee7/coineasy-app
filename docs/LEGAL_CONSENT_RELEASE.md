@@ -58,8 +58,10 @@ Google Play policy URLs in this state.
   responses. Public blockchain records remain independently public and
   immutable.
 - Expo push tokens are currently generated only after device permission and
-  retained in the account-scoped on-device store; backend token registration
-  has not shipped.
+  retained in the account-scoped on-device store. The owner-bound backend
+  registration implementation is compile-time locked; it must not activate
+  until a new versioned privacy document describes server storage and matching
+  physical-device QA passes. Remote notification sending is not active.
 - Media selection uses device permissions only on user action. The EasyGo
   backend media-upload flow remains disabled.
 - Privy, Apple, Google, Railway/PostgreSQL, Expo, Squid and Base infrastructure

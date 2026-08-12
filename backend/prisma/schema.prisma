@@ -78,6 +78,24 @@ model User {
   // provider subjects and emails are never stored. The generic provider +
   // context namespace lets later providers join the same deletion guard.
   stableProviderIdentities UserStableProviderIdentity[]
+
+  // Expo delivery addresses are account-owned and disappear with the user.
+  // A globally unique token can belong to only one account at a time.
+  expoPushTokens ExpoPushToken[]
+}
+
+model ExpoPushToken {
+  id         String   @id @default(cuid())
+  token      String   @unique @db.VarChar(255)
+  platform   String   @db.VarChar(16)
+  userId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
 }
 
 enum AccountDeletionState {

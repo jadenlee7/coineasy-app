@@ -239,7 +239,12 @@ mobile client if that client is used on both platforms.
 ## Remaining screen migrations
 
 - Media upload plus repost/quote relationships.
-- Server-side Expo push-token registration; the client currently retains the token on-device only.
+- Push registration activation, delivery worker, and notification-send policy.
+  The owner-bound `PUT`/`DELETE /me/push-token` implementation and account
+  deletion cascade are present, but paired compile-time and environment brakes
+  keep registration off while the current policy says tokens remain on-device.
+  Activation requires a new versioned privacy document and physical-device QA;
+  no remote notification sender is active.
 - Messaging models and delivery; chat currently shows an explicit unavailable state.
 - Server-backed shop inventory, Orange spending, and gift fulfillment.
 - Authored-reply/repost timelines, social-link persistence, and profile media upload need additional backend/UI work.

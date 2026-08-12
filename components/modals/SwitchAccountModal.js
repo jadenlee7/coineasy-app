@@ -5,12 +5,20 @@ import { usePrivy } from '@privy-io/expo';
 import { useTailwind } from 'tailwind-rn';
 
 import { GlobalContext } from '../../contexts/GlobalContext';
+import {
+  useDeviceAccountData,
+  useDeviceAccountOperationLease,
+} from '../../contexts/DeviceAccountDataContext';
+import { api } from '../../utils/api';
+import { unregisterPushTokenBeforeLogout } from '../../utils/pushTokenRegistration.mjs';
 import Button from '../Button';
 import { UserPfp, Username } from '../User';
 
 export default function SwitchAccountModal() {
   const { user, setUser, modalSwitchRef } = useContext(GlobalContext);
   const { logout } = usePrivy();
+  const { clearExpoPushToken, expoPushToken } = useDeviceAccountData();
+  const { lease: renderLease, isCurrentLease } = useDeviceAccountOperationLease();
   const tailwind = useTailwind();
   const [loading, setLoading] = useState(false);
 
@@ -24,8 +32,18 @@ export default function SwitchAccountModal() {
         {
           text: 'Sign out',
           onPress: async () => {
+            const expectedLease = renderLease;
+            if (!isCurrentLease(expectedLease)) return;
             setLoading(true);
             try {
+              await unregisterPushTokenBeforeLogout({
+                token: expoPushToken,
+                ownerUserId: expectedLease.ownerUserId,
+                unregister: api.unregisterPushToken,
+                clearLocal: clearExpoPushToken,
+                isCurrent: () => isCurrentLease(expectedLease),
+              });
+              if (!isCurrentLease(expectedLease)) return;
               await logout();
               setUser(null);
               modalSwitchRef.current?.close();

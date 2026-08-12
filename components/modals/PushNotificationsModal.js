@@ -9,6 +9,8 @@ import {
     useDeviceAccountOperationLease,
 } from '../../contexts/DeviceAccountDataContext';
 import { registerForPushNotificationsAsync } from "../../utils/push";
+import { api } from '../../utils/api';
+import { pushTokenRegistrationEnabled } from '../../utils/pushTokenRegistration.mjs';
 
 import moment from "moment";
 import Checkbox from 'expo-checkbox';
@@ -27,7 +29,7 @@ export default function PushNotificationsModal() {
     const tailwind = useTailwind();
 
     const [toggleCheckBox, setToggleCheckBox] = useState(false)
-    /** Request device permission and retain the Expo token until server-side delivery ships. */
+    /** Request permission, bind the token to this account, then retain it locally. */
     async function enablePushNotifications() {
         const expectedLease = renderLease;
         if (!isCurrentLease(expectedLease)) return;
@@ -45,9 +47,60 @@ export default function PushNotificationsModal() {
 
         if (!isCurrentLease(expectedLease)) return;
         if(res?.data) {
-            const tokenSaved = await saveExpoPushToken(res.data);
-            if (!isCurrentLease(expectedLease)) return;
+            const token = res.data;
+            const remoteRegistrationEnabled = pushTokenRegistrationEnabled();
+            let registration;
+            if (remoteRegistrationEnabled) {
+                try {
+                    registration = await api.registerPushToken({
+                        token,
+                        platform: Platform.OS,
+                        expectedAuthUserId: expectedLease.ownerUserId,
+                    });
+                } catch {
+                    if (isCurrentLease(expectedLease)) {
+                        Alert.alert('Notifications unavailable', 'EasyGo could not securely register this device. Please try again.');
+                    }
+                    return;
+                }
+            }
+            if (!isCurrentLease(expectedLease)) {
+                if (remoteRegistrationEnabled) {
+                    try {
+                        await api.unregisterPushToken({
+                            token,
+                            expectedAuthUserId: expectedLease.ownerUserId,
+                        });
+                    } catch {}
+                }
+                return;
+            }
+            if (remoteRegistrationEnabled && registration?.registration?.registered !== true) {
+                Alert.alert('Notifications unavailable', 'EasyGo could not securely register this device. Please try again.');
+                return;
+            }
+
+            const tokenSaved = await saveExpoPushToken(token);
+            if (!isCurrentLease(expectedLease)) {
+                if (remoteRegistrationEnabled) {
+                    try {
+                        await api.unregisterPushToken({
+                            token,
+                            expectedAuthUserId: expectedLease.ownerUserId,
+                        });
+                    } catch {}
+                }
+                return;
+            }
             if (!tokenSaved) {
+                if (remoteRegistrationEnabled) {
+                    try {
+                        await api.unregisterPushToken({
+                            token,
+                            expectedAuthUserId: expectedLease.ownerUserId,
+                        });
+                    } catch {}
+                }
                 Alert.alert('Notifications unavailable', 'EasyGo could not protect this account’s notification registration. Please try again.');
                 return;
             }
@@ -65,7 +118,9 @@ export default function PushNotificationsModal() {
             setPushNotifsVis(false);
             Alert.alert(
                 'Notifications enabled',
-                'Device permission is ready. Remote EasyGo delivery will activate when backend token registration ships.'
+                remoteRegistrationEnabled
+                    ? 'Device permission and secure EasyGo registration are ready. Notification delivery will activate in a later release.'
+                    : 'Device permission is ready. Remote EasyGo registration remains off until the next privacy document is approved.'
             );
         } else {
             Alert.alert('Notifications unavailable', 'EasyGo could not retrieve a notification token. Please try again.');
