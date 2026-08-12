@@ -174,13 +174,19 @@ test('registerHandlers handles /wallet for linked users with wallet address', as
         walletAddress: '0xabc123',
       },
     }),
-    env: {},
+    env: { BASESCAN_URL: 'https://example-scan.local' },
     appLogger: { info: () => {}, error: () => {} },
   });
 
   const handler = getHandler(bot.events, '/wallet');
   await handler({ from: { id: 1001 }, chat: { id: 2002 } });
-  assert.equal(bot.messages[0].text, '연동된 지갑 주소: 0xabc123');
+  assert.equal(
+    bot.messages[0].text,
+    [
+      '연동된 지갑 주소: 0xabc123',
+      'Base 체인에서 보기: https://example-scan.local/address/0xabc123',
+    ].join('\n'),
+  );
 });
 
 test('registerHandlers explains /wallet when user is not linked', async () => {

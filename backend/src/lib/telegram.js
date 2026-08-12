@@ -27,6 +27,7 @@ import { createTelegramAmaController } from './telegram-ama.js';
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL;
+const DEFAULT_BASE_EXPLORER_URL = 'https://basescan.org';
 
 function getTelegramBotUsername(env = process.env) {
   return String(
@@ -79,6 +80,16 @@ function buildTelegramInviteLink(env = process.env) {
 
 function formatBalance(balance) {
   return `${Intl.NumberFormat('en-US').format(balance)} Orange`;
+}
+
+function buildWalletExplorerUrl(walletAddress, env = process.env) {
+  const baseUrl = String(
+    env.BASESCAN_URL ||
+      env.EXPO_PUBLIC_BASESCAN_URL ||
+      env.EXPO_PUBLIC_BASE_EXPLORER_URL ||
+      DEFAULT_BASE_EXPLORER_URL,
+  ).replace(/\/+$/, '');
+  return `${baseUrl}/address/${walletAddress}`;
 }
 
 function buildTelegramHelpText(amaEnabled) {
@@ -280,7 +291,11 @@ export function registerHandlers(bot, {
       return;
     }
 
-    await bot.sendMessage(msg.chat.id, `연동된 지갑 주소: ${result.walletAddress}`);
+    const walletLink = buildWalletExplorerUrl(result.walletAddress, env);
+    await bot.sendMessage(
+      msg.chat.id,
+      `연동된 지갑 주소: ${result.walletAddress}\nBase 체인에서 보기: ${walletLink}`,
+    );
   });
 
   bot.on('polling_error', (err) => logger.error({ err }, 'telegram polling error'));
