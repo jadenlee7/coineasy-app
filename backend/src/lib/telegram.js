@@ -25,9 +25,12 @@ import { createTelegramAmaController } from './telegram-ama.js';
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL;
-const BOT_USERNAME = String(
-  process.env.TELEGRAM_BOT_USERNAME || process.env.EXPO_PUBLIC_TG_BOT_USERNAME || '',
-).trim();
+
+function getTelegramBotUsername(env = process.env) {
+  return String(
+    env.TELEGRAM_BOT_USERNAME || env.EXPO_PUBLIC_TG_BOT_USERNAME || '',
+  ).trim();
+}
 
 let _bot = null;
 let _amaController = null;
@@ -51,9 +54,10 @@ export async function getTelegramBalanceById(db, telegramId) {
   };
 }
 
-function buildTelegramInviteLink() {
-  if (!BOT_USERNAME) return null;
-  return `https://t.me/${BOT_USERNAME}?start=invite`;
+function buildTelegramInviteLink(env = process.env) {
+  const botUsername = getTelegramBotUsername(env);
+  if (!botUsername) return null;
+  return `https://t.me/${botUsername}?start=invite`;
 }
 
 function formatBalance(balance) {
@@ -202,7 +206,7 @@ export function registerHandlers(bot, {
       return;
     }
 
-    const inviteUrl = buildTelegramInviteLink();
+    const inviteUrl = buildTelegramInviteLink(env);
     if (!inviteUrl) {
       await bot.sendMessage(
         msg.chat.id,
