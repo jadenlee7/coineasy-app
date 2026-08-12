@@ -226,7 +226,10 @@ wallet private key, or login code.
   completed this across the Apple/Google account regression, and Railway
   recorded only successful feed/post and `/auth/sync` responses in the checked
   window.
-- [ ] Publish one clearly labelled staging text post, edit it, and delete it.
+- [x] Publish one clearly labelled staging text post, edit it, and delete it.
+  - 2026-08-10/Build 102: owner created a labelled staging post, edited and
+    deleted it successfully; there was no account leakage or stale draft during
+    account-switch flow.
 - [ ] On that post, open the overflow menu and confirm Edit/Delete appear for
   the signed-in author, while another account sees only Report/Block/Hide/Mute.
 - [ ] Type text, attach media, and select a category in the composer; cancel it,
