@@ -126,6 +126,28 @@ test('registerHandlers blocks /invite when bot username is missing', async () =>
   assert.equal(bot.messages[0].text, '초대 링크 설정이 아직 준비되지 않았어요. 나중에 다시 시도해 주세요.');
 });
 
+test('registerHandlers handles /help with default command list', async () => {
+  const bot = makeMockBot();
+  registerHandlers(bot, {
+    db: makeDb({ userById: { id: 'user-1' }, balance: 0 }),
+    env: {},
+    appLogger: { info: () => {}, error: () => {} },
+  });
+
+  const handler = getHandler(bot.events, '/help');
+  await handler({ from: { id: 1001 }, chat: { id: 2002 } });
+  assert.equal(
+    bot.messages[0].text,
+    [
+      'EasyGo Bot 명령어',
+      '/start - 앱 연동/웰컴 안내',
+      '/balance - 🍊 Orange 보유량 조회',
+      '/wallet - 연동 지갑 주소 조회',
+      '/invite - 추천 링크 생성',
+    ].join('\n'),
+  );
+});
+
 test('getTelegramWalletById returns null when no wallet exists', async () => {
   const result = await getTelegramWalletById(
     makeDbWithWallet({ user: null }),

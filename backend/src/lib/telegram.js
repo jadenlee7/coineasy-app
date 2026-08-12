@@ -11,6 +11,7 @@
  *   /balance  - 🍊 Orange balance lookup
  *   /invite   - referral link
  *   /wallet   - linked wallet address
+ *   /help     - command guide
  *
  * The bot module deliberately keeps business logic OUT of here —
  * it just routes commands to handlers.
@@ -78,6 +79,22 @@ function buildTelegramInviteLink(env = process.env) {
 
 function formatBalance(balance) {
   return `${Intl.NumberFormat('en-US').format(balance)} Orange`;
+}
+
+function buildTelegramHelpText(amaEnabled) {
+  const lines = [
+    'EasyGo Bot 명령어',
+    '/start - 앱 연동/웰컴 안내',
+    '/balance - 🍊 Orange 보유량 조회',
+    '/wallet - 연동 지갑 주소 조회',
+    '/invite - 추천 링크 생성',
+  ];
+
+  if (amaEnabled) {
+    lines.push('/ama - AMA 운영자 안내(운영 중에만 노출)');
+  }
+
+  return lines.join('\n');
 }
 
 export function telegramStartupMode(env = process.env) {
@@ -232,6 +249,11 @@ export function registerHandlers(bot, {
     }
 
     await bot.sendMessage(msg.chat.id, `초대 링크가 준비되었어요.\n${inviteUrl}`);
+  });
+
+  bot.onText(/^\/help$/, async (msg) => {
+    const amaEnabled = Boolean(amaConfig.enabled);
+    await bot.sendMessage(msg.chat.id, buildTelegramHelpText(amaEnabled));
   });
 
   bot.onText(/^\/wallet$/, async (msg) => {
