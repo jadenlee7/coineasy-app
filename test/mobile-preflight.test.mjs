@@ -17,6 +17,7 @@ import {
   singletonPrivyClientIsConfigured,
   startupDiagnosticPersistsPhases,
   startupDiagnosticReportsRuntime,
+  startupAutomaticallyLoadsAppWithRecovery,
   startupBoundaryProtectsApp,
   startupKeepsOnePrivyProvider,
   targetFromArgs,
@@ -263,7 +264,7 @@ test('Privy polyfills evaluate before the application module', () => {
   `), false);
 });
 
-test('build 97 persists and user-gates every risky Privy startup phase', () => {
+test('automatic startup retains persistent user-gated Privy diagnostic recovery', () => {
   const bootstrapSource = readFileSync(new URL('../BootstrapApp.js', import.meta.url), 'utf8');
   const appSource = readFileSync(new URL('../App.js', import.meta.url), 'utf8');
   const probeSource = readFileSync(new URL('../PrivyStartupProbe.js', import.meta.url), 'utf8');
@@ -272,6 +273,11 @@ test('build 97 persists and user-gates every risky Privy startup phase', () => {
 
   assert.equal(startupDiagnosticPersistsPhases(bootstrapSource, probeSource), true);
   assert.equal(startupDiagnosticReportsRuntime(bootstrapSource, probeSource), true);
+  assert.equal(startupAutomaticallyLoadsAppWithRecovery(bootstrapSource), true);
+  assert.equal(startupAutomaticallyLoadsAppWithRecovery(`
+    if (phase === 'ready') void loadFullApp();
+    return <AppRoot />;
+  `), false);
   assert.equal(probeSource.includes("setStage('client-create')"), false);
   assert.equal(probeSource.includes("stage === 'client-create'"), true);
   assert.equal(probeSource.includes("stage === 'client-initialize'"), true);

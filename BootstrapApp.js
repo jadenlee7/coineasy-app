@@ -13,6 +13,8 @@ import {
   View,
 } from 'react-native';
 
+import { startupRecoveryRequired } from './utils/startupRecoveryPolicy.mjs';
+
 const BUILD_NUMBER = Application.nativeBuildVersion || 'unknown';
 const STARTUP_STATE_KEY = 'easygo.startup-probe.v97';
 const JS_ENGINE = global.HermesInternal ? 'HERMES' : 'JSC';
@@ -56,6 +58,8 @@ export default function BootstrapApp() {
   const [storageWarning, setStorageWarning] = useState('');
   const [navigationUrlEvent, setNavigationUrlEvent] = useState(null);
   const navigationUrlSequenceRef = useRef(0);
+  const startupOperationRef = useRef(false);
+  const runtimeReadyRef = useRef(false);
   const startupStateRef = useRef({
     build: BUILD_NUMBER,
     last: null,
@@ -94,33 +98,6 @@ export default function BootstrapApp() {
       subscription.remove();
     };
   }, [publishNavigationUrl]);
-
-  useEffect(() => {
-    let active = true;
-
-    AsyncStorage.getItem(STARTUP_STATE_KEY)
-      .then((stored) => {
-        if (!active || !stored) return;
-        try {
-          const parsed = JSON.parse(stored);
-          startupStateRef.current = parsed;
-          setLastMarker(parsed.last || null);
-        } catch (restoreError) {
-          console.warn('[bootstrap] unable to parse startup state', restoreError);
-        }
-      })
-      .catch((restoreError) => {
-        console.warn('[bootstrap] unable to restore startup state', restoreError);
-        if (active) setStorageWarning('이전 진단 기록을 읽지 못했습니다.');
-      })
-      .finally(() => {
-        if (active) setPhase('ready');
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const recordMarker = useCallback((step, status, detail = null) => {
     const marker = {
@@ -172,17 +149,24 @@ export default function BootstrapApp() {
     await recordMarker(step, status, detail || null);
   }, [recordMarker]);
 
+  const ensureRuntimePrerequisites = useCallback(async () => {
+    if (runtimeReadyRef.current) return;
+    await runStep('polyfill-text', () => import('fast-text-encoding'));
+    await runStep('polyfill-random', () => import('react-native-get-random-values'));
+    await runStep('polyfill-ethers', () => import('@ethersproject/shims'));
+    await runStep('gesture-handler', () => import('react-native-gesture-handler'));
+    await runStep('reanimated', () => import('react-native-reanimated'));
+    runtimeReadyRef.current = true;
+  }, [runStep]);
+
   const loadPrivyProbe = useCallback(async () => {
-    if (phase === 'loading') return;
+    if (startupOperationRef.current) return;
+    startupOperationRef.current = true;
     setError(null);
     setPhase('loading');
 
     try {
-      await runStep('polyfill-text', () => import('fast-text-encoding'));
-      await runStep('polyfill-random', () => import('react-native-get-random-values'));
-      await runStep('polyfill-ethers', () => import('@ethersproject/shims'));
-      await runStep('gesture-handler', () => import('react-native-gesture-handler'));
-      await runStep('reanimated', () => import('react-native-reanimated'));
+      await ensureRuntimePrerequisites();
 
       const probeModule = await runStep(
         'privy-probe-module',
@@ -194,15 +178,19 @@ export default function BootstrapApp() {
       console.error('[bootstrap] staged startup failure', startupError);
       setError(startupError);
       setPhase('error');
+    } finally {
+      startupOperationRef.current = false;
     }
-  }, [phase, recordMarker, runStep]);
+  }, [ensureRuntimePrerequisites, runStep]);
 
   const loadFullApp = useCallback(async () => {
-    if (phase === 'loading') return;
+    if (startupOperationRef.current) return;
+    startupOperationRef.current = true;
     setError(null);
     setPhase('loading');
 
     try {
+      await ensureRuntimePrerequisites();
       const appModule = await runStep('full-app-module', () => import('./App'));
       await recordMarker('full-app-render', 'pending');
       setAppRoot(() => appModule.default);
@@ -210,9 +198,61 @@ export default function BootstrapApp() {
     } catch (startupError) {
       console.error('[bootstrap] full app load failure', startupError);
       setError(startupError);
-      setPhase('probe');
+      setPhase('error');
+    } finally {
+      startupOperationRef.current = false;
     }
-  }, [phase, recordMarker, runStep]);
+  }, [ensureRuntimePrerequisites, recordMarker, runStep]);
+
+  useEffect(() => {
+    let active = true;
+
+    AsyncStorage.getItem(STARTUP_STATE_KEY)
+      .then((stored) => {
+        if (!active) return;
+        let restoredMarker = null;
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            startupStateRef.current = parsed;
+            restoredMarker = parsed?.last || null;
+            setLastMarker(restoredMarker);
+          } catch (restoreError) {
+            console.warn('[bootstrap] unable to parse startup state', restoreError);
+          }
+        }
+        setPhase(
+          startupRecoveryRequired(restoredMarker, BUILD_NUMBER)
+            ? 'recovery'
+            : 'ready',
+        );
+      })
+      .catch((restoreError) => {
+        console.warn('[bootstrap] unable to restore startup state', restoreError);
+        if (!active) return;
+        setStorageWarning('이전 진단 기록을 읽지 못했습니다.');
+        setPhase('ready');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (phase !== 'ready') return;
+    void loadFullApp();
+  }, [loadFullApp, phase]);
+
+  if (AppRoot && !ProbeRoot) {
+    return (
+      <AppRoot
+        linkingManagedExternally
+        navigationUrlEvent={navigationUrlEvent}
+        onStartupStatus={handleProbeStatus}
+      />
+    );
+  }
 
   if (ProbeRoot) {
     return (
@@ -230,6 +270,9 @@ export default function BootstrapApp() {
     );
   }
 
+  const startupInProgress = ['loading', 'ready', 'restoring'].includes(phase);
+  const recoveryMode = phase === 'error' || phase === 'recovery';
+
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -237,10 +280,13 @@ export default function BootstrapApp() {
         <Text style={styles.eyebrow}>
           STARTUP DIAGNOSTIC · BUILD {BUILD_NUMBER} · {RUNTIME_LABEL}
         </Text>
-        <Text style={styles.title}>단계별 안전 부팅</Text>
+        <Text style={styles.title}>
+          {recoveryMode ? '안전 부팅 복구' : 'EasyGo 시작 중'}
+        </Text>
         <Text style={styles.body}>
-          아래 버튼은 진단 화면만 준비합니다. 다음 화면에서 저장소, client 생성,
-          initialize, WebView, Provider를 버튼으로 하나씩 실행합니다.
+          {recoveryMode
+            ? '같은 빌드의 이전 시작이 완료되지 않았습니다. 아래 진단에서 저장소, client, WebView, Provider를 단계별로 확인할 수 있습니다.'
+            : '저장된 진단 기록을 확인하고 EasyGo를 자동으로 준비하고 있습니다.'}
         </Text>
 
         <View style={styles.markerBox}>
@@ -266,27 +312,25 @@ export default function BootstrapApp() {
 
         <Pressable
           accessibilityRole="button"
-          disabled={phase === 'loading' || phase === 'restoring'}
+          disabled={startupInProgress}
           onPress={loadPrivyProbe}
           style={[
             styles.button,
-            (phase === 'loading' || phase === 'restoring') && styles.buttonDisabled,
+            startupInProgress && styles.buttonDisabled,
           ]}
         >
-          {phase === 'loading' || phase === 'restoring' ? (
+          {startupInProgress ? (
             <View style={styles.loadingRow}>
               <ActivityIndicator color="#FFF" />
               <Text style={styles.loadingText}>
                 {phase === 'restoring'
-                  ? '진단 기록 확인 중'
+                  ? '시작 기록 확인 중'
                   : STEP_LABELS[currentStep] || '점검 중'}
               </Text>
             </View>
           ) : (
             <Text style={styles.buttonText}>
-              {phase === 'error'
-                ? '진단 준비 다시 시도'
-                : `Build ${BUILD_NUMBER} 단계 진단 열기`}
+              {`Build ${BUILD_NUMBER} 단계 진단 열기`}
             </Text>
           )}
         </Pressable>
