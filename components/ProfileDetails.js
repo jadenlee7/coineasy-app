@@ -41,6 +41,7 @@ import { adaptSocialProfile, getEasyGoUserId } from "../utils/socialPostAdapter"
 import useEasyGoWalletRuntime from "../hooks/useEasyGoWalletRuntime";
 import { createBaseScanAddressUrl } from "../utils/baseWalletRuntime.mjs";
 import { useDeviceAccountOperationLease } from "../contexts/DeviceAccountDataContext";
+import { mergeOwnProfilePresentation } from "../hooks/authPresentation.mjs";
 
 const TabBarHeight = 50;
 const IndicatorWidth = 50
@@ -255,19 +256,7 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
             if (details) {
                 setUserInfo(details);
                 if (type !== 'selected') {
-                    setUser((current) => ({
-                        ...current,
-                        id: details.id || current?.id,
-                        did: details.did || current?.did,
-                        profile: {
-                            ...current?.profile,
-                            ...details.profile,
-                            data: {
-                                ...current?.profile?.data,
-                                ...details.profile?.data,
-                            },
-                        },
-                    }));
+                    setUser((current) => mergeOwnProfilePresentation(current, details));
                 }
             }
             if (type === 'selected') {

@@ -38,3 +38,46 @@ export function fallbackPresentationData({ courseProgressOwner, localCourses = [
     courseProgressOwner,
   };
 }
+
+export function mergeOwnProfilePresentation(current, incoming) {
+  if (!incoming || typeof incoming !== 'object') return current;
+
+  const currentProfileData = current?.profile?.data && typeof current.profile.data === 'object'
+    ? current.profile.data
+    : {};
+  const incomingProfileData = incoming?.profile?.data && typeof incoming.profile.data === 'object'
+    ? incoming.profile.data
+    : {};
+  const incomingWalletAddress = typeof incomingProfileData.walletAddress === 'string'
+    && incomingProfileData.walletAddress.trim()
+    ? incomingProfileData.walletAddress
+    : null;
+  const currentWalletAddress = typeof currentProfileData.walletAddress === 'string'
+    && currentProfileData.walletAddress.trim()
+    ? currentProfileData.walletAddress
+    : null;
+  const currentDid = typeof current?.did === 'string' ? current.did : null;
+  const incomingDid = typeof incoming.did === 'string' ? incoming.did : null;
+  const nextDid = incomingDid?.startsWith('easygo:') && currentDid
+    ? currentDid
+    : incomingDid || currentDid;
+
+  return {
+    ...current,
+    id: incoming.id || current?.id,
+    // The public adapter uses easygo:<id> for presentation. Keep the current
+    // authenticated Privy DID when refreshing the signed-in user's profile.
+    did: nextDid,
+    profile: {
+      ...current?.profile,
+      ...incoming.profile,
+      data: {
+        ...currentProfileData,
+        ...incomingProfileData,
+        // Public profile responses intentionally omit the private wallet address.
+        // Do not let their adapted null value erase the address hydrated by /auth/sync.
+        walletAddress: incomingWalletAddress || currentWalletAddress || null,
+      },
+    },
+  };
+}

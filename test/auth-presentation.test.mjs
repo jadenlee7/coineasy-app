@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   fallbackPresentationData,
+  mergeOwnProfilePresentation,
   profilePresentationData,
 } from '../hooks/authPresentation.mjs';
 
@@ -47,4 +48,59 @@ test('fallback presentation is account-scoped and does not invent a balance', ()
   }), {
     courseProgressOwner: 'did:privy:user-2',
   });
+});
+
+test('public own-profile refresh cannot erase the private auth wallet address', () => {
+  const current = {
+    id: 'easygo-user-1',
+    did: 'did:privy:apple-user',
+    profile: {
+      username: 'Before',
+      data: {
+        easygoUserId: 'easygo-user-1',
+        walletAddress: '0x1111111111111111111111111111111111111111',
+        privateSetting: true,
+      },
+    },
+  };
+  const refreshed = {
+    id: 'easygo-user-1',
+    did: 'easygo:easygo-user-1',
+    profile: {
+      username: 'After',
+      data: {
+        easygoUserId: 'easygo-user-1',
+        walletAddress: null,
+        joinedAt: '2026-08-13T00:00:00.000Z',
+      },
+    },
+  };
+
+  const merged = mergeOwnProfilePresentation(current, refreshed);
+
+  assert.equal(merged.profile.username, 'After');
+  assert.equal(merged.did, 'did:privy:apple-user');
+  assert.equal(merged.profile.data.joinedAt, '2026-08-13T00:00:00.000Z');
+  assert.equal(merged.profile.data.privateSetting, true);
+  assert.equal(
+    merged.profile.data.walletAddress,
+    '0x1111111111111111111111111111111111111111',
+  );
+});
+
+test('private own-profile refresh can replace a previously hydrated wallet address', () => {
+  const merged = mergeOwnProfilePresentation({
+    profile: {
+      data: { walletAddress: '0x1111111111111111111111111111111111111111' },
+    },
+  }, {
+    profile: {
+      data: { walletAddress: '0x2222222222222222222222222222222222222222' },
+    },
+  });
+
+  assert.equal(
+    merged.profile.data.walletAddress,
+    '0x2222222222222222222222222222222222222222',
+  );
 });
