@@ -33,7 +33,10 @@ export default function QR({hide}) {
     /** Share only the public EasyGo database id, never the private Privy subject. */
     const easyGoUserId = normalizeEasyGoRouteId(user?.profile?.data?.easygoUserId);
     const link = easyGoUserId
-        ? Linking.createURL('user', { queryParams: { userId: easyGoUserId } })
+        ? Linking.createURL('user', {
+            isTripleSlashed: true,
+            queryParams: { userId: easyGoUserId },
+        })
         : null;
 
     /** Will open the native sharing modal */

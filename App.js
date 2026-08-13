@@ -360,10 +360,17 @@ SplashScreen.preventAutoHideAsync().catch((error) => {
 
 let callbackPostShared;
 let page = 0;
-export default function App({ onStartupStatus, privyAlreadyMounted = false }) {
+export default function App({
+  linkingManagedExternally = false,
+  navigationUrlEvent = null,
+  onStartupStatus,
+  privyAlreadyMounted = false,
+}) {
   return (
     <StartupErrorBoundary>
       <EasyGoApp
+        linkingManagedExternally={linkingManagedExternally}
+        navigationUrlEvent={navigationUrlEvent}
         onStartupStatus={onStartupStatus}
         privyAlreadyMounted={privyAlreadyMounted}
       />
@@ -371,7 +378,12 @@ export default function App({ onStartupStatus, privyAlreadyMounted = false }) {
   );
 }
 
-function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
+function EasyGoApp({
+  linkingManagedExternally,
+  navigationUrlEvent,
+  onStartupStatus,
+  privyAlreadyMounted,
+}) {
   const missingPrivyEnv = collectMissingPrivyEnvVars();
   const [user, setUser] = useState();
   const [userData, setUserData] = useState();
@@ -419,8 +431,7 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
   const [isLayoutReady, setIsLayoutReady] = useState(false);
   const [scrolled, setScrolled] = useState(0);
   const translateY = useSharedValue(0);
-  const url = Linking.useURL();
-  
+
   const confetti = useRef();
   const responseListener = useRef();
   const homeFeedRef = useRef();
@@ -666,10 +677,38 @@ function EasyGoApp({ onStartupStatus, privyAlreadyMounted }) {
         loadPosts();
     }, [category]);
 
-    /** Will be triggered when a new deeplink is received */
+    /** The bootstrap owns URL delivery so cold-launch links survive staged startup. */
     useEffect(() => {
-        if (url) void handleURL(url);
-    }, [handleURL, url]);
+        if (!linkingManagedExternally || !navigationUrlEvent?.url) return;
+        void handleURL(navigationUrlEvent.url);
+    }, [
+        handleURL,
+        linkingManagedExternally,
+        navigationUrlEvent?.id,
+        navigationUrlEvent?.url,
+    ]);
+
+    /** Retain direct App mounting as a safe development/test fallback. */
+    useEffect(() => {
+        if (linkingManagedExternally) return undefined;
+        let active = true;
+        let receivedLiveUrl = false;
+        const subscription = Linking.addEventListener('url', ({ url: incomingUrl }) => {
+            receivedLiveUrl = true;
+            void handleURL(incomingUrl);
+        });
+        void Linking.getInitialURL()
+            .then((initialUrl) => {
+                if (active && !receivedLiveUrl && initialUrl) void handleURL(initialUrl);
+            })
+            .catch((error) => {
+                console.warn('[navigation] unable to read initial URL', error);
+            });
+        return () => {
+            active = false;
+            subscription.remove();
+        };
+    }, [handleURL, linkingManagedExternally]);
 
     /** Handle notifications received, will open right screen or pane based on the notification received */
     useEffect(() => {

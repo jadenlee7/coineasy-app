@@ -562,6 +562,8 @@ export default function PrivyStartupProbe(props) {
         >
           {AppRoot ? (
             <AppRoot
+              linkingManagedExternally
+              navigationUrlEvent={props.navigationUrlEvent}
               onStartupStatus={props.onStatus}
               privyAlreadyMounted
             />
