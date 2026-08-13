@@ -108,28 +108,34 @@ function optionalTextQuery(value, maxLength = 100) {
   return normalized ? normalized.slice(0, maxLength) : null;
 }
 
+export function createGlobalFeedWhere({ query, tag } = {}) {
+  return {
+    parentPostId: null,
+    deletedAt: null,
+    authorId: { not: null },
+    ...(query ? { body: { contains: query, mode: 'insensitive' } } : {}),
+    ...(tag ? { AND: [{ body: { contains: tag, mode: 'insensitive' } }] } : {}),
+  };
+}
+
 // --- GET /posts (global feed / text and hashtag discovery) ----------
-postsRouter.get('/', async (req, res) => {
+postsRouter.get('/', express4AsyncHandler(async (req, res) => {
   const limit = parseLimit(req.query);
   const cursor = req.query.cursor ? String(req.query.cursor) : null;
   const query = optionalTextQuery(req.query.q);
   const tag = optionalTextQuery(req.query.tag, 50);
   const viewer = await viewerUserId(req);
   const { page, nextCursor } = await paginate({
-    where: {
-      parentPostId: null,
-      ...(query ? { body: { contains: query, mode: 'insensitive' } } : {}),
-      ...(tag ? { AND: [{ body: { contains: tag, mode: 'insensitive' } }] } : {}),
-    },
+    where: createGlobalFeedWhere({ query, tag }),
     limit,
     cursor,
   });
   const rows = await Promise.all(page.map((p) => shapePost(p, viewer)));
   res.json({ rows, nextCursor });
-});
+}));
 
 // --- GET /posts/by-author/:userId -----------------------------------
-postsRouter.get('/by-author/:userId', async (req, res) => {
+postsRouter.get('/by-author/:userId', express4AsyncHandler(async (req, res) => {
   const limit = parseLimit(req.query);
   const cursor = req.query.cursor ? String(req.query.cursor) : null;
   const viewer = await viewerUserId(req);
@@ -140,10 +146,10 @@ postsRouter.get('/by-author/:userId', async (req, res) => {
   });
   const rows = await Promise.all(page.map((p) => shapePost(p, viewer)));
   res.json({ rows, nextCursor });
-});
+}));
 
 // --- GET /posts/:id (single) ----------------------------------------
-postsRouter.get('/:id', async (req, res) => {
+postsRouter.get('/:id', express4AsyncHandler(async (req, res) => {
   const viewer = await viewerUserId(req);
   const post = await prisma.post.findUnique({
     where: { id: req.params.id },
@@ -151,10 +157,10 @@ postsRouter.get('/:id', async (req, res) => {
   });
   if (!post) return res.status(404).json({ error: 'not_found' });
   res.json({ post: await shapePost(post, viewer) });
-});
+}));
 
 // --- GET /posts/:id/replies -----------------------------------------
-postsRouter.get('/:id/replies', async (req, res) => {
+postsRouter.get('/:id/replies', express4AsyncHandler(async (req, res) => {
   const limit = parseLimit(req.query);
   const cursor = req.query.cursor ? String(req.query.cursor) : null;
   const viewer = await viewerUserId(req);
@@ -165,7 +171,7 @@ postsRouter.get('/:id/replies', async (req, res) => {
   });
   const rows = await Promise.all(page.map((p) => shapePost(p, viewer)));
   res.json({ rows, nextCursor });
-});
+}));
 
 // --- POST /posts (create) -------------------------------------------
 const createSchema = z.object({
@@ -174,7 +180,7 @@ const createSchema = z.object({
   mediaUrl: z.string().url().max(500).optional().nullable(),
 });
 
-postsRouter.post('/', requireAuth, async (req, res) => {
+postsRouter.post('/', requireAuth, express4AsyncHandler(async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'bad_input', details: parsed.error.issues });
@@ -197,7 +203,7 @@ postsRouter.post('/', requireAuth, async (req, res) => {
     include: { author: { select: authorSummary } },
   });
   res.status(201).json({ post: await shapePost(created, user.id) });
-});
+}));
 
 // --- PUT /posts/:id (edit own post) --------------------------------
 const updateSchema = z.object({
@@ -205,7 +211,7 @@ const updateSchema = z.object({
   mediaUrl: z.string().url().max(500).optional().nullable(),
 });
 
-postsRouter.put('/:id', requireAuth, async (req, res) => {
+postsRouter.put('/:id', requireAuth, express4AsyncHandler(async (req, res) => {
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'bad_input', details: parsed.error.issues });
@@ -228,7 +234,7 @@ postsRouter.put('/:id', requireAuth, async (req, res) => {
     include: { author: { select: authorSummary } },
   });
   res.json({ post: await shapePost(updated, user.id) });
-});
+}));
 
 // --- DELETE /posts/:id ----------------------------------------------
 export function createDeletePostHandler({
@@ -257,7 +263,7 @@ postsRouter.delete(
 );
 
 // --- POST /posts/:id/like (idempotent) -------------------------------
-postsRouter.post('/:id/like', requireAuth, async (req, res) => {
+postsRouter.post('/:id/like', requireAuth, express4AsyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({ where: { privyDid: req.user.privyDid } });
   if (!user) return res.status(404).json({ error: 'user_not_found' });
   const post = await prisma.post.findUnique({ where: { id: req.params.id } });
@@ -269,10 +275,10 @@ postsRouter.post('/:id/like', requireAuth, async (req, res) => {
   });
   const likes = await prisma.like.count({ where: { postId: post.id } });
   res.json({ liked: true, likes });
-});
+}));
 
 // --- DELETE /posts/:id/like (idempotent) -----------------------------
-postsRouter.delete('/:id/like', requireAuth, async (req, res) => {
+postsRouter.delete('/:id/like', requireAuth, express4AsyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({ where: { privyDid: req.user.privyDid } });
   if (!user) return res.status(404).json({ error: 'user_not_found' });
   await prisma.like
@@ -280,4 +286,4 @@ postsRouter.delete('/:id/like', requireAuth, async (req, res) => {
     .catch(() => null); // ignore "not found" so endpoint is idempotent
   const likes = await prisma.like.count({ where: { postId: req.params.id } });
   res.json({ liked: false, likes });
-});
+}));
