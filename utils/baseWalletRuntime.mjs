@@ -45,14 +45,24 @@ export function attestBaseWalletRuntime({
 
   const normalizedWallet = normalizeEvmAddress(walletAddress);
   const normalizedExpected = normalizeEvmAddress(expectedAddress);
+  const hasExpectedAddress = typeof expectedAddress === 'string'
+    && expectedAddress.trim().length > 0;
   const normalizedAccounts = Array.isArray(accounts)
     ? accounts.map(normalizeEvmAddress).filter(Boolean)
     : [];
 
+  // The authenticated Privy wallet and the provider account are sufficient to
+  // attest the active wallet while the private /auth/sync profile is still
+  // hydrating. A missing comparison address is not evidence of a mismatch.
+  // When the backend comparison address is present, it remains mandatory and
+  // must match the same authenticated wallet.
+  if (hasExpectedAddress && !normalizedExpected) {
+    return { status: 'error', chainId: parsedChainId };
+  }
+
   if (
     !normalizedWallet
-    || !normalizedExpected
-    || normalizedWallet !== normalizedExpected
+    || (normalizedExpected && normalizedWallet !== normalizedExpected)
     || !normalizedAccounts.includes(normalizedWallet)
   ) {
     return { status: 'account-mismatch', chainId: parsedChainId };
