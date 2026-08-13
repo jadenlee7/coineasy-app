@@ -20,7 +20,7 @@ test('Base chain constants and EIP-1193 chain responses stay aligned', () => {
   assert.equal(parseEvmChainId('not-a-chain'), null);
 });
 
-test('runtime attestation requires Base and the embedded wallet account', () => {
+test('runtime attestation requires Base and the authenticated embedded wallet account', () => {
   assert.deepEqual(attestBaseWalletRuntime({
     chainId: '0x2105',
     accounts: [ADDRESS.toLowerCase()],
@@ -47,6 +47,20 @@ test('runtime attestation requires Base and the embedded wallet account', () => 
     accounts: [ADDRESS],
     walletAddress: ADDRESS,
     expectedAddress: null,
+  }), { status: 'ready', chainId: 8453 });
+
+  assert.deepEqual(attestBaseWalletRuntime({
+    chainId: '0x2105',
+    accounts: [ADDRESS],
+    walletAddress: ADDRESS,
+    expectedAddress: 'not-an-address',
+  }), { status: 'error', chainId: 8453 });
+
+  assert.deepEqual(attestBaseWalletRuntime({
+    chainId: '0x2105',
+    accounts: [ADDRESS],
+    walletAddress: ADDRESS,
+    expectedAddress: '0x0000000000000000000000000000000000000000',
   }), { status: 'account-mismatch', chainId: 8453 });
 });
 

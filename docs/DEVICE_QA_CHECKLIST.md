@@ -1,8 +1,9 @@
 # EasyGo staging device QA
 
-Use this checklist for the internal-only social-author/edit TestFlight candidate
-`2.0.3 (104)`, its legal-consent predecessor `2.0.3 (103)`, and the existing
-Android preview build `versionCode 64`. All clients must target
+Use this checklist for the internal-only wallet-runtime TestFlight candidate
+`2.0.3 (106)`, its social-author/edit predecessor `2.0.3 (104)`, the
+legal-consent predecessor `2.0.3 (103)`, and the existing Android preview build
+`versionCode 64`. All clients must target
 `https://easygo-web-staging-staging.up.railway.app`. Record the device model,
 OS version, tester account type, and test time; never record an access token,
 wallet private key, or login code.
@@ -226,12 +227,23 @@ wallet private key, or login code.
   completed this across the Apple/Google account regression, and Railway
   recorded only successful feed/post and `/auth/sync` responses in the checked
   window.
-- [ ] Publish one clearly labelled staging text post, edit it, and delete it.
-- [ ] On that post, open the overflow menu and confirm Edit/Delete appear for
+- [x] Publish one clearly labelled staging text post, edit it, and delete it.
+  - 2026-08-10/Build 102: owner created a labelled staging post, edited and
+    deleted it successfully; there was no account leakage or stale draft during
+    account-switch flow.
+- [x] On that post, open the overflow menu and confirm Edit/Delete appear for
   the signed-in author, while another account sees only Report/Block/Hide/Mute.
-- [ ] Type text, attach media, and select a category in the composer; cancel it,
+  - 2026-08-10/Build 102: post-menu checks passed for owner (Edit/Delete) and
+    non-owner (Report/Block/Hide/Mute only), then owner deleted the post after
+    account-switch flow.
+  - 2026-08-11/Build 104: owner confirmed non-owner menu exposure was exactly
+    Report, Block, Hide, and Mute with no safety action executed.
+- [x] Type text, attach media, and select a category in the composer; cancel it,
   immediately open a new post/reply composer, and confirm no prior draft flashes
   or survives into the new presentation.
+  - 2026-08-10/Build 102: owner entered unique text/media/category, cancelled,
+    reopened a new composer immediately, and confirmed no stale draft or
+    attachment remained in either post/reply composition flows.
 - [ ] Open another staging profile, follow then unfollow it, and confirm both
   profile counts and state update.
 - [ ] Share the own-profile QR/link and open its `coineasyapp://user?userId=…`
@@ -473,6 +485,59 @@ wallet private key, or login code.
       deletion readiness latches remain false; external TestFlight distribution
       and App Store review remain off. Build 104 is an internal regression
       candidate only.
+
+## Build 105/106 wallet-runtime hydration candidate
+
+- [x] Complete, inspect, submit, and process internal-only iOS `2.0.3 (105)`
+      from exact commit `46b00a4b13814629be2d817a2cfa24e83a0d43d2`.
+      EAS build `5d8bd06a-93ea-425c-96b0-94a9d8ae8a75` and submission
+      `9c954609-bab3-4955-b623-c0af54f70185` finished without an error. App
+      Store Connect build `ab32b983-7d20-48cf-a4f6-6c5609b36d47` is `VALID`,
+      unexpired, and in internal beta testing with external state
+      `NOT_APPLICABLE`.
+- [x] Verify the 27,046,247-byte Build 105 IPA at SHA-256
+      `c912fb951e70a2a921c5b979392e9a99588096afa5484f83155f95c336b0c741`.
+      It reports the intended version, build number, bundle identifier, and
+      exact release commit. The preview channel had no OTA update group, so the
+      submitted bundle was the code running on the device.
+- [x] On 2026-08-13, reproduce the remaining Apple profile status defect on
+      Build 105. Sign in with Apple and backend `/auth/sync` completed normally,
+      but the own profile still displayed `Wallet mismatch`; there was no crash
+      or OAuth failure.
+- [x] Diagnose the mismatch without exposing an address or account identifier.
+      A privacy-safe staging check found one Apple login, one Privy embedded
+      Ethereum wallet, a valid DB wallet, and exact DB-to-Privy equality. The
+      SDK provider returns the authenticated wallet address for `eth_accounts`.
+      The remaining false result came from classifying a temporarily missing
+      private comparison address during profile hydration as a real mismatch.
+- [x] Keep the security boundary while correcting the presentation result.
+      Build 106 requires Base chain `0x2105`, a valid authenticated Privy wallet,
+      and provider-account equality. When a valid backend comparison address is
+      present it must still match; a malformed comparison is an error and a
+      genuinely different address remains `Wallet mismatch`. Only an absent
+      hydration value is no longer treated as evidence of mismatch.
+- [x] Complete, inspect, submit, and process internal-only iOS `2.0.3 (106)`
+      from exact commit `4c3c9639946cae85d9b30c8e25376b95edcc0788`.
+      EAS build `4ef86dfb-447b-4c45-be89-40814bef0612` and submission
+      `b9d3e556-1654-4de2-a31e-7b214d830f54` finished without an error. App
+      Store Connect build `32dcb2ff-98e2-4af9-ba7f-bdff0cc7da69` is `VALID`,
+      `INTERNAL_ONLY`, `IN_BETA_TESTING`, unexpired, and has external state
+      `NOT_APPLICABLE`. It was not added to an external group or App Store
+      review.
+- [x] Verify the 27,046,265-byte Build 106 IPA at SHA-256
+      `8a9fa865f07fa69985a35313ce5fd2c62b6a2cf68ceb76419e16071629c7b584`.
+      It reports `2.0.3 (106)`, bundle identifier
+      `com.coineasy.coineasysocial`, an arm64 embedded signature, Team ID
+      `A9G84S4PWJ`, and sealed resources.
+- [x] On 2026-08-13, the owner installed Build 106 on the physical iPhone 16
+      Pro Max and confirmed the requested Apple sign-in/profile regression now
+      works: the false `Wallet mismatch` is absent and the own profile reports
+      the connected Base wallet normally.
+- [x] Build 106 mobile tests passed 166/166, the EAS Preview staging preflight
+      passed with zero failures, the preview-environment iOS export completed,
+      and PR #43 Backend and Mobile CI both passed. No database migration,
+      Railway deployment, feature-flag activation, external TestFlight group,
+      or App Store review submission is part of this candidate.
 
 ## Dormant recent Apple reauthentication candidate
 

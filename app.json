@@ -21,7 +21,7 @@
       "jsEngine": "jsc",
       "supportsTablet": false,
       "usesAppleSignIn": true,
-      "buildNumber": "104",
+      "buildNumber": "106",
       "bundleIdentifier": "com.coineasy.coineasysocial",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "EasyGo uses your photo library when you choose a profile image or attach media to a post.",
