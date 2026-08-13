@@ -133,6 +133,19 @@ export function startupDiagnosticReportsRuntime(bootstrapSource, probeSource) {
     ].every((token) => probe.includes(token));
 }
 
+export function startupAutomaticallyLoadsAppWithRecovery(bootstrapSource) {
+  const source = String(bootstrapSource || '');
+  return [
+    "startupRecoveryRequired(restoredMarker, BUILD_NUMBER)",
+    "phase !== 'ready'",
+    'void loadFullApp()',
+    'if (AppRoot && !ProbeRoot)',
+    'linkingManagedExternally',
+    'navigationUrlEvent={navigationUrlEvent}',
+    'onPress={loadPrivyProbe}',
+  ].every((token) => source.includes(token));
+}
+
 export function privyIsolationStagesAreGuarded(probeSource) {
   const source = String(probeSource || '');
   const pendingWrite = source.indexOf(
@@ -433,6 +446,11 @@ export function validateMobileEnvironment(env, appConfig, {
       startupDiagnosticPersistsPhases(bootstrapSource, probeSource),
       'persistent startup diagnostics',
       'startup diagnostics must persist every risky iOS initialization phase',
+    );
+    add(
+      startupAutomaticallyLoadsAppWithRecovery(bootstrapSource),
+      'automatic startup with diagnostic recovery',
+      'normal launches must load EasyGo automatically while same-build interrupted launches retain the manual diagnostic path',
     );
   }
   if (probeSource !== undefined) {
