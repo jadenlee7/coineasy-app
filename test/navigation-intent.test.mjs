@@ -29,10 +29,23 @@ test('profile links use explicit EasyGo ids and retain safe legacy easygo did li
     }),
     { type: 'profile', userId: 'easygo_seed_builder' },
   );
+  assert.deepEqual(
+    navigationIntentFromParsedUrl({
+      hostname: 'user',
+      path: null,
+      queryParams: { userId: 'easygo_seed_builder' },
+    }),
+    { type: 'profile', userId: 'easygo_seed_builder' },
+  );
   assert.equal(easyGoUserIdFromDid('privy:did:user-1'), null);
   assert.equal(navigationIntentFromParsedUrl({
     path: 'user',
     queryParams: { userId: '../profiles/me' },
+  }), null);
+  assert.equal(navigationIntentFromParsedUrl({
+    hostname: 'user',
+    path: 'unexpected',
+    queryParams: { userId: 'easygo_seed_builder' },
   }), null);
 });
 
@@ -73,6 +86,8 @@ test('navigation routes are constructed only from normalized targets', () => {
 
 test('the app replays only transition-bound intents through the real navigator', () => {
   const app = read('../App.js');
+  const bootstrap = read('../BootstrapApp.js');
+  const probe = read('../PrivyStartupProbe.js');
   const navigator = read('../navigation/AppNavigator.js');
   const qr = read('../components/modals/QR.js');
 
@@ -83,7 +98,15 @@ test('the app replays only transition-bound intents through the real navigator',
   assert.match(app, /<AppNavigator[\s\S]*?navigationRef=\{navigationRef\}[\s\S]*?onNavigationReady=\{handleNavigationReady\}/);
   assert.match(navigator, /<NavigationContainer ref=\{navigationRef\} onReady=\{onNavigationReady\}>/);
   assert.match(qr, /queryParams: \{ userId: easyGoUserId \}/);
+  assert.match(qr, /isTripleSlashed: true/);
   assert.doesNotMatch(qr, /queryParams: \{ did: user\.did \}/);
+  assert.match(bootstrap, /Linking\.getInitialURL\(\)/);
+  assert.match(bootstrap, /Linking\.addEventListener\(['"]url['"]/);
+  assert.match(bootstrap, /navigationUrlEvent=\{navigationUrlEvent\}/);
+  assert.match(probe, /navigationUrlEvent=\{props\.navigationUrlEvent\}/);
+  assert.match(app, /linkingManagedExternally/);
+  assert.match(app, /navigationUrlEvent\?\.url/);
+  assert.doesNotMatch(app, /Linking\.useURL\(\)/);
   assert.match(qr, /useEffect\(\(\) => \{\s*const subscription = BackHandler\.addEventListener/);
   assert.match(qr, /return \(\) => subscription\.remove\(\);/);
 });

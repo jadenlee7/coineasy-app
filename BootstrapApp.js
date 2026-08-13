@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
 import {
   ActivityIndicator,
+  Linking,
   Platform,
   Pressable,
   SafeAreaView,
@@ -53,6 +54,8 @@ export default function BootstrapApp() {
   const [lastMarker, setLastMarker] = useState(null);
   const [error, setError] = useState(null);
   const [storageWarning, setStorageWarning] = useState('');
+  const [navigationUrlEvent, setNavigationUrlEvent] = useState(null);
+  const navigationUrlSequenceRef = useRef(0);
   const startupStateRef = useRef({
     build: BUILD_NUMBER,
     last: null,
@@ -60,6 +63,37 @@ export default function BootstrapApp() {
     updatedAt: null,
   });
   const writeChainRef = useRef(Promise.resolve());
+
+  const publishNavigationUrl = useCallback((url) => {
+    if (typeof url !== 'string' || !url.trim()) return;
+    navigationUrlSequenceRef.current += 1;
+    setNavigationUrlEvent(Object.freeze({
+      id: navigationUrlSequenceRef.current,
+      url,
+    }));
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    let receivedLiveUrl = false;
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      receivedLiveUrl = true;
+      publishNavigationUrl(url);
+    });
+
+    void Linking.getInitialURL()
+      .then((url) => {
+        if (active && !receivedLiveUrl) publishNavigationUrl(url);
+      })
+      .catch((linkingError) => {
+        console.warn('[bootstrap] unable to read initial URL', linkingError);
+      });
+
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, [publishNavigationUrl]);
 
   useEffect(() => {
     let active = true;
@@ -189,6 +223,7 @@ export default function BootstrapApp() {
         busy={phase === 'loading'}
         lastMarker={lastMarker}
         markerLabel={markerLabel}
+        navigationUrlEvent={navigationUrlEvent}
         onContinue={loadFullApp}
         onStatus={handleProbeStatus}
       />

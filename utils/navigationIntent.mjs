@@ -22,11 +22,16 @@ export function easyGoUserIdFromDid(value) {
   return normalizeEasyGoRouteId(value.slice('easygo:'.length));
 }
 
-export function navigationIntentFromParsedUrl({ path, queryParams } = {}) {
+export function navigationIntentFromParsedUrl({ hostname, path, queryParams } = {}) {
   const normalizedPath = typeof path === 'string'
     ? path.replace(/^\/+|\/+$/gu, '').toLowerCase()
     : '';
-  if (!['profile', 'user'].includes(normalizedPath)) return null;
+  const normalizedHostname = typeof hostname === 'string'
+    ? hostname.trim().toLowerCase()
+    : '';
+  const profileRoute = ['profile', 'user'].includes(normalizedPath)
+    || (!normalizedPath && ['profile', 'user'].includes(normalizedHostname));
+  if (!profileRoute) return null;
 
   const userId = normalizeEasyGoRouteId(queryParams?.userId)
     || easyGoUserIdFromDid(queryParams?.did);
