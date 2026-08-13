@@ -539,6 +539,39 @@ wallet private key, or login code.
       Railway deployment, feature-flag activation, external TestFlight group,
       or App Store review submission is part of this candidate.
 
+## Build 107 staged-startup profile-link candidate
+
+- [x] Merge the profile-link fix and Build 107 release guard through PR #44 and
+      PR #45. Both PRs passed Backend and Mobile CI before merge. Internal-only
+      iOS `2.0.3 (107)` was built from exact master commit
+      `4b4b5f676de2386f005afb31d48426043776a1e8` with EAS build
+      `29d03a10-fcab-43b3-ad5b-436c7d0c93a9`.
+- [x] Submit Build 107 with EAS submission
+      `41012c52-8b0b-4e41-bb09-ddced40b2d69`. App Store Connect build
+      `5b29d180-05ff-416e-aadc-f218a4642ed6` is `VALID`, `INTERNAL_ONLY`,
+      `IN_BETA_TESTING`, unexpired, and has external state `NOT_APPLICABLE`.
+      It was not added to an external TestFlight group or App Store review.
+- [x] Verify the 27,046,646-byte Build 107 IPA at SHA-256
+      `3cc3f42e4773b07df7fc2a18e6df4e7aa2c15cd4b478732cbd2318226120bba5`.
+      The build reports EasyGo `2.0.3 (107)`, bundle identifier
+      `com.coineasy.coineasysocial`, and exact release commit `4b4b5f6`.
+- [x] On 2026-08-13, the owner installed Build 107 on the physical iPhone 16
+      Pro Max, copied a new own-profile link, and opened it while EasyGo was
+      already running. EasyGo navigated to the intended profile exactly once.
+- [x] On the same device, fully terminate EasyGo, open the copied profile link,
+      complete the staged safety-startup pages, and open the full app. The
+      pending link survived staged startup and navigated to the intended
+      profile exactly once.
+- [x] After both profile-link paths, confirm Apple sign-in session presentation,
+      the connected Base wallet, Orange state, and Base-chain state remained
+      intact. There was no wallet mismatch, duplicate profile navigation,
+      crash, or login loop during the requested regression.
+- [x] Build 107 mobile tests passed 166/166, staging preflight passed with zero
+      failures, the local iOS export completed, and PR #44 and PR #45 Backend
+      and Mobile CI passed. No database migration, Railway deployment,
+      feature-flag activation, external TestFlight distribution, or App Store
+      review submission is part of this candidate.
+
 ## Dormant recent Apple reauthentication candidate
 
 Do not run these checks from Build 104 or a primary tester account. The current
