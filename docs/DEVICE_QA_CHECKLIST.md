@@ -622,6 +622,41 @@ wallet private key, or login code.
       a release blocker. Keep Build 108 internal-only and use Build 107 as the
       known-good comparison while the blocker is diagnosed.
 
+## Build 109 fixed branded-launch candidate
+
+- [x] Merge the fixed branded-launch implementation through PR #50 and the
+      Build 109 release guard through PR #51. Both PRs passed Backend and
+      Mobile CI before merge. Internal-only iOS `2.0.3 (109)` was built from
+      exact master commit `ce0598e38529f6148cc7436bfc2d3f04cf39ed4c` with
+      EAS build `9c774761-f21c-4c2c-a250-6bf4fe25c410`, which finished without
+      an error.
+- [x] Complete EAS submission
+      `a77396b4-b957-4286-9aa1-e9da993c94d0` without an error. App Store
+      Connect build `fad7fe98-af82-4ef9-b78d-f303e319ec98` is `VALID`,
+      `INTERNAL_ONLY`, `IN_BETA_TESTING`, unexpired, and has external state
+      `NOT_APPLICABLE`. It was not added to an external TestFlight group or
+      App Store review.
+- [x] On 2026-08-20, the owner installed Build 109 from internal TestFlight on
+      the physical iPhone 16 Pro Max, fully terminated EasyGo, and launched it
+      twice from the app icon. Both launches stayed on the fixed branded
+      launch surface until the app opened; none of the five retired safety
+      startup step labels or diagnostic recovery controls appeared.
+- [x] Background and foreground Build 109 once and confirm the authenticated
+      session remains stable without a crash, startup stall, or recovery
+      screen.
+- [x] Complete the Apple session check and confirm the own profile, feed,
+      Orange state, connected Base wallet, and Base-chain state remain intact.
+      No `Wallet mismatch`, login loop, duplicate account, or deleted-account
+      presentation appeared for the active owner.
+- [x] Open a newly copied own-profile link once while EasyGo is running and
+      once after fully terminating it. Both links navigated to the intended
+      profile exactly once without exposing the retired safety-startup pages,
+      losing the pending link, or duplicating navigation.
+- [x] Clear the Build 109 device release blockers. No launch crash, persistent
+      recovery screen, Apple login loop, wallet mismatch, missing owner state,
+      or broken warm/cold profile link was reproduced. Build 109 remains
+      internal-only pending any separately approved release expansion.
+
 ## Dormant recent Apple reauthentication candidate
 
 Do not run these checks from Build 104 or a primary tester account. The current
