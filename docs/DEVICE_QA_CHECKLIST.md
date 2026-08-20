@@ -572,6 +572,51 @@ wallet private key, or login code.
       feature-flag activation, external TestFlight distribution, or App Store
       review submission is part of this candidate.
 
+## Build 108 automatic-startup candidate
+
+- [x] Merge the automatic-startup implementation and Build 108 release guard
+      through PR #47 and PR #48. Both PRs passed Backend and Mobile CI before
+      merge. Internal-only iOS `2.0.3 (108)` was built from exact master commit
+      `db67233af5045d7920a53c53f799061d577c355c` with EAS build
+      `f255c7cf-bbdb-48db-b56c-a441047b599b`.
+- [x] Complete EAS submission
+      `0d8f9673-c164-44d8-b15e-4db26cd2e4b0` without an error. App Store
+      Connect build `b917cd9c-4208-4f93-8e44-8a41bba26e1c` is `VALID`,
+      `INTERNAL_ONLY`, `IN_BETA_TESTING`, unexpired, and has external state
+      `NOT_APPLICABLE`. It was not added to an external TestFlight group or
+      App Store review.
+- [x] Verify the 27,046,960-byte Build 108 IPA at SHA-256
+      `f0b84e971469bcc2d5757b9ad8660068c193b1368f58de1a4ad513c67da9eb41`.
+      The archive reports EasyGo `2.0.3 (108)`, bundle identifier
+      `com.coineasy.coineasysocial`, URL scheme `coineasyapp`, an arm64
+      embedded signature with Team ID `A9G84S4PWJ`, sealed resources, and
+      `TFInternalTestingOnly=true`.
+- [x] Build 108 mobile tests passed 168/168 and the EAS Preview staging
+      preflight passed with zero failures and only the existing Privy native
+      allowlist reminder. No database migration, Railway deployment,
+      feature-flag activation, external TestFlight distribution, or App Store
+      review submission is part of this candidate.
+- [ ] Install Build 108 from the internal TestFlight group on the physical
+      iPhone 16 Pro Max. Fully terminate EasyGo, launch it from the app icon,
+      and confirm the app opens without the five manual safety-startup pages,
+      an extra tap, a crash, or a startup stall.
+- [ ] Fully terminate and relaunch EasyGo twice, then background and foreground
+      it once. Confirm successful launches do not show diagnostic recovery and
+      the authenticated session remains stable. If recovery appears, record
+      only the build number, safe startup step label, and timestamp.
+- [ ] Sign in with Apple if required and confirm own profile, feed, Orange
+      state, connected Base wallet, and Base-chain state remain intact. There
+      must be no `Wallet mismatch`, login loop, duplicate account, or deleted
+      account presentation for the active owner.
+- [ ] Open a newly copied own-profile link once while EasyGo is running and
+      once after fully terminating it. Each link must navigate to the intended
+      profile exactly once without exposing the retired safety-startup pages,
+      losing the pending link, or duplicating navigation.
+- [ ] Treat any launch crash, persistent recovery screen, Apple login loop,
+      wallet mismatch, missing owner state, or broken warm/cold profile link as
+      a release blocker. Keep Build 108 internal-only and use Build 107 as the
+      known-good comparison while the blocker is diagnosed.
+
 ## Dormant recent Apple reauthentication candidate
 
 Do not run these checks from Build 104 or a primary tester account. The current
