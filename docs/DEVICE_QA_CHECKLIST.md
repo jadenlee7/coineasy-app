@@ -596,10 +596,10 @@ wallet private key, or login code.
       allowlist reminder. No database migration, Railway deployment,
       feature-flag activation, external TestFlight distribution, or App Store
       review submission is part of this candidate.
-- [ ] Install Build 108 from the internal TestFlight group on the physical
-      iPhone 16 Pro Max. Fully terminate EasyGo, launch it from the app icon,
-      and confirm the app opens without the five manual safety-startup pages,
-      an extra tap, a crash, or a startup stall.
+- [x] On 2026-08-20, the owner installed Build 108 from internal TestFlight on
+      the physical iPhone 16 Pro Max, fully terminated EasyGo, and launched it
+      from the app icon. EasyGo opened immediately without the five manual
+      safety-startup pages, an extra tap, a crash, or a startup stall.
 - [ ] Fully terminate and relaunch EasyGo twice, then background and foreground
       it once. Confirm successful launches do not show diagnostic recovery and
       the authenticated session remains stable. If recovery appears, record
