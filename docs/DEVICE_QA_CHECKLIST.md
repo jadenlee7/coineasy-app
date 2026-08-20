@@ -244,21 +244,32 @@ wallet private key, or login code.
   - 2026-08-10/Build 102: owner entered unique text/media/category, cancelled,
     reopened a new composer immediately, and confirmed no stale draft or
     attachment remained in either post/reply composition flows.
-- [ ] Open another staging profile, follow then unfollow it, and confirm both
-  profile counts and state update.
-- [ ] Share the own-profile QR/link and open its `coineasyapp://user?userId=…`
+- [x] Open another staging profile, follow then unfollow it, and confirm both
+  profile counts and state update. On 2026-08-20, the owner completed this on
+  Build 109 without an auth or server error.
+- [x] Share the own-profile QR/link and open its `coineasyapp://user?userId=…`
   URL both while EasyGo is ready and from a cold launch. It must navigate to
   that public EasyGo profile without exposing or interpreting a Privy DID.
-- [ ] Open Notifications and confirm the screen loads without an auth or server
-  error. Where a second tester is available, confirm one follow/like/reply event
-  and that tapping a post event opens the matching PostDetails route.
-- [ ] Open the Orange balance/history and confirm both return consistently after
+  Build 109 opened the intended profile exactly once in both states.
+- [x] Open Notifications and confirm the screen loads without an auth or server
+  error. The owner completed this on Build 109 on 2026-08-20.
+- [ ] Where a second tester is available, confirm one follow/like/reply
+  notification and that tapping a post event opens the matching PostDetails
+  route.
+- [x] Open the Orange balance/history and confirm both return consistently after
   a refresh. Claim only a staging-safe idempotent reward already exposed by the
-  UI; do not spend or transfer real assets.
+  UI; do not spend or transfer real assets. Build 109 returned the expected
+  balance and history after refresh without spending or transferring assets.
 - [ ] Request one Squid quote and verify amount, source, destination, fee, and
-  route render. Stop before signing or broadcasting a transaction.
-- [ ] Open `coineasyapp://` from Safari or Notes and confirm EasyGo foregrounds.
-- [ ] Sign out, sign in again, and confirm profile/feed/Orange data persist.
+  route render. Stop before signing or broadcasting a transaction. Build 109
+  cannot exercise this item because no shipped screen calls the existing
+  `getSquidQuote` client helper; this is an implementation gap, not a failed
+  quote.
+- [x] Open `coineasyapp://` from Safari or Notes and confirm EasyGo foregrounds.
+  The owner completed this on Build 109 on 2026-08-20.
+- [x] Sign out, sign in again, and confirm profile/feed/Orange data persist. The
+  owner completed the Apple return path on Build 109 without a login loop,
+  wallet mismatch, or missing owner state.
 
 ## Build 101 privacy-center candidate
 
