@@ -48,6 +48,23 @@ function markerLabel(marker) {
   return `${label} · 시작됨(완료 전)`;
 }
 
+function AutomaticLaunchScreen() {
+  return (
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.launchContent}>
+        <Text style={styles.brand}>EasyGo</Text>
+        <ActivityIndicator
+          accessibilityLabel="EasyGo 앱을 여는 중"
+          color="#FF6813"
+          size="large"
+          style={styles.launchSpinner}
+        />
+        <Text style={styles.launchText}>앱을 여는 중</Text>
+      </View>
+    </SafeAreaView>
+  );
+}
+
 export default function BootstrapApp() {
   const [ProbeRoot, setProbeRoot] = useState(null);
   const [AppRoot, setAppRoot] = useState(null);
@@ -273,6 +290,10 @@ export default function BootstrapApp() {
   const startupInProgress = ['loading', 'ready', 'restoring'].includes(phase);
   const recoveryMode = phase === 'error' || phase === 'recovery';
 
+  if (!recoveryMode) {
+    return <AutomaticLaunchScreen />;
+  }
+
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -280,13 +301,10 @@ export default function BootstrapApp() {
         <Text style={styles.eyebrow}>
           STARTUP DIAGNOSTIC · BUILD {BUILD_NUMBER} · {RUNTIME_LABEL}
         </Text>
-        <Text style={styles.title}>
-          {recoveryMode ? '안전 부팅 복구' : 'EasyGo 시작 중'}
-        </Text>
+        <Text style={styles.title}>안전 부팅 복구</Text>
         <Text style={styles.body}>
-          {recoveryMode
-            ? '같은 빌드의 이전 시작이 완료되지 않았습니다. 아래 진단에서 저장소, client, WebView, Provider를 단계별로 확인할 수 있습니다.'
-            : '저장된 진단 기록을 확인하고 EasyGo를 자동으로 준비하고 있습니다.'}
+          같은 빌드의 이전 시작이 완료되지 않았습니다. 아래 진단에서 저장소,
+          client, WebView, Provider를 단계별로 확인할 수 있습니다.
         </Text>
 
         <View style={styles.markerBox}>
@@ -341,6 +359,14 @@ export default function BootstrapApp() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFF8F0' },
+  launchContent: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 28,
+  },
+  launchSpinner: { marginTop: 28 },
+  launchText: { color: '#64748B', fontSize: 14, fontWeight: '600', marginTop: 14 },
   content: { flexGrow: 1, justifyContent: 'center', padding: 28 },
   brand: { color: '#FF6813', fontSize: 42, fontWeight: '800' },
   eyebrow: {
