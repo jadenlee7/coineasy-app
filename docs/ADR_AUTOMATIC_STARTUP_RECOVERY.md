@@ -42,8 +42,9 @@ fallback.
 
 ## Consequences
 
-- Normal users see a short startup progress state and then the app, with no
-  diagnostic button sequence.
+- Normal users see one fixed EasyGo-branded launch surface and then the app.
+  Step labels, persisted markers, build diagnostics, and diagnostic controls
+  render only after the recovery policy selects the recovery path.
 - A same-build interrupted startup deliberately requires the existing manual
   recovery flow on the next launch.
 - The first internal build containing this decision requires physical-device QA
@@ -51,3 +52,10 @@ fallback.
   wallet/Base/Orange retention, and cold-launch profile links.
 - No backend, Railway, database, consent, distribution, or feature-flag change
   is part of this decision.
+
+## Device validation note
+
+Build 108 proved that automatic initialization, login, and full-app entry work
+without a user tap, but its normal launch surface still displayed changing
+startup step labels. The 2026-08-20 follow-up keeps the persistent marker chain
+unchanged while separating healthy presentation from recovery presentation.

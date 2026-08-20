@@ -19,6 +19,7 @@ import {
   startupDiagnosticReportsRuntime,
   startupAutomaticallyLoadsAppWithRecovery,
   startupBoundaryProtectsApp,
+  startupKeepsHealthyLaunchBranded,
   startupKeepsOnePrivyProvider,
   targetFromArgs,
   validateMobileEnvironment,
@@ -274,9 +275,19 @@ test('automatic startup retains persistent user-gated Privy diagnostic recovery'
   assert.equal(startupDiagnosticPersistsPhases(bootstrapSource, probeSource), true);
   assert.equal(startupDiagnosticReportsRuntime(bootstrapSource, probeSource), true);
   assert.equal(startupAutomaticallyLoadsAppWithRecovery(bootstrapSource), true);
+  assert.equal(startupKeepsHealthyLaunchBranded(bootstrapSource), true);
   assert.equal(startupAutomaticallyLoadsAppWithRecovery(`
     if (phase === 'ready') void loadFullApp();
     return <AppRoot />;
+  `), false);
+  assert.equal(startupKeepsHealthyLaunchBranded(`
+    function AutomaticLaunchScreen() {
+      return <Text>{STEP_LABELS[currentStep]}</Text>;
+    }
+    export default function BootstrapApp() {
+      if (!recoveryMode) return <AutomaticLaunchScreen />;
+      return <Text>STARTUP DIAGNOSTIC · BUILD</Text>;
+    }
   `), false);
   assert.equal(probeSource.includes("setStage('client-create')"), false);
   assert.equal(probeSource.includes("stage === 'client-create'"), true);

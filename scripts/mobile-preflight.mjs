@@ -146,6 +146,34 @@ export function startupAutomaticallyLoadsAppWithRecovery(bootstrapSource) {
   ].every((token) => source.includes(token));
 }
 
+export function startupKeepsHealthyLaunchBranded(bootstrapSource) {
+  const source = String(bootstrapSource || '');
+  const componentStart = source.indexOf('function AutomaticLaunchScreen()');
+  const componentEnd = source.indexOf(
+    'export default function BootstrapApp()',
+    componentStart + 1,
+  );
+  if (componentStart < 0 || componentEnd <= componentStart) return false;
+
+  const launchSurface = source.slice(componentStart, componentEnd);
+  const healthyGuard = source.indexOf('if (!recoveryMode) {', componentEnd);
+  const diagnosticSurface = source.indexOf(
+    'STARTUP DIAGNOSTIC · BUILD',
+    healthyGuard + 1,
+  );
+
+  return healthyGuard >= 0
+    && diagnosticSurface > healthyGuard
+    && source.slice(healthyGuard, diagnosticSurface).includes('<AutomaticLaunchScreen />')
+    && launchSurface.includes('앱을 여는 중')
+    && ![
+      'STEP_LABELS',
+      'markerLabel',
+      'lastMarker',
+      'STARTUP DIAGNOSTIC',
+    ].some((token) => launchSurface.includes(token));
+}
+
 export function privyIsolationStagesAreGuarded(probeSource) {
   const source = String(probeSource || '');
   const pendingWrite = source.indexOf(
@@ -451,6 +479,11 @@ export function validateMobileEnvironment(env, appConfig, {
       startupAutomaticallyLoadsAppWithRecovery(bootstrapSource),
       'automatic startup with diagnostic recovery',
       'normal launches must load EasyGo automatically while same-build interrupted launches retain the manual diagnostic path',
+    );
+    add(
+      startupKeepsHealthyLaunchBranded(bootstrapSource),
+      'healthy startup presentation',
+      'normal launches must keep step labels, markers, and diagnostic controls behind the recovery-only surface',
     );
   }
   if (probeSource !== undefined) {
