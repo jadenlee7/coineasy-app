@@ -176,8 +176,15 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Confirm Railway `/ready` health check becomes healthy.
 - [x] Set `EASYGO_BASE_URL` and `EXPECTED_RELEASE`, then run `npm run smoke`.
 - [x] Verify one real-device Privy sign-in and `/auth/sync` against staging.
-- [ ] Verify feed, profile, follow, notification, Orange balance, and Squid quote
-  read paths without activating Path C flags.
+- [x] Verify feed, profile, follow, notification-screen, and Orange balance read
+  paths without activating Path C flags. The owner completed the remaining
+  follow/unfollow, notification-screen, and refreshed Orange checks on internal
+  Build 109 on 2026-08-20; the existing feed/profile session also remained
+  intact across Apple sign-out/sign-in.
+- [ ] Verify the Squid quote read path without activating Path C flags. Build
+  109 ships the backend route and `getSquidQuote` helper but no screen calls the
+  helper, so physical-device quote-preview QA awaits a separately reviewed UI
+  implementation. Do not sign or broadcast a transaction for this check.
 - [x] Deploy the worker service with `SEGMENTS_ENABLED=false` and confirm one
   dormant/start-stop log sequence without a public domain.
 - [x] Exercise `SIGTERM` for the web process and confirm graceful cleanup.
