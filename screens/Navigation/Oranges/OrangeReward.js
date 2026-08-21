@@ -203,6 +203,26 @@ const OrangeReward = (props) => {
                     onPress={() => {Haptics.selectionAsync();navigation.navigate('InviteFriendScreen')}}
                 />
 
+                <View style={styles.quotePreviewCard}>
+                    <View style={styles.quotePreviewBadge}>
+                        <Text style={styles.quotePreviewBadgeText}>SQUID · BASE</Text>
+                    </View>
+                    <Text style={styles.quotePreviewTitle}>Swap quote preview</Text>
+                    <Text style={styles.quotePreviewDescription}>
+                        Check an estimated ETH ↔ USDC route without signing or sending a transaction.
+                    </Text>
+                    <TouchableOpacity
+                        accessibilityRole="button"
+                        style={styles.quotePreviewButton}
+                        onPress={() => {
+                            Haptics.selectionAsync();
+                            navigation.navigate('SquidQuotePreview');
+                        }}
+                    >
+                        <Text style={styles.quotePreviewButtonText}>Preview route</Text>
+                    </TouchableOpacity>
+                </View>
+
                 <View style={{height: 30}} />
             </ScrollView>
         </View>
@@ -277,6 +297,55 @@ const styles = StyleSheet.create({
   },
   buttonPrimary: {
     backgroundColor: '#FF6B35',
+  },
+  quotePreviewCard: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#D9E5F7',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    marginTop: 20,
+    padding: 20,
+  },
+  quotePreviewBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E8F1FF',
+    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  quotePreviewBadgeText: {
+    color: '#155EEF',
+    fontFamily: 'GmarketBold',
+    fontSize: 10,
+  },
+  quotePreviewTitle: {
+    color: '#1F2937',
+    fontFamily: 'GmarketBold',
+    fontSize: Platform.OS == 'ios' ? 17 : 15,
+    marginTop: 13,
+  },
+  quotePreviewDescription: {
+    color: '#64748B',
+    fontFamily: 'GmarketMedium',
+    fontSize: Platform.OS == 'ios' ? 12 : 10,
+    lineHeight: 17,
+    marginTop: 7,
+  },
+  quotePreviewButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    backgroundColor: '#FF6B35',
+    borderRadius: 24,
+    justifyContent: 'center',
+    marginTop: 16,
+    minHeight: 34,
+    minWidth: 120,
+    paddingHorizontal: 14,
+  },
+  quotePreviewButtonText: {
+    color: '#FFFFFF',
+    fontFamily: 'GmarketBold',
+    fontSize: 12,
   },
   buttonSecondary: {
     backgroundColor: '#EEE',

@@ -32,7 +32,8 @@ See `EASYGO_BUILD_PLAN.md` §11 (data flow), §12 (backend endpoints), §13.2 (S
 | First reward modal | `POST /orange/claims/first-reward` | Idempotently award the authenticated user's first 50 🍊 reward. |
 | Check-in/activity/ad cards | `POST /orange/claims/{daily-checkin,daily-activity,ad-reward}` | Validate and idempotently record recurring rewards. |
 | Course quiz compatibility fallback | `POST /orange/claims/course-quiz` | Used only while the S6 route is hidden; returns `410` after `QUESTS_ENABLED=true`. |
-| `getSquidQuote(...)` | `POST /swap/quote` | Backend calls Squid SDK with the embedded wallet's `fromAddress`; returns `{ route, tx, defaultChain }`. |
+| Orange → Squid Quote Preview | `POST /swap/quote-preview` | Read-only Base ETH ↔ USDC estimate. The server derives the authenticated wallet and returns a display-only projection with no executable transaction data. |
+| Dormant `getSquidQuote(...)` | `POST /swap/quote` | Legacy execution contract only; it is not called by Quote Preview and must remain inactive pending the Squid SDK response-envelope and execution/reward audit. |
 | `executeSquidRoute(...)` | `POST /swap/log` | After Privy embedded wallet broadcasts the tx, log txHash → backend awards +10 🍊. |
 | `useFeed('home')` / `usePosts()` | `GET /posts` | Read the global social feed with cursor pagination. |
 | `useFeed('category', { tag })` | `GET /posts?tag=...` | Read a hashtag category with server-side cursor filtering. |
@@ -151,6 +152,37 @@ close a modal for the next session.
 
 ## Swap flow (Phase 1, Squid via backend)
 
+The new quote-preview candidate is deliberately separate from the dormant
+execution flow below:
+
+```
+Client                                      Backend                         Squid
+  │ explicit Get quote preview tap             │                              │
+  │ POST /swap/quote-preview {tokens,amount}   │                              │
+  ├───────────────────────────────────────────▶│ derive authenticated wallet  │
+  │                                             │ Base 8453 + quoteOnly route  │
+  │                                             ├─────────────────────────────▶│
+  │                                             │◀─────────────────────────────┤
+  │ { preview, defaultChain }                   │ sanitize display fields only │
+  │◀────────────────────────────────────────────┤                              │
+  │ render amount/minimum/fees/time/path        │                              │
+  │ clear after 20 s/background/session change  │                              │
+```
+
+The client cannot supply a sender, recipient, chain, slippage, or arbitrary
+token. The backend derives both addresses from the authenticated user's stored
+wallet, fixes both chains to Base `8453`, fixes slippage to 1%, and permits only
+the reviewed Base native ETH/USDC pair. Although Squid is asked for
+`quoteOnly:true`, the backend still treats the upstream response as untrusted
+and allowlists display scalars; transaction requests, targets, calldata, calls,
+quote IDs, and raw route params never cross the preview boundary. The screen
+does not import a signer or execution helper and never calls `/swap/log`, so a
+preview cannot award Orange. The public wallet address is disclosed to Squid
+only after the user explicitly taps the preview button, consistent with the
+published privacy copy.
+
+The older Path C execution contract remains dormant and unchanged:
+
 ```
 Client                                     Backend                         Squid
   │                                            │                              │
@@ -170,6 +202,14 @@ Client                                     Backend                         Squid
   │ { ok: true, orangeAwarded: 10 }            │                              │
   │◀───────────────────────────────────────────┤                              │
 ```
+
+Do not infer execution readiness from the preview. The installed Squid SDK
+returns an outer `{ route }` envelope, while the legacy `/swap/quote` builder
+still reads `transactionRequest` from a flat route object. That dormant path
+therefore requires a separate reviewed migration plus address/chain/reward
+hardening before any signing UI is introduced. The preview path normalizes the
+outer envelope only inside its own display-only sanitizer and does not repair
+or activate the legacy execution endpoint.
 
 `getSquidQuote` requires the current device-account lease and its live
 validator. The returned quote is held in an in-memory capability map for that
@@ -235,6 +275,10 @@ mobile client if that client is used on both platforms.
   instead of claiming Base connectivity. Transaction features must remain
   unavailable unless the same runtime attestation reports `ready`.
 - **Quote returns `null`**: `getSquidQuote` swallows `ApiError` so the swap UI can show a graceful retry CTA.
+- **Preview unavailable**: the read-only screen maps fixed 400/401/409/429/502
+  categories to credential-free retry copy. It never renders the upstream
+  error body. An account/session change, app background, input change, or
+  20-second expiry aborts or discards the in-memory preview.
 
 ## Remaining screen migrations
 

@@ -66,6 +66,38 @@ export async function getSquidQuote({
 }
 
 // ---------------------------------------------------------------------------
+// Read-only quote preview — sanitized backend response, no executable tx.
+// ---------------------------------------------------------------------------
+export async function getSquidQuotePreview({
+  fromToken,
+  fromAmount,
+  toToken,
+  lease,
+  isCurrentLease,
+  signal,
+}) {
+  const operationLease = squidRouteLeases.requireCurrent(lease, isCurrentLease);
+  try {
+    const result = await api.swapQuotePreview(
+      {
+        fromToken,
+        fromAmount,
+        toToken,
+      },
+      {
+        signal,
+        expectedAuthUserId: operationLease.ownerUserId,
+      },
+    );
+    squidRouteLeases.requireCurrent(operationLease, isCurrentLease);
+    return result?.preview ? result : null;
+  } catch (error) {
+    squidRouteLeases.requireCurrent(operationLease, isCurrentLease);
+    throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Execute — sign + broadcast the backend's unsigned tx, then log for 🍊 reward
 //   quote:  exact in-memory result of getSquidQuote (clones are rejected)
 //   signer: ethers-compatible signer from Privy embedded wallet

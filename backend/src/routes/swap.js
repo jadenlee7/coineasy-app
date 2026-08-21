@@ -3,7 +3,8 @@
  *
  * Phase 1 (Path C):
  *   - Source/destination chain default = Base (chainId 8453).
- *   - GET /swap/quote returns route + unsigned tx for client to sign.
+ *   - POST /swap/quote returns route + unsigned tx for client to sign.
+ *   - POST /swap/quote-preview returns a read-only, account-bound estimate.
  *   - POST /swap/log records a successful swap (client posts tx hash);
  *     awards 🍊 Orange via internal earn() call.
  *
@@ -12,8 +13,15 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import { isAddress } from 'viem';
 import { requireAuth } from '../middleware/auth.js';
-import { getQuote, buildExecuteTx, PHASE_1_CHAIN_ID } from '../lib/squid.js';
+import {
+  buildExecuteTx,
+  getQuote,
+  getQuotePreview,
+  PHASE_1_CHAIN_ID,
+  QUOTE_PREVIEW_TOKEN_ADDRESSES,
+} from '../lib/squid.js';
 import { prisma } from '../lib/db.js';
 
 export const swapRouter = Router();
@@ -28,6 +36,67 @@ const quoteSchema = z.object({
   toAddress: z.string().optional(),
   slippage: z.number().optional(),
 });
+
+const MAX_UINT256 = (1n << 256n) - 1n;
+const quotePreviewTokenSchema = z.string()
+  .trim()
+  .transform((value) => value.toLowerCase())
+  .refine((value) => QUOTE_PREVIEW_TOKEN_ADDRESSES.includes(value), 'unsupported token');
+const quotePreviewAmountSchema = z.string()
+  .max(78)
+  .regex(/^[1-9][0-9]*$/u, 'must be a positive integer string')
+  .refine((value) => {
+    try {
+      return BigInt(value) <= MAX_UINT256;
+    } catch {
+      return false;
+    }
+  }, 'amount exceeds uint256');
+const quotePreviewSchema = z.object({
+  fromToken: quotePreviewTokenSchema,
+  toToken: quotePreviewTokenSchema,
+  fromAmount: quotePreviewAmountSchema,
+}).strict().refine((value) => value.fromToken !== value.toToken, {
+  message: 'token pair must be distinct',
+  path: ['toToken'],
+});
+
+export function createQuotePreviewHandler({ db = prisma, fetchPreview = getQuotePreview } = {}) {
+  return async function quotePreview(req, res) {
+    res.set('Cache-Control', 'no-store');
+    const parsed = quotePreviewSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'bad_input', details: parsed.error.issues });
+    }
+
+    try {
+      const user = await db.user.findUnique({
+        where: { privyDid: req.user.privyDid },
+        select: { walletAddress: true },
+      });
+      if (!user) return res.status(404).json({ error: 'user_not_found' });
+      if (!user.walletAddress || !isAddress(user.walletAddress, { strict: false })) {
+        return res.status(409).json({ error: 'wallet_not_ready' });
+      }
+
+      const preview = await fetchPreview({
+        walletAddress: user.walletAddress,
+        fromToken: parsed.data.fromToken,
+        toToken: parsed.data.toToken,
+        fromAmount: parsed.data.fromAmount,
+      });
+      return res.json({ preview, defaultChain: PHASE_1_CHAIN_ID });
+    } catch (err) {
+      req.log?.error({
+        errorType: err?.name || 'Error',
+        upstreamStatus: Number.isInteger(err?.response?.status) ? err.response.status : undefined,
+      }, 'squid quote preview failed');
+      return res.status(502).json({ error: 'squid_failed' });
+    }
+  };
+}
+
+swapRouter.post('/quote-preview', requireAuth, createQuotePreviewHandler());
 
 swapRouter.post('/quote', requireAuth, async (req, res) => {
   const parsed = quoteSchema.safeParse(req.body);
