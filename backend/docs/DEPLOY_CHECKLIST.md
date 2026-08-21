@@ -182,9 +182,14 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   Build 109 on 2026-08-20; the existing feed/profile session also remained
   intact across Apple sign-out/sign-in.
 - [ ] Verify the Squid quote read path without activating Path C flags. Build
-  109 ships the backend route and `getSquidQuote` helper but no screen calls the
-  helper, so physical-device quote-preview QA awaits a separately reviewed UI
-  implementation. Do not sign or broadcast a transaction for this check.
+  109 cannot exercise it. The next internal candidate adds a separate
+  authenticated `/swap/quote-preview` path and Orange-tab preview screen. The
+  backend must derive the stored wallet, fix both sides to Base 8453, accept
+  only the reviewed ETH/USDC pair, request `quoteOnly`, and return the
+  display-only allowlist without `transactionRequest`, calldata, calls, target,
+  quote ID, or route params. Do not sign or broadcast a transaction for this
+  check; leave this item open until the exact backend/mobile SHA passes device
+  QA.
 - [x] Deploy the worker service with `SEGMENTS_ENABLED=false` and confirm one
   dormant/start-stop log sequence without a public domain.
 - [x] Exercise `SIGTERM` for the web process and confirm graceful cleanup.

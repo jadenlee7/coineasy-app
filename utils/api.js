@@ -354,6 +354,14 @@ export const api = {
       expectedAuthUserId,
     })
   ),
+  swapQuotePreview: (params, { signal, expectedAuthUserId } = {}) => (
+    request('POST', '/swap/quote-preview', {
+      body: params,
+      signal,
+      boundAuth: true,
+      expectedAuthUserId,
+    })
+  ),
   swapLog: (entry, { signal, expectedAuthUserId } = {}) => (
     request('POST', '/swap/log', {
       body: entry,

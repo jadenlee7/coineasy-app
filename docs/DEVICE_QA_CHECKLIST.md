@@ -262,9 +262,12 @@ wallet private key, or login code.
   balance and history after refresh without spending or transferring assets.
 - [ ] Request one Squid quote and verify amount, source, destination, fee, and
   route render. Stop before signing or broadcasting a transaction. Build 109
-  cannot exercise this item because no shipped screen calls the existing
-  `getSquidQuote` client helper; this is an implementation gap, not a failed
-  quote.
+  cannot exercise this item. The next internal candidate adds Orange → Swap
+  quote preview through the separate sanitized `/swap/quote-preview` path, but
+  this remains unchecked until that exact backend/mobile SHA is deployed and
+  exercised on device. Confirm the screen contains no Sign, Confirm, Swap, or
+  Orange-award action and that the preview clears after 20 seconds, background,
+  token/amount change, logout, or account switch.
 - [x] Open `coineasyapp://` from Safari or Notes and confirm EasyGo foregrounds.
   The owner completed this on Build 109 on 2026-08-20.
 - [x] Sign out, sign in again, and confirm profile/feed/Orange data persist. The

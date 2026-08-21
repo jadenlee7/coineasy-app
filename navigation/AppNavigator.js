@@ -19,6 +19,7 @@ import OrangeNavigation from '../screens/Navigation/OrangeNavigation';
 import InviteFriendScreen from '../screens/Navigation/InviteFriendScreen';
 import Search from '../screens/Search';
 import Categories from '../screens/Categories';
+import SquidQuotePreview from '../screens/Navigation/SquidQuotePreview';
 
 // const Stack = createNativeStackNavigator();
 
@@ -44,6 +45,7 @@ const AppNavigator = ({ navigationRef, onNavigationReady }) => {
                     <Stack.Screen name="InviteFriendScreen" component={InviteFriendScreen} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="Search" component={Search} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="Categories" component={Categories} options={{ headerShown: false, gestureEnabled: true }} />
+                    <Stack.Screen name="SquidQuotePreview" component={SquidQuotePreview} options={{ headerShown: false, gestureEnabled: true }} />
                 </Stack.Navigator>
             </NavigationContainer>
 
