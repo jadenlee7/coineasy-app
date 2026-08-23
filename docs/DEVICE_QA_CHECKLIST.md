@@ -260,14 +260,17 @@ wallet private key, or login code.
   a refresh. Claim only a staging-safe idempotent reward already exposed by the
   UI; do not spend or transfer real assets. Build 109 returned the expected
   balance and history after refresh without spending or transferring assets.
-- [ ] Request one Squid quote and verify amount, source, destination, fee, and
-  route render. Stop before signing or broadcasting a transaction. Build 109
-  cannot exercise this item. The next internal candidate adds Orange → Swap
-  quote preview through the separate sanitized `/swap/quote-preview` path, but
-  this remains unchecked until that exact backend/mobile SHA is deployed and
-  exercised on device. Confirm the screen contains no Sign, Confirm, Swap, or
-  Orange-award action and that the preview clears after 20 seconds, background,
-  token/amount change, logout, or account switch.
+- [x] Request one Squid quote and verify amount, source, destination, fee, and
+  route render. Stop before signing or broadcasting a transaction. On
+  2026-08-22, the owner used internal Build 110 on the physical iPhone 16 Pro
+  Max to request one `0.001 ETH → USDC` Base preview. The amount, source,
+  destination, minimum received, fees, duration, and route rendered; the screen
+  contained no Sign, Confirm, Swap, wallet prompt, or Orange-award action, and
+  the preview cleared after 20 seconds.
+- [ ] Confirm the preview also clears after backgrounding, token/amount change,
+  logout, and account switch. Build 110 passed the 20-second expiry check, but
+  these four specific lifecycle invalidation variants remain separate device
+  checks.
 - [x] Open `coineasyapp://` from Safari or Notes and confirm EasyGo foregrounds.
   The owner completed this on Build 109 on 2026-08-20.
 - [x] Sign out, sign in again, and confirm profile/feed/Orange data persist. The
@@ -670,6 +673,42 @@ wallet private key, or login code.
       recovery screen, Apple login loop, wallet mismatch, missing owner state,
       or broken warm/cold profile link was reproduced. Build 109 remains
       internal-only pending any separately approved release expansion.
+
+## Build 110 display-only Squid quote-preview candidate
+
+- [x] Merge the display-only Base ETH/USDC quote preview through PR #54 and the
+      Build 110 release guard through PR #55. Both PRs passed Backend and Mobile
+      CI before merge. Internal-only iOS `2.0.3 (110)` was built from exact
+      master commit `50517c31ab194cf26b8bd7744e0f2a98524ecced` with EAS build
+      `a831a88f-0dad-4599-8d10-5e99fbd2c94e`, which finished without an error.
+- [x] Complete EAS submission
+      `c4ca4861-436f-4717-8d23-c1bd647bb753` without an error. App Store Connect
+      reports Build 110 as `VALID` and `IN_BETA_TESTING`, unexpired, with
+      external state `NOT_APPLICABLE`. The Internal Only export was not added
+      to an external TestFlight group or App Store review.
+- [x] On 2026-08-22, the owner installed Build 110 from internal TestFlight on
+      the physical iPhone 16 Pro Max, opened Orange → Swap quote preview, and
+      requested one `0.001 ETH → USDC` Base quote. The expected amount, minimum
+      received, fees, duration, slippage, and route rendered successfully.
+- [x] Confirm the preview remains display-only. There was no Sign, Confirm, or
+      Swap control, wallet prompt, signing request, transaction broadcast, or
+      Orange-award action, and the preview cleared after 20 seconds.
+- [x] Correlate the device check with Railway staging. At 2026-08-22 20:32 EDT,
+      deployment `1ace84df-3625-46a0-866f-bfa633f8af0e` returned HTTP 200 for
+      exactly one `POST /swap/quote-preview` in about 1.75 seconds with no
+      upstream error. The same 30-minute audit window contained zero
+      `POST /swap/quote`, zero `POST /swap/log`, zero HTTP 5xx responses, and no
+      Squid/auth/unhandled error or restart signal. A privacy-safe scan found no
+      bearer, Privy DID, or full wallet address in those logs.
+- [x] Re-run the focused release checks: the mobile preview/Internal Only suite
+      passed 6/6 and the backend preview suite passed 18/18. Railway staging
+      deployment `1ace84df-3625-46a0-866f-bfa633f8af0e` remains `SUCCESS` at
+      backend release `46e6b341e607325cf0dac2ec1fed80ada9543ad8`; `/health`,
+      `/ready`, and `/social/status` each returned HTTP 200.
+- [ ] Exercise the remaining preview invalidation variants independently:
+      background/foreground, token or amount change, logout, and account switch.
+      Do not use this follow-up to enable signing, broadcast, `/swap/log`, or an
+      Orange reward.
 
 ## Dormant recent Apple reauthentication candidate
 

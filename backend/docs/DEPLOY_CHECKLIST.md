@@ -181,15 +181,19 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   follow/unfollow, notification-screen, and refreshed Orange checks on internal
   Build 109 on 2026-08-20; the existing feed/profile session also remained
   intact across Apple sign-out/sign-in.
-- [ ] Verify the Squid quote read path without activating Path C flags. Build
-  109 cannot exercise it. The next internal candidate adds a separate
-  authenticated `/swap/quote-preview` path and Orange-tab preview screen. The
-  backend must derive the stored wallet, fix both sides to Base 8453, accept
-  only the reviewed ETH/USDC pair, request `quoteOnly`, and return the
-  display-only allowlist without `transactionRequest`, calldata, calls, target,
-  quote ID, or route params. Do not sign or broadcast a transaction for this
-  check; leave this item open until the exact backend/mobile SHA passes device
-  QA.
+- [x] Verify the Squid quote read path without activating Path C flags. On
+  2026-08-22, internal Build 110 at exact mobile SHA
+  `50517c31ab194cf26b8bd7744e0f2a98524ecced` requested one `0.001 ETH → USDC`
+  preview against staging backend release
+  `46e6b341e607325cf0dac2ec1fed80ada9543ad8`. Railway deployment
+  `1ace84df-3625-46a0-866f-bfa633f8af0e` returned HTTP 200 from
+  `POST /swap/quote-preview` in about 1.75 seconds with no upstream error. The
+  owner confirmed the Base amount, source, destination, minimum, fees,
+  duration, slippage, and route rendered with no signing or execution control
+  and expired after 20 seconds. The correlated 30-minute audit found zero
+  `POST /swap/quote`, zero `POST /swap/log`, zero HTTP 5xx responses, and no
+  Squid/auth/unhandled error or restart signal; no bearer, Privy DID, or full
+  wallet address appeared in the checked logs.
 - [x] Deploy the worker service with `SEGMENTS_ENABLED=false` and confirm one
   dormant/start-stop log sequence without a public domain.
 - [x] Exercise `SIGTERM` for the web process and confirm graceful cleanup.
