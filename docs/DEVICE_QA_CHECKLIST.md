@@ -683,16 +683,19 @@ wallet private key, or login code.
       `a831a88f-0dad-4599-8d10-5e99fbd2c94e`, which finished without an error.
 - [x] Complete EAS submission
       `c4ca4861-436f-4717-8d23-c1bd647bb753` without an error. App Store Connect
-      reports Build 110 as `VALID` and `IN_BETA_TESTING`, unexpired, with
-      external state `NOT_APPLICABLE`. The Internal Only export was not added
-      to an external TestFlight group or App Store review.
+      reports Build 110 with `processingState=VALID`,
+      `internalState=IN_BETA_TESTING`, `externalState=NOT_APPLICABLE`, and
+      `expired=false`. The archive's verified `TFInternalTestingOnly=true`
+      boundary was not expanded to an external TestFlight group or App Store
+      review.
 - [x] On 2026-08-22, the owner installed Build 110 from internal TestFlight on
       the physical iPhone 16 Pro Max, opened Orange → Swap quote preview, and
       requested one `0.001 ETH → USDC` Base quote. The expected amount, minimum
       received, fees, duration, slippage, and route rendered successfully.
 - [x] Confirm the preview remains display-only. There was no Sign, Confirm, or
-      Swap control, wallet prompt, signing request, transaction broadcast, or
-      Orange-award action, and the preview cleared after 20 seconds.
+      Swap control, wallet prompt, signing request, or Orange-award action. No
+      transaction was initiated by this screen, and the preview cleared after
+      20 seconds.
 - [x] Correlate the device check with Railway staging. At 2026-08-22 20:32 EDT,
       deployment `1ace84df-3625-46a0-866f-bfa633f8af0e` returned HTTP 200 for
       exactly one `POST /swap/quote-preview` in about 1.75 seconds with no
@@ -703,8 +706,9 @@ wallet private key, or login code.
 - [x] Re-run the focused release checks: the mobile preview/Internal Only suite
       passed 6/6 and the backend preview suite passed 18/18. Railway staging
       deployment `1ace84df-3625-46a0-866f-bfa633f8af0e` remains `SUCCESS` at
-      backend release `46e6b341e607325cf0dac2ec1fed80ada9543ad8`; `/health`,
-      `/ready`, and `/social/status` each returned HTTP 200.
+      backend release `46e6b341e607325cf0dac2ec1fed80ada9543ad8`. A post-device
+      check on 2026-08-22 confirmed `/health`, `/ready`, and `/social/status`
+      each returned HTTP 200.
 - [ ] Exercise the remaining preview invalidation variants independently:
       background/foreground, token or amount change, logout, and account switch.
       Do not use this follow-up to enable signing, broadcast, `/swap/log`, or an
