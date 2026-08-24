@@ -72,14 +72,71 @@ does not make a command safe when its response contains secret-bearing fields.
 
 | Priority | Owner role | Status | Due / next review | Action | Completion evidence |
 | --- | --- | --- | --- | --- | --- |
-| P0 | Incident commander and platform owner | Open | Before any credential rotation | Confirm transcript ACL, sharing, retention, and download/export history | Secret-free reviewer receipt |
-| P0 | Platform owner | Blocked on ACL review | Immediately after ACL review | Restrict or safely dispose of retained copies where platform controls permit | Platform receipt or documented limitation |
-| P1 | Security reviewer plus provider/database owners | Open | Before credential disposition | Review provider, database, and application audit evidence and record coverage limits | Secret-free audit conclusion and event IDs |
+| P0 | Incident commander and platform owner | Partial — local metadata reviewed; platform history unobserved | Before any credential rotation | Confirm transcript ACL, sharing, retention, and download/export history | Secret-free reviewer receipt |
+| P0 | Platform owner | Partial — local transcript restricted; platform copies pending | Immediately after ACL review | Restrict or safely dispose of retained copies where platform controls permit | Platform receipt or documented limitation |
+| P1 | Security reviewer plus provider/database owners | Partial — Railway/app window reviewed; remaining surfaces unobserved | Before credential disposition | Review provider, database, and application audit evidence and record coverage limits | Secret-free audit conclusion and event IDs |
 | P1 | Credential owners | Blocked on ACL and audit review | Before any rotation approval | Inventory affected credential categories in a restricted channel | Owner-approved rotate/retain decision for each category |
 | P1 | Service owners and incident commander | Blocked on inventory and separate execution approval | Approved maintenance window | Rotate independently revocable authentication and database credentials | New deployment checks plus old-credential revocation receipts |
 | P1 | Backend/data owner plus security reviewer | Planned | Separate code release before either key changes | Design versioned multi-key migration for account-deletion HMAC and encryption keys | Approved code/data migration plan, rollback baseline, and tests |
 | P1 | Backend operations owner | Planned | Before the next Railway metadata inspection | Add a metadata-only Railway inspection wrapper that cannot serialize variable values | Tests proving value fields cannot be emitted |
-| P2 | PR author and reviewer | Complete | 2026-08-25 | Run a secret-safe scan over repository changes and review summaries | Count-only result with no secret re-output |
+| P2 | PR author and reviewer | Partial — working document/body scan complete; immutable PR scan pending | Before merge | Run a secret-safe scan over the changed incident document and final Draft PR material | Final commit and posted PR body count-only receipt |
+
+## Phase 0 secret-free audit receipt (2026-08-25)
+
+The locally retained transcript was inspected by metadata only; its contents
+were not opened, read, searched, or copied. Its POSIX mode changed from `0644`
+to owner-only `0600`, with ownership unchanged. The metadata inspection reported
+no extended ACL entries. Server-side task ACLs, shared-link history,
+download/export history, retention, backups, and imported copies remain
+unobserved and require the platform-owner review above.
+
+The repository is a public fork, so repository and PR material was scanned
+separately from the restricted incident evidence. At
+`2026-08-24T22:03:19Z`, a count-only scan of the working incident document and
+proposed Draft PR body found zero matches for private-key markers,
+bearer-token shapes, PostgreSQL URIs, Privy subjects, EVM addresses, JWT shapes,
+email addresses, or sensitive assignments. No transcript path, session
+identifier, credential value, fingerprint, raw log, request identifier, IP
+address, user agent, email address, Privy subject, or wallet address is retained
+in this receipt.
+
+The Railway staging web audit used count-only filters over an approximately
+two-hour window (`2026-08-24T19:52Z`–`21:52Z`). This deliberately broad window
+covered the known investigation period because exact T0 was not recorded. Raw
+log bodies were not emitted into the receipt. The reviewed deployment was
+`10ba0998-ca2d-429b-8a94-527b4db47ab0`, and nine HTTP request events were in the
+window.
+
+| Reviewed Railway/app signal | Count in stated window |
+| --- | ---: |
+| HTTP 5xx responses | 0 |
+| `POST /orange/earn` requests | 0 |
+| 401 responses on `/auth` or `/me` routes | 0 |
+| 503 responses on `/auth` or `/me` routes | 0 |
+| `/ready` 5xx responses | 0 |
+| Application error-level events | 0 |
+| Authentication failure events | 0 |
+| Privy lookup-unavailable events during auth sync | 0 |
+| Database readiness failures | 0 |
+| Unhandled request errors | 0 |
+| Fatal-stop events | 0 |
+| Backend start events | 1 |
+| Backend stop or stopping events | 0 |
+
+A count-only scanner over the same application-log window found zero matches
+for private-key markers, bearer-token shapes, PostgreSQL URIs, Privy subjects,
+EVM addresses, JWT shapes, email addresses, or sensitive field names. These
+zeros apply only to the stated Railway/application surfaces and time window;
+they are not evidence about Privy provider logs, PostgreSQL audit logs, the
+Codex/OpenAI platform, or activity outside the window. Those surfaces, the
+exact T0, and the credential-category inventory remain unobserved.
+
+Apart from the local POSIX permission hardening above, no credential was
+rotated, revoked, or reissued, and no provider, database, Railway-variable,
+deployment, deletion, archive, or retention mutation was performed as part of
+Phase 0. The incident therefore remains open at provisional SEV4 / security P1
+pending the outstanding platform and provider reviews and separately approved
+remediation.
 
 ## Owner communication
 
