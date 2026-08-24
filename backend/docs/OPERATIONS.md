@@ -17,15 +17,21 @@ The verified target is project `easygo-app-staging`
 
 Postgres is running with a ready persistent volume and both migrations applied.
 Web is deployed from the reviewed staging branch and serves the public staging
-domain with `/ready` healthy. Worker is deployed from the same revision and
-exits successfully while `SEGMENTS_ENABLED=false`. The project's default
-`production` environment remains empty; do not add services or variables there
-during staging work.
+domain with `/ready` healthy. Web and worker revisions are deployed and rolled
+back independently. The current PR #58 record is web only; the unchanged
+worker remains on its prior reviewed revision and exits successfully while
+`SEGMENTS_ENABLED=false`. The project's default `production` environment
+remains empty; do not add services or variables there during staging work.
 
 Required staging configuration is present and the value-safe deployed preflight
 passes with zero failures. Optional Sentry, Better Stack, and Telegram values
 remain intentionally unset pending vendor/privacy approval. Never record secret
-values in this document or CLI output.
+values in this document or CLI output. Treat tool transcripts as operational
+logs: do not call bulk environment/configuration/variable endpoints whose
+response schema may include values. Use a fixed metadata allowlist or a
+value-safe validator such as `preflight:staging`. If credential material is
+printed, stop querying immediately and follow
+[`SECRET_ROTATION_RUNBOOK.md`](./SECRET_ROTATION_RUNBOOK.md).
 
 ## Process topology
 
@@ -58,6 +64,12 @@ idempotent.
 - `NODE_ENV=production` and `LOG_LEVEL=info`.
 - `READINESS_TIMEOUT_MS=2000` for the web service.
 - `SHUTDOWN_TIMEOUT_MS=10000` for the web service.
+
+For every completed web rollout, bind `RELEASE_SHA` to the Railway deployment
+ID, immutable image digest, and release archive SHA-256 in
+[`DEPLOY_CHECKLIST.md`](./DEPLOY_CHECKLIST.md). Promote it to the rollback
+baseline below only after exact-release smoke verification and the required
+stabilization window.
 
 The existing database, Privy, provider, consent, and phase configuration still
 applies. S9 never applies a migration during web/worker startup.
@@ -199,27 +211,46 @@ logs are expected while the S5 flag is false and must not alert.
 
 ## Incident triage
 
-1. Compare `/health` and `/ready` to separate process from database failure.
-2. Search by release, service, and request ID. Do not request a user's token,
+1. If an operational command prints credential material, stop the query, do
+   not copy the value, preserve only a restricted incident reference, and
+   begin the transcript-access and credential-disposition workflow in
+   [`SECRET_ROTATION_RUNBOOK.md`](./SECRET_ROTATION_RUNBOOK.md).
+2. Compare `/health` and `/ready` to separate process from database failure.
+3. Search by release, service, and request ID. Do not request a user's token,
    SIWE signature, or private wallet/account data for debugging.
-3. Check the database and relevant provider status from their official status
+4. Check the database and relevant provider status from their official status
    surfaces.
-4. Disable only the affected optional feature flag when possible. Existing
+5. Disable only the affected optional feature flag when possible. Existing
    defaults keep S4–S7 off and S8 social mode active.
-5. Record the first bad release, error group, scope, and recovery time.
+6. Record the first bad release, error group, scope, and recovery time.
 
 ## Rollback
 
-Roll back web and worker to the last known-good release independently. Once the
-legacy swap execution brake is deployed, every eligible web rollback target
-must also contain `SWAP_EXECUTION_READY=false`; use a forward fix instead of a
-pre-gate revision that would reopen `/swap/quote` or `/swap/log`. If only
-telemetry is unhealthy, remove its credentials and restart; core API behavior
-remains available. If the worker is unhealthy, set `SEGMENTS_ENABLED=false` or
-scale that service to zero without stopping the web API. Do not down-migrate
-the additive S2 schema during incident response; the previous app can ignore
-the new tables/nullable columns. Never use `npm audit fix --force` during
-incident response.
+Roll back web and worker independently. The legacy swap execution brake is
+deployed, so every eligible web target must contain
+`SWAP_EXECUTION_READY=false`; never choose a pre-gate revision that would
+reopen `/swap/quote` or `/swap/log`. If only telemetry is unhealthy, remove its
+credentials and restart; core API behavior remains available. If the worker is
+unhealthy, set `SEGMENTS_ENABLED=false` or scale that service to zero without
+stopping the web API. Do not down-migrate the additive S2 schema during
+incident response; the previous app can ignore the new tables/nullable
+columns. Never use `npm audit fix --force` during incident response.
+
+### Minimum safe web rollback baseline
+
+| Field | Verified value |
+| --- | --- |
+| Effective after | `2026-08-24T20:31:56Z` |
+| Release SHA | `0600f24d7b706aefb1a5215be559b7640d36a3e2` |
+| Railway deployment | `10ba0998-ca2d-429b-8a94-527b4db47ab0` |
+| Image digest | `sha256:3a04c35286a2b51fde7009edfbfa4f86f78fcf98eb1f44872434b48a9035bc01` |
+| Release archive SHA-256 | `2c4319485d27b2af7728c590f6daccf75af2b5b35c87efb085e8b5daf6d0416a` |
+| Scope | Web only; worker and Postgres unchanged |
+| Evidence | [PR #58 staging rollout](./DEPLOY_CHECKLIST.md#pr-58-railway-staging-web-rollout-2026-08-24-utc) |
+
+Do not roll the web service below this baseline. If it is unhealthy and no
+newer verified gate-containing target exists, keep the gate closed and
+forward-fix.
 
 ## Pre-production checklist
 
