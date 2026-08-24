@@ -267,10 +267,10 @@ wallet private key, or login code.
   destination, minimum received, fees, duration, and route rendered; the screen
   contained no Sign, Confirm, Swap, wallet prompt, or Orange-award action, and
   the preview cleared after 20 seconds.
-- [ ] Confirm the preview also clears after backgrounding, token/amount change,
-  logout, and account switch. Build 110 passed the 20-second expiry check, but
-  these four specific lifecycle invalidation variants remain separate device
-  checks.
+- [x] Confirm the preview clears after backgrounding and token/amount changes,
+  and is not restored after same-account logout/relogin or an account switch.
+  The owner completed all five Build 110 device checks independently on
+  2026-08-24; see the Build 110 candidate section below for the evidence.
 - [x] Open `coineasyapp://` from Safari or Notes and confirm EasyGo foregrounds.
   The owner completed this on Build 109 on 2026-08-20.
 - [x] Sign out, sign in again, and confirm profile/feed/Orange data persist. The
@@ -709,10 +709,38 @@ wallet private key, or login code.
       backend release `46e6b341e607325cf0dac2ec1fed80ada9543ad8`. A post-device
       check on 2026-08-22 confirmed `/health`, `/ready`, and `/social/status`
       each returned HTTP 200.
-- [ ] Exercise the remaining preview invalidation variants independently:
-      background/foreground, token or amount change, logout, and account switch.
-      Do not use this follow-up to enable signing, broadcast, `/swap/log`, or an
-      Orange reward.
+- [x] On 2026-08-24, independently complete the background/foreground,
+      amount-change, and token-pair-change checks on Build 110 on the physical
+      iPhone 16 Pro Max. Each existing result cleared. The amount test retained
+      the newly entered valid amount without showing an automatic replacement
+      result; switching from `ETH → USDC` to `USDC → ETH` reset the amount and
+      required new input before another preview.
+- [x] After creating a fresh Apple-session quote, sign out through Settings and
+      sign back into the same existing Apple account. The profile, feed, Orange
+      state, connected Base wallet, and Base-chain state returned without a
+      login loop or wallet mismatch. Reopening Swap quote preview showed the
+      default pair, an empty amount, and no result from the prior session.
+- [x] After creating another Apple-session quote, switch from the existing
+      Apple account to the existing Google account and back to Apple through
+      Use another account. Each session showed only its own profile, masked
+      wallet, and Orange state; reopening the preview showed no prior account's
+      result, and the original Apple state returned. No deleted-account,
+      duplicate-account, wallet-mismatch, signing, broadcast, `/swap/log`, or
+      Orange-claim path was used.
+- [x] Correlate each lifecycle checkpoint with bounded Railway staging logs
+      from deployment `1ace84df-3625-46a0-866f-bfa633f8af0e`. The five accepted
+      precondition quotes for background, amount, the clean token-pair rerun,
+      same-account relogin, and account switch each returned HTTP 200 in
+      425–517 ms. The first token-pair run was not accepted as evidence because
+      its window contained two quote requests; a clean rerun showed exactly one
+      request and no automatic follow-up. All five bounded audits showed zero
+      `POST /swap/quote`, `POST /swap/log`, HTTP 5xx responses,
+      auth/Squid/unhandled errors, restart signals, bearer tokens, Privy DIDs,
+      or full wallet addresses. The same-account and account-switch windows
+      additionally showed zero HTTP 401 responses and zero mutating requests to
+      Orange-claim or account-deletion endpoints. The final Apple-return window
+      recorded one authenticated own-profile `PUT /profiles/me` with HTTP 200;
+      the owner confirmed the expected Apple profile and no Google state.
 
 ## Dormant recent Apple reauthentication candidate
 
