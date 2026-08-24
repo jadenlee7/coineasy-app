@@ -7,6 +7,7 @@ import {
   QUOTE_PREVIEW_SLIPPAGE,
   SQUID_NATIVE_ETH_ADDRESS,
 } from '../src/lib/squid.js';
+import { requireSwapExecution } from '../src/lib/swap-execution-gates.js';
 import { createQuotePreviewHandler, swapRouter } from '../src/routes/swap.js';
 
 const WALLET_ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
@@ -242,7 +243,7 @@ test('Squid preview rejects an envelope or route that is not bound to the reques
   );
 });
 
-test('quote-preview route is authenticated and leaves the execution and log surfaces intact', () => {
+test('quote-preview stays authenticated while legacy execution routes fail closed before auth', () => {
   const routes = swapRouter.stack
     .filter((layer) => layer.route)
     .map((layer) => ({
@@ -253,9 +254,14 @@ test('quote-preview route is authenticated and leaves the execution and log surf
 
   assert.deepEqual(routes, [
     { path: '/quote-preview', methods: ['POST'], middlewareCount: 2 },
-    { path: '/quote', methods: ['POST'], middlewareCount: 2 },
-    { path: '/log', methods: ['POST'], middlewareCount: 2 },
+    { path: '/quote', methods: ['POST'], middlewareCount: 3 },
+    { path: '/log', methods: ['POST'], middlewareCount: 3 },
   ]);
+
+  for (const path of ['/quote', '/log']) {
+    const route = swapRouter.stack.find((layer) => layer.route?.path === path).route;
+    assert.equal(route.stack[0].handle, requireSwapExecution);
+  }
 });
 
 test('quote-preview derives both addresses from the authenticated stored wallet', async () => {

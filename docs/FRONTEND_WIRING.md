@@ -33,8 +33,8 @@ See `EASYGO_BUILD_PLAN.md` §11 (data flow), §12 (backend endpoints), §13.2 (S
 | Check-in/activity/ad cards | `POST /orange/claims/{daily-checkin,daily-activity,ad-reward}` | Validate and idempotently record recurring rewards. |
 | Course quiz compatibility fallback | `POST /orange/claims/course-quiz` | Used only while the S6 route is hidden; returns `410` after `QUESTS_ENABLED=true`. |
 | Orange → Squid Quote Preview | `POST /swap/quote-preview` | Read-only Base ETH ↔ USDC estimate. The server derives the authenticated wallet and returns a display-only projection with no executable transaction data. |
-| Dormant `getSquidQuote(...)` | `POST /swap/quote` | Legacy execution contract only; it is not called by Quote Preview and must remain inactive pending the Squid SDK response-envelope and execution/reward audit. |
-| `executeSquidRoute(...)` | `POST /swap/log` | After Privy embedded wallet broadcasts the tx, log txHash → backend awards +10 🍊. |
+| Dormant `getSquidQuote(...)` | `POST /swap/quote` | Legacy execution contract; this server revision returns `404` behind a compile-time and runtime execution gate. |
+| Dormant `executeSquidRoute(...)` | `POST /swap/log` | Legacy reward contract; this server revision returns `404` before auth or database access. |
 | `useFeed('home')` / `usePosts()` | `GET /posts` | Read the global social feed with cursor pagination. |
 | `useFeed('category', { tag })` | `GET /posts?tag=...` | Read a hashtag category with server-side cursor filtering. |
 | `useFeed('search', { query })` | `GET /posts?q=...` | Search root-post bodies without breaking pagination. |
@@ -181,7 +181,8 @@ preview cannot award Orange. The public wallet address is disclosed to Squid
 only after the user explicitly taps the preview button, consistent with the
 published privacy copy.
 
-The older Path C execution contract remains dormant and unchanged:
+The older Path C execution contract remains unreachable in this server
+revision. This diagram describes the future contract only:
 
 ```
 Client                                     Backend                         Squid
@@ -210,6 +211,12 @@ therefore requires a separate reviewed migration plus address/chain/reward
 hardening before any signing UI is introduced. The preview path normalizes the
 outer envelope only inside its own display-only sanitizer and does not repair
 or activate the legacy execution endpoint.
+This server revision fail-closes both legacy endpoints with
+`SWAP_EXECUTION_READY=false` plus the default-off `SWAP_EXECUTION_ENABLED`
+runtime kill switch. An environment change cannot expose them until a
+separately reviewed release changes the compile-time brake after execution and
+reward verification are implemented. Railway deployment and runtime 404
+evidence remain separate checklist gates.
 
 `getSquidQuote` requires the current device-account lease and its live
 validator. The returned quote is held in an in-memory capability map for that

@@ -3,10 +3,9 @@
  *
  * Phase 1 (Path C):
  *   - Source/destination chain default = Base (chainId 8453).
- *   - POST /swap/quote returns route + unsigned tx for client to sign.
  *   - POST /swap/quote-preview returns a read-only, account-bound estimate.
- *   - POST /swap/log records a successful swap (client posts tx hash);
- *     awards 🍊 Orange via internal earn() call.
+ *   - POST /swap/quote and POST /swap/log are dormant behind independent
+ *     compile-time and runtime execution gates.
  *
  * Phase 2 (PHASE.EASYCHAIN_ENABLED): chainIds become configurable.
  */
@@ -23,6 +22,7 @@ import {
   QUOTE_PREVIEW_TOKEN_ADDRESSES,
 } from '../lib/squid.js';
 import { prisma } from '../lib/db.js';
+import { requireSwapExecution } from '../lib/swap-execution-gates.js';
 
 export const swapRouter = Router();
 
@@ -98,7 +98,7 @@ export function createQuotePreviewHandler({ db = prisma, fetchPreview = getQuote
 
 swapRouter.post('/quote-preview', requireAuth, createQuotePreviewHandler());
 
-swapRouter.post('/quote', requireAuth, async (req, res) => {
+swapRouter.post('/quote', requireSwapExecution, requireAuth, async (req, res) => {
   const parsed = quoteSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'bad_input', details: parsed.error.issues });
   try {
@@ -125,7 +125,7 @@ const logSchema = z.object({
 
 const SWAP_REWARD_ORANGE = 10;
 
-swapRouter.post('/log', requireAuth, async (req, res) => {
+swapRouter.post('/log', requireSwapExecution, requireAuth, async (req, res) => {
   const parsed = logSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'bad_input', details: parsed.error.issues });
   const user = await prisma.user.findUnique({ where: { privyDid: req.user.privyDid } });

@@ -12,6 +12,7 @@ import {
   LEGAL_DOCUMENT_VERSION,
 } from '../src/lib/legal.js';
 import { PUSH_TOKEN_REGISTRATION_READY } from '../src/lib/push-token-gates.js';
+import { SWAP_EXECUTION_READY } from '../src/lib/swap-execution-gates.js';
 
 const BOOLEAN_FLAGS = [
   'SIWE_AUTH_ENABLED',
@@ -24,6 +25,7 @@ const BOOLEAN_FLAGS = [
   'ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED',
   'ACCOUNT_DELETION_RECENT_AUTH_ENABLED',
   'PUSH_TOKEN_REGISTRATION_ENABLED',
+  'SWAP_EXECUTION_ENABLED',
 ];
 
 function clean(value) {
@@ -158,6 +160,14 @@ export function validateDeployEnvironment(
       PUSH_TOKEN_REGISTRATION_READY,
       'push-token registration approval',
       'PUSH_TOKEN_REGISTRATION_ENABLED cannot be true until the matching privacy version and device QA are approved',
+    );
+  }
+
+  if (enabled(env, 'SWAP_EXECUTION_ENABLED')) {
+    add(
+      SWAP_EXECUTION_READY,
+      'swap execution approval',
+      'SWAP_EXECUTION_ENABLED cannot be true until execution and reward verification are approved',
     );
   }
 
