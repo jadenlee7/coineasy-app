@@ -21,6 +21,7 @@ function stagingEnv(overrides = {}) {
     SEGMENTS_ENABLED: 'false',
     QUESTS_ENABLED: 'false',
     ADVERTISER_ADMIN_ENABLED: 'false',
+    SWAP_EXECUTION_ENABLED: 'false',
     LEGACY_SOCIAL_MODE: 'active',
     SENTRY_DSN: 'https://public@example.ingest.sentry.io/1',
     BETTER_STACK_SOURCE_TOKEN: 'source-token',
@@ -90,6 +91,24 @@ test('push-token registration cannot activate before a matching privacy release'
   }), { target: 'staging' });
   assert.equal(
     result.errors.some((item) => item.name === 'push-token registration approval'),
+    true,
+  );
+});
+
+test('legacy swap execution cannot activate before execution and reward verification', () => {
+  const result = validateDeployEnvironment(stagingEnv({
+    SWAP_EXECUTION_ENABLED: 'true',
+  }), { target: 'staging' });
+  assert.equal(
+    result.errors.some((item) => item.name === 'swap execution approval'),
+    true,
+  );
+
+  const malformed = validateDeployEnvironment(stagingEnv({
+    SWAP_EXECUTION_ENABLED: 'yes',
+  }), { target: 'staging' });
+  assert.equal(
+    malformed.errors.some((item) => item.name === 'SWAP_EXECUTION_ENABLED syntax'),
     true,
   );
 });

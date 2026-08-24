@@ -210,7 +210,10 @@ logs are expected while the S5 flag is false and must not alert.
 
 ## Rollback
 
-Roll back web and worker to the last known-good release independently. If only
+Roll back web and worker to the last known-good release independently. Once the
+legacy swap execution brake is deployed, every eligible web rollback target
+must also contain `SWAP_EXECUTION_READY=false`; use a forward fix instead of a
+pre-gate revision that would reopen `/swap/quote` or `/swap/log`. If only
 telemetry is unhealthy, remove its credentials and restart; core API behavior
 remains available. If the worker is unhealthy, set `SEGMENTS_ENABLED=false` or
 scale that service to zero without stopping the web API. Do not down-migrate

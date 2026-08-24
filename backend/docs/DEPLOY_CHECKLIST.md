@@ -143,8 +143,12 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   both web and worker services.
 - [x] Re-run `npm run prisma:status`; verify both migrations are applied.
 - [x] Keep `SIWE_AUTH_ENABLED`, `JUSTANAME_ENABLED`, `SEGMENTS_ENABLED`,
-  `QUESTS_ENABLED`, and `ADVERTISER_ADMIN_ENABLED` false for the first deploy.
+      `QUESTS_ENABLED`, and `ADVERTISER_ADMIN_ENABLED` false for the first deploy.
 - [x] Keep `LEGACY_SOCIAL_MODE=active`.
+- [ ] Keep `SWAP_EXECUTION_ENABLED=false` or absent for the next deployment.
+      The current code candidate adds an independent compile-time brake, so an
+      environment change cannot expose legacy `/swap/quote` or `/swap/log`;
+      `/swap/quote-preview` remains available.
 - [ ] Verify published privacy/terms version equals `EASYGO_CONSENT_VERSION`.
   The linked privacy PDF is an old ThePivot policy effective 2023-08-26, the
   linked terms PDF has no explicit effective date, and the deployed consent
@@ -245,7 +249,9 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   Its last known-good web and worker deployments are
   `97b8294a-767e-4d32-a7f9-df77f1387c83` and
   `e5017999-52ee-4880-931d-d7a641f26e14`, respectively. Extended monitoring
-  is not claimed by this immediate smoke record.
+  is not claimed by this immediate smoke record. This historical web rollback
+  predates the legacy swap execution brake and becomes ineligible after the
+  first gate-containing web release is deployed.
 
 ## Rollback Triggers
 
@@ -262,9 +268,17 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 ## Rollback Procedure
 
 1. Set newly enabled feature flags back to false; keep social mode active.
-2. Roll web and worker back independently to the previous known-good SHA.
+2. Roll web and worker back independently to a previous known-good SHA. After
+   the legacy swap execution brake is deployed, the web target must contain
+   `SWAP_EXECUTION_READY=false`; never roll web back to an older revision that
+   reopens `/swap/quote` or `/swap/log`. If no gate-containing target is
+   healthy, keep the gate-containing release in place and forward-fix.
 3. If only the worker is affected, scale it to zero without stopping the API.
 4. Do not down-migrate during incident response. The Path C migration only adds
    nullable/defaulted columns, enums, tables, indexes, and foreign keys, so the
    previous app can run while those additions remain.
 5. Re-run the read-only smoke test and preserve logs/error IDs for review.
+
+Before closing the first gate rollout, record its exact merge SHA and Railway
+deployment as the minimum safe web rollback baseline, replacing the historical
+pre-gate baseline above.

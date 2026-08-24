@@ -141,8 +141,9 @@ default.
 | POST | `/orange/claims/ad-reward` | Bearer | Claim one 10 🍊 reward per UTC 8-hour slot |
 | POST | `/orange/claims/course-quiz` | Bearer | Idempotent allow-listed quiz reward |
 | POST | `/orange/earn` | `x-admin-secret` | Server-trusted grant |
-| POST | `/swap/quote` | Bearer | Squid route + unsigned tx (Base) |
-| POST | `/swap/log` | Bearer | Record swap, award 10 🍊 |
+| POST | `/swap/quote-preview` | Bearer | Display-only Base ETH/USDC estimate with no executable data |
+| POST | `/swap/quote` | Execution gate + Bearer | Dormant legacy route; this server revision returns `404` |
+| POST | `/swap/log` | Execution gate + Bearer | Dormant legacy reward route; this server revision returns `404` |
 | POST | `/telegram/webhook/<secret>` | path-secret | Telegram update receiver |
 | GET | `/telegram/health` | — | Bot subsystem status |
 
@@ -152,6 +153,14 @@ RPC URL for smart-account verification, and production privacy/terms approval.
 Nonces are stored only as hashes, expire after ten minutes, and are atomically
 consumed to prevent replay. EOA signatures verify locally; ERC-1271/6492 smart
 accounts fall back to the configured Base RPC.
+
+This server revision independently hides the legacy Squid signing/broadcast
+and reward routes behind the compile-time `SWAP_EXECUTION_READY=false` brake
+and the runtime `SWAP_EXECUTION_ENABLED` kill switch. The gate runs before
+authentication, Squid, or database access. The display-only
+`/swap/quote-preview` route remains available and does not use this execution
+gate. Runtime deployment evidence is tracked separately in the deploy
+checklist.
 
 `Bearer + flag` also applies to the S4 identity routes, which stay invisible
 until `JUSTANAME_ENABLED=true`. JustaName's API key is server-only. The provider
@@ -488,6 +497,11 @@ corresponding PR ships:
 
 Routes guarded by an off flag return `404` so the surface is invisible in
 production until the matching PR lands and the env var is set.
+
+Legacy swap execution uses a separate two-key gate rather than a `PHASE.*`
+flag. `SWAP_EXECUTION_ENABLED` is necessary but cannot expose `/swap/quote` or
+`/swap/log` while the independent compile-time `SWAP_EXECUTION_READY` brake is
+`false`. The display-only `/swap/quote-preview` route is not part of that gate.
 
 S8 uses the separate `LEGACY_SOCIAL_MODE` lifecycle gate rather than a boolean
 `PHASE` flag. It must remain `active` until a compatible client, published
