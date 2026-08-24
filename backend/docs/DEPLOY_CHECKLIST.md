@@ -21,7 +21,9 @@ Verified on 2026-07-21 without printing secret values:
 The project's default `production` environment is empty. All three service
 instances and the database volume exist only in `staging`. Web is running the
 approved release at `https://easygo-web-staging-staging.up.railway.app`.
-Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
+Web and worker revisions are tracked independently. The current PR #58 record
+below is web only; the unchanged worker retains its prior reviewed release and
+exits cleanly while `SEGMENTS_ENABLED=false`.
 
 ## Current automated evidence
 
@@ -145,10 +147,15 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Keep `SIWE_AUTH_ENABLED`, `JUSTANAME_ENABLED`, `SEGMENTS_ENABLED`,
       `QUESTS_ENABLED`, and `ADVERTISER_ADMIN_ENABLED` false for the first deploy.
 - [x] Keep `LEGACY_SOCIAL_MODE=active`.
-- [ ] Keep `SWAP_EXECUTION_ENABLED=false` or absent for the next deployment.
-      The current code candidate adds an independent compile-time brake, so an
-      environment change cannot expose legacy `/swap/quote` or `/swap/log`;
-      `/swap/quote-preview` remains available.
+- [x] Keep `SWAP_EXECUTION_ENABLED=false` or absent until a separately reviewed
+      execution and reward-verification rollout. The value-safe staging
+      preflight completed with zero failures before deployment. Release
+      `0600f24d7b706aefb1a5215be559b7640d36a3e2` also contains the independent
+      `SWAP_EXECUTION_READY=false` compile-time brake, so runtime configuration
+      alone cannot expose `/swap/quote` or `/swap/log`;
+      `/swap/quote-preview` remains authenticated and available.
+- [x] Verify the first gate-containing web release in staging; see the dated
+      PR #58 rollout record below.
 - [ ] Verify published privacy/terms version equals `EASYGO_CONSENT_VERSION`.
   The linked privacy PDF is an old ThePivot policy effective 2023-08-26, the
   linked terms PDF has no explicit effective date, and the deployed consent
@@ -208,8 +215,9 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   exits with code zero.
 - [ ] Exercise `SIGTERM` for an enabled worker only in an approved environment;
   keep `SEGMENTS_ENABLED=false` until the privacy/security gates pass.
-- [x] Monitor Railway readiness, 5xx responses, and request latency for at
-  least 15 minutes.
+- [x] Monitor Railway deployment status, HTTP 5xx responses, application
+  errors, and restart signals for at least 15 minutes. The PR #58 evidence is
+  recorded in the dated rollout section below.
 - [ ] Activate and monitor Sentry and Better Stack before production traffic;
   both remain intentionally unset pending vendor/privacy approval.
 - [ ] Only after the baseline is stable, enable one Path C feature in a separate
@@ -230,6 +238,31 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   provide the exact TestFlight/device checklist.
 - [ ] Close the release only after the monitoring window completes.
 
+### PR #58 Railway staging web rollout (2026-08-24 UTC)
+
+- Scope was web only; the worker and Postgres were unchanged.
+- The deployed identity tuple is exact release
+  `0600f24d7b706aefb1a5215be559b7640d36a3e2`, Railway deployment
+  `10ba0998-ca2d-429b-8a94-527b4db47ab0`, image digest
+  `sha256:3a04c35286a2b51fde7009edfbfa4f86f78fcf98eb1f44872434b48a9035bc01`,
+  and release archive SHA-256
+  `2c4319485d27b2af7728c590f6daccf75af2b5b35c87efb085e8b5daf6d0416a`.
+- The read-only GET smoke returned HTTP 200 for `/health`, `/ready`, and
+  `/social/status`; `/health` reported the exact release above.
+- Unauthenticated `{}` POST probes confirmed the fail-closed route contract:
+  `/swap/quote` and `/swap/log` returned HTTP 404 with
+  `{"error":"not_found"}`, while `/swap/quote-preview` reached authentication
+  and returned HTTP 401 with `{"error":"missing_bearer"}`. Synthetic request
+  IDs `pr58-gate-20260825-{quote,log,preview}` each appeared once in app logs,
+  with respective durations of 1 ms, 2 ms, and 9 ms.
+- During `2026-08-24T20:16:56Z–20:31:56Z`, five status samples
+  reported `SUCCESS`. The exact window contained zero HTTP 5xx responses, zero
+  `@level:error` events, zero additional restart signals, and zero configured
+  sensitive-pattern matches.
+- This is the first verified gate-containing web release and establishes the
+  minimum safe web rollback baseline. Pre-gate web revisions are no longer
+  eligible rollback targets.
+
 ### 2026-08-10 Telegram dependency security rollout
 
 - PR #23 merged as `3c7b9bdd316a37f66d2a9405de4a91a9645ef0c5` after
@@ -245,13 +278,12 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
   `RELEASE_SHA`. The read-only smoke passed `/health`, `/ready`, and
   `/social/status`; `/telegram/health` also returned HTTP 200. The immediate
   post-deploy review found no application error logs or HTTP 5xx responses.
-- The rollback release remains `f252761a217094942bc18e57e09467c01a8bc8ba`.
-  Its last known-good web and worker deployments are
-  `97b8294a-767e-4d32-a7f9-df77f1387c83` and
-  `e5017999-52ee-4880-931d-d7a641f26e14`, respectively. Extended monitoring
-  is not claimed by this immediate smoke record. This historical web rollback
-  predates the legacy swap execution brake and becomes ineligible after the
-  first gate-containing web release is deployed.
+- At the time of this historical rollout, the rollback release was
+  `f252761a217094942bc18e57e09467c01a8bc8ba`, with web deployment
+  `97b8294a-767e-4d32-a7f9-df77f1387c83` and worker deployment
+  `e5017999-52ee-4880-931d-d7a641f26e14`. The pre-gate web target was
+  superseded by the verified PR #58 baseline above and is no longer eligible
+  for web rollback. PR #58 did not change the worker.
 
 ## Rollback Triggers
 
@@ -279,6 +311,7 @@ Worker uses the same release and exits cleanly while `SEGMENTS_ENABLED=false`.
    previous app can run while those additions remain.
 5. Re-run the read-only smoke test and preserve logs/error IDs for review.
 
-Before closing the first gate rollout, record its exact merge SHA and Railway
-deployment as the minimum safe web rollback baseline, replacing the historical
-pre-gate baseline above.
+The PR #58 rollout recorded above satisfies the first gate-rollout evidence
+requirement. The current operator-facing minimum safe web rollback target is
+maintained in
+[`OPERATIONS.md`](./OPERATIONS.md#minimum-safe-web-rollback-baseline).
