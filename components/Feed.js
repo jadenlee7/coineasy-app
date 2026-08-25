@@ -43,7 +43,10 @@ export default function Feed({posts = [], refreshing, refreshingBottom, onRefres
     return(
         <>
             {(refreshing && safePosts.length == 0) ?
-                <ActivityIndicator style={{marginTop: 190}} size="small" color="#020617" />
+                <>
+                    {header}
+                    <ActivityIndicator style={{marginTop: header ? 24 : 190}} size="small" color="#020617" />
+                </>
             :
                 <>
                 {filteredPosts.length > 0 ?
@@ -60,7 +63,7 @@ export default function Feed({posts = [], refreshing, refreshingBottom, onRefres
                                         {/* <View style={{height: Platform.OS == 'ios' ? 0 : 55 + statusBarHeight, width: '100%', backgroundColor: 'red',}} /> */}
 
                                         <PagerView 
-                                            style={{height: 100, width: '100%', marginTop: Platform.OS == 'ios' ? -58 : 60 + statusBarHeight}} 
+                                            style={{height: 100, width: '100%', marginTop: header ? 0 : Platform.OS == 'ios' ? -58 : 60 + statusBarHeight}}
                                             initialPage={0}
                                             orientation='horizontal'
                                             onPageSelected={(props) => setIndexSwiper(props.nativeEvent.position)}
@@ -134,7 +137,9 @@ export default function Feed({posts = [], refreshing, refreshingBottom, onRefres
                         )}
                     />
                 :
-                    <View style={[tailwind('bg-slate-50 px-5 py-5 items-center mx-6 rounded-md'), {marginTop: showBanner ? 160 : 30}]} >
+                    <>
+                    {header}
+                    <View style={[tailwind('bg-slate-50 px-5 py-5 items-center mx-6 rounded-md'), {marginTop: header ? 20 : showBanner ? 160 : 30}]} >
                         <Text style={[tailwind('text-slate-900 text-center'), {fontFamily: 'GmarketBold'}]}>
                             {emptyTitle || (!backendConfigured
                                 ? 'EasyGo feed is getting connected.'
@@ -159,6 +164,7 @@ export default function Feed({posts = [], refreshing, refreshingBottom, onRefres
                             </TouchableOpacity>
                         }
                     </View>
+                    </>
                 }
                 </>
             }

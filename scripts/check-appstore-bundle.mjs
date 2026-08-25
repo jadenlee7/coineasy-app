@@ -17,6 +17,13 @@ export const FORBIDDEN_APPSTORE_BUNDLE_MARKERS = Object.freeze([
   '+50 Oranges',
   'Discover New Rewards!',
   'Go to Reward Page',
+  'Starbucks Gifticon Entry',
+  'Winning Chance 2%',
+  'Guaranteed Coffee Coupon',
+  "You've received a Starbucks Gifticon!",
+  "You've received a free cup of coffee!",
+  'Easycon whitelist',
+  'SQUID_BRIDGE',
 ]);
 
 export function findForbiddenAppStoreMarkers(contents) {

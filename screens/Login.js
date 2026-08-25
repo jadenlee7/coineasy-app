@@ -27,6 +27,7 @@ import PasskeyIcon from '../assets/easygo/passkey.svg';
 import WalletIcon from '../assets/easygo/wallet.svg';
 import { EASYGO_LEGAL_DOCUMENTS } from '../utils/legalDocuments.mjs';
 import { getOAuthLoginErrorMessage } from '../utils/oauthLoginError.mjs';
+import { DailyRunGuestSample } from './DailyRun';
 
 const BRAND = {
   background: '#FFF8F0',
@@ -69,6 +70,7 @@ export default function Login() {
   const { login: loginWithOAuth, state: oauthState } = useLoginWithOAuth();
   const [pendingProvider, setPendingProvider] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showDailyRunSample, setShowDailyRunSample] = useState(false);
 
   const compact = height < 780;
   const oauthLoading = oauthState.status === 'loading';
@@ -107,6 +109,10 @@ export default function Login() {
     );
   }
 
+  if (showDailyRunSample) {
+    return <DailyRunGuestSample onClose={() => setShowDailyRunSample(false)} />;
+  }
+
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
       <View style={[styles.hero, compact && styles.heroCompact]}>
@@ -138,6 +144,21 @@ export default function Login() {
           source={require('../assets/easygo/pixel-hills.png')}
           style={styles.hillsRight}
         />
+
+        <TouchableOpacity
+          accessibilityHint="로그인 없이 첫 Web3 밈 학습을 체험합니다"
+          accessibilityLabel="30초 Daily Run 맛보기"
+          accessibilityRole="button"
+          activeOpacity={0.82}
+          onPress={() => {
+            Haptics.selectionAsync();
+            setShowDailyRunSample(true);
+          }}
+          style={styles.sampleButton}
+        >
+          <Text style={styles.sampleButtonText}>30초 맛보기</Text>
+          <Text style={styles.sampleButtonIcon}>▶</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.sheet, compact && styles.sheetCompact]}>
@@ -278,6 +299,31 @@ const styles = StyleSheet.create({
     minHeight: 320,
     paddingBottom: 12,
     paddingTop: 16,
+  },
+  sampleButton: {
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderColor: '#000',
+    borderRadius: 18,
+    borderWidth: 2,
+    bottom: 24,
+    flexDirection: 'row',
+    gap: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    position: 'absolute',
+    right: 22,
+    zIndex: 5,
+  },
+  sampleButtonIcon: {
+    color: BRAND.orange,
+    fontFamily: 'GmarketBold',
+    fontSize: 12,
+  },
+  sampleButtonText: {
+    color: '#000',
+    fontFamily: 'GmarketBold',
+    fontSize: 12,
   },
   loginOption: {
     alignItems: 'center',

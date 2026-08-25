@@ -22,6 +22,7 @@ import {
 const EMPTY_DATA = Object.freeze({
   blockedAccounts: Object.freeze([]),
   courseProgress: Object.freeze([]),
+  dailyRunProgress: null,
   expoPushToken: null,
   hiddenPosts: Object.freeze([]),
   mutedAccounts: Object.freeze([]),
@@ -47,10 +48,23 @@ function parsedList(value) {
   }
 }
 
+function parsedObject(value) {
+  if (typeof value !== 'string') return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? Object.freeze(parsed)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function hydratedData(values) {
   return Object.freeze({
     blockedAccounts: Object.freeze(parsedList(values[DEVICE_ACCOUNT_DATA_SLOT.blockedAccounts])),
     courseProgress: Object.freeze(parsedList(values[DEVICE_ACCOUNT_DATA_SLOT.courseProgress])),
+    dailyRunProgress: parsedObject(values[DEVICE_ACCOUNT_DATA_SLOT.dailyRunProgress]),
     expoPushToken: typeof values[DEVICE_ACCOUNT_DATA_SLOT.expoPushToken] === 'string'
       ? values[DEVICE_ACCOUNT_DATA_SLOT.expoPushToken]
       : null,
@@ -291,6 +305,7 @@ export function DeviceAccountDataProvider({ children }) {
     errorCode: visibleSnapshot.errorCode,
     blockedAccounts: visibleSnapshot.data.blockedAccounts,
     courseProgress: visibleSnapshot.data.courseProgress,
+    dailyRunProgress: visibleSnapshot.data.dailyRunProgress,
     expoPushToken: visibleSnapshot.data.expoPushToken,
     hiddenPosts: visibleSnapshot.data.hiddenPosts,
     mutedAccounts: visibleSnapshot.data.mutedAccounts,
@@ -329,6 +344,19 @@ export function DeviceAccountDataProvider({ children }) {
       'courseProgress',
       next,
     ),
+    saveDailyRunProgress: (next) => {
+      if (!next || typeof next !== 'object' || Array.isArray(next)) {
+        return Promise.resolve(false);
+      }
+      const copy = Object.freeze({ ...next });
+      return saveValue({
+        expectedLease: lease,
+        slot: DEVICE_ACCOUNT_DATA_SLOT.dailyRunProgress,
+        field: 'dailyRunProgress',
+        value: copy,
+        serialized: JSON.stringify(copy),
+      });
+    },
     saveExpoPushToken: (token) => {
       if (typeof token !== 'string' || !token.trim()) return Promise.resolve(false);
       return saveValue({

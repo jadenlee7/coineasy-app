@@ -54,7 +54,9 @@ test('App Store Orange UI is progress-only and omits ad, invite, shop, and conve
     new URL('../screens/Navigation/Trophies/TrophieCoineasy.js', import.meta.url),
     'utf8',
   );
-  const combined = [reward, history, navigation, modal, postbox, newFeature, trophies].join('\n');
+  const courses = readFileSync(new URL('../data/courses.js', import.meta.url), 'utf8');
+  const easygo = readFileSync(new URL('../utils/easygo.js', import.meta.url), 'utf8');
+  const combined = [reward, history, navigation, modal, postbox, newFeature, trophies, courses, easygo].join('\n');
 
   assert.deepEqual(findForbiddenAppStoreMarkers(combined), []);
   assert.match(reward, /Orange points track in-app learning and participation only/);
@@ -64,6 +66,8 @@ test('App Store Orange UI is progress-only and omits ad, invite, shop, and conve
   assert.match(navigation, /AD_REWARD: 'Legacy promotion points'/);
   assert.match(navigation, /SWAP_REWARD: 'Legacy activity points'/);
   assert.doesNotMatch(postbox, /Oranges Reward for your first post/);
+  assert.doesNotMatch(courses, /shopData|starbucks_(?:gifticon|coffee)\.png/);
+  assert.doesNotMatch(easygo, /SQUID_BRIDGE/);
   assert.equal(existsSync(new URL('../screens/Navigation/Oranges/ShopScreen.js', import.meta.url)), false);
   assert.equal(existsSync(new URL('../screens/Navigation/Oranges/GiftScreen.js', import.meta.url)), false);
 });

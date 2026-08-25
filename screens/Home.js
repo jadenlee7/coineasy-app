@@ -9,6 +9,8 @@ import Feed from "../components/Feed";
 import Header from "../components/Header";
 import { GlobalContext } from "../contexts/GlobalContext";
 import useFeed from "../hooks/useFeed";
+import DailyRunHomeCard from "../components/DailyRunHomeCard";
+import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
 
 const Home = ({ navigation, route }) => {
@@ -34,6 +36,10 @@ const Home = ({ navigation, route }) => {
         refresh,
         loadMore,
     } = useFeed('home', { limit: 20 });
+    const statusBarHeight = useStatusBarHeight();
+    const homeHeaderHeight = statusBarHeight > 25
+        ? 65 + statusBarHeight
+        : 60 + statusBarHeight;
 
     useFocusEffect(
         React.useCallback(() => {
@@ -85,15 +91,22 @@ const Home = ({ navigation, route }) => {
             
             <View style={tailwind('flex flex-col flex-1')}>
                 <View style={tailwind('flex flex-1 bg-white')}>
-                    <Feed 
-                        posts={posts} 
-                        refreshing={loading || refreshing}
-                        refreshingBottom={loadingMore}
-                        onRefresh={refresh}
-                        loadMore={loadMore}
-                        error={error}
-                        backendConfigured={backendConfigured}
-                    />
+                    <View style={tailwind('flex flex-1')}>
+                        <Feed
+                            posts={posts}
+                            refreshing={loading || refreshing}
+                            refreshingBottom={loadingMore}
+                            onRefresh={refresh}
+                            loadMore={loadMore}
+                            error={error}
+                            backendConfigured={backendConfigured}
+                            header={(
+                                <View style={{paddingTop: homeHeaderHeight}}>
+                                    <DailyRunHomeCard onPress={() => navigation.navigate('DailyRun')} />
+                                </View>
+                            )}
+                        />
+                    </View>
 
                     {/** Share button */}
                     <TouchableOpacity activeOpacity="0.8" style={[tailwind('absolute'), {elevation: 10, bottom: 15, right: 15} ]} onPress={() => {setEditedPost(null);showPostbox()}}>

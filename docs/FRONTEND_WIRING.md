@@ -257,6 +257,20 @@ mobile client if that client is used on both platforms.
   error body. An account/session change, app background, input change, or
   20-second expiry aborts or discards the in-memory preview.
 
+## Daily Run MVP (local, account-bound)
+
+`Home -> DailyRun` provides the first seven-day beginner loop documented in
+`docs/EASYGO_DAILY_RUN_MVP.md`. Its only reward is local Knowledge XP derived
+from known one-time lesson completions. The progress object lives in the
+hashed, owner-scoped `daily-run-progress` device slot and uses the same
+account/session lease as course progress, hidden posts, and recent profiles.
+
+The signed-out 30-second sample is deliberately ephemeral. It does not write
+progress or migrate into the next authenticated account. Daily Run never calls
+an Orange claim, swap execution, signing, or broadcast API. BaseScan and the
+existing display-only quote preview are educational outbound actions only;
+the optional Day 7 share sheet appears after completion and provides no XP.
+
 ## Remaining screen migrations
 
 - Media upload plus repost/quote relationships.
