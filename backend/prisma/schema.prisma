@@ -64,6 +64,7 @@ model User {
   // Social relations (PR #9)
   posts     Post[]   @relation("PostAuthor")
   likes     Like[]
+  postReports PostReport[] @relation("PostReportReporter")
   following Follow[] @relation("Follower")
   followers Follow[] @relation("Followee")
 
@@ -297,6 +298,7 @@ model Post {
   parent  Post?  @relation("PostReplies", fields: [parentPostId], references: [id], onDelete: SetNull)
   replies Post[] @relation("PostReplies")
   likes   Like[]
+  reports PostReport[]
 
   // Feed cursor: newest-first by (createdAt, id).
   @@index([createdAt, id])
@@ -304,6 +306,41 @@ model Post {
   @@index([authorId, createdAt])
   // Reply lookups for a given thread.
   @@index([parentPostId, createdAt])
+}
+
+enum PostReportReason {
+  SPAM
+  NUDITY_SEXUAL_CONTENT
+  HATE_SPEECH
+  VIOLENCE_DANGEROUS
+  BULLYING_HARASSMENT
+  SCAM_FRAUD
+  FALSE_INFORMATION
+}
+
+enum PostReportStatus {
+  OPEN
+  REVIEWING
+  ACTIONED
+  DISMISSED
+}
+
+model PostReport {
+  id         String           @id @default(cuid())
+  postId     String
+  reporterId String
+  reason     PostReportReason
+  status     PostReportStatus @default(OPEN)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  reviewedAt DateTime?
+
+  post     Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter User @relation("PostReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, reporterId], map: "uniq_post_report_reporter")
+  @@index([status, createdAt], map: "idx_post_report_queue")
+  @@index([reporterId, createdAt], map: "idx_post_report_reporter")
 }
 
 model Follow {

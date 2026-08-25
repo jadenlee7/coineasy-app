@@ -119,7 +119,7 @@ test('sanitized preview responses render token amounts and only sum USD costs', 
 
 test('the mobile preview is owner-bound, abortable, and has no signing path', () => {
   const screen = source('../screens/Navigation/SquidQuotePreview.js');
-  const squid = source('../utils/squid.js');
+  const squid = source('../utils/squidPreview.js');
   const api = source('../utils/api.js');
 
   assert.match(screen, /useDeviceAccountOperationLease/);
@@ -134,4 +134,13 @@ test('the mobile preview is owner-bound, abortable, and has no signing path', ()
   assert.match(squid, /getSquidQuotePreview\(\{[\s\S]*?lease,[\s\S]*?isCurrentLease,[\s\S]*?signal,/);
   assert.match(squid, /api\.swapQuotePreview\([\s\S]*?expectedAuthUserId: operationLease\.ownerUserId/);
   assert.match(api, /swapQuotePreview:[\s\S]*?boundAuth: true,[\s\S]*?expectedAuthUserId/);
+  assert.doesNotMatch(api, /swapQuote:\s*\(|swapLog:\s*\(/);
+
+  const navigation = source('../navigation/AppNavigator.js');
+  const education = source('../screens/Navigation/Trophies/TrophieCoineasy.js');
+  const rewards = source('../screens/Navigation/Oranges/OrangeReward.js');
+  assert.match(navigation, /name="SquidQuotePreview"/);
+  assert.match(education, /navigation\.navigate\('SquidQuotePreview'\)/);
+  assert.match(education, /Preview only—no transaction and no Orange reward/);
+  assert.doesNotMatch(rewards, /Squid|quote preview|Invite Friends|AD Rewards/);
 });

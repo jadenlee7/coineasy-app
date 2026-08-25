@@ -25,7 +25,7 @@ test('every asynchronous post route is mounted through the Express 4 rejection w
     handlerName: item.route.stack.at(-1).handle.name,
   }));
 
-  assert.equal(asyncRoutes.length, 9);
+  assert.equal(asyncRoutes.length, 10);
   assert.deepEqual(new Set(asyncRoutes.map(({ handlerName }) => handlerName)), new Set(['handleAsyncRoute']));
 });
 

@@ -20,7 +20,7 @@ import { useTailwind } from 'tailwind-rn';
 import { GlobalContext } from '../../contexts/GlobalContext';
 import { useDeviceAccountData } from '../../contexts/DeviceAccountDataContext';
 import useConsent from '../../hooks/useConsent';
-import { api } from '../../utils/api';
+import { api, ApiError } from '../../utils/api';
 import { unregisterPushTokenBeforeLogout } from '../../utils/pushTokenRegistration.mjs';
 import {
   canConfirmAccountDeletion,
@@ -64,6 +64,25 @@ function openLegalDocument(document, label) {
     return;
   }
   WebBrowser.openBrowserAsync(document.url);
+}
+
+function accountDeletionAvailabilityMessage(error) {
+  if (error instanceof ApiError) {
+    const code = error.body?.error;
+    if (code === 'stable_provider_identity_required'
+      || code === 'stable_provider_identity_unavailable') {
+      return '현재 로그인 제공자는 이 빌드의 안전한 계정 삭제 재인증을 지원하지 않습니다. 삭제 요청은 전송되지 않았고 데이터는 변경되지 않았습니다.';
+    }
+    if (code === 'account_deletion_disabled'
+      || code === 'account_deletion_reauth_disabled'
+      || code === 'account_deletion_not_configured') {
+      return '제공자 계정 정리와 최근 로그인 확인이 아직 릴리스 승인되지 않아 새 삭제 요청이 잠겨 있습니다. 데이터는 변경되지 않았습니다.';
+    }
+    if (code === 'privy_not_configured' || code === 'privy_unavailable') {
+      return '로그인 제공자 상태를 확인할 수 없어 안전하게 중단했습니다. 삭제 요청은 전송되지 않았습니다.';
+    }
+  }
+  return '계정이나 데이터를 변경하지 않았습니다. 연결 상태를 확인하고 다시 시도해 주세요.';
 }
 
 const EXPORTS = {
@@ -348,7 +367,7 @@ export default function SettingsModal() {
         setDeletionStage('idle');
         Alert.alert(
           '계정 삭제 준비 중',
-          '현재 내부 안전 검토가 진행 중입니다. 데이터 내보내기는 위 메뉴에서 계속 사용할 수 있습니다.',
+          '제공자 계정 정리와 최근 로그인 확인이 릴리스 승인될 때까지 새 삭제 요청은 잠겨 있습니다. 계정과 데이터는 변경되지 않았으며, 데이터 내보내기는 위 메뉴에서 계속 사용할 수 있습니다.',
         );
         return;
       }
@@ -357,13 +376,13 @@ export default function SettingsModal() {
       setWalletRiskAcknowledged(false);
       setDeletionConfirmation('');
       setDeletionStage('confirm');
-    } catch {
+    } catch (error) {
       if (
         !isCurrentDeletionAction(operation)
       ) return;
       Alert.alert(
         '삭제 가능 여부를 확인하지 못했습니다',
-        '계정이나 데이터를 변경하지 않았습니다. 연결 상태를 확인하고 다시 시도해 주세요.',
+        accountDeletionAvailabilityMessage(error),
       );
     } finally {
       if (
@@ -480,13 +499,13 @@ export default function SettingsModal() {
       if (!reauthCompleted) {
         if (error?.code === ACCOUNT_DELETION_REAUTH_ERROR.cancelled) {
           Alert.alert(
-            'Apple 재인증이 취소되었습니다',
+            '최근 로그인 확인이 취소되었습니다',
             '계정 삭제 요청은 전송하지 않았습니다.',
           );
         } else if (error?.code === ACCOUNT_DELETION_REAUTH_ERROR.unavailable) {
           Alert.alert(
-            'Apple 재인증을 사용할 수 없습니다',
-            '이 기기에서는 계정 삭제를 진행할 수 없습니다. 계정과 데이터는 변경되지 않았습니다.',
+            '안전한 재인증을 사용할 수 없습니다',
+            '이 로그인 제공자 또는 기기에서는 계정 삭제를 진행할 수 없습니다. 삭제 요청은 전송되지 않았고 계정과 데이터는 변경되지 않았습니다.',
           );
         } else if (error?.code === ACCOUNT_DELETION_REAUTH_ERROR.sessionChanged) {
           Alert.alert(
@@ -495,7 +514,7 @@ export default function SettingsModal() {
           );
         } else {
           Alert.alert(
-            'Apple 재인증을 완료하지 못했습니다',
+            '최근 로그인 확인을 완료하지 못했습니다',
             '계정 삭제 요청은 전송하지 않았습니다. 잠시 후 다시 시도해 주세요.',
           );
         }
@@ -852,7 +871,7 @@ export default function SettingsModal() {
               </Text>
             </TouchableOpacity>
             <Text style={{ color: '#64748B', fontSize: 10, lineHeight: 15, textAlign: 'center' }}>
-              신규 삭제 요청은 서버·지갑·재로그인 안전 조건이 모두 통과한 경우에만 열립니다. 데이터 내보내기는 위 메뉴에서 계속 사용할 수 있습니다.
+              이 메뉴에서 삭제를 시작할 수 있습니다. 단, 서버·지갑·최근 로그인·제공자 계정 정리 조건이 모두 통과한 경우에만 최종 확인 화면이 열립니다.
             </Text>
           </>
         ) : (
@@ -863,7 +882,7 @@ export default function SettingsModal() {
             <Text style={{ color: '#4C0519', fontSize: 11, lineHeight: 18, marginTop: 10 }}>
               EasyGo 프로필·활동·게시물 내용은 제거됩니다. 다른 사용자의 답글은 유지되며 “Deleted account” 표시가 남을 수 있습니다.{"\n\n"}
               Base 체인의 거래 기록은 블록체인에서 삭제할 수 없습니다. Embedded wallet 접근과 복구가 영구적으로 불가능해질 수 있으므로 먼저 자산을 다른 지갑으로 옮기세요.{"\n\n"}
-              Apple·Privy 연결 정리는 추가 시간이 걸릴 수 있으며, 사용자가 내보낸 JSON 파일은 EasyGo가 회수할 수 없습니다.
+              로그인 제공자·Privy 연결 정리는 추가 시간이 걸릴 수 있으며, 사용자가 내보낸 JSON 파일은 EasyGo가 회수할 수 없습니다.
             </Text>
 
             <View style={{ alignItems: 'center', flexDirection: 'row', marginTop: 16 }}>
@@ -917,7 +936,7 @@ export default function SettingsModal() {
               }}
             >
               <Text style={{ color: '#FFF', fontFamily: 'GmarketBold', fontSize: 13 }}>
-                {loadingAction === 'account-deletion' ? 'Apple 재인증 및 삭제 보호 중…' : 'Permanently delete account'}
+                {loadingAction === 'account-deletion' ? '최근 로그인 확인 및 삭제 보호 중…' : 'Permanently delete account'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity

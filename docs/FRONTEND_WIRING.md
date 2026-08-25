@@ -30,11 +30,11 @@ See `EASYGO_BUILD_PLAN.md` §11 (data flow), §12 (backend endpoints), §13.2 (S
 | `useOrange(addr)` | `GET /orange/history` | Read the authenticated user's 🍊 ledger entries (limit-paginated). |
 | Orange reward screen | `GET /orange/rewards/status` | Read server-derived activity counts and claim timers. |
 | First reward modal | `POST /orange/claims/first-reward` | Idempotently award the authenticated user's first 50 🍊 reward. |
-| Check-in/activity/ad cards | `POST /orange/claims/{daily-checkin,daily-activity,ad-reward}` | Validate and idempotently record recurring rewards. |
+| Check-in/activity cards | `POST /orange/claims/{daily-checkin,daily-activity}` | Validate and idempotently record recurring rewards. |
+| Dormant ad-reward backend | `POST /orange/claims/ad-reward` | Retained for old-client compatibility; the App Store mobile graph has no ad card or client call. |
 | Course quiz compatibility fallback | `POST /orange/claims/course-quiz` | Used only while the S6 route is hidden; returns `410` after `QUESTS_ENABLED=true`. |
-| Orange → Squid Quote Preview | `POST /swap/quote-preview` | Read-only Base ETH ↔ USDC estimate. The server derives the authenticated wallet and returns a display-only projection with no executable transaction data. |
-| Dormant `getSquidQuote(...)` | `POST /swap/quote` | Legacy execution contract; this server revision returns `404` behind a compile-time and runtime execution gate. |
-| Dormant `executeSquidRoute(...)` | `POST /swap/log` | Legacy reward contract; this server revision returns `404` before auth or database access. |
+| EASYEDU → Base Route Estimate Lab | `POST /swap/quote-preview` | Educational, read-only Base ETH ↔ USDC estimate. The server derives the authenticated wallet and returns a display-only projection with no executable transaction data or Orange reward. |
+| Removed mobile execution clients | `POST /swap/quote`, `POST /swap/log` | No App Store mobile symbol or API client calls these dormant server-only legacy routes; the server still returns `404`. |
 | `useFeed('home')` / `usePosts()` | `GET /posts` | Read the global social feed with cursor pagination. |
 | `useFeed('category', { tag })` | `GET /posts?tag=...` | Read a hashtag category with server-side cursor filtering. |
 | `useFeed('search', { query })` | `GET /posts?q=...` | Search root-post bodies without breaking pagination. |
@@ -42,6 +42,7 @@ See `EASYGO_BUILD_PLAN.md` §11 (data flow), §12 (backend endpoints), §13.2 (S
 | `usePosts({ authorId })` | `GET /posts/by-author/:userId` | Read a user's root-post timeline. |
 | `usePosts.create(...)` | `POST /posts` | Publish a root text post and update mounted feeds. |
 | Post editor | `PUT /posts/:id` | Edit the authenticated author's post body/media URL. |
+| Post report modal | `POST /posts/:id/report` | Persist one authenticated, bounded report per reporter/post pair; replay is idempotent and exposes no reporter identity or queue totals. |
 | `useReplies.create(...)` | `POST /posts` | Publish a reply using `parentPostId`. |
 | `useSocialProfile(userId)` | `GET /profiles/:userId` | Read public profile details and live post/follow counts. |
 | Own profile | `GET /profiles/me` | Read the authenticated user's private profile projection, including their wallet address. |
@@ -150,14 +151,13 @@ treated as account export/deletion data. Their asynchronous readers still
 capture the full account transition so an old continuation cannot open or
 close a modal for the next session.
 
-## Swap flow (Phase 1, Squid via backend)
+## Base Route Estimate Lab (educational preview only)
 
-The new quote-preview candidate is deliberately separate from the dormant
-execution flow below:
+The EASYEDU/Trophies lab is deliberately separate from any swap execution:
 
 ```
 Client                                      Backend                         Squid
-  │ explicit Get quote preview tap             │                              │
+  │ explicit Estimate route tap               │                              │
   │ POST /swap/quote-preview {tokens,amount}   │                              │
   ├───────────────────────────────────────────▶│ derive authenticated wallet  │
   │                                             │ Base 8453 + quoteOnly route  │
@@ -181,51 +181,23 @@ preview cannot award Orange. The public wallet address is disclosed to Squid
 only after the user explicitly taps the preview button, consistent with the
 published privacy copy.
 
-The older Path C execution contract remains unreachable in this server
-revision. This diagram describes the future contract only:
+The App Store client physically omits the old quote-execution helper, wallet
+signer/broadcast code, execution API client, reward-log client, Invite reward
+screen, Ad reward claim surface, and Orange Shop/Gift/conversion screens.
+Orange is presented only as non-transferable, non-redeemable in-app progress;
+the daily participation design still requires a separate Guideline 3.1.5(v)
+classification before App Store submission. `utils/squidPreview.js` contains only the
+display-preview request and session-lease checks. Run `npm run
+appstore:bundle-check -- <ios-bundle>` as a release gate so execution and
+reward-log markers cannot return to the exported JavaScript bundle.
 
-```
-Client                                     Backend                         Squid
-  │                                            │                              │
-  │ POST /swap/quote {from,to,amount,...}     │                              │
-  ├──────────────────────────────────────────▶│                              │
-  │                                            │ squid.getRoute(...)          │
-  │                                            ├─────────────────────────────▶│
-  │                                            │◀─────────────────────────────┤
-  │ { route, tx, defaultChain }                │                              │
-  │◀───────────────────────────────────────────┤                              │
-  │                                            │                              │
-  │ Privy embedded wallet signs + broadcasts   │                              │
-  │ (target/data/value/gasLimit from txReq)    │                              │
-  │                                            │                              │
-  │ POST /swap/log {txHash, status, params}   │                              │
-  ├──────────────────────────────────────────▶│ Prisma: SwapLog + 🍊 +10     │
-  │ { ok: true, orangeAwarded: 10 }            │                              │
-  │◀───────────────────────────────────────────┤                              │
-```
-
-Do not infer execution readiness from the preview. The installed Squid SDK
-returns an outer `{ route }` envelope, while the legacy `/swap/quote` builder
-still reads `transactionRequest` from a flat route object. That dormant path
-therefore requires a separate reviewed migration plus address/chain/reward
-hardening before any signing UI is introduced. The preview path normalizes the
-outer envelope only inside its own display-only sanitizer and does not repair
-or activate the legacy execution endpoint.
-This server revision fail-closes both legacy endpoints with
+Do not infer execution readiness from this lab. The server fail-closes both
+legacy endpoints with
 `SWAP_EXECUTION_READY=false` plus the default-off `SWAP_EXECUTION_ENABLED`
 runtime kill switch. An environment change cannot expose them until a
 separately reviewed release changes the compile-time brake after execution and
 reward verification are implemented. Railway deployment and runtime 404
 evidence remain separate checklist gates.
-
-`getSquidQuote` requires the current device-account lease and its live
-validator. The returned quote is held in an in-memory capability map for that
-exact owner and session epoch; cloning, serializing, switching accounts, or
-logging out invalidates it. `executeSquidRoute` rechecks that capability
-immediately before `sendTransaction`, after `tx.wait()`, and after the
-owner-bound reward log. A transaction already broadcast before a later logout
-cannot be cancelled, but its continuation cannot borrow the replacement
-account's signer, bearer, reward record, or UI state.
 
 ## Environment variables (client)
 
@@ -235,7 +207,6 @@ Already defined in repo-root `.env.example` (PR #4):
 - `EXPO_PUBLIC_PRIVY_APP_ID` — required for Privy SDK at app boot.
 - `EXPO_PUBLIC_PRIVY_CLIENT_ID` — EasyGo mobile client identifier for the app bundle and URL scheme.
 - `EXPO_PUBLIC_TG_BOT_USERNAME` / `EXPO_PUBLIC_TG_WEBAPP_URL` — for `getTelegramLoginUrl`.
-- `EXPO_PUBLIC_SQUID_INTEGRATOR_ID` / `EXPO_PUBLIC_SQUID_API_URL` — surfaced in client config but actual SDK runs server-side.
 - `EXPO_PUBLIC_EASYGO_CONSENT_VERSION` — exact version shared by the published
   EasyGo Terms and Privacy documents.
 - `EXPO_PUBLIC_EASYGO_TERMS_URL` / `EXPO_PUBLIC_EASYGO_PRIVACY_URL` — versioned
@@ -281,7 +252,6 @@ mobile client if that client is used on both platforms.
 - **Wallet chain/account mismatch**: the profile displays a retryable warning
   instead of claiming Base connectivity. Transaction features must remain
   unavailable unless the same runtime attestation reports `ready`.
-- **Quote returns `null`**: `getSquidQuote` swallows `ApiError` so the swap UI can show a graceful retry CTA.
 - **Preview unavailable**: the read-only screen maps fixed 400/401/409/429/502
   categories to credential-free retry copy. It never renders the upstream
   error body. An account/session change, app background, input change, or
@@ -320,5 +290,7 @@ mobile client if that client is used on both platforms.
 When `PHASE.EASYCHAIN_ENABLED` flips to `true` (per `utils/easygo.js` activation gate):
 
 - `useEasyChainProfile` switches to on-chain `PROFILE_REGISTRY` reads (already gated).
-- `utils/squid.js` Lazy Liquidity behavior unchanged; backend points Squid at EasyChain destination.
+- The Base Route Estimate Lab remains display-only unless a separate reviewed
+  product and App Store release deliberately introduces a new transaction
+  architecture.
 - `utils/nearIntents.js` (new) takes over solver-based swaps once liquidity matures.

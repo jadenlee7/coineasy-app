@@ -247,9 +247,9 @@ test('block, hide, and mute preserve the X mutation while suppressing stale Y UI
   }
 });
 
-test('report timer and animation callbacks cannot mutate a replacement menu', () => {
+test('persisted report and animation callbacks cannot mutate a replacement menu', () => {
   const animation = section('const doAnimation =', '    const showBlock =');
-  const report = section('function sendReport', '    const onHidePress =');
+  const report = section('async function sendReport', '    const onHidePress =');
 
   assertOrdered(animation, [
     'const expectedPresentation = livePresentationRef.current;',
@@ -260,10 +260,17 @@ test('report timer and animation callbacks cannot mutate a replacement menu', ()
   ], 'animation callback');
   assertOrdered(report, [
     'const operation = captureOperation();',
-    'setTimeout(() => {',
+    'const result = await api.posts.report(',
+    'if (!isCurrentOperation(operation)) return;',
+    "if (result?.reported !== true) throw new Error('report_not_persisted');",
+    'await saveHiddenPosts(hidden);',
     'if (!isCurrentOperation(operation)) return;',
     'setLoading(false);',
     'showMessage({',
     'hide(operation);',
-  ], 'report timer');
+  ], 'persisted report');
+  assert.doesNotMatch(report, /setTimeout/);
+  assert.doesNotMatch(report, /We will review/);
+  assert.match(report, /expectedAuthUserId: operation\.expectedLease\.ownerUserId/);
+  assert.match(report, /catch \(error\) \{\s*if \(!isCurrentOperation\(operation\)\) return;[\s\S]*?Alert\.alert/);
 });

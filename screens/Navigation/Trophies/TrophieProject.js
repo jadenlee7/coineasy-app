@@ -162,7 +162,7 @@ const TrophieProject = () => {
 
                                 <View style={styles.cardFooter}>
                                     <View style={styles.rewardContainer}>
-                                        <Text style={styles.rewardLabel}>Total Reward</Text>
+                                        <Text style={styles.rewardLabel}>Total Points</Text>
                                         <View style={styles.rewardValue}>
                                             <Image
                                                 style={{width: 18,height: 18}}

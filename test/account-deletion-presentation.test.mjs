@@ -68,6 +68,12 @@ test('account deletion is capability-gated and binds the destructive request to 
   );
 
   assert.match(settings, /status\?\.available !== true/);
+  assert.match(settings, /accountDeletionAvailabilityMessage\(error\)/);
+  assert.match(settings, /제공자 계정 정리와 최근 로그인 확인이 아직 릴리스 승인되지 않아 새 삭제 요청이 잠겨 있습니다/);
+  assert.match(settings, /삭제 요청은 전송되지 않았고 데이터는 변경되지 않았습니다/);
+  assert.match(settings, /이 메뉴에서 삭제를 시작할 수 있습니다/);
+  assert.match(settings, /로그인 제공자·Privy 연결 정리/);
+  assert.doesNotMatch(settings, /Apple 계정 정리/);
   assert.match(settings, /walletRiskAcknowledged/);
   assert.match(settings, /confirmationText: deletionConfirmation/);
   assert.match(settings, /submitAccountDeletionRequest/);

@@ -1071,7 +1071,7 @@ export default function Postbox({isReply = false, openGeneration = 0}) {
 
                         {!replyTo && userData?.rewardFirstPost == 'reward pending' && (
                             <View style={{backgroundColor: '#FFE9E3',width:'100%', alignSelf:'center',borderRadius: 10,paddingVertical: 10}}>
-                                <Text style={{color:'#FF6E31',fontWeight: 'bold',textAlign: 'center',}}>Receive 50 Oranges Reward for your first post!</Text>
+                                <Text style={{color:'#FF6E31',fontWeight: 'bold',textAlign: 'center',}}>Share one useful idea with the EasyGo community.</Text>
                             </View>
                         )}
 

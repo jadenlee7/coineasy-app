@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useContext } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   Platform,
   Image,
-  Animated,
-  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -17,14 +15,8 @@ import { useNavigation } from '@react-navigation/core';
 import { GlobalContext } from '../../../contexts/GlobalContext';
 import useCountdown from '../../../hooks/useCountdown';
 
-const {width, height} = Dimensions.get('window')
-
 const OrangeReward = (props) => {
-    const {
-        userData,
-        setShowClaimOranges,
-        setTodayOranges,
-    } = useContext(GlobalContext);
+    const { userData } = useContext(GlobalContext);
 
     const { onClaimDailyCheckin, handleClaimDailyActivity } = props
 
@@ -37,28 +29,25 @@ const OrangeReward = (props) => {
     const nextAvailable = dailyCheckin.nextAvailable ? new Date(dailyCheckin.nextAvailable) : null;
     const isDailyCheckinAvailable = !nextAvailable || now >= nextAvailable;
 
-    const timeLeftAdReward = useCountdown(userData?.adReward?.nextReset);
     const timeLeftDailyCheckin = useCountdown(userData?.dailyCheckin?.nextAvailable);
     const timeLeftDailyActivity = useCountdown(userData?.dailyActivity?.nextAvailable);
+    const isDailyActivityReady = (
+        (userData?.todayActivities?.posts ?? 0) >= 1
+        && (userData?.todayActivities?.comments ?? 0) >= 2
+        && (userData?.todayActivities?.likes ?? 0) >= 10
+        && !timeLeftDailyActivity
+    );
 
-    const RewardCard = ({logo, title, description, points, buttonText, buttonType = 'primary', onPress, children }) => {
+    const RewardCard = ({logo, title, description, points, buttonText, buttonType = 'primary', disabled = false, onPress, children }) => {
         return (
             <View style={{
                 borderWidth: 1.5,
-                borderColor: (
-                    (title == 'Daily Check-in' && !isDailyCheckinAvailable) 
-                    || (title == 'AD Rewards' && timeLeftAdReward) 
-                    || (title == 'Daily Activity Reward' && timeLeftDailyActivity)) 
-                    ? '#EEE' : '#FF6B17',
+                borderColor: disabled ? '#EEE' : '#FF6B17',
                 borderRadius: 16,
                 marginTop: 20,
             }}>
                 <LinearGradient
-                    colors={(
-                        (title == 'Daily Check-in' && !isDailyCheckinAvailable) 
-                        || (title == 'AD Rewards' && timeLeftAdReward)
-                        || (title == 'Daily Activity Reward' && timeLeftDailyActivity)) 
-                        ? ["#FFFFFF", "#FFF"] : ["#FFFFFF", "#FFE9E3"]}
+                    colors={disabled ? ["#FFFFFF", "#FFF"] : ["#FFFFFF", "#FFE9E3"]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }} // from left to right
                     style={styles.card}
@@ -94,11 +83,13 @@ const OrangeReward = (props) => {
                         </View>
 
                         {/* BUTTON */}
-                        <TouchableOpacity 
+                        <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityState={{disabled}}
+                            disabled={disabled}
                             style={[
                                 styles.button, 
                                 buttonType === 'secondary' ? styles.buttonSecondary : styles.buttonPrimary,
-                                title == "Invite Friends" && {paddingHorizontal: 20}
                             ]}
                             onPress={onPress}
                         >
@@ -131,97 +122,57 @@ const OrangeReward = (props) => {
         );
     };
 
-    const handleClaimAdReward = () => {
-        Haptics.selectionAsync();
-        setTodayOranges(10);
-        setShowClaimOranges(true)
-    }
-
     return (
-        <View>
+        <View style={{flex: 1}}>
             {/* Header */}
             <View style={{paddingHorizontal: 20,paddingVertical: 20,flexDirection:'row',justifyContent:'space-between',alignItems:'center',}}>
-                <Text style={{fontFamily: 'GmarketBold', fontSize: Platform.OS == 'ios' ? 17 : 15, }}>Orange Rewards</Text>
+                <Text style={{fontFamily: 'GmarketBold', fontSize: Platform.OS == 'ios' ? 17 : 15, }}>Orange Progress</Text>
                 <TouchableOpacity 
                     style={{borderWidth: 1, borderColor: '#E3E8EC',borderRadius: 20,padding: 8,paddingHorizontal: 10, alignItems: 'center', justifyContent:'center', backgroundColor: '#FEFBF7',}}
                     onPress={() => {Haptics.selectionAsync();navigation.navigate('RewardHistory')}} 
                 >
-                    <Text style={{fontFamily: 'GmarketMedium', fontSize: 12,color: '#454545',}}>Track Rewards</Text>    
+                    <Text style={{fontFamily: 'GmarketMedium', fontSize: 12,color: '#454545',}}>Progress history</Text>
                 </TouchableOpacity>
             </View>
 
+            <View style={styles.pointsNotice}>
+                <Text style={styles.pointsNoticeText}>
+                    Orange points track in-app learning and participation only. They cannot be bought, sold, transferred, redeemed, or converted into cash, crypto, tokens, NFTs, or gifts.
+                </Text>
+            </View>
+
             <ScrollView 
-                style={{flex: 1,paddingHorizontal: 16,marginTop: -20,}} 
+                style={{flex: 1,paddingHorizontal: 16,}}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Daily Check-in */}
                 <RewardCard
                     logo={require('../../../assets/trophy/reward/daily_check_in.png')}
                     title="Daily Check-in"
-                    description="Check in daily and earn Orange."
+                    description="Record a daily check-in and build non-transferable in-app progress."
                     points="20"
-                    buttonText={isDailyCheckinAvailable ? "Claim" : timeLeftDailyCheckin || "Wait..."}
+                    buttonText={isDailyCheckinAvailable ? "Add progress" : timeLeftDailyCheckin || "Wait..."}
                     buttonType={isDailyCheckinAvailable ? "primary" : "secondary"}
+                    disabled={!isDailyCheckinAvailable}
                     onPress={isDailyCheckinAvailable ? onClaimDailyCheckin : null}
                 />
 
-                {/* AD Rewards */}
-                <RewardCard
-                    logo={require('../../../assets/trophy/reward/ad_reward.png')}
-                    title="AD Rewards"
-                    description="Watch an ad and earn Orange. Up to 3 times per day."
-                    points="10"
-                    buttonText={!timeLeftAdReward ? `Claim` : timeLeftAdReward || "Wait..."}
-                    buttonType={!timeLeftAdReward ? "primary" : "secondary"}
-                    onPress={!timeLeftAdReward ? handleClaimAdReward : null}
-                />
-
-                {/* Daily Activity Reward */}
+                {/* Daily participation progress */}
                 <RewardCard
                     logo={require('../../../assets/trophy/reward/daily_activity.png')}
-                    title="Daily Activity Reward"
-                    description="Complete daily tasks and earn Orange. Stay active every day to claim your reward!"
+                    title="Daily Participation"
+                    description="Track daily participation with non-transferable in-app progress points."
                     points="30"
-                    buttonText={!timeLeftDailyActivity ? `Claim` : timeLeftDailyActivity || "Wait..."}
-                    buttonType={userData?.todayActivities?.posts >= 1 && userData?.todayActivities?.comments >= 2 && userData?.todayActivities?.likes >= 10 && !timeLeftDailyActivity ? "primary" : "secondary"}
+                    buttonText={!timeLeftDailyActivity ? `Add progress` : timeLeftDailyActivity || "Wait..."}
+                    buttonType={isDailyActivityReady ? "primary" : "secondary"}
+                    disabled={!isDailyActivityReady}
                     // buttonType={userData.todayActivities?.posts == 1 && userData.todayActivities?.comments == 2 && userData.todayActivities?.likes == 10 ? "primary" : "secondary"}
-                    onPress={!timeLeftDailyActivity ? handleClaimDailyActivity : null}
+                    onPress={isDailyActivityReady ? handleClaimDailyActivity : null}
                 >
                     <ProgressBar current={userData?.todayActivities?.posts ?? 0} max={1} label="Post" />
                     <ProgressBar current={userData?.todayActivities?.comments ?? 0} max={2} label="Comments" />
                     <ProgressBar current={userData?.todayActivities?.likes ?? 0} max={10} label="Likes" />
                 </RewardCard>
-
-                {/* Invite Friends */}
-                <RewardCard
-                    logo={require('../../../assets/trophy/reward/invite_friend.png')}
-                    title="Invite Friends"
-                    description="Earn up to 100 Orange for every friend you invite!"
-                    points="100"
-                    buttonText="View Details"
-                    buttonType="primary"
-                    onPress={() => {Haptics.selectionAsync();navigation.navigate('InviteFriendScreen')}}
-                />
-
-                <View style={styles.quotePreviewCard}>
-                    <View style={styles.quotePreviewBadge}>
-                        <Text style={styles.quotePreviewBadgeText}>SQUID · BASE</Text>
-                    </View>
-                    <Text style={styles.quotePreviewTitle}>Swap quote preview</Text>
-                    <Text style={styles.quotePreviewDescription}>
-                        Check an estimated ETH ↔ USDC route without signing or sending a transaction.
-                    </Text>
-                    <TouchableOpacity
-                        accessibilityRole="button"
-                        style={styles.quotePreviewButton}
-                        onPress={() => {
-                            Haptics.selectionAsync();
-                            navigation.navigate('SquidQuotePreview');
-                        }}
-                    >
-                        <Text style={styles.quotePreviewButtonText}>Preview route</Text>
-                    </TouchableOpacity>
-                </View>
 
                 <View style={{height: 30}} />
             </ScrollView>
@@ -298,58 +249,24 @@ const styles = StyleSheet.create({
   buttonPrimary: {
     backgroundColor: '#FF6B35',
   },
-  quotePreviewCard: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#D9E5F7',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    marginTop: 20,
-    padding: 20,
-  },
-  quotePreviewBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#E8F1FF',
-    borderRadius: 12,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  quotePreviewBadgeText: {
-    color: '#155EEF',
-    fontFamily: 'GmarketBold',
-    fontSize: 10,
-  },
-  quotePreviewTitle: {
-    color: '#1F2937',
-    fontFamily: 'GmarketBold',
-    fontSize: Platform.OS == 'ios' ? 17 : 15,
-    marginTop: 13,
-  },
-  quotePreviewDescription: {
-    color: '#64748B',
-    fontFamily: 'GmarketMedium',
-    fontSize: Platform.OS == 'ios' ? 12 : 10,
-    lineHeight: 17,
-    marginTop: 7,
-  },
-  quotePreviewButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-end',
-    backgroundColor: '#FF6B35',
-    borderRadius: 24,
-    justifyContent: 'center',
-    marginTop: 16,
-    minHeight: 34,
-    minWidth: 120,
-    paddingHorizontal: 14,
-  },
-  quotePreviewButtonText: {
-    color: '#FFFFFF',
-    fontFamily: 'GmarketBold',
-    fontSize: 12,
-  },
   buttonSecondary: {
     backgroundColor: '#EEE',
     borderWidth: 0,
+  },
+  pointsNotice: {
+    backgroundColor: '#FFF7ED',
+    borderColor: '#FED7AA',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 14,
+    marginHorizontal: 20,
+    padding: 12,
+  },
+  pointsNoticeText: {
+    color: '#9A3412',
+    fontFamily: 'GmarketMedium',
+    fontSize: Platform.OS == 'ios' ? 11 : 10,
+    lineHeight: 16,
   },
   buttonText: {
     fontSize: Platform.OS == 'ios' ? 14 : 12,

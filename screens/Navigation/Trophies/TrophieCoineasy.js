@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/core';
+import * as Haptics from 'expo-haptics';
 
 import { courses } from '../../../data/courses';
 import { MultiplePeopleIcon } from '../../../components/Icons';
@@ -106,6 +107,30 @@ const TrophieCoineasy = () => {
                     ))}
                 </ScrollView>
 
+                <View style={styles.labContainer}>
+                    <View style={styles.labCard}>
+                        <View style={styles.labBadge}>
+                            <Text style={styles.labBadgeText}>PRACTICE LAB · BASE</Text>
+                        </View>
+                        <Text style={styles.labTitle}>Base Route Estimate Lab</Text>
+                        <Text style={styles.labDescription}>
+                            Learn how an ETH ↔ USDC route, fees, and minimum received amount are estimated. Preview only—no transaction and no Orange reward.
+                        </Text>
+                        <TouchableOpacity
+                            accessibilityHint="Opens a display-only Base route estimate exercise."
+                            accessibilityLabel="Open Base Route Estimate Lab"
+                            accessibilityRole="button"
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.navigate('SquidQuotePreview');
+                            }}
+                            style={styles.labButton}
+                        >
+                            <Text style={styles.labButtonText}>Open practice</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
                 {/* Course Cards */}
                 <View style={styles.courseContainer}>
                     {filteredCourses.map((course) => {
@@ -151,7 +176,7 @@ const TrophieCoineasy = () => {
 
                                 <View style={styles.cardFooter}>
                                     <View style={styles.rewardContainer}>
-                                        <Text style={styles.rewardLabel}>Total Reward</Text>
+                                        <Text style={styles.rewardLabel}>Total Points</Text>
                                         <View style={styles.rewardValue}>
                                             <Image
                                                 style={{width: 18,height: 18}}
@@ -212,6 +237,57 @@ const styles = StyleSheet.create({
   },
   courseContainer: {
     paddingHorizontal: 20,
+  },
+  labContainer: {
+    paddingHorizontal: 20,
+  },
+  labCard: {
+    backgroundColor: '#FFF8F0',
+    borderColor: '#FFD4BA',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    marginBottom: 16,
+    padding: 18,
+  },
+  labBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFE7D6',
+    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  labBadgeText: {
+    color: '#9A3412',
+    fontFamily: 'GmarketBold',
+    fontSize: 10,
+  },
+  labTitle: {
+    color: '#111827',
+    fontFamily: 'GmarketBold',
+    fontSize: Platform.OS === 'ios' ? 17 : 15,
+    marginTop: 12,
+  },
+  labDescription: {
+    color: '#64748B',
+    fontFamily: 'GmarketMedium',
+    fontSize: Platform.OS === 'ios' ? 12 : 10,
+    lineHeight: 17,
+    marginTop: 7,
+  },
+  labButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    backgroundColor: '#FF6B17',
+    borderRadius: 22,
+    marginTop: 14,
+    minWidth: 118,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  labButtonText: {
+    color: '#FFFFFF',
+    fontFamily: 'GmarketBold',
+    fontSize: 12,
   },
   courseCard: {
     backgroundColor: '#FFFFFF',

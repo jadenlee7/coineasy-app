@@ -88,7 +88,6 @@ import * as WebBrowser from 'expo-web-browser';
 import moment from 'moment';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import ClaimOrangesModal from './components/modals/ClaimOrangesModal';
 // import { Asset } from 'expo-asset';
 
 /**
@@ -398,11 +397,8 @@ function EasyGoApp({
   const [pushNotifsVis, setPushNotifsVis] = useState(false);
   const [newFeatureVis, setNewFeatureVis] = useState(false);
   const [newFeatureAlertVis, setNewFeatureAlertVis] = useState(false);
-  const [showClaimOranges, setShowClaimOranges] = useState(false)
-  const [todayOranges, setTodayOranges] = useState(Math.floor(Math.random() * (20 - 5) + 5))
   const [settingsVis, setSettingsVis] = useState(false);
   const [switchAccountVis, setSwitchAccountVis] = useState(false);
-  const [adAlreadyClaimed, setAdAlreadyClaimed] = useState(false)
   const [addressCopied, setAddressCopied] = useState(false)
 
 
@@ -457,7 +453,6 @@ function EasyGoApp({
   const [categoriesVis, setCategoriesVis] = useState(false);
   const [showReportBack, setShowReportBack] = useState(false)
   const [activityClaim, setActivityClaim] = useState(false)
-  const [inviteClaim, setInviteClaim] = useState(false)
 
   const [categoryPosts, setCategoryPosts] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState(null)
@@ -531,13 +526,10 @@ function EasyGoApp({
     setPushNotifsVis(false);
     setNewFeatureVis(false);
     setNewFeatureAlertVis(false);
-    setShowClaimOranges(false);
-    setTodayOranges(0);
     setSwitchLoading(false);
     setLoading(false);
     setSettingsVis(false);
     setSwitchAccountVis(false);
-    setAdAlreadyClaimed(false);
     setAddressCopied(false);
     setPostSettingsModalVis(false);
     setPostboxVis(false);
@@ -555,7 +547,6 @@ function EasyGoApp({
     setCategoriesVis(false);
     setShowReportBack(false);
     setActivityClaim(false);
-    setInviteClaim(false);
     setCategoryPosts(null);
     setSelectedCategory(null);
     setNewsPosts(null);
@@ -1153,11 +1144,9 @@ function EasyGoApp({
                         connectType, setConnectType,
                         listAccount, setListAccount,
                         nicknameVis, setNicknameVis,
-                        inviteClaim, setInviteClaim,
                         listMessages, setListMessages,
                         currentRoute, setCurrentRoute,
                         selectedNews, setSelectedNews,
-                        todayOranges, setTodayOranges,
                         addressCopied, setAddressCopied,
                         switchLoading, setSwitchLoading,
                         tabViewHeight, setTabViewHeight,
@@ -1169,8 +1158,6 @@ function EasyGoApp({
                         showImageSender, setShowImageSender,
                         connectModalVis, setConnectModalVis,
                         selectedCategory, setSelectedCategory,
-                        showClaimOranges, setShowClaimOranges,
-                        adAlreadyClaimed, setAdAlreadyClaimed,
                     }}
                 >
                     <AccountTransitionResetSignal onTransition={resetAccountTransientUi} />

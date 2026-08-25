@@ -1,38 +1,23 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { Alert, Dimensions, Image, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-
-import { ScrollView } from 'react-native-gesture-handler';
-
+import { Alert, Image, Modal, Platform, Text, TouchableOpacity, View } from 'react-native'
 
 import { GlobalContext } from '../../contexts/GlobalContext';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
-import { TabBar, TabView } from 'react-native-tab-view';
 import useStatusBarHeight from '../../hooks/useStatusBarHeight';
 import OrangeReward from './Oranges/OrangeReward';
-import ShopScreen from './Oranges/ShopScreen';
-import GiftScreen from './Oranges/GiftScreen';
-import ClaimOrangesModal from '../../components/modals/ClaimOrangesModal';
 import Header from '../../components/Header';
 import { api, ApiError } from '../../utils/api';
 import { useOrange } from '../../hooks/useOrange';
 import { useDeviceAccountOperationLease } from '../../contexts/DeviceAccountDataContext';
 
 
-const TabBarHeight = 50;
-const IndicatorWidth = 50
-
-const windowSize = Dimensions.get('window')
-
 const OrangeNavigation = ({navigation, route}) => {
     const { 
         user,
         userData,
         setUserData,
-        tabViewHeight,
-        showClaimOranges,
-        newGiftsCount, setNewGiftsCount
     } = useContext(GlobalContext);
     const { lease, isCurrentLease } = useDeviceAccountOperationLease();
     const tailwind = useTailwind();      
@@ -47,39 +32,15 @@ const OrangeNavigation = ({navigation, route}) => {
     const claimRequestIdRef = useRef(0);
     const claimQueueRef = useRef(Promise.resolve());
 
-    const [tabIndex, setIndex] = useState(0);
-    const routes = [
-        {key:0, title: 'Reward'},
-        {key:1, title: 'Shop'},
-        {key:2, title: 'Gift'},
-    ];
-
-    
-    const renderLabel = ({route, focused}) => { 
-        const showDot = route.title === 'Gift' && newGiftsCount;
-
-        return ( 
-            // <Text style={[styles.label, {opacity: focused ? 1 : 0.5}]}>{route.title}</Text>
-            <View style={{alignItems: 'center', justifyContent: 'center'}}>
-                <Text style={[styles.label, {opacity: focused ? 1 : 0.5}]}>
-                    {route.title}
-                </Text>
-                {showDot && (
-                    <View style={styles.orangeDot} />
-                )}
-            </View>
-
-        );
-    };
-
     const rewardTypeLabel = useCallback((reason) => ({
-        DAILY_CHECKIN: 'Check-in reward',
-        DAILY_ACTIVITY: 'Daily activity reward',
-        AD_REWARD: 'AD reward',
-        COURSE_QUIZ: 'Quiz completed',
-        FIRST_REWARD: 'First reward bonus',
-        WELCOME: 'Welcome bonus',
-        SWAP: 'Swap reward',
+        DAILY_CHECKIN: 'Check-in points',
+        DAILY_ACTIVITY: 'Daily activity points',
+        AD_REWARD: 'Legacy promotion points',
+        COURSE_QUIZ: 'Learning points',
+        FIRST_REWARD: 'First progress bonus',
+        WELCOME: 'Welcome progress bonus',
+        SWAP: 'Legacy activity points',
+        SWAP_REWARD: 'Legacy activity points',
     }[reason] || reason.replaceAll('_', ' ')), []);
 
     const groupedHistory = useCallback((rows) => {
@@ -130,7 +91,6 @@ const OrangeNavigation = ({navigation, route}) => {
                         todayActivities: status.todayActivities,
                         dailyCheckin: status.dailyCheckin,
                         dailyActivity: status.dailyActivity,
-                        adReward: { nextReset: status.adReward?.nextAvailable || null },
                     }
                     : current
             ));
@@ -162,7 +122,7 @@ const OrangeNavigation = ({navigation, route}) => {
                 });
                 if (!isCurrentRequest()) return null;
                 if (!result) {
-                    Alert.alert('Backend not connected', 'Set EXPO_PUBLIC_BACKEND_URL to claim Orange rewards.');
+                    Alert.alert('Backend not connected', 'Set EXPO_PUBLIC_BACKEND_URL to update Orange progress.');
                     return null;
                 }
                 setUserData((current) => (
@@ -171,9 +131,7 @@ const OrangeNavigation = ({navigation, route}) => {
                             ...(current || {}),
                             numberOranges: result.balance,
                             ...(stateKey ? {
-                                [stateKey]: stateKey === 'adReward'
-                                    ? { nextReset: result.nextAvailable }
-                                    : { claimed: true, nextAvailable: result.nextAvailable },
+                                [stateKey]: { claimed: true, nextAvailable: result.nextAvailable },
                             } : {}),
                         }
                         : current
@@ -222,7 +180,7 @@ const OrangeNavigation = ({navigation, route}) => {
             const result = await syncClaim(api.orangeClaimDailyActivity, 'dailyActivity', expectedLease);
             if (!isCurrentLease(expectedLease)) return;
             if (result?.claimed) setOpenDailyActivityModal(true);
-            else if (result) Alert.alert('Already claimed', 'The daily activity reward has already been collected.');
+            else if (result) Alert.alert('Already updated', 'Today\'s participation progress is already recorded.');
         } catch (error) {
             if (!isCurrentLease(expectedLease)) return;
             if (error instanceof ApiError && error.status === 409) {
@@ -234,72 +192,12 @@ const OrangeNavigation = ({navigation, route}) => {
                         : current
                 ));
                 Alert.alert(
-                    'Tasks not complete',
+                    'Progress not complete',
                     `Post ${progress.posts || 0}/${targets.posts || 1} · Comments ${progress.comments || 0}/${targets.comments || 2} · Likes ${progress.likes || 0}/${targets.likes || 10}`,
                 );
                 return;
             }
             Alert.alert('Claim failed', 'Please try again in a moment.');
-        }
-    };
-
-    const onClaimAdReward = async () => {
-        const expectedLease = lease;
-        if (!expectedLease || !isCurrentLease(expectedLease)) return false;
-        Haptics.selectionAsync();
-        try {
-            const result = await syncClaim(api.orangeClaimAdReward, 'adReward', expectedLease);
-            if (!isCurrentLease(expectedLease)) return false;
-            if (!result?.claimed && result) {
-                Alert.alert('Already claimed', 'The next ad reward will unlock in the next reward slot.');
-            }
-            return Boolean(result?.claimed);
-        } catch (error) {
-            if (!isCurrentLease(expectedLease)) return false;
-            Alert.alert('Claim failed', 'Please try again in a moment.');
-            return false;
-        }
-    };
-
-
-    const renderScene = ({route}) => {
-        if(route.key == 0 ) return (
-            <ScrollView>
-                <OrangeReward 
-                    onClaimDailyCheckin={onClaimDailyCheckin}
-                    handleClaimDailyActivity={handleClaimDailyActivity}
-                />
-            </ScrollView>
-        )
-        if(route.key == 1 ) return (
-            <ScrollView>
-                <ShopScreen />
-            </ScrollView>
-        )
-        if(route.key == 2 ) return (
-            <ScrollView>
-                <GiftScreen goToShop={() => setIndex(1)}/>
-            </ScrollView>
-        )
-    }
- 
-    const renderTabBar = (props) => {
-        return (
-            <TabBar
-                {...props}
-                style={styles.tab}
-                renderLabel={renderLabel}
-                indicatorStyle={[styles.indicator, { width: IndicatorWidth, left: (windowSize.width / 3 - IndicatorWidth) / 2 }]}
-            />
-        );
-    };
-
-    const onIndexChange = (index) => {
-        setIndex(index);
-
-        // Si l'utilisateur ouvre Gift (route key = 2)
-        if (routes[index].key == 2) {
-            setNewGiftsCount(false);
         }
     };
 
@@ -319,13 +217,9 @@ const OrangeNavigation = ({navigation, route}) => {
             )}
 
             <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',marginTop: statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight}]}>
-                <TabView
-                    navigationState={{index: tabIndex, routes}}
-                    renderScene={renderScene}
-                    renderTabBar={renderTabBar}
-                    onIndexChange={onIndexChange}
-                    initialLayout={{width: windowSize.width}}
-                    style={{height: tabViewHeight,}}
+                <OrangeReward
+                    onClaimDailyCheckin={onClaimDailyCheckin}
+                    handleClaimDailyActivity={handleClaimDailyActivity}
                 />
             </View>
 
@@ -351,7 +245,7 @@ const OrangeNavigation = ({navigation, route}) => {
                         shadowRadius: 4,
                         elevation: 5,
                     }}>
-                        <Text style={{fontFamily:'GmarketBold', textAlign:'center',}}>Orange Collected!</Text>
+                        <Text style={{fontFamily:'GmarketBold', textAlign:'center',}}>Orange Progress Updated</Text>
 
                         <View style={{alignItems:'center',padding: 20}}>
                             <Image
@@ -360,7 +254,7 @@ const OrangeNavigation = ({navigation, route}) => {
                                 source={require('../../assets/trophy/reward/daily_check_in_orange.png')}
                                 defaultSource={require('../../assets/trophy/reward/daily_check_in_orange.png')}
                             />  
-                            <Text style={{fontFamily:'GmarketMedium',marginTop: 10,fontSize: 18,}}>{openDailyCheckinModal ? "+20" : "+30"}</Text>
+                            <Text style={{fontFamily:'GmarketMedium',marginTop: 10,fontSize: 18,}}>{openDailyCheckinModal ? "+20 points" : "+30 points"}</Text>
                         </View>
 
                         <TouchableOpacity
@@ -373,46 +267,8 @@ const OrangeNavigation = ({navigation, route}) => {
                 </View>
             </Modal>
 
-            {/** Display claim oranges pane */}
-            {showClaimOranges &&
-                <ClaimOrangesModal 
-                    onClaimAdReward={onClaimAdReward}
-                />
-            }
-
         </View>
     )
 }
 
 export default OrangeNavigation
-
-const styles = StyleSheet.create({
-    label: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginTop: 5,
-    },
-    tab: {
-        elevation: 0,
-        shadowOpacity: 0,
-        backgroundColor: 'white',
-        height: TabBarHeight,
-        borderBottomWidth: 1,
-        borderBottomColor: '#ebebeb'
-    },
-    indicator: {
-        height: 4, 
-        borderRadius: 10,
-        width: '20%',
-        backgroundColor: '#FF6B17',
-    },
-    orangeDot: {
-        position: 'absolute',
-        top: 2,
-        right: -8,
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#FF6B17',
-    },
-})
