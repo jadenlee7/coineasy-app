@@ -21,6 +21,7 @@
  *   POST   /posts                  create root post or reply (auth)
  *   PUT    /posts/:id              edit own post (auth)
  *   DELETE /posts/:id              delete own post (auth)
+ *   POST   /posts/:id/report       report another user's post (auth, idempotent)
  *   POST   /posts/:id/like         like (auth, idempotent)
  *   DELETE /posts/:id/like         unlike (auth, idempotent)
  */
@@ -35,6 +36,17 @@ export const postsRouter = Router();
 
 const PAGE_DEFAULT = 20;
 const PAGE_MAX = 100;
+const REPORTS_PER_DAY_MAX = 20;
+
+export const POST_REPORT_REASONS = Object.freeze([
+  'SPAM',
+  'NUDITY_SEXUAL_CONTENT',
+  'HATE_SPEECH',
+  'VIOLENCE_DANGEROUS',
+  'BULLYING_HARASSMENT',
+  'SCAM_FRAUD',
+  'FALSE_INFORMATION',
+]);
 
 function parseLimit(q) {
   const n = Number(q.limit);
@@ -260,6 +272,96 @@ postsRouter.delete(
   '/:id',
   requireAuth,
   express4AsyncHandler(createDeletePostHandler()),
+);
+
+// --- POST /posts/:id/report (authenticated and idempotent) ----------
+const reportSchema = z.object({
+  reason: z.enum([...POST_REPORT_REASONS]),
+}).strict();
+
+export function createPostReportHandler({
+  db = prisma,
+  now = () => new Date(),
+  reportsPerDayMax = REPORTS_PER_DAY_MAX,
+} = {}) {
+  return async function reportPost(req, res) {
+    res.set('Cache-Control', 'no-store');
+    const parsed = reportSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'report_reason_invalid' });
+    }
+
+    const reporter = await db.user.findUnique({
+      where: { privyDid: req.user.privyDid },
+      select: { id: true },
+    });
+    if (!reporter) return res.status(404).json({ error: 'user_not_found' });
+
+    const outcome = await db.$transaction(async (tx) => {
+      // Serialize report creation per reporter. The unique constraint handles
+      // same-pair replay; this lock also makes the rolling count a hard bound
+      // when many different posts are reported concurrently.
+      await tx.$queryRawUnsafe(
+        'SELECT pg_advisory_xact_lock(hashtextextended($1, 0)) IS NULL AS "lockAcquired"',
+        `post-report:${reporter.id}`,
+      );
+
+      const post = await tx.post.findUnique({
+        where: { id: req.params.id },
+        select: { id: true, authorId: true, deletedAt: true },
+      });
+      if (!post || post.deletedAt || !post.authorId) {
+        return { body: { error: 'post_not_reportable' }, status: 404 };
+      }
+      if (post.authorId === reporter.id) {
+        return { body: { error: 'cannot_report_own_post' }, status: 409 };
+      }
+
+      const unique = {
+        postId_reporterId: { postId: post.id, reporterId: reporter.id },
+      };
+      const existing = await tx.postReport.findUnique({
+        where: unique,
+        select: { id: true },
+      });
+      if (existing) {
+        return { body: { reported: true, duplicate: true }, status: 200 };
+      }
+
+      const currentTime = now();
+      const windowStart = new Date(currentTime.getTime() - 24 * 60 * 60 * 1_000);
+      const recentReports = await tx.postReport.count({
+        where: {
+          reporterId: reporter.id,
+          createdAt: { gte: windowStart },
+        },
+      });
+      if (recentReports >= reportsPerDayMax) {
+        return { body: { error: 'report_rate_limited' }, retryAfter: '3600', status: 429 };
+      }
+
+      await tx.postReport.upsert({
+        where: unique,
+        create: {
+          postId: post.id,
+          reporterId: reporter.id,
+          reason: parsed.data.reason,
+        },
+        update: {},
+        select: { id: true },
+      });
+      return { body: { reported: true, duplicate: false }, status: 201 };
+    });
+
+    if (outcome.retryAfter) res.set('Retry-After', outcome.retryAfter);
+    return res.status(outcome.status).json(outcome.body);
+  };
+}
+
+postsRouter.post(
+  '/:id/report',
+  requireAuth,
+  express4AsyncHandler(createPostReportHandler()),
 );
 
 // --- POST /posts/:id/like (idempotent) -------------------------------

@@ -180,6 +180,31 @@ exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Document release SHA `f252761a217094942bc18e57e09467c01a8bc8ba`
   and previous known-good SHA `b1850d0`.
 - [x] Confirm an operator is available for the deployment and 15-minute watch.
+- [ ] Back up the approved target, apply the additive
+      `20260825120000_post_reports` migration once, and verify Prisma reports
+      no pending migration before deploying the post-report API.
+- [ ] Smoke one authenticated non-owner `POST /posts/:id/report`, one replay,
+      and the invalid/self/deleted cases against the exact staging SHA. Record
+      only status codes and request IDs; do not put reporter identity or report
+      content in release logs.
+- [ ] Provision and verify a separately authenticated operator moderation
+      queue, action/status workflow, owner, response SLA, and escalation
+      runbook before an App Store submission that exposes UGC. Persistence and
+      local Hide are not a complete moderation operation.
+- [ ] Export the exact iOS release JavaScript and run `npm run
+      appstore:bundle-check -- <ios-bundle>`. Any legacy execution/reward-log
+      marker is a stop-ship failure; source tests alone are not archive proof.
+- [ ] Verify the internal build shows Base Route Estimate Lab only under
+      EASYEDU/Trophies, shows no Ad/Invite/Shop/Gift/Squid Orange reward or
+      conversion controls, and cannot display a signing, broadcast,
+      redemption, or Orange-credit action from the lab.
+- [ ] Confirm App Review Guideline 3.1.5(v) treatment of non-transferable daily
+      participation points. If product/legal review does not approve the
+      classification, disable that claim before submission; the server route
+      remaining compatible for internal builds is not App Store approval.
+- [ ] Keep every account-deletion source latch and Railway flag off. Apple and
+      Google provider cleanup, provider-neutral recent reauth, Android QA, and
+      the public web initiation path remain independent stop-ship gates.
 
 ## Deploy
 

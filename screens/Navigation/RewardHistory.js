@@ -10,77 +10,13 @@ import moment from 'moment';
 const RewardHistory = ({navigation, route}) => {
     const { userData } = useContext(GlobalContext);
 
-    const categories = ["All", "Check-in", "AD", "Activity", "Invite", "Bonus"];
+    const categories = ["All", "Check-in", "Activity", "Learning", "Bonus", "Legacy"];
     const [selectedCategory, setSelectedCategory] = useState("All");
 
     const tempList = userData?.listClaimedOranges ?? []
     if(tempList){
         tempList.sort((a, b) => (moment(a.date).format('YYYY-MM-DD') < moment(b.date).format('YYYY-MM-DD')) ? 1 : -1)
     }
-    // const tempList = userData?.listClaimedOranges ?? [
-    // {
-    //         date: '2024-06-01',
-    //         listOranges: [
-    //             {
-    //                 numberOranges: 10,
-    //                 type: 'Daily Check-in'
-    //             },
-    //         ]
-    //     },
-    //     {
-    //         date: '2024-05-31',
-    //         listOranges: [
-    //             {
-    //                 numberOranges: 20,
-    //                 type: '7-Day Streak Bonus'
-    //             },
-    //         ]
-    //     },
-    //     {
-    //         date: '2024-05-30',
-    //         listOranges: [
-    //             {
-    //                 numberOranges: 5,
-    //                 type: 'Daily Check-in'
-    //             },
-    //         ]
-    //     },
-    //     {
-    //         date: '2024-05-29',
-    //         listOranges: [
-    //             {
-    //                 numberOranges: 10,
-    //                 type: 'Daily Check-in'
-    //             },
-    //             {
-    //                 numberOranges: 50,
-    //                 type: 'Ad Rewards'
-    //             },
-    //             {
-    //                 numberOranges: 10,
-    //                 type: 'Invite Friends'
-    //             },
-    //         ]
-    //     },
-    //     {
-    //         date: '2024-05-28',
-    //         listOranges: [
-    //             {
-    //                 numberOranges: 10,
-    //                 type: 'Daily Check-in'
-    //             },
-    //             {
-    //                 numberOranges: 20,
-    //                 type: '14-Day Streak Bonus'
-    //             },
-    //             {
-    //                 numberOranges: 10,
-    //                 type: 'Invite Friends'
-    //             },
-    //         ]
-    //     },
-    // ]
-
     const filteredList = useMemo(() => {
         if (!tempList) return [];
 
@@ -92,9 +28,10 @@ const RewardHistory = ({navigation, route}) => {
 
         return sortedList.map((entry) => ({
             ...entry,
-            listOranges: entry.listOranges.filter((orange) =>
-                orange.type.toLowerCase().includes(selectedCategory.toLowerCase())
-            ),
+            listOranges: entry.listOranges.filter((orange) => (
+                String(orange.type || '').toLowerCase()
+                    .includes(selectedCategory.toLowerCase())
+            )),
         }));
     }, [userData, selectedCategory]);
 
@@ -109,11 +46,11 @@ const RewardHistory = ({navigation, route}) => {
 
                     <Text style={styles.subtitle}>
                         {
-                            item.type.toLowerCase().includes("check-in") ? "Check-in reward"
-                            : item.type.toLowerCase().includes("ad") ? "Watch AD"
-                            : item.type.toLowerCase().includes("activity") ? "Complete daily task"
-                            : item.type.toLowerCase().includes("invite") ? "Invite reward"
-                            : item.type.toLowerCase().includes("bonus") ? "Bonus"
+                            item.type.toLowerCase().includes("check-in") ? "Check-in points"
+                            : item.type.toLowerCase().includes("activity") ? "Daily progress points"
+                            : item.type.toLowerCase().includes("learning") ? "Learning progress points"
+                            : item.type.toLowerCase().includes("legacy") ? "Legacy point history"
+                            : item.type.toLowerCase().includes("bonus") ? "Bonus points"
                             : "Other"
                         }
                     </Text>
@@ -151,7 +88,7 @@ const RewardHistory = ({navigation, route}) => {
                         defaultSource={require('../../assets/back_button.png')}
                     />
                 </TouchableOpacity>
-                <Text style={{fontFamily: 'GmarketBold', fontSize: Platform.OS == 'ios' ? 18 : 16,}}>Reward History</Text>
+                <Text style={{fontFamily: 'GmarketBold', fontSize: Platform.OS == 'ios' ? 18 : 16,}}>Progress History</Text>
             </View>
 
             <SafeAreaView style={{flex: 1}}>
@@ -193,7 +130,7 @@ const RewardHistory = ({navigation, route}) => {
                             )
                         ) : (
                             <Text style={{textAlign:'center', marginTop: 20, color:'#999'}}>
-                                No oranges claimed
+                                No progress points yet
                             </Text>
                         )}
                     </View>

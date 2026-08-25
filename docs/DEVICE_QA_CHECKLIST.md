@@ -742,6 +742,54 @@ wallet private key, or login code.
       recorded one authenticated own-profile `PUT /profiles/me` with HTTP 200;
       the owner confirmed the expected Apple profile and no Google state.
 
+## App Store hardening source candidate (not built or deployed)
+
+- [x] Remove the dormant mobile execution quote, signer/broadcast, and reward
+      log clients from the source graph. Keep only the owner-bound,
+      display-only preview helper and a source-level bundle guard for the
+      legacy execution/reward markers.
+- [x] Move the visible preview from Orange to EASYEDU/Trophies as **Base Route
+      Estimate Lab**. It is explicitly educational, has no transaction control,
+      and has no Orange reward association.
+- [x] Remove Ad and Invite reward controls, Reward History filters/copy, generic
+      ad modal branches, and Shop/Gift/conversion navigation from the App Store
+      mobile graph. Historical ledger rows remain readable with neutral legacy
+      point labels; the backend compatibility endpoints were not activated or
+      deleted in this candidate.
+- [x] Present Orange as in-app progress only, with visible copy stating it
+      cannot be bought, sold, transferred, redeemed, or converted into cash,
+      crypto, tokens, NFTs, or gifts. Remove the first-post reward promise.
+- [x] Replace the report-success timer with an authenticated
+      `POST /posts/:id/report` receipt. The server validates an allow-listed
+      reason, rejects missing/deleted/self-authored posts, rate-limits new
+      reports, and idempotently persists one row per reporter/post pair without
+      returning reporter identity, report IDs, or totals.
+- [x] Keep account deletion visible but fail-closed. Disabled and error copy
+      now says that no request was sent and local/provider data remains
+      unchanged; no source latch or runtime flag was enabled.
+- [ ] Apply the additive `PostReport` migration to an approved staging backup
+      target, deploy the exact reviewed SHA, and verify a second account can
+      submit one report, replay it idempotently, and receive success only after
+      the server receipt. Verify local Hide occurs only after that receipt and
+      does not cross an account switch.
+- [ ] Provision an authenticated operator report queue and action workflow,
+      assign an owner and response SLA, validate the user escalation/contact
+      path, and complete the moderation/retention runbook. Do not mark App
+      Review Guideline 1.2 complete from report persistence alone.
+- [ ] Export the exact iOS release JavaScript, run `npm run
+      appstore:bundle-check -- <ios-bundle>`, inspect the archive, and repeat
+      the EASYEDU/Orange/Report checks on internal TestFlight. No external
+      group or App Store review submission is authorized by this checklist.
+- [ ] Obtain product/legal review of daily social-participation points against
+      App Review Guideline 3.1.5(v). If the classification is not approved in
+      writing, remove the daily participation claim before submission; visible
+      non-conversion copy is not by itself policy clearance.
+- [ ] Keep deletion unavailable until Apple authorization-code exchange,
+      secure revocation credentials and cleanup disposition, Google stable
+      identity/reauth/cleanup, Android QA, and the public web deletion path all
+      pass on disposable staging accounts. Gate activation is a separate
+      review.
+
 ## Dormant recent Apple reauthentication candidate
 
 Do not run these checks from Build 104 or a primary tester account. The current

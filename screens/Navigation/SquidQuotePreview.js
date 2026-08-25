@@ -26,7 +26,7 @@ import { GlobalContext } from '../../contexts/GlobalContext';
 import { useDeviceAccountOperationLease } from '../../contexts/DeviceAccountDataContext';
 import useEasyGoWalletRuntime from '../../hooks/useEasyGoWalletRuntime';
 import { ApiError } from '../../utils/api';
-import { getSquidQuotePreview } from '../../utils/squid';
+import { getSquidQuotePreview } from '../../utils/squidPreview';
 import {
   SQUID_QUOTE_PREVIEW_DIRECTIONS,
   buildSquidQuotePreviewRequest,
@@ -217,7 +217,7 @@ const SquidQuotePreview = ({ navigation }) => {
             source={require('../../assets/back_button.png')}
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Squid Quote Preview</Text>
+        <Text style={styles.headerTitle}>Base Route Estimate Lab</Text>
       </View>
 
       <SafeAreaView style={styles.safeArea}>
@@ -231,11 +231,11 @@ const SquidQuotePreview = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.safetyCard}>
-              <Text style={styles.safetyTitle}>Preview only · No transaction</Text>
+              <Text style={styles.safetyTitle}>Learning lab · Preview only</Text>
               <Text style={styles.safetyCopy}>
-                This checks an estimated route on Base. EasyGo will not ask for a signature,
-                broadcast a transaction, or award Orange from this screen. Your public wallet
-                address is shared with Squid only to calculate the preview.
+                Learn how an ETH–USDC route and its fees are estimated on Base. EasyGo will not
+                ask for a signature, broadcast a transaction, or award Orange here. Your public
+                wallet address is shared with Squid only to calculate this temporary estimate.
               </Text>
             </View>
 
@@ -303,7 +303,7 @@ const SquidQuotePreview = ({ navigation }) => {
               {loading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.previewButtonText}>Get quote preview</Text>
+                <Text style={styles.previewButtonText}>Estimate route</Text>
               )}
             </TouchableOpacity>
 
@@ -313,7 +313,7 @@ const SquidQuotePreview = ({ navigation }) => {
             {presentedQuote ? (
               <View style={styles.resultCard}>
                 <View style={styles.resultHeader}>
-                  <Text style={styles.resultTitle}>Estimated route</Text>
+                  <Text style={styles.resultTitle}>Practice estimate</Text>
                   <Text style={styles.baseBadge}>{presentedQuote.chainLabel || 'Base'}</Text>
                 </View>
                 <Text style={styles.resultFrom}>{presentedQuote.fromLabel}</Text>

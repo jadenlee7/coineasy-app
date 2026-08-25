@@ -89,11 +89,10 @@ test('Orange reward actions carry the captured owner and drop stale UI effects',
   assert.match(contents, /const result = await claim\(\{\s*expectedAuthUserId: expectedLease\.ownerUserId,/);
   assert.match(contents, /syncClaim\(api\.orangeClaimDailyCheckin, 'dailyCheckin', expectedLease\)/);
   assert.match(contents, /syncClaim\(api\.orangeClaimDailyActivity, 'dailyActivity', expectedLease\)/);
-  assert.match(contents, /syncClaim\(api\.orangeClaimAdReward, 'adReward', expectedLease\)/);
   assert.match(contents, /setUserData\(\(current\) => \(\s*isCurrentLease\(expectedLease\)/);
   assert.match(contents, /catch \(error\) \{\s*if \(!isCurrentLease\(expectedLease\)\) return;[\s\S]*?Alert\.alert/);
   assert.doesNotMatch(contents, /api\.orangeRewardStatus\(\)/);
-  assert.doesNotMatch(contents, /syncClaim\(api\.orangeClaim(?:DailyCheckin|DailyActivity|AdReward), '[^']+'\)/);
+  assert.doesNotMatch(contents, /syncClaim\(api\.orangeClaim(?:DailyCheckin|DailyActivity), '[^']+'\)/);
 });
 
 test('Orange reads and claims reject older same-session completions', () => {
@@ -144,30 +143,15 @@ test('profile and first-reward modals suppress stale account updates and alerts'
   assert.doesNotMatch(newFeature, /orangeClaimFirstReward\(\)/);
 });
 
-test('Squid quote and execution bind the quote and signer to one full session lease', () => {
-  const contents = source('../utils/squid.js');
+test('the mobile Squid module is preview-only and owner-bound', () => {
+  const contents = source('../utils/squidPreview.js');
+  const api = source('../utils/api.js');
 
-  assert.match(contents, /createSquidRouteLeaseRegistry/);
-  assert.match(contents, /getSquidQuote\(\{[\s\S]*?lease,[\s\S]*?isCurrentLease,[\s\S]*?\}\)/);
-  assert.match(contents, /fromAddress,[\s\S]*?slippage,[\s\S]*?lease,[\s\S]*?isCurrentLease/);
-  assert.match(contents, /executeSquidRoute\(\{ quote, signer, lease, isCurrentLease \}\)/);
-  assert.match(contents, /api\.swapQuote\([\s\S]*?expectedAuthUserId: operationLease\.ownerUserId/);
-  assert.match(contents, /api\.swapLog\([\s\S]*?expectedAuthUserId: operationLease\.ownerUserId/);
-  assert.match(contents, /if \(!quote\?\.route \|\| !quote\?\.tx\) return null;/);
-  assert.match(contents, /fromAddress,[\s\S]*?fromToken,[\s\S]*?fromAmount/);
-  assert.match(contents, /const \{ to, data, value, gasLimit, gasPrice \} = quote\.tx;/);
-  const finalFence = contents.indexOf(
-    'squidRouteLeases.requireBound(quote, operationLease, isCurrentLease);',
-    contents.indexOf('const { to, data, value, gasLimit, gasPrice }'),
-  );
-  assert.ok(finalFence >= 0);
-  assert.ok(finalFence < contents.indexOf('signer.sendTransaction', finalFence));
-  const wait = contents.indexOf('await tx.wait()');
-  assert.ok(wait >= 0);
-  assert.ok(contents.indexOf(
-    'squidRouteLeases.requireBound(quote, operationLease, isCurrentLease);',
-    wait,
-  ) > wait);
+  assert.match(contents, /getSquidQuotePreview\(\{[\s\S]*?lease,[\s\S]*?isCurrentLease,[\s\S]*?signal,/);
+  assert.match(contents, /previewLeases\.requireCurrent\(lease, isCurrentLease\)/);
+  assert.match(contents, /api\.swapQuotePreview\([\s\S]*?expectedAuthUserId: operationLease\.ownerUserId/);
+  assert.doesNotMatch(contents, /sendTransaction|executeSquidRoute|swapLog|getSigner|getProvider/);
+  assert.doesNotMatch(api, /swapQuote:\s*\(|swapLog:\s*\(/);
 });
 
 test('a Squid quote capability cannot cross owner or same-DID session epochs', () => {

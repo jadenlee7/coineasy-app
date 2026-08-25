@@ -345,7 +345,7 @@ const CourseDetailScreen = ({ navigation, route }) => {
             if (!isCurrentCourseLease(expectedLease)) return;
             Alert.alert(
                 'Progress saved on this device',
-                'The Orange reward could not be claimed. You can retry after the backend is available.',
+                'The learning points could not be recorded. You can retry after the backend is available.',
             );
         }
         if (!isCurrentCourseLease(expectedLease)) return;

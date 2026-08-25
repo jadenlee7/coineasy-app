@@ -1,6 +1,6 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useTailwind } from 'tailwind-rn';
-import { Platform, Keyboard, View, TouchableOpacity, Dimensions, ImageBackground, KeyboardAvoidingView, Linking, TouchableWithoutFeedback } from 'react-native';
+import { Platform, TouchableOpacity, Dimensions, ImageBackground, KeyboardAvoidingView } from 'react-native';
 import Animated, {
   withTiming,
   useAnimatedStyle,
@@ -8,11 +8,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from "expo-linear-gradient";
-import { GlobalContext } from "../contexts/GlobalContext";
 
 
-export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24, type = null, isAds = null, pendingAds = null}) {
+export default function Modal({hide, children, animateModal = true, bottomDuration = 150, bottomStart = -100, paddingBottom = 24, type = null}) {
     const tailwind = useTailwind();
     const opacity = useSharedValue(0.25);
     const bottom = useSharedValue(bottomStart);    
@@ -37,17 +35,6 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
 
     const statusBarHeight = useStatusBarHeight();
     
-    const openUrl = async () => {
-        let url = 'https://youtu.be/EPLZlxe07Eg'
-        const supported = await Linking.canOpenURL(url);
-
-        if (supported) {
-          await Linking.openURL(url);
-        } else {
-          Alert.alert(`Don't know how to open this URL: ${url}`);
-        }
-    }
-
     return(
         <KeyboardAvoidingView style={[tailwind('absolute h-full w-full'), { elevation: 50 }]} behavior={'height'}>
             {/** Background */}
@@ -58,7 +45,7 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     tailwind('h-full w-full bg-slate-950'), 
                     {
                         opacity: 0.63,
-                        height: (type == 'notifications' || type == 'oranges' || type == 'oranges-help' || type == 'oranges-help-invite') ? '100%' : Dimensions.get('window').height,
+                        height: (type == 'notifications' || type == 'oranges') ? '100%' : Dimensions.get('window').height,
                     }
                 ]} 
             />
@@ -66,25 +53,21 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
             {/** Modal content */}
             <Animated.View 
                 style={[
-                    tailwind('absolute '+  (!pendingAds ? ' bg-white ' : '')+ ((type == 'notifications' || type == 'oranges' || type == 'oranges-help' || type == 'oranges-help-invite' || type == 'deleteAccount') ? 'rounded-xl' : 'rounded-t-xl')),
+                    tailwind('absolute bg-white '+ ((type == 'notifications' || type == 'oranges' || type == 'deleteAccount') ? 'rounded-xl' : 'rounded-t-xl')),
                     animatedModalStyle ,
                     {
                         paddingBottom: paddingBottom,
                         top: 
-                            statusBarHeight > 25 && type != 'notifications' && type != 'trophy' && type != 'oranges' && type != 'oranges-help' && type != 'oranges-help-invite' && type != 'small' && type != 'deleteAccount' ? 65 + statusBarHeight 
-                            : type != 'notifications' && type != 'oranges' && type != 'trophy' && type != 'oranges-help' && type != 'oranges-help-invite' && type != 'small' && type != 'deleteAccount' ? 80 + statusBarHeight 
+                            statusBarHeight > 25 && type != 'notifications' && type != 'trophy' && type != 'oranges' && type != 'small' && type != 'deleteAccount' ? 65 + statusBarHeight
+                            : type != 'notifications' && type != 'oranges' && type != 'trophy' && type != 'small' && type != 'deleteAccount' ? 80 + statusBarHeight
                             : type == 'oranges' ? 150 + statusBarHeight 
-                            : type == 'oranges-help' ? 100 + statusBarHeight 
-                            : type == 'oranges-help-invite' ? 200 + statusBarHeight 
                             : type == 'trophy' ? 220 
                             : 'auto',
-                        width: (type == 'notifications' || type == 'oranges' || type == 'oranges-help' || type == 'oranges-help-invite' || type == 'deleteAccount' || type == 'trophy')  ? '90%' : '100%',
+                        width: (type == 'notifications' || type == 'oranges' || type == 'deleteAccount' || type == 'trophy')  ? '90%' : '100%',
                         height: 
                             type == 'notifications' ? 400 
                             : type == 'oranges' && Platform.OS == 'ios' ? 450 
                             : type == 'oranges' && Platform.OS !== 'ios' ? 400 
-                            : type == 'oranges-help' ? 450
-                            : type == 'oranges-help-invite' ? 260
                             : type == 'deleteAccount' && Platform.OS == 'ios' ? 470 
                             : type == 'deleteAccount' ? 500 
                             : type == 'trophy' ? 350 
@@ -102,29 +85,6 @@ export default function Modal({hide, children, animateModal = true, bottomDurati
                     <ImageBackground source={require('../assets/delete_account_background.png')} resizeMode="stretch" style={{height: '103%',}} >
                         {children}
                     </ImageBackground>
-                ) : type && (type == 'oranges' || type == 'oranges-help' || type == 'oranges-help-invite') && isAds && !pendingAds ? (
-                    <TouchableWithoutFeedback onPress={openUrl} disabled={!isAds}>
-                        <ImageBackground 
-                            source={isAds ? require('../assets/ads/ad1_v2.png') : require('../assets/background_claim_oranges.png')} 
-                            resizeMode="stretch" 
-                            style={[isAds ? {height: '103.2%',width: '100%',} : {height: '103%',}, type == 'oranges-help' && {justifyContent:'center'}]} 
-                        >
-                            {children}
-                        </ImageBackground>
-                    </TouchableWithoutFeedback>
-                ) : type && (type == 'oranges' || type == 'oranges-help' || type == 'oranges-help-invite') && !isAds && !pendingAds ? (
-                    <TouchableWithoutFeedback onPress={openUrl} disabled={!isAds}>
-                        <LinearGradient
-                            colors={['#FFF7E8', '#FFD4D1']}
-                            style={[isAds ? {height: '103.2%',width: '100%',} : {height: '111%',}, type == 'oranges-help' && {justifyContent:'center'}, {borderRadius: 10,}]} 
-                        >
-                            {children}
-                        </LinearGradient>
-                    </TouchableWithoutFeedback>
-                ) : type && (type == 'oranges' || type == 'oranges-help' || type == 'oranges-help-invite') && pendingAds ? (
-                    <>
-                        {children}
-                    </>
                 ) : (
                     <>
                         {children}
