@@ -19,16 +19,27 @@ import useDidToAddress from "../../hooks/useDidToAddress";
 import useGetUsername from "../../hooks/useGetUsername";
 import usePosts from "../../hooks/usePosts";
 import { getEasyGoUserId } from "../../utils/socialPostAdapter";
+import { api, ApiError } from '../../utils/api';
 
 const list_report = [
-    {label: 'It\'s spam'},
-    {label: 'Nudity or sexual activity'},
-    {label: 'Hate speech or symbols'},
-    {label: 'Violence or dangerous'},
-    {label: 'Bullying or harassment'},
-    {label: 'Scam or fraud'},
-    {label: 'False information'},
+    {code: 'SPAM', label: 'It\'s spam'},
+    {code: 'NUDITY_SEXUAL_CONTENT', label: 'Nudity or sexual activity'},
+    {code: 'HATE_SPEECH', label: 'Hate speech or symbols'},
+    {code: 'VIOLENCE_DANGEROUS', label: 'Violence or dangerous activity'},
+    {code: 'BULLYING_HARASSMENT', label: 'Bullying or harassment'},
+    {code: 'SCAM_FRAUD', label: 'Scam or fraud'},
+    {code: 'FALSE_INFORMATION', label: 'False information'},
 ];
+
+function reportErrorMessage(error) {
+    if (error instanceof ApiError) {
+        if (error.status === 401) return 'Your login expired. Sign in again before reporting.';
+        if (error.status === 404) return 'This post is no longer available to report.';
+        if (error.status === 409) return 'You cannot report your own post.';
+        if (error.status === 429) return 'You reached the report safety limit. Try again later.';
+    }
+    return 'EasyGo did not receive this report. Check the connection and try again.';
+}
 
 let nextPostSettingsOpenGeneration = 0;
 let activePostSettingsPresentation = null;
@@ -294,25 +305,54 @@ export default function PostSettingsModal() {
         doAnimation(moveAnimation1, moveAnimation2, 0, windowSize.width,() => {setShowReportBack(false);setSuccess(false);})
     }
 
-    function sendReport () {
+    async function sendReport () {
         const operation = captureOperation();
         if (!operation) return;
+        if (!backendConfigured) {
+            Alert.alert('Backend not connected', 'EasyGo cannot submit a report without the backend.');
+            return;
+        }
+        if (!operation.expectedPostId || !checked) {
+            Alert.alert('Choose a reason', 'Select one reason before sending your report.');
+            return;
+        }
         Haptics.selectionAsync();
         setLoading(true);
+        try {
+            const result = await api.posts.report(
+                operation.expectedPostId,
+                checked,
+                { expectedAuthUserId: operation.expectedLease.ownerUserId },
+            );
+            if (!isCurrentOperation(operation)) return;
+            if (result?.reported !== true) throw new Error('report_not_persisted');
 
-        setTimeout(() => {
+            const hiddenPostId = operation.hiddenPostId;
+            const hidden = hiddenPostId && !listHiddenPost?.includes(hiddenPostId)
+                ? [...(listHiddenPost || []), hiddenPostId]
+                : listHiddenPost;
+            const hiddenSaved = hidden === listHiddenPost
+                ? true
+                : await saveHiddenPosts(hidden);
             if (!isCurrentOperation(operation)) return;
             setLoading(false);
-
             showMessage({
-                message: "This post was reported !",
+                message: result.duplicate
+                    ? 'Report already received.'
+                    : hiddenSaved
+                        ? 'Report received. This post is now hidden.'
+                        : 'Report received.',
                 type: "success",
                 floating: true,
                 backgroundColor: "#3D3D3D",
                 icon: () => <SuccessIcon style={{marginRight: 10,}}/>
             });
             hide(operation);
-        }, 3000)
+        } catch (error) {
+            if (!isCurrentOperation(operation)) return;
+            setLoading(false);
+            Alert.alert('Could not submit report', reportErrorMessage(error));
+        }
     }
 
     const onHidePress = () => {
@@ -494,20 +534,20 @@ export default function PostSettingsModal() {
                                 />
 
                                 <Text style={{textAlign:'center',fontWeight: 'bold',fontSize: 19,marginTop: 2,}}>Why are you reporting this post ?</Text>
-                                <Text style={{color: '#959595',textAlign:'center',margin: 15,marginTop: 5,marginBottom: 10,fontSize: 12,}}>Your report is anonymous, except if you're reporting an intellectual property infringement</Text>
+                                <Text style={{color: '#959595',textAlign:'center',margin: 15,marginTop: 5,marginBottom: 10,fontSize: 12,}}>Your identity is not shown to the reported user. EasyGo stores it to prevent duplicate reports and support moderation.</Text>
                                 {list_report.map(e => {
                                     return(
                                         <TouchableOpacity 
                                             style={{backgroundColor: '#F6F6F6',borderRadius: 25,height: 50,marginTop: 10,flexDirection:'row', justifyContent: 'space-between',alignItems: 'center',}} 
-                                            key={Math.random()}
+                                            key={e.code}
                                             onPress={() => {
-                                                checked == e.label ?  setChecked(null) : setChecked(e.label)
+                                                checked == e.code ?  setChecked(null) : setChecked(e.code)
                                             }}
                                         >
                                             <Text style={{fontWeight: 'bold',fontSize: 17,paddingLeft: 20}}>{e.label}</Text>
 
                                             <View style={{backgroundColor: 'white',width: 26,height: 26,borderWidth: 1,borderColor: '#999',borderRadius: 13,marginRight: 15, justifyContent: 'center',alignItems: 'center',}}>
-                                                {checked == e.label && (
+                                                {checked == e.code && (
                                                     <View style={{backgroundColor: '#FF6E31',width: 24,height: 24,borderRadius: 13,justifyContent: 'center',alignItems: 'center',}}>
                                                         <View style={{backgroundColor: 'white',width: 10,height: 10,borderRadius: 5,}} />
                                                     </View>

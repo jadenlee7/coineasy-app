@@ -51,6 +51,14 @@ test('local data export is versioned and excludes ephemeral SIWE secrets', async
   });
   assert.equal(query.select.expoPushTokens.select.token, undefined);
   assert.equal(query.select.consent, true);
+  assert.deepEqual(query.select.postReports.select, {
+    postId: true,
+    reason: true,
+    status: true,
+    createdAt: true,
+    updatedAt: true,
+    reviewedAt: true,
+  });
   assert.ok(query.select.questCompletions);
   assert.ok(query.select.segments);
 });
@@ -93,6 +101,7 @@ test('legacy social export is purpose-specific and excludes identity and wallet 
   assert.equal(query.select.consent, undefined);
   assert.equal(query.select.ledger, undefined);
   assert.equal(query.select.questCompletions, undefined);
+  assert.equal(query.select.postReports, undefined);
   const serialized = JSON.stringify(result);
   assert.equal(serialized.includes('did:privy'), false);
   assert.equal(serialized.includes('wallet'), false);

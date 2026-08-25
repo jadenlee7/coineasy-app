@@ -132,6 +132,7 @@ default.
 | GET/PATCH | `/admin/campaigns/:id` | Advertiser Bearer + flag | Read or lifecycle-update an own campaign |
 | GET | `/admin/campaigns/:id/report` | Advertiser Bearer + flag | Read consent-filtered, minimum-cohort aggregates |
 | GET | `/social/status` | — | Discover active/read-only/retired social capability and export path |
+| POST | `/posts/:id/report` | Bearer | Persist an allow-listed post report; one idempotent row per reporter/post pair |
 | GET | `/orange/balance` | Bearer | Current 🍊 balance |
 | GET | `/orange/history` | Bearer | Recent ledger rows |
 | GET | `/orange/rewards/status` | Bearer | Server-derived daily activity and reward timers |
@@ -273,6 +274,17 @@ wallets, SIWE, consent, segments, quests, swaps, and Orange history. S8 does
 not delete or archive any database row. See
 [`docs/adr/0006-stage-legacy-social-retirement.md`](./docs/adr/0006-stage-legacy-social-retirement.md).
 
+Authenticated post reports accept only the server allowlist, reject missing,
+deleted, and self-authored posts, cap new reports per reporter, and upsert the
+unique `(postId, reporterId)` pair. The response exposes only `reported` and
+`duplicate`; reporter identity, report ID, counts, and moderation state are not
+returned to the reported user. `PostReport` cascades with the post or reporter,
+and a reporter's full local data export contains the reason and status needed
+to explain its retention. This persistence layer does not by itself complete
+App Review Guideline 1.2: a separately authenticated operator queue, review
+ownership, response SLA, status action, user contact path, and production
+moderation runbook remain release gates.
+
 ### S9 observability and process split
 
 S9 adds request IDs, separate liveness/readiness probes, bounded graceful
@@ -316,6 +328,8 @@ thread model: every content unit is a `Post`; replies are Posts with
 - `Post` — thread node with a nullable author and explicit redaction timestamp.
 - `Follow` — composite PK `(followerId, followeeId)`.
 - `Like` — composite PK `(postId, userId)`.
+- `PostReport` — bounded reporter/post moderation record with an idempotent
+  unique pair and `OPEN`/review/action status lifecycle.
 
 `Post.mediaUrl` is reserved now to avoid a second migration when media
 upload lands in PR #10.
@@ -389,6 +403,17 @@ closed. See
 [`docs/adr/0009-provider-identity-and-cleanup-worker.md`](./docs/adr/0009-provider-identity-and-cleanup-worker.md),
 and
 [`docs/adr/0010-account-deletion-recent-reauth.md`](./docs/adr/0010-account-deletion-recent-reauth.md).
+
+The Settings entry remains visible but fail-closed while these brakes are
+closed. Activation also requires proof that the native Apple authorization
+code is exchanged immediately and a dedicated revocation credential is held
+securely; the current native reauth submits only an identity token and the
+Apple cleanup adapter deliberately reports an unimplemented disposition.
+Google stable identity binding, provider-neutral recent reauthentication,
+provider cleanup, Android device coverage, and the required public web
+deletion initiation path are also incomplete. No runtime configuration should
+claim provider deletion or enable this path until those independent gates are
+implemented and verified on disposable accounts.
 
 ### Migration
 

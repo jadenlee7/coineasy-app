@@ -50,7 +50,7 @@ export default function NewFeatureModal() {
 
     useEffect(() => {
         if(showOrangesAdded){
-            handleAds(rewardLeaseRef.current)
+            animateProgressAdded(rewardLeaseRef.current)
         }
     }, [lease, showOrangesAdded])
 
@@ -61,7 +61,7 @@ export default function NewFeatureModal() {
     }, [lease])
 
 
-    const handleAds = (expectedLease) => {
+    const animateProgressAdded = (expectedLease) => {
         if (!expectedLease || !isCurrentLease(expectedLease)) return;
         Animated.sequence([
             Animated.timing(opacity, {
@@ -134,14 +134,14 @@ export default function NewFeatureModal() {
                 if (!result.claimed) {
                     setNewFeatureVis(false)
                     setNewFeatureAlertVis(false)
-                    Alert.alert('Reward already claimed', `Your EasyGo balance is ${result.balance} Oranges.`);
+                    Alert.alert('Progress already added', `Your EasyGo balance is ${result.balance} Orange points.`);
                     return;
                 }
                 rewardLeaseRef.current = expectedLease
                 setShowOrangesAdded(true)
             } catch {
                 if (!isCurrentLease(expectedLease)) return;
-                Alert.alert('Could not claim reward', 'Connect the EasyGo backend and try again.');
+                Alert.alert('Could not add progress', 'Connect the EasyGo backend and try again.');
             }
         }
     }
@@ -150,7 +150,6 @@ export default function NewFeatureModal() {
         <Modal 
             hide={() => goToRewardPage(false)} 
             type='oranges'
-            pendingAds={showOrangesAdded}
         >
             {!showOrangesAdded && (
                 <TouchableOpacity
@@ -165,7 +164,7 @@ export default function NewFeatureModal() {
                 <View style={[tailwind('flex flex-col items-center px-3'), {paddingTop: 30,height:'100%'}]}>
                     <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,}]}>New Feature Alert!</Text>
                     <Text style={[tailwind(`text-center`), {lineHeight: 20,marginTop: 10,fontFamily: "GmarketMedium",fontSize: Platform.OS == 'ios' ? 16 : 14,}]}>
-                        Enjoy Your First Orange Rewards!
+                        Start Your Orange Progress!
                     </Text>
 
                     {isClaimed ? (
@@ -177,7 +176,7 @@ export default function NewFeatureModal() {
                                 source={require('../../assets/orange_day.png')} 
                             />
                             <Animated.Text style={{opacity: fadeAnim, textAlign: 'center',marginTop: 10,fontWeight: 'bold',fontSize: Platform.OS == 'ios' ? 18 : 14,}}>
-                                You've earned 50 Oranges !
+                                50 Orange progress points added.
                             </Animated.Text>
                         </Animated.View>
                     ) : (
@@ -191,7 +190,7 @@ export default function NewFeatureModal() {
                     <Button 
                         size="md" 
                         color="white" 
-                        title={isClaimed ? "Continue" : "Claim"}
+                        title={isClaimed ? "Continue" : "Add progress"}
                         onPress={() => claimFirstReward()} 
                         style={{width: '90%',alignItems: 'center',height: 50,justifyContent: 'center',position: 'absolute',bottom: 30,zIndex: 2}}
                     />
@@ -199,7 +198,7 @@ export default function NewFeatureModal() {
             ) : !showOrangesAdded && (
                 <View style={[tailwind('flex flex-col items-center px-3'), {paddingTop: 30, height:'100%'}]}>
                     <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: 18,fontFamily: "GmarketBold",lineHeight: 24,}]}>New Feature Alert!</Text>
-                    <Text style={[tailwind(`text-center`), {lineHeight: 20,marginTop: 10,fontFamily: "GmarketMedium",fontSize: Platform.OS == 'ios' ? 16 : 14,}]}>Discover New Rewards!</Text>
+                    <Text style={[tailwind(`text-center`), {lineHeight: 20,marginTop: 10,fontFamily: "GmarketMedium",fontSize: Platform.OS == 'ios' ? 16 : 14,}]}>View your Orange Progress</Text>
 
                     <Image 
                         style={{height: Platform.OS == 'ios' ? 200 : 180,marginTop: Platform.OS == 'ios' ? 40 : 20,alignSelf: 'center',}} 
@@ -220,19 +219,19 @@ export default function NewFeatureModal() {
                     <Button 
                         size="md" 
                         color="white" 
-                        title="Go to Reward Page"
+                        title="Go to Progress Page"
                         onPress={() => goToRewardPage(true)} 
                         style={{width: '100%',alignItems: 'center',height: 50,justifyContent: 'center',position: 'absolute',bottom: 30,zIndex: 2}}
                     />
                 </View>
             )}
 
-            {/* Pop up celebration daily reward */}
+            {/* Progress-added celebration */}
             {showOrangesAdded && (
                 <View style={[styles.boxContainer, {width: width, height: 500, justifyContent:'center',alignItems:'center',}]}>
                     <Animated.View style={animatedStyles}>
                         <Text style={{textAlign: 'center',color:'white', fontSize: 18,fontWeight: 'bold',minWidth: width-100}}>
-                            +50 Oranges !
+                            +50 progress points
                         </Text>
 
                         <Image

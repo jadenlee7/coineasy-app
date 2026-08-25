@@ -11,6 +11,7 @@
     "preflight": "node scripts/mobile-preflight.mjs",
     "preflight:staging": "node scripts/mobile-preflight.mjs --target=staging",
     "preflight:production": "node scripts/mobile-preflight.mjs --target=production",
+    "appstore:bundle-check": "node scripts/check-appstore-bundle.mjs",
     "eas-build-pre-install": "node scripts/mobile-preflight.mjs",
     "test:preflight": "node --test test/*.test.mjs",
     "build:tailwind": "tailwindcss --input input.css --output tailwind.css --no-autoprefixer && tailwind-rn",

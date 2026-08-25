@@ -4,57 +4,6 @@ const courseObject = {
     bottomDescription: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam ultrices, magna vitae eleifend placerat, turpis lectus maximus libero, sed egestas enim consectetur consectetur adipiscing elit. Etiam ultrices, magna vitae eleifend placerat.. Etiam ultrices, magna vitae eleifend placerat.. Etiam ultrices, magna vitae eleifend placerat.. Etiam ultrices, magna vitae eleifend placerat.. Etiam ultrices, magna vitae eleifend placerat.. Etiam ultrices, magna vitae eleifend placerat.. Etiam ultrices, magna vitae eleifend placerat."
 }
 
-export const shopData = [
-    {
-      id: 1,
-      title: 'Starbucks Gifticon Entry',
-      subtitle: 'Winning Chance 2%',
-      remainer: 48,
-      total: 120,
-      oranges: 120,
-      image: require('../assets/starbucks_gifticon.png'),
-      buttonText: 'Join',
-      successText: "You've received a Starbucks Gifticon!",
-      loseText: "You didn't win the Starbucks Gifticon entry."
-    },
-    {
-      id: 2,
-      title: '1 Coffee',
-      subtitle: 'Guaranteed Coffee Coupon',
-      remainer: 0,
-      total: 1000,
-      oranges: 120,
-      image: require('../assets/starbucks_coffee.png'),
-      buttonText: 'Apply',
-      successText: "You've received a free cup of coffee!",
-      loseText: "You didn't win the free cup of coffee."
-    },
-    {
-      id: 3,
-      title: 'Easycon whitelist',
-      subtitle: 'Priority Entry',
-      remainer: 0,
-      total: 1000,
-      oranges: 1000,
-      image: require('../assets/trophy/trophy_placeholder.png'),
-      buttonText: 'Closed',
-      successText: "You're registered in the Easycon Whitelist!",
-      loseText: "You didn't win the Easycon Whitelist entry."
-    },
-    {
-      id: 4,
-      title: '1 Coffee',
-      subtitle: 'Guaranteed Coffee Coupon',
-      remainer: 0,
-      total: 1000,
-      oranges: 120,
-      image: require('../assets/starbucks_coffee.png'),
-      buttonText: 'Apply',
-      successText: "You've received a free cup of coffee!",
-      loseText: "You didn't win the free cup of coffee."
-    },
-  ];
-
 export const courses = [
     // TROPHIE COINEASY
     

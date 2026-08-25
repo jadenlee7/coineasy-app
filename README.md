@@ -1,8 +1,9 @@
 # EasyGo mobile app
 
 EasyGo is the CoinEasy social onboarding app: Privy authentication, an EasyGo
-social feed, Base-first swaps, education, and the server-backed Orange reward
-ledger. The mobile client uses Expo / React Native; the API lives in
+social feed, game-like Web3 education, a display-only Base route-estimate lab,
+and the server-backed Orange reward ledger. The App Store client has no swap
+signing/broadcast path. The mobile client uses Expo / React Native; the API lives in
 [`backend/`](./backend/README.md).
 
 ## Local setup
@@ -43,6 +44,7 @@ npm run android # native Android run
 npm run preflight         # local config check
 npm run preflight:staging # staging config gate
 npm run test:preflight    # config-check unit tests
+npm run appstore:bundle-check -- <ios-bundle> # stop-ship legacy marker scan
 ```
 
 The project uses `tailwind-rn` for existing presentation styles. The legacy

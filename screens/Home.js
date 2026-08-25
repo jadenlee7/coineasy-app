@@ -1,5 +1,5 @@
 import React, { useContext, useEffect } from "react";
-import { View, TouchableOpacity, Image, BackHandler, Animated, Text, Platform } from 'react-native';
+import { View, TouchableOpacity, Image, BackHandler, Animated } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useTailwind } from 'tailwind-rn';
@@ -8,9 +8,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import Feed from "../components/Feed";
 import Header from "../components/Header";
 import { GlobalContext } from "../contexts/GlobalContext";
-import Modal from "../components/Modal";
-import { AntDesign } from "@expo/vector-icons";
-import Button from "../components/Button";
 import useFeed from "../hooks/useFeed";
 import DailyRunHomeCard from "../components/DailyRunHomeCard";
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
@@ -26,9 +23,7 @@ const Home = ({ navigation, route }) => {
         setScrollAnim, 
         setOffsetAnim, 
         setCurrentRoute, 
-        setEditedPost,
-        adAlreadyClaimed,
-        setAdAlreadyClaimed
+        setEditedPost
     } = useContext(GlobalContext);
     const tailwind = useTailwind();
     const {
@@ -123,51 +118,6 @@ const Home = ({ navigation, route }) => {
                 </View>
             </View>
 
-            {adAlreadyClaimed && (
-                <View style={{
-                    zIndex: 9999,
-                    position: 'absolute',
-                    flex: 1,
-                    width: '100%',
-                    height:'100%',
-                }}>
-                    <Modal 
-                        hide={() => setAdAlreadyClaimed(false)} 
-                        type='oranges' 
-                    >         
-                        <TouchableOpacity
-                            style={{position: 'absolute',top: 15, right: 15}}
-                            onPress={() => {Haptics.selectionAsync();setAdAlreadyClaimed(false)}}
-                        >
-                            <AntDesign name="closecircle" size={24} color="black" />
-                        </TouchableOpacity>
-
-                        <View style={[tailwind('flex flex-col items-center justify-center px-3')]}>
-                            <Text style={[tailwind(`text-center`), {color: "#000000",fontSize: Platform.OS == 'ios' ? 19 : 16,fontFamily: "GmarketBold",lineHeight: 24,marginTop: Platform.OS == 'ios' ? 10 : 20,}]}>
-                                Oops, this basket is empty!
-                            </Text>
-
-                            <Text style={{textAlign: 'center',fontFamily: "GmarketMedium",fontSize: Platform.OS == 'ios' ? 16 : 13,marginTop: Platform.OS == 'ios' ? 20 : 10,}}>
-                                You've already claimed :)
-                            </Text>
-
-                            <Image 
-                                source={require('../assets/orange_box_empty.png')} 
-                                style={{height: '58%',alignSelf: 'center',marginTop: Platform.OS == 'ios' ? 30 : 20,}} 
-                                resizeMode="contain"
-                            />
-                        </View>
-
-                        <Button 
-                            size="md" 
-                            color="white" 
-                            title="Go to Reward Page" 
-                            onPress={() => {Haptics.selectionAsync();setAdAlreadyClaimed(false);navigation.navigate('RewardHistory')}} 
-                            style={{width: '85%',alignItems: 'center',alignSelf:'center', height: 50,justifyContent: 'center',position: 'absolute',bottom: 30,zIndex: 2}}
-                        />                           
-                    </Modal>
-                </View>
-            )}
         </>
     )
 }

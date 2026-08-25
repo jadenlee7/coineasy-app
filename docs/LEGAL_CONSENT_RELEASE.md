@@ -52,7 +52,9 @@ Google Play policy URLs in this state.
 - EasyGo processes a Privy account identifier, provider login linkage, private
   profile data, public social content, a public EVM wallet address, Base chain
   verification, Orange and swap records, consent/audit records, and optional
-  quest/segment data.
+  quest/segment data. Authenticated post reports are retained as bounded
+  moderation records and the reporter identity is not shown to the reported
+  user.
 - EasyGo never requests or stores a wallet private key or recovery phrase.
 - Other users' wallet addresses are excluded from public EasyGo profile
   responses. Public blockchain records remain independently public and
@@ -70,6 +72,12 @@ Google Play policy URLs in this state.
 - Personalized segmentation, marketing measurement, advertiser activation,
   quests, ENS issuance, SIWE, telemetry, and public account deletion remain
   default-off.
+- The App Store mobile graph has no Ad/Invite reward, Shop, Gift, redemption,
+  or asset-conversion surface and no Squid signing, broadcast, execution-quote,
+  or reward-log client. Visible Orange copy describes non-purchasable,
+  non-transferable, non-redeemable in-app progress points only. The educational
+  Base Route Estimate Lab under EASYEDU requests a display-only estimate and
+  cannot award Orange.
 
 ## Required configuration contract
 
@@ -116,11 +124,26 @@ fail-closed. Revocation remains available independently of the grant gate.
       logs, backups, deleted post topology, consent audits, reward/transaction
       records, and keyed deletion tombstones.
 - [ ] Approve the Orange/quest promotional rules and confirm that Orange has no
-      cash, deposit, security, cryptoasset, or redemption status unless a
-      specific campaign says otherwise.
-- [ ] Complete the in-app account deletion path, provider cleanup, Sign in with
-      Apple token revocation, Google/Android coverage, and a standalone web
-      deletion request path on disposable staging accounts.
+      cash, deposit, security, cryptoasset, transfer, conversion, or redemption
+      status. Reconcile the daily social-participation progress design with
+      [App Review Guideline 3.1.5(v)](https://developer.apple.com/app-store/review/guidelines/#cryptocurrencies),
+      which prohibits cryptocurrency apps from offering currency for tasks
+      such as social posting. If qualified review cannot establish that the
+      non-transferable progress points are outside that rule, disable the daily
+      participation claim before App Store submission.
+- [ ] Keep all four account-deletion source latches and all three runtime flags
+      closed until the provider-neutral path is complete. The current native
+      Apple reauth discards the authorization code, has no reviewed token
+      exchange/revocation credential, and its cleanup disposition is
+      intentionally unimplemented. Google stable identity, recent reauth,
+      provider cleanup, Android coverage, and the standalone web initiation
+      path are also absent. Verify every stage on disposable staging accounts
+      before a separate activation review.
+- [ ] Operate the new authenticated, deduplicated post-report persistence with
+      a separately protected moderation queue, assigned reviewer, response
+      SLA, action/status workflow, user contact/escalation path, and reviewed
+      retention schedule. Persistence alone does not close App Review
+      Guideline 1.2.
 - [ ] Reconcile Apple App Privacy and Google Play Data safety answers with the
       final document and an SDK/data-flow inventory.
 - [ ] Obtain qualified legal review for privacy, consumer, UGC moderation,

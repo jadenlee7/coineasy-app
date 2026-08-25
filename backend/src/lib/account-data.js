@@ -49,6 +49,17 @@ const userDataSelect = {
   ledger: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
   swaps: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
   posts: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
+  postReports: {
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    select: {
+      postId: true,
+      reason: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+      reviewedAt: true,
+    },
+  },
   likes: { orderBy: [{ createdAt: 'asc' }, { postId: 'asc' }] },
   following: { orderBy: [{ createdAt: 'asc' }, { followeeId: 'asc' }] },
   followers: { orderBy: [{ createdAt: 'asc' }, { followerId: 'asc' }] },

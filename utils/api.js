@@ -330,13 +330,6 @@ export const api = {
       expectedAuthUserId,
     })
   ),
-  orangeClaimAdReward: ({ signal, expectedAuthUserId } = {}) => (
-    request('POST', '/orange/claims/ad-reward', {
-      signal,
-      boundAuth: true,
-      expectedAuthUserId,
-    })
-  ),
   orangeClaimCourseQuiz: ({ courseId, sectionId, signal, expectedAuthUserId }) =>
     request('POST', '/orange/claims/course-quiz', {
       body: { courseId, sectionId },
@@ -345,15 +338,7 @@ export const api = {
       expectedAuthUserId,
     }),
 
-  // swap (Squid via backend proxy)
-  swapQuote: (params, { signal, expectedAuthUserId } = {}) => (
-    request('POST', '/swap/quote', {
-      body: params,
-      signal,
-      boundAuth: true,
-      expectedAuthUserId,
-    })
-  ),
+  // Display-only Base route estimate. No executable quote/log clients ship in mobile.
   swapQuotePreview: (params, { signal, expectedAuthUserId } = {}) => (
     request('POST', '/swap/quote-preview', {
       body: params,
@@ -362,15 +347,6 @@ export const api = {
       expectedAuthUserId,
     })
   ),
-  swapLog: (entry, { signal, expectedAuthUserId } = {}) => (
-    request('POST', '/swap/log', {
-      body: entry,
-      signal,
-      boundAuth: true,
-      expectedAuthUserId,
-    })
-  ),
-
   // -------------------------------------------------------------------------
   // social (PR #9 backend: profiles, posts, follows, likes)
   // All endpoints return shapes documented in backend/README.md "Social (PR #9)".
@@ -472,6 +448,16 @@ export const api = {
     // Soft-delete own post.
     remove: (postId, { signal, expectedAuthUserId } = {}) => (
       request('DELETE', `/posts/${encodeURIComponent(postId)}`, {
+        signal,
+        boundAuth: true,
+        expectedAuthUserId,
+      })
+    ),
+    // Report another user's post. The backend persists one report per
+    // reporter/post pair and returns no reporter, count, or moderation data.
+    report: (postId, reason, { signal, expectedAuthUserId } = {}) => (
+      request('POST', `/posts/${encodeURIComponent(postId)}/report`, {
+        body: { reason },
         signal,
         boundAuth: true,
         expectedAuthUserId,

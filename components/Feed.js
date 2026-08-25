@@ -1,8 +1,7 @@
 import React, { useContext, useState } from "react";
-import { Text, View, ActivityIndicator, Animated, RefreshControl, Platform, Image, ImageBackground, TouchableOpacity, Dimensions } from 'react-native';
+import { Text, View, ActivityIndicator, Animated, RefreshControl, Platform, Image, TouchableOpacity } from 'react-native';
 
 import { BlurView } from 'expo-blur';
-import * as Haptics from 'expo-haptics';
 import PagerView from 'react-native-pager-view';
 import { useTailwind } from 'tailwind-rn';
 import { useScrollToTop } from "@react-navigation/native";
@@ -16,7 +15,7 @@ import { useDeviceAccountData } from '../contexts/DeviceAccountDataContext';
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
 
 export default function Feed({posts = [], refreshing, refreshingBottom, onRefresh, loadMore, header, feedRef, error, backendConfigured = true, showBanner = true, emptyTitle, emptyDescription }) {
-    const { userData, homeFeedRef, scrollAnim, setShowClaimOranges, setTodayOranges, setAdAlreadyClaimed} = useContext(GlobalContext);
+    const { homeFeedRef, scrollAnim } = useContext(GlobalContext);
     const {
         blockedAccounts: listBlockedUser,
         hiddenPosts: listHiddenPost,
@@ -40,17 +39,6 @@ export default function Feed({posts = [], refreshing, refreshingBottom, onRefres
     filteredPosts = filteredPosts.filter(e => !listMutedUsers?.includes(e.creator) && !listMutedUsers?.includes(e.reply_to_creator_details?.did))
 
     useScrollToTop(feedRef ? feedRef : homeFeedRef);
-
-    const onBannerPress = () => {
-        Haptics.selectionAsync()
-                
-        if(userData?.adReward?.lastClaim){
-            setAdAlreadyClaimed(true)
-        }else{
-            setTodayOranges(200)
-            setShowClaimOranges(true)
-        }
-    }    
 
     return(
         <>
@@ -80,16 +68,13 @@ export default function Feed({posts = [], refreshing, refreshingBottom, onRefres
                                             orientation='horizontal'
                                             onPageSelected={(props) => setIndexSwiper(props.nativeEvent.position)}
                                         >
-                                            <TouchableOpacity 
-                                                key="1"
-                                                onPress={onBannerPress}
-                                            >
+                                            <View key="1">
                                                 <Image
                                                     resizeMode="stretch"
                                                     style={{height:'100%', width: '100%'}}
                                                     source={require('../assets/ads/home_ad_1.png')}
                                                 />
-                                            </TouchableOpacity>
+                                            </View>
                                             <View key="2">
                                                 <Image
                                                     resizeMode="stretch"

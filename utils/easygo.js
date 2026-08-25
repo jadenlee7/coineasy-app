@@ -30,7 +30,6 @@ export const FEATURES = {
   TELEGRAM_AUTH: true,
   KAKAO_AUTH: true,
   PRIVY_EMBEDDED_WALLET: true,
-  SQUID_BRIDGE: true,
   EASYCHAIN_PROFILE: false, // gated; flips with EASYCHAIN_ENABLED
 };
 
