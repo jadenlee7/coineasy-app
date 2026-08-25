@@ -4,6 +4,7 @@ const SUBJECT_KEY_PATTERN = /^[a-f0-9]{64}$/u;
 export const DEVICE_ACCOUNT_DATA_SLOT = Object.freeze({
   blockedAccounts: 'blocked-accounts',
   courseProgress: 'course-progress',
+  dailyRunProgress: 'daily-run-progress',
   expoPushToken: 'expo-push-token',
   hiddenPosts: 'hidden-posts',
   mutedAccounts: 'muted-accounts',
