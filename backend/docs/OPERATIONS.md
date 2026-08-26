@@ -28,6 +28,105 @@ unchanged worker remains on its prior reviewed revision and exits successfully
 while `SEGMENTS_ENABLED=false`. The project's default `production` environment
 remains empty; do not add services or variables there during staging work.
 
+### Protected moderation source candidate — not deployed
+
+[`ADR-0011`](./adr/0011-protected-post-report-moderation.md) and the
+[`MODERATION_RUNBOOK`](./MODERATION_RUNBOOK.md) describe a default-off
+moderation queue candidate. It is not part of the current `69bf0bb` runtime or
+the applied staging migration set. `POST_MODERATION_READY=false` masks the
+runtime flag, and deploy preflight rejects activation even if candidate
+configuration is present. Do not apply
+`20260826144000_moderation_queue`, provision reviewer credentials, add Railway
+variables, deploy the candidate, or exercise a real moderation decision
+without separate approvals for each state change.
+
+In a future activation-capable release, both an authenticated moderation route
+and `/ready` must return a sanitized `503` unless dedicated reviewer-key hashes,
+an approved response SLA, approved policy and retention-policy versions, a
+named owner, and a credential-free escalation contact are all valid. Placeholder
+or default values do not satisfy the contract. The current source latch remains
+closed, so this readiness behavior is a future activation check rather than a
+claim about the deployed `69bf0bb` release.
+
+After that configuration validation, one bounded `/ready` catalog aggregate
+requires the exact completed/non-rolled-back migration receipt, required
+named column presence with selected reporter nullability/revision defaults,
+exact enums, nine named constraints plus two relevant foreign-key actions, and
+ten named valid/ready index entries including exactly two uniques. Any mismatch,
+query error, or timeout returns sanitized `503 not_ready`. This bounded
+attestation does not compare every definition or exclude every extra audit
+column. Source and disposable-PostgreSQL tests cover success and a
+transactionally removed-index failure; exact target definition/privacy readback,
+migration, and deployment approval remain separate.
+
+Before any future activation, complete workforce OIDC/MFA/RBAC, named owner and
+backup coverage, approved SLA/escalation/contact/appeal, retention and legal
+hold policy, PostgreSQL concurrency/rollback tests, exact-target/CI/staging
+proof and monitoring for the source-enforced 250 pending-row ceiling per post
+across all revisions, a named Sybil/abuse owner,
+encrypted backup and additive migration verification, value-safe staging smoke,
+monitoring, and promotion of the exact enforcement-aware release as the new
+minimum safe web rollback baseline. Until then, authenticated report ingest
+remains independent and the protected moderation route must remain
+indistinguishable from absent.
+
+The source candidate uses one post advisory-lock namespace across author edit,
+ordinary owner deletion, report creation, and moderation. It increments integer
+`Post.contentRevision` on edits/redaction, captures it in
+`PostReport.postRevision`, and scopes replay uniqueness to
+`(postId, reporterId, postRevision)`. Claim carries an old report to the current
+revision only if no linked current-revision report exists; a decision after an
+author edit returns `REBASE_REVISION` with `reviewRequired=true` rather than
+applying the decision. Only a linked current-revision report permits
+`CONTENT_SUPERSEDED`, and no linked/replacement report ID is returned.
+`DISMISS` changes only the assigned target with `affectedReportCount=1`; every
+sibling and other reviewer claim remains unchanged. Available-content removal
+must redact exactly one post and resolve every pending sibling atomically;
+already unavailable content resolves every pending sibling as
+`CONTENT_UNAVAILABLE` with `CLOSE_UNAVAILABLE`.
+
+Every accepted mutation generates a server UUID `operationId`; all fan-out
+audits share it, while each audit is identified by composite
+`(reportId, toVersion)`. The response must contain the exact target receipt—
+action, from/to report version, integer `fromPostRevision`/`toPostRevision`, and
+server timestamp. A client `X-Request-ID` remains HTTP/log correlation and is
+never stored as the audit identity or receipt.
+
+Schema delivery is expand/contract. The additive expand migration makes
+`PostReport.reporterId` nullable with `ON DELETE SET NULL`, creates no durable
+reporter pseudonym, adds revision/audit state, and retains the legacy
+`(postId, reporterId)` unique index for compatibility. Do not claim
+multi-revision admission or drop that index during expand. The index drop is a
+later contract migration requiring independent approval and rollback evidence;
+no deployment, smoke, or gate approval implies it.
+
+Before expand, run and retain the exact target-database aggregate from the
+moderation runbook. It must show `nonOpenReports=0` and `reviewedReports=0`;
+query failure or missing readback is unobserved, not zero. The migration fails
+fast when any legacy row is not `OPEN` or has non-null `reviewedAt`. Stop on that
+failure: no backfill, status rewrite, or timestamp clearing is authorized.
+Report creation deliberately uses a target-free `INSERT ... ON CONFLICT DO
+NOTHING`, so it remains valid with both unique indexes; before contract, a later
+revision from the same reporter is still a duplicate.
+
+User deletion sets a report's `reporterId` to `NULL` and preserves the report
+and its audit without creating a pseudonym. Hard `Post` or `PostReport` deletion
+can still cascade-delete moderation evidence. Retention/legal-hold rules and
+database privileges that prevent unauthorized hard deletes therefore remain
+activation blockers. Account deletion also locks and redacts all owned posts in
+one transaction and can fan out `reporterId=NULL` across all reports by the
+deleted user; there is no bounded/checkpointed high-cardinality path. The
+moderation candidate does not resolve that independent deletion-latch blocker.
+
+CI release evidence must come from the disposable PostgreSQL service after
+`prisma migrate deploy` and a non-skipped database integration suite. A local
+skip because `TEST_DATABASE_URL` is absent does not qualify. The Prisma schema
+and migration SQL both name the retained legacy and revision unique indexes and
+declare `postRevision=0`; CI must continue asserting exactly those two physical
+catalog indexes after the full migration chain. Explicit integration cases must
+also cover the `OPEN` plus non-null `reviewedAt` fail-fast branch and a nonempty
+all-`OPEN`/null-`reviewedAt` success case.
+
 Required staging configuration is present and the value-safe deployed preflight
 passes with zero failures. Optional Sentry, Better Stack, and Telegram values
 remain intentionally unset pending vendor/privacy approval. Never record secret
@@ -161,6 +260,15 @@ user context, request headers/cookies/bodies/query strings, and URL queries.
 Never add wallet, Privy, email, consent, answer, proof, or advertiser-key data
 as tags or custom context.
 
+Moderation credential-shaped text is sanitized from request and breadcrumb
+URLs independently of the Pino HTTP path. Any request ID containing that shape
+is replaced with a server UUID. Sentry's `beforeSend` and `beforeBreadcrumb`
+paths recursively redact it from enumerable error-event/breadcrumb strings,
+including event, exception, stack-path, and breadcrumb text, while the existing
+request-field removal remains in force. `beforeSendTransaction` applies the same
+recursive sanitizer to performance transaction/span strings, with regression
+coverage. Retain a value-safe exact-release staging check.
+
 ### Better Stack
 
 - `BETTER_STACK_SOURCE_TOKEN`: unique source token for this service.
@@ -176,8 +284,11 @@ token for web and worker so alerts and retention can differ.
 contains `status: "alive"`, service, phase, release, and uptime. It never calls
 the database.
 
-`GET /ready` runs `SELECT 1` with a bounded response deadline. A normal body
-contains `status: "ready"`. Database failure or timeout returns `503`,
+`GET /ready` normally runs `SELECT 1` with a bounded response deadline. In a
+future activation-capable process where both moderation gates are selected, it
+instead runs the exact bounded moderation catalog contract described above after
+validating the complete operating configuration. A normal body contains
+`status: "ready"`. Database/catalog failure, mismatch, or timeout returns `503`,
 `Retry-After: 5`, a request ID, and no provider/database error detail.
 
 Both responses use `Cache-Control: no-store`. External uptime monitoring may
@@ -192,7 +303,9 @@ returns the selected ID.
 HTTP logs contain method, path without query, status, duration, and request ID.
 Authentication/cookie/admin headers, SIWE messages/signatures, quiz answers,
 emails, Privy IDs, and wallet addresses are redacted before stdout or remote
-transport.
+transport. The request URL sanitizer also removes moderation-key-shaped path
+material. Any request ID containing that credential shape is replaced with a
+server UUID, including an embedded occurrence.
 
 ## Alert baseline
 
@@ -265,6 +378,9 @@ evidence, but this operator rollback floor has not been promoted.
 
 - `npm test` passes, with only the database-backed SIWE test skipped when no
   approved test database exists.
+- The moderation candidate's CI job provisions disposable PostgreSQL, applies
+  migrations, and runs its database integration suite without a skip; retain
+  those exact receipts for an activation-capable SHA.
 - `npx expo-doctor` passes from the app root.
 - Android and iOS static exports pass from the app root.
 - S2 additive migration has been reviewed and applied to an approved database.

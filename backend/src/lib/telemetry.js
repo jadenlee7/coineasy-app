@@ -1,5 +1,9 @@
 /** Optional, privacy-minimized Sentry error reporting. */
 import * as Sentry from '@sentry/node';
+import {
+  sanitizeModerationCredentialText,
+  sanitizeRequestUrl,
+} from './request-url.js';
 
 function clean(value) {
   const result = String(value || '').trim();
@@ -12,9 +16,19 @@ function sampleRate(value) {
   return Math.max(0, Math.min(parsed, 0.2));
 }
 
-function stripQuery(value) {
-  if (!value) return value;
-  return String(value).split(/[?#]/, 1)[0];
+function sanitizeCredentialStrings(value, seen = new WeakSet()) {
+  if (typeof value === 'string') return sanitizeModerationCredentialText(value);
+  if (!value || typeof value !== 'object' || seen.has(value)) return value;
+
+  seen.add(value);
+  for (const key of Object.keys(value)) {
+    value[key] = sanitizeCredentialStrings(value[key], seen);
+  }
+  return value;
+}
+
+export function sanitizeSentryBreadcrumb(breadcrumb) {
+  return sanitizeCredentialStrings(breadcrumb);
 }
 
 export function sanitizeSentryEvent(event) {
@@ -23,7 +37,7 @@ export function sanitizeSentryEvent(event) {
   delete event.user;
 
   if (event.request) {
-    event.request.url = stripQuery(event.request.url);
+    event.request.url = sanitizeRequestUrl(event.request.url);
     delete event.request.headers;
     delete event.request.cookies;
     delete event.request.data;
@@ -34,7 +48,7 @@ export function sanitizeSentryEvent(event) {
     event.breadcrumbs = event.breadcrumbs.map((breadcrumb) => {
       if (!breadcrumb?.data) return breadcrumb;
       const data = { ...breadcrumb.data };
-      if (data.url) data.url = stripQuery(data.url);
+      if (data.url) data.url = sanitizeRequestUrl(data.url);
       delete data.headers;
       delete data.request_body;
       delete data.response_body;
@@ -42,7 +56,11 @@ export function sanitizeSentryEvent(event) {
     });
   }
 
-  return event;
+  return sanitizeCredentialStrings(event);
+}
+
+export function sanitizeSentryTransaction(event) {
+  return sanitizeCredentialStrings(event);
 }
 
 export function createNoopTelemetry() {
@@ -67,6 +85,8 @@ export function createTelemetry({ env = process.env, appLogger } = {}) {
       includeLocalVariables: false,
       tracesSampleRate: sampleRate(env.SENTRY_TRACES_SAMPLE_RATE),
       beforeSend: sanitizeSentryEvent,
+      beforeSendTransaction: sanitizeSentryTransaction,
+      beforeBreadcrumb: sanitizeSentryBreadcrumb,
     });
   } catch (error) {
     appLogger?.warn(

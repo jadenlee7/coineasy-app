@@ -177,6 +177,26 @@ test('partial Better Stack configuration and malformed flags fail closed', () =>
   assert.equal(result.errors.some((item) => item.name === 'QUESTS_ENABLED syntax'), true);
 });
 
+test('moderation preflight uses the exact runtime escalation URL contract', () => {
+  const result = validateDeployEnvironment(stagingEnv({
+    POST_MODERATION_ENABLED: 'true',
+    MODERATION_API_KEY_HASHES_JSON: JSON.stringify({
+      'reviewer-one': 'a'.repeat(64),
+    }),
+    MODERATION_RESPONSE_SLA_HOURS: '24',
+    MODERATION_POLICY_VERSION: 'policy-v1',
+    MODERATION_RETENTION_POLICY_VERSION: 'retention-v1',
+    MODERATION_OWNER: 'EasyGo Trust Team',
+    MODERATION_ESCALATION_CONTACT: 'https://user:secret@example.com/escalate',
+  }), { target: 'staging' });
+
+  assert.equal(
+    result.errors.some(({ name }) => name === 'moderation runtime contract parity'),
+    true,
+  );
+  assert.equal(JSON.stringify(result).includes('user:secret'), false);
+});
+
 test('smoke targets require HTTPS except for loopback development', () => {
   assert.equal(validateSmokeBaseUrl('http://127.0.0.1:3000').origin, 'http://127.0.0.1:3000');
   assert.throws(() => validateSmokeBaseUrl('http://api.easygo.example'), /HTTPS/);

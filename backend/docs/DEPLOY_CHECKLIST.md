@@ -200,6 +200,98 @@ web rollback baseline.
       queue, action/status workflow, owner, response SLA, and escalation
       runbook before an App Store submission that exposes UGC. Persistence and
       local Hide are not a complete moderation operation.
+      A default-off source candidate is specified by
+      [`ADR-0011`](./adr/0011-protected-post-report-moderation.md) and the
+      [`MODERATION_RUNBOOK`](./MODERATION_RUNBOOK.md). Its dedicated auth,
+      additive migration, integer `Post.contentRevision`, captured
+      `PostReport.postRevision`, revision-scoped reporter uniqueness,
+      queue/claim/decision API, optimistic report and post versions, audit,
+      shared post lock, claim carry-forward, decision `REBASE_REVISION`,
+      linked-only `CONTENT_SUPERSEDED` without a replacement-report locator,
+      target-only dismissal with `affectedReportCount=1`, exact-redaction
+      transaction, unavailable-content terminal closure, nullable reporter
+      deletion without a durable pseudonym, and server-generated operation
+      receipts are code-review inputs only. Audit
+      identity is composite `(reportId, toVersion)` and records integer
+      `fromPostRevision`/`toPostRevision`; client `X-Request-ID` is not stored in
+      the audit. The source readiness latch remains false; no migration, Railway
+      deployment, reviewer provisioning, endpoint activation, or real
+      moderation action is authorized. Workforce OIDC/MFA/RBAC, named owners,
+      escalation/contact, retention, PostgreSQL concurrency proof,
+      exact-target/CI/staging receipts and monitoring for the source-enforced 250
+      pending-row ceiling per post across all revisions, a named abuse owner, and a newly
+      promoted rollback baseline remain unchecked stop-ship gates.
+      The additive expand migration must retain the legacy
+      `(postId, reporterId)` unique index while adding nullable `reporterId` with
+      `ON DELETE SET NULL`, revision fields, and audit state. Dropping that
+      legacy index is a later contract migration requiring its own review,
+      rollback evidence, and explicit approval; no expand migration, deploy,
+      smoke, or activation approval authorizes it.
+- [ ] Before applying the moderation expand migration, capture this exact
+      aggregate from the exact target database and retain the value-safe
+      readback with the release receipt:
+
+      ```sql
+      SELECT
+        COUNT(*)::bigint AS "totalReports",
+        COUNT(*) FILTER (WHERE "status" <> 'OPEN')::bigint AS "nonOpenReports",
+        COUNT(*) FILTER (WHERE "reviewedAt" IS NOT NULL)::bigint AS "reviewedReports",
+        COALESCE((
+          SELECT COUNT(*)::bigint
+          FROM (
+            SELECT "postId"
+            FROM "PostReport"
+            WHERE "status" IN ('OPEN', 'REVIEWING')
+            GROUP BY "postId"
+            HAVING COUNT(*) > 250
+          ) AS "overCapPost"
+        ), 0)::bigint AS "overCapPosts"
+      FROM "PostReport";
+      ```
+
+      Proceed only when `nonOpenReports=0`, `reviewedReports=0`, and
+      `overCapPosts=0`. The migration itself must fail fast otherwise. A
+      failed/missing query is unobserved, not zero; no backfill, status rewrite,
+      `reviewedAt` clearing, report deletion, or report coalescing is authorized
+      without a separate data-remediation approval.
+- [ ] For the exact activation-capable SHA, prove that an authenticated
+      `/moderation/reports*` request and `/ready` each fail closed with sanitized
+      `503` when any dedicated reviewer-key hash, named owner, approved response
+      SLA, approved policy version, approved retention-policy version, or
+      credential-free escalation contact is missing/placeholder. Do not log
+      values or rely on defaults. With complete configuration, prove the one
+      bounded `/ready` catalog aggregate requires the exact finished migration,
+      named column presence with selected defaults/nullability, exact enums,
+      nine named constraints plus two relevant FK actions, and ten named
+      valid/ready index entries including exactly two uniques. Any mismatch,
+      query error, or timeout must remain sanitized `503 not_ready`. Source and
+      disposable-PostgreSQL tests cover success and a transactionally removed-
+      index failure. Because this bounded attestation does not compare every
+      definition or reject every extra audit column, retain separate exact-target
+      definition/privacy readback.
+- [ ] Retain CI evidence that disposable PostgreSQL applied all migrations and
+      ran the moderation PostgreSQL integration suite without a skip. Also prove
+      target-free `INSERT ... ON CONFLICT DO NOTHING` treats a later revision as
+      duplicate while both legacy and revision uniques coexist; do not use a
+      caught uniqueness error inside the transaction. Confirm the Prisma schema
+      and migration SQL retain the same two named unique indexes and
+      `postRevision=0`, and retain the CI physical-catalog assertion that exactly
+      those indexes exist after the full migration chain. Add explicit executable
+      cases for `OPEN` plus
+      non-null `reviewedAt` rejection and a nonempty all-`OPEN`/null success; the
+      existing non-`OPEN` failure test proves only one fail-fast branch.
+- [ ] Prove deletion of a reporter sets `reporterId=NULL` while preserving the
+      report and audit. Separately approve retention/legal-hold behavior and
+      database privileges that prevent unauthorized hard `Post` or `PostReport`
+      deletion from cascading away moderation evidence.
+- [ ] Prove moderation credential material is absent from both HTTP logs and
+      Sentry on the exact activation-capable SHA. Source regression tests now
+      prove embedded credential-like request IDs are replaced with UUIDs and
+      that request paths plus enumerable Sentry error-event/breadcrumb strings
+      are sanitized, including event, exception, stack-path, and breadcrumb text.
+      `beforeSendTransaction` regression coverage also sanitizes performance
+      transaction/span text. Retain only value-safe staging evidence; never
+      inject or print a real credential for this check.
 - [ ] Export the exact iOS release JavaScript and run `npm run
       appstore:bundle-check -- <ios-bundle>`. Any legacy execution/reward-log
       marker is a stop-ship failure; source tests alone are not archive proof.
@@ -213,7 +305,11 @@ web rollback baseline.
       remaining compatible for internal builds is not App Store approval.
 - [ ] Keep every account-deletion source latch and Railway flag off. Apple and
       Google provider cleanup, provider-neutral recent reauth, Android QA, and
-      the public web initiation path remain independent stop-ship gates.
+      the public web initiation path remain independent stop-ship gates. The
+      current purge also lacks bounded/checkpointed handling for an account with
+      many owned posts and for the `reporterId=NULL` foreign-key fan-out across
+      many reports. This moderation candidate does not solve that
+      high-cardinality path; do not mark the deletion latch blocker complete.
 
 ## Deploy
 

@@ -512,6 +512,18 @@ export async function reconcileUserStableProviderIdentities(tx, {
 }
 
 export async function redactPostsByAuthor(tx, authorId, now = new Date()) {
+  // The volatile advisory-lock function is evaluated in deterministic post-ID
+  // order. This serializes account purge with edit, report creation, owner
+  // deletion, and moderation for every affected post without exporting IDs.
+  await tx.$queryRawUnsafe(
+    `SELECT pg_advisory_xact_lock(
+       hashtextextended('post-report-target:' || "id", 0)
+     ) IS NULL AS "lockAcquired"
+     FROM "Post"
+     WHERE "authorId" = $1
+     ORDER BY "id"`,
+    authorId,
+  );
   return tx.post.updateMany({
     where: { authorId },
     data: {
@@ -519,21 +531,32 @@ export async function redactPostsByAuthor(tx, authorId, now = new Date()) {
       body: '',
       mediaUrl: null,
       deletedAt: now,
+      contentRevision: { increment: 1 },
     },
   });
 }
 
 export async function redactOwnedPost(prisma, { postId, authorId, now = new Date() }) {
-  const result = await prisma.post.updateMany({
-    where: { id: postId, authorId, deletedAt: null },
-    data: {
-      authorId: null,
-      body: '',
-      mediaUrl: null,
-      deletedAt: now,
-    },
+  return prisma.$transaction(async (tx) => {
+    // Serialize ordinary owner deletion with report creation and moderation.
+    // A reporter can therefore never observe a live post and insert a new OPEN
+    // report after this redaction has committed.
+    await tx.$queryRawUnsafe(
+      'SELECT pg_advisory_xact_lock(hashtextextended($1, 0)) IS NULL AS "lockAcquired"',
+      `post-report-target:${postId}`,
+    );
+    const result = await tx.post.updateMany({
+      where: { id: postId, authorId, deletedAt: null },
+      data: {
+        authorId: null,
+        body: '',
+        mediaUrl: null,
+        deletedAt: now,
+        contentRevision: { increment: 1 },
+      },
+    });
+    return result.count === 1;
   });
-  return result.count === 1;
 }
 
 function deletionResult(request, { created = false, redactedPosts = 0 } = {}) {

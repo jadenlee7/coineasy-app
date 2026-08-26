@@ -132,7 +132,7 @@ default.
 | GET/PATCH | `/admin/campaigns/:id` | Advertiser Bearer + flag | Read or lifecycle-update an own campaign |
 | GET | `/admin/campaigns/:id/report` | Advertiser Bearer + flag | Read consent-filtered, minimum-cohort aggregates |
 | GET | `/social/status` | — | Discover active/read-only/retired social capability and export path |
-| POST | `/posts/:id/report` | Bearer | Persist an allow-listed post report; one idempotent row per reporter/post pair |
+| POST | `/posts/:id/report` | Bearer | Persist an allow-listed post report; one idempotent row per reporter/post content revision |
 | GET | `/orange/balance` | Bearer | Current 🍊 balance |
 | GET | `/orange/history` | Bearer | Recent ledger rows |
 | GET | `/orange/rewards/status` | Bearer | Server-derived daily activity and reward timers |
@@ -275,12 +275,25 @@ not delete or archive any database row. See
 [`docs/adr/0006-stage-legacy-social-retirement.md`](./docs/adr/0006-stage-legacy-social-retirement.md).
 
 Authenticated post reports accept only the server allowlist, reject missing,
-deleted, and self-authored posts, cap new reports per reporter, and upsert the
-unique `(postId, reporterId)` pair. The response exposes only `reported` and
-`duplicate`; reporter identity, report ID, counts, and moderation state are not
-returned to the reported user. `PostReport` cascades with the post or reporter,
-and a reporter's full local data export contains the reason and status needed
-to explain its retention. This persistence layer does not by itself complete
+deleted, and self-authored posts, cap new reports per reporter, capture the
+locked integer `Post.contentRevision` in `PostReport.postRevision`, and upsert
+the unique `(postId, reporterId, postRevision)` tuple. Replay by one reporter
+against unchanged content is idempotent. Under the same post lock, admission
+also caps unresolved `OPEN`/`REVIEWING` rows at 250 across all revisions; once
+that post is already fully represented in the active queue, an excess report
+creates no extra row and returns the same count-free duplicate response. The
+final contract treats an author
+edit as a distinct reportable revision, but the expand phase's retained legacy
+pair index continues returning `duplicate=true` across revisions until its
+separately approved contract migration. The response exposes only `reported`
+and `duplicate`; reporter identity, report ID, counts, and moderation state are
+not returned to the reported user. `PostReport` cascades with the post, but its
+nullable reporter relation uses `ON DELETE SET NULL` so account deletion
+preserves the moderation record without a long-lived replacement pseudonym. A
+reporter's full local data export contains the reason and status needed to
+explain its retention while that relation exists. The exact `69bf0bb` staging
+receipt predates this candidate migration and proves only the earlier
+reporter/post replay contract. Neither persistence contract by itself completes
 App Review Guideline 1.2: a separately authenticated operator queue, review
 ownership, response SLA, status action, user contact path, and production
 moderation runbook remain release gates.
@@ -295,7 +308,18 @@ Pino always writes structured stdout logs in production. Sentry and Better
 Stack are optional: leave their environment values blank for a fully supported
 local/default configuration. When enabled, request/user PII, auth/cookie/admin
 headers, request bodies, query strings, Privy IDs, wallet addresses, SIWE
-signatures, and quiz answers are stripped or redacted before transport.
+signatures, and quiz answers are stripped or redacted before transport. The
+HTTP path sanitizer removes query/fragment data and moderation-key-shaped path
+material, and any `X-Request-ID` containing moderation-key-shaped text is
+replaced with a server UUID. Sentry independently applies the same URL
+sanitizer to request and breadcrumb URLs, removes request headers, cookies,
+bodies, query objects, and user context, and recursively redacts
+moderation-key-shaped text from enumerable error-event and breadcrumb strings via
+`beforeSend` and `beforeBreadcrumb`; `beforeSendTransaction` applies the same
+recursive sanitizer to performance transaction/span strings. Regression tests
+cover embedded request-ID, event, exception, stack-path, breadcrumb,
+transaction, and span cases. A value-safe staging check remains part of
+activation evidence.
 
 Deploy the web and segment worker as separate Railway services from the same
 release. Point web readiness at `/ready`; expose no public worker port. See
@@ -325,11 +349,13 @@ thread model: every content unit is a `Post`; replies are Posts with
 ### Models added
 - `User` — extended with social profile fields plus dormant SIWE verification
   state (`verifiedAddress`, Base chain ID, verification time, hashed nonce).
-- `Post` — thread node with a nullable author and explicit redaction timestamp.
+- `Post` — thread node with a nullable author, explicit redaction timestamp,
+  and monotonic integer `contentRevision`.
 - `Follow` — composite PK `(followerId, followeeId)`.
 - `Like` — composite PK `(postId, userId)`.
-- `PostReport` — bounded reporter/post moderation record with an idempotent
-  unique pair and `OPEN`/review/action status lifecycle.
+- `PostReport` — reporter/post-revision moderation record with an idempotent
+  unique `(postId, reporterId, postRevision)` tuple, nullable reporter relation,
+  and `OPEN`/review/action status lifecycle.
 
 `Post.mediaUrl` is reserved now to avoid a second migration when media
 upload lands in PR #10.
@@ -414,6 +440,15 @@ provider cleanup, Android device coverage, and the required public web
 deletion initiation path are also incomplete. No runtime configuration should
 claim provider deletion or enable this path until those independent gates are
 implemented and verified on disposable accounts.
+
+The local purge currently takes advisory locks for all posts owned by one user
+in deterministic order and redacts them inside one transaction. It does not
+provide bounded or checkpointed per-post batching for a high-cardinality
+account. That scalability and rollback proof is an independent account-deletion
+activation blocker; the moderation locking candidate does not solve it, and all
+deletion source latches must remain closed. The final user deletion can also
+fan out `reporterId=NULL` across every report by a high-volume reporter, so
+bounded/checkpointed owned-post processing alone would not close the blocker.
 
 ### Migration
 
@@ -519,9 +554,78 @@ corresponding PR ships:
 | `SEGMENTS_ENABLED`         | Segment worker + `/segments` (read-only, off)     | S5  |
 | `QUESTS_ENABLED`           | `/quests`, `/quests/:id/{start,complete}` (off)   | S6  |
 | `ADVERTISER_ADMIN_ENABLED` | `/admin/*` (advertiser-scoped, separate API keys, off) | S7  |
+| `POST_MODERATION_ENABLED`  | `/moderation/reports*` (source-locked, separate reviewer auth, off) | Candidate |
 
 Routes guarded by an off flag return `404` so the surface is invisible in
 production until the matching PR lands and the env var is set.
+
+Post moderation has an additional compile-time brake:
+`POST_MODERATION_READY=false`. The environment flag alone cannot expose it.
+An activation-capable release must also require dedicated valid reviewer-key
+hashes, an approved response SLA, approved policy and retention-policy versions,
+a named owner, and a credential-free escalation contact. An authenticated
+moderation route with any missing or placeholder value must return a sanitized
+`503`; `/ready` must likewise fail closed with `503` before an activation-capable
+instance can accept traffic. No default value may silently complete this
+contract.
+
+Complete configuration is still insufficient for readiness. One bounded
+catalog query verifies the exact completed/non-rolled-back moderation migration,
+named column presence with selected reporter nullability/revision defaults,
+exact enums, nine named constraints plus two relevant foreign-key actions, and
+ten named valid/ready index entries including exactly two uniques. Any false
+result, error, or timeout produces only sanitized `503 not_ready`. This is a
+bounded presence/readiness attestation: it does not compare every physical
+definition or reject every extra audit column. Source and disposable-PostgreSQL
+tests prove success and a transactionally removed-index failure; the exact target
+still requires separate definition/privacy readback after its approved migration.
+
+The local candidate uses dedicated hashed reviewer keys, a bounded queue page,
+optimistic claim/decision versions, integer `Post.contentRevision`, captured
+`PostReport.postRevision`, and privacy-minimized audits keyed by
+`(reportId, toVersion)`. Each accepted mutation generates a server UUID
+`operationId` and returns the exact target audit receipt, including
+`fromPostRevision`/`toPostRevision`; client `X-Request-ID` is not stored in that
+audit. Report creation, author edit, ordinary owner deletion, and moderation use
+the same post advisory lock. An old unlinked report is carried forward on
+claim; an edit after claim requires `REBASE_REVISION` and
+`reviewRequired=true`; `CONTENT_SUPERSEDED` is used only when the same non-null
+reporter has a linked current-revision report, and no linked/replacement report
+ID is returned. `DISMISS` changes only the assigned target and returns
+`affectedReportCount=1`; every sibling and other reviewer claim remains
+unchanged. `REMOVE_POST` atomically redacts available content and resolves every
+pending sibling; already unavailable content instead resolves every pending
+sibling as `CONTENT_UNAVAILABLE` with `CLOSE_UNAVAILABLE` audits. This remains
+unsuitable for activation until workforce OIDC/MFA/RBAC, named
+ownership, SLA/escalation/contact/appeal, retention, PostgreSQL concurrency
+proof, exact-target/CI/staging evidence for the source-enforced 250 pending-row
+ceiling per post across all revisions, monitoring and an abuse owner, and a new
+rollback baseline are approved. See
+[`docs/adr/0011-protected-post-report-moderation.md`](./docs/adr/0011-protected-post-report-moderation.md)
+and [`docs/MODERATION_RUNBOOK.md`](./docs/MODERATION_RUNBOOK.md).
+
+Moderation schema delivery is expand/contract. The additive expand migration
+makes `reporterId` nullable with `ON DELETE SET NULL`, adds revision/audit state,
+and retains the legacy `(postId, reporterId)` unique index as a compatibility
+brake. Multi-revision admission is not operational while that stricter index
+remains. Dropping it requires a later, independently reviewed contract migration
+and explicit approval; expand deployment or gate activation does not imply it.
+Before applying expand, an exact target-database aggregate readback must prove
+every legacy report is `OPEN` and every `reviewedAt` is `NULL`; the migration
+fails fast otherwise. An unobserved/failed readback is not zero, and no
+unapproved backfill, status rewrite, or timestamp clearing is remediation.
+Report creation uses a target-free `INSERT ... ON CONFLICT DO NOTHING`, which is
+compatible with both the retained pair uniqueness and the new revision tuple.
+During expand, a later-revision report by the same reporter is therefore still
+returned as a duplicate until the separately approved contract migration.
+
+Deleting a reporter sets `PostReport.reporterId=NULL` and preserves its report
+and audit history without a replacement pseudonym. Hard deletion of a `Post` or
+`PostReport` can still cascade into moderation evidence, so approved retention
+and legal-hold semantics plus restricted database privileges for those hard
+deletes are activation blockers. CI must prove the migration and non-skipped
+PostgreSQL integration suite against a disposable PostgreSQL service; a local
+skip caused by a missing test database is not release evidence.
 
 Legacy swap execution uses a separate two-key gate rather than a `PHASE.*`
 flag. `SWAP_EXECUTION_ENABLED` is necessary but cannot expose `/swap/quote` or

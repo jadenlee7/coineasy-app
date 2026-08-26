@@ -59,6 +59,8 @@ test('local data export is versioned and excludes ephemeral SIWE secrets', async
     updatedAt: true,
     reviewedAt: true,
   });
+  assert.equal(query.select.postReports.select.reviewerKeyId, undefined);
+  assert.equal(query.select.postReports.select.audits, undefined);
   assert.ok(query.select.questCompletions);
   assert.ok(query.select.segments);
 });

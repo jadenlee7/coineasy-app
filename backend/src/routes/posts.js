@@ -26,11 +26,13 @@
  *   DELETE /posts/:id/like         unlike (auth, idempotent)
  */
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { prisma } from '../lib/db.js';
 import { redactOwnedPost } from '../lib/account-deletion.js';
 import { express4AsyncHandler } from '../lib/express-async.js';
+import { PENDING_REPORTS_PER_POST_MAX } from '../lib/moderation-limits.js';
 
 export const postsRouter = Router();
 
@@ -61,6 +63,15 @@ const authorSummary = {
   pfp: true,
 };
 
+export function publicPostContent(row) {
+  const deleted = Boolean(row.deletedAt);
+  return {
+    body: deleted ? '' : row.body,
+    mediaUrl: deleted ? null : row.mediaUrl,
+    author: deleted ? null : row.author,
+  };
+}
+
 async function shapePost(row, viewerUserId) {
   const [likeCount, replyCount, likedByMe] = await Promise.all([
     prisma.like.count({ where: { postId: row.id } }),
@@ -71,15 +82,17 @@ async function shapePost(row, viewerUserId) {
         })
       : Promise.resolve(null),
   ]);
+  const deleted = Boolean(row.deletedAt);
+  const safeContent = publicPostContent(row);
   return {
     id: row.id,
-    body: row.body,
-    mediaUrl: row.mediaUrl,
+    body: safeContent.body,
+    mediaUrl: safeContent.mediaUrl,
     parentPostId: row.parentPostId,
     deletedAt: row.deletedAt,
-    deleted: Boolean(row.deletedAt),
+    deleted,
     createdAt: row.createdAt,
-    author: row.author,
+    author: safeContent.author,
     counts: { likes: likeCount, replies: replyCount },
     likedByMe: !!likedByMe,
   };
@@ -223,30 +236,61 @@ const updateSchema = z.object({
   mediaUrl: z.string().url().max(500).optional().nullable(),
 });
 
-postsRouter.put('/:id', requireAuth, express4AsyncHandler(async (req, res) => {
-  const parsed = updateSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: 'bad_input', details: parsed.error.issues });
-  }
+export function createUpdatePostHandler({
+  db = prisma,
+  shape = shapePost,
+} = {}) {
+  return async function updatePost(req, res) {
+    const parsed = updateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'bad_input', details: parsed.error.issues });
+    }
 
-  const user = await prisma.user.findUnique({ where: { privyDid: req.user.privyDid } });
-  if (!user) return res.status(404).json({ error: 'user_not_found' });
-  const post = await prisma.post.findUnique({ where: { id: req.params.id } });
-  if (!post) return res.status(404).json({ error: 'not_found' });
-  if (post.authorId !== user.id) return res.status(403).json({ error: 'forbidden' });
+    const user = await db.user.findUnique({ where: { privyDid: req.user.privyDid } });
+    if (!user) return res.status(404).json({ error: 'user_not_found' });
+    const outcome = await db.$transaction(async (tx) => {
+      await tx.$queryRawUnsafe(
+        'SELECT pg_advisory_xact_lock(hashtextextended($1, 0)) IS NULL AS "lockAcquired"',
+        `post-report-target:${req.params.id}`,
+      );
+      const post = await tx.post.findUnique({ where: { id: req.params.id } });
+      if (!post) return { error: 'not_found', status: 404 };
+      if (post.authorId !== user.id) return { error: 'forbidden', status: 403 };
 
-  const updated = await prisma.post.update({
-    where: { id: post.id },
-    data: {
-      body: parsed.data.body,
-      ...(Object.prototype.hasOwnProperty.call(parsed.data, 'mediaUrl')
-        ? { mediaUrl: parsed.data.mediaUrl ?? null }
-        : {}),
-    },
-    include: { author: { select: authorSummary } },
-  });
-  res.json({ post: await shapePost(updated, user.id) });
-}));
+      const mutation = await tx.post.updateMany({
+        where: {
+          id: post.id,
+          authorId: user.id,
+          deletedAt: null,
+          contentRevision: post.contentRevision,
+        },
+        data: {
+          body: parsed.data.body,
+          ...(Object.prototype.hasOwnProperty.call(parsed.data, 'mediaUrl')
+            ? { mediaUrl: parsed.data.mediaUrl ?? null }
+            : {}),
+          contentRevision: { increment: 1 },
+        },
+      });
+      if (mutation.count !== 1) {
+        return { error: 'post_changed', status: 409 };
+      }
+      const updated = await tx.post.findUnique({
+        where: { id: post.id },
+        include: { author: { select: authorSummary } },
+      });
+      return { updated };
+    });
+    if (outcome.error) return res.status(outcome.status).json({ error: outcome.error });
+    return res.json({ post: await shape(outcome.updated, user.id) });
+  };
+}
+
+postsRouter.put(
+  '/:id',
+  requireAuth,
+  express4AsyncHandler(createUpdatePostHandler()),
+);
 
 // --- DELETE /posts/:id ----------------------------------------------
 export function createDeletePostHandler({
@@ -283,6 +327,7 @@ export function createPostReportHandler({
   db = prisma,
   now = () => new Date(),
   reportsPerDayMax = REPORTS_PER_DAY_MAX,
+  pendingReportsPerPostMax = PENDING_REPORTS_PER_POST_MAX,
 } = {}) {
   return async function reportPost(req, res) {
     res.set('Cache-Control', 'no-store');
@@ -305,10 +350,22 @@ export function createPostReportHandler({
         'SELECT pg_advisory_xact_lock(hashtextextended($1, 0)) IS NULL AS "lockAcquired"',
         `post-report:${reporter.id}`,
       );
+      // Share a post-scoped lock with the moderation decision path. This
+      // prevents a new report from being inserted while the same post is
+      // atomically redacted and all of its pending reports are resolved.
+      await tx.$queryRawUnsafe(
+        'SELECT pg_advisory_xact_lock(hashtextextended($1, 0)) IS NULL AS "lockAcquired"',
+        `post-report-target:${req.params.id}`,
+      );
 
       const post = await tx.post.findUnique({
         where: { id: req.params.id },
-        select: { id: true, authorId: true, deletedAt: true },
+        select: {
+          id: true,
+          authorId: true,
+          deletedAt: true,
+          contentRevision: true,
+        },
       });
       if (!post || post.deletedAt || !post.authorId) {
         return { body: { error: 'post_not_reportable' }, status: 404 };
@@ -317,14 +374,29 @@ export function createPostReportHandler({
         return { body: { error: 'cannot_report_own_post' }, status: 409 };
       }
 
-      const unique = {
-        postId_reporterId: { postId: post.id, reporterId: reporter.id },
+      const currentIdentity = {
+        postId: post.id,
+        reporterId: reporter.id,
+        postRevision: post.contentRevision,
       };
-      const existing = await tx.postReport.findUnique({
-        where: unique,
+      const existing = await tx.postReport.findFirst({
+        where: currentIdentity,
         select: { id: true },
       });
       if (existing) {
+        return { body: { reported: true, duplicate: true }, status: 200 };
+      }
+
+      const pendingForPost = await tx.postReport.count({
+        where: {
+          postId: post.id,
+          status: { in: ['OPEN', 'REVIEWING'] },
+        },
+      });
+      if (pendingForPost >= pendingReportsPerPostMax) {
+        // The allegation is already represented by a bounded active queue for
+        // this post. Keep the public response indistinguishable from an exact
+        // duplicate and avoid creating an unbounded Sybil-controlled fan-out.
         return { body: { reported: true, duplicate: true }, status: 200 };
       }
 
@@ -340,17 +412,30 @@ export function createPostReportHandler({
         return { body: { error: 'report_rate_limited' }, retryAfter: '3600', status: 429 };
       }
 
-      await tx.postReport.upsert({
-        where: unique,
-        create: {
-          postId: post.id,
-          reporterId: reporter.id,
-          reason: parsed.data.reason,
-        },
-        update: {},
-        select: { id: true },
-      });
-      return { body: { reported: true, duplicate: false }, status: 201 };
+      // Do not catch a Prisma P2002 inside this transaction: PostgreSQL marks
+      // the transaction aborted after a unique violation. A target-free
+      // ON CONFLICT keeps both the expand-phase legacy unique index and the
+      // revision-scoped unique index non-throwing. Once the separately
+      // approved contract migration removes the legacy index, later revisions
+      // begin inserting without another application release.
+      const inserted = await tx.$queryRawUnsafe(
+        `INSERT INTO "PostReport" (
+          "id", "postId", "reporterId", "reason", "postRevision", "updatedAt"
+        ) VALUES ($1, $2, $3, $4::"PostReportReason", $5, $6)
+        ON CONFLICT DO NOTHING
+        RETURNING "id"`,
+        randomUUID(),
+        post.id,
+        reporter.id,
+        parsed.data.reason,
+        post.contentRevision,
+        currentTime,
+      );
+      const created = Array.isArray(inserted) && inserted.length === 1;
+      return {
+        body: { reported: true, duplicate: !created },
+        status: created ? 201 : 200,
+      };
     });
 
     if (outcome.retryAfter) res.set('Retry-After', outcome.retryAfter);

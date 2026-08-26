@@ -62,11 +62,11 @@ model User {
   swaps  SwapLog[]
 
   // Social relations (PR #9)
-  posts     Post[]   @relation("PostAuthor")
-  likes     Like[]
+  posts       Post[]       @relation("PostAuthor")
+  likes       Like[]
   postReports PostReport[] @relation("PostReportReporter")
-  following Follow[] @relation("Follower")
-  followers Follow[] @relation("Followee")
+  following   Follow[]     @relation("Follower")
+  followers   Follow[]     @relation("Followee")
 
   // Path C v2 ownership. All user-owned privacy/targeting records are
   // removed by the future S3 account-forget flow.
@@ -119,25 +119,25 @@ enum AccountDeletionReauthStatus {
 // Raw DIDs, session IDs, client request IDs, Apple subjects, JWTs, nonce/state,
 // and bearer proofs are never persisted.
 model AccountDeletionReauthChallenge {
-  id                       String                      @id @default(cuid())
-  subjectHash              String                      @db.Char(64)
-  subjectHashKeyVersion    Int                         @default(1)
-  subjectHashKeyFingerprint String                     @db.Char(64)
-  sessionHash              String                      @db.Char(64)
-  clientRequestHash        String                      @db.Char(64)
-  nonceHash                String                      @db.Char(64)
-  stateHash                String                      @db.Char(64)
-  providerIdentityHash     String?                     @db.Char(64)
-  proofHash                String?                     @unique @db.Char(64)
-  status                   AccountDeletionReauthStatus @default(ISSUED)
-  expiresAt                DateTime                    @db.Timestamptz(3)
-  attestedAt               DateTime?                   @db.Timestamptz(3)
-  consumedAt               DateTime?                   @db.Timestamptz(3)
-  createdAt                DateTime                    @default(now()) @db.Timestamptz(3)
-  updatedAt                DateTime                    @updatedAt @db.Timestamptz(3)
+  id                        String                      @id @default(cuid())
+  subjectHash               String                      @db.Char(64)
+  subjectHashKeyVersion     Int                         @default(1)
+  subjectHashKeyFingerprint String                      @db.Char(64)
+  sessionHash               String                      @db.Char(64)
+  clientRequestHash         String                      @db.Char(64)
+  nonceHash                 String                      @db.Char(64)
+  stateHash                 String                      @db.Char(64)
+  providerIdentityHash      String?                     @db.Char(64)
+  proofHash                 String?                     @unique @db.Char(64)
+  status                    AccountDeletionReauthStatus @default(ISSUED)
+  expiresAt                 DateTime                    @db.Timestamptz(3)
+  attestedAt                DateTime?                   @db.Timestamptz(3)
+  consumedAt                DateTime?                   @db.Timestamptz(3)
+  createdAt                 DateTime                    @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime                    @updatedAt @db.Timestamptz(3)
 
   subjectKey      AccountDeletionKeyRegistry @relation("AccountDeletionReauthSubjectKey", fields: [subjectHashKeyVersion, subjectHashKeyFingerprint], references: [keyVersion, fingerprint], onDelete: Restrict, onUpdate: Restrict, map: "AccountDeletionReauthChallenge_subject_key_fkey")
-  deletionRequest AccountDeletionRequest?      @relation("AccountDeletionRequestReauth")
+  deletionRequest AccountDeletionRequest?    @relation("AccountDeletionRequestReauth")
 
   @@index([subjectHash, sessionHash, status, expiresAt], map: "idx_deletion_reauth_binding")
   @@index([expiresAt], map: "idx_deletion_reauth_expiry")
@@ -154,7 +154,7 @@ model AccountDeletionKeyRegistry {
   deletionRequests           AccountDeletionRequest[]          @relation("AccountDeletionSubjectKey")
   userProviderIdentities     UserStableProviderIdentity[]      @relation("UserStableProviderIdentityKey")
   deletionProviderIdentities AccountDeletionProviderIdentity[] @relation("AccountDeletionProviderIdentityKey")
-  reauthChallenges           AccountDeletionReauthChallenge[]   @relation("AccountDeletionReauthSubjectKey")
+  reauthChallenges           AccountDeletionReauthChallenge[]  @relation("AccountDeletionReauthSubjectKey")
 
   @@unique([keyVersion, fingerprint])
 }
@@ -188,8 +188,8 @@ model AccountDeletionRequest {
   manualReviewAt            DateTime?
   updatedAt                 DateTime             @updatedAt
 
-  subjectKey         AccountDeletionKeyRegistry        @relation("AccountDeletionSubjectKey", fields: [subjectHashKeyVersion, subjectHashKeyFingerprint], references: [keyVersion, fingerprint], onDelete: Restrict, onUpdate: Restrict, map: "AccountDeletionRequest_subject_key_fkey")
-  providerIdentities AccountDeletionProviderIdentity[]
+  subjectKey          AccountDeletionKeyRegistry        @relation("AccountDeletionSubjectKey", fields: [subjectHashKeyVersion, subjectHashKeyFingerprint], references: [keyVersion, fingerprint], onDelete: Restrict, onUpdate: Restrict, map: "AccountDeletionRequest_subject_key_fkey")
+  providerIdentities  AccountDeletionProviderIdentity[]
   recentAuthChallenge AccountDeletionReauthChallenge?   @relation("AccountDeletionRequestReauth", fields: [recentAuthChallengeId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "AccountDeletionRequest_recent_auth_fkey")
 
   @@index([clientRequestId])
@@ -282,21 +282,22 @@ model SwapLog {
 // =====================================================================
 
 model Post {
-  id           String    @id @default(cuid())
-  authorId     String?
-  body         String    @db.VarChar(2000)
+  id              String    @id @default(cuid())
+  authorId        String?
+  body            String    @db.VarChar(2000)
   // Self-join: null = root post, non-null = reply to that post.
-  parentPostId String?
+  parentPostId    String?
   // mediaUrl reserved for PR #10 (media upload). Kept now to avoid a
   // second migration when uploads land.
-  mediaUrl     String?
-  deletedAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  mediaUrl        String?
+  deletedAt       DateTime?
+  contentRevision Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  author  User?  @relation("PostAuthor", fields: [authorId], references: [id], onDelete: SetNull)
-  parent  Post?  @relation("PostReplies", fields: [parentPostId], references: [id], onDelete: SetNull)
-  replies Post[] @relation("PostReplies")
+  author  User?        @relation("PostAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  parent  Post?        @relation("PostReplies", fields: [parentPostId], references: [id], onDelete: SetNull)
+  replies Post[]       @relation("PostReplies")
   likes   Like[]
   reports PostReport[]
 
@@ -325,22 +326,69 @@ enum PostReportStatus {
   DISMISSED
 }
 
-model PostReport {
-  id         String           @id @default(cuid())
-  postId     String
-  reporterId String
-  reason     PostReportReason
-  status     PostReportStatus @default(OPEN)
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-  reviewedAt DateTime?
+enum PostReportResolution {
+  CONTENT_REMOVED
+  CONTENT_UNAVAILABLE
+  CONTENT_SUPERSEDED
+  NO_VIOLATION
+}
 
-  post     Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  reporter User @relation("PostReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+enum PostReportAuditAction {
+  CLAIM
+  REMOVE_POST
+  CLOSE_UNAVAILABLE
+  CLOSE_SUPERSEDED
+  REBASE_REVISION
+  DISMISS
+}
+
+model PostReport {
+  id            String                @id @default(cuid())
+  postId        String
+  reporterId    String?
+  reason        PostReportReason
+  postRevision  Int                   @default(0)
+  status        PostReportStatus      @default(OPEN)
+  reviewerKeyId String?               @db.VarChar(64)
+  claimedAt     DateTime?
+  version       Int                   @default(0)
+  resolution    PostReportResolution?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  reviewedAt    DateTime?
+
+  post     Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter User?             @relation("PostReportReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  audits   PostReportAudit[]
 
   @@unique([postId, reporterId], map: "uniq_post_report_reporter")
-  @@index([status, createdAt], map: "idx_post_report_queue")
+  @@unique([postId, reporterId, postRevision], map: "uniq_post_report_reporter_revision")
+  @@index([postId, postRevision, status, id], map: "idx_post_report_revision_state")
+  @@index([postId, status, id], map: "idx_post_report_pending")
+  @@index([status, createdAt, id], map: "idx_post_report_queue_v2")
   @@index([reporterId, createdAt], map: "idx_post_report_reporter")
+}
+
+model PostReportAudit {
+  reportId         String
+  reviewerKeyId    String                @db.VarChar(64)
+  policyVersion    String                @db.VarChar(64)
+  action           PostReportAuditAction
+  fromStatus       PostReportStatus
+  toStatus         PostReportStatus
+  fromVersion      Int
+  toVersion        Int
+  operationId      String                @db.Uuid
+  fromPostRevision Int
+  toPostRevision   Int
+  createdAt        DateTime              @default(now())
+
+  report PostReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@id([reportId, toVersion], map: "PostReportAudit_pkey")
+  @@index([reportId, createdAt], map: "idx_post_report_audit_report")
+  @@index([reviewerKeyId, createdAt], map: "idx_post_report_audit_reviewer")
+  @@index([operationId, createdAt], map: "idx_post_report_audit_operation")
 }
 
 model Follow {

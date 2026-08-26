@@ -6,6 +6,13 @@ import pinoHttp from 'pino-http';
 import { prisma } from './lib/db.js';
 import { logger } from './lib/logger.js';
 import { createNoopTelemetry } from './lib/telemetry.js';
+import { resolveModerationActivationConfig } from './lib/moderation-config.js';
+import { verifyModerationDatabaseContract } from './lib/moderation-database.js';
+import { POST_MODERATION_READY } from './lib/moderation-gates.js';
+import {
+  containsModerationCredential,
+  sanitizeRequestUrl,
+} from './lib/request-url.js';
 import { authRouter } from './routes/auth.js';
 import { orangeRouter } from './routes/orange.js';
 import { swapRouter } from './routes/swap.js';
@@ -22,6 +29,7 @@ import { questsRouter } from './routes/quests.js';
 import { adminRouter } from './routes/admin.js';
 import { socialRouter } from './routes/social.js';
 import { legalRouter } from './routes/legal.js';
+import { moderationRouter } from './routes/moderation.js';
 import { createLegacySocialGate } from './middleware/legacy-social.js';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{8,128}$/;
@@ -39,13 +47,15 @@ function boundedTimeout(value, fallback = 2_000) {
 
 export function resolveRequestId(value) {
   const candidate = Array.isArray(value) ? value[0] : value;
-  return typeof candidate === 'string' && REQUEST_ID_PATTERN.test(candidate)
+  return typeof candidate === 'string'
+    && REQUEST_ID_PATTERN.test(candidate)
+    && !containsModerationCredential(candidate)
     ? candidate
     : randomUUID();
 }
 
-function requestPath(value) {
-  return String(value || '').split(/[?#]/, 1)[0] || '/';
+export function requestPath(value) {
+  return sanitizeRequestUrl(value) || '/';
 }
 
 export function serviceMetadata(env = process.env) {
@@ -72,14 +82,29 @@ export function notFoundHandler(req, res) {
   return res.status(404).json({ error: 'not_found', requestId: req.id });
 }
 
-export function createReadinessHandler({ db, env = process.env, appLogger = logger } = {}) {
+export function createReadinessHandler({
+  db,
+  env = process.env,
+  appLogger = logger,
+  moderationReady = POST_MODERATION_READY,
+  verifyModerationContract = verifyModerationDatabaseContract,
+} = {}) {
   const timeoutMs = boundedTimeout(env.READINESS_TIMEOUT_MS);
 
   return async function readiness(req, res) {
     let timer;
     try {
+      const moderationEnabled = (
+        moderationReady
+        && clean(env.POST_MODERATION_ENABLED)?.toLowerCase() === 'true'
+      );
+      if (moderationEnabled) {
+        resolveModerationActivationConfig(env);
+      }
       await Promise.race([
-        db.$queryRawUnsafe('SELECT 1'),
+        moderationEnabled
+          ? verifyModerationContract(db)
+          : db.$queryRawUnsafe('SELECT 1'),
         new Promise((_, reject) => {
           timer = setTimeout(() => reject(new Error('Readiness timeout')), timeoutMs);
           timer.unref?.();
@@ -92,7 +117,7 @@ export function createReadinessHandler({ db, env = process.env, appLogger = logg
       clearTimeout(timer);
       appLogger.warn(
         { requestId: req.id, errorType: error?.name || 'Error' },
-        'database readiness check failed',
+        'service readiness check failed',
       );
       res.set('Cache-Control', 'no-store');
       res.set('Retry-After', '5');
@@ -159,6 +184,7 @@ export function createApp({
   app.use('/segments', segmentsRouter);
   app.use('/quests', questsRouter);
   app.use('/admin', adminRouter);
+  app.use('/moderation', moderationRouter);
   app.use('/', followsRouter);
 
   app.use(notFoundHandler);
