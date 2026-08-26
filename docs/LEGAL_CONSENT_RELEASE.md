@@ -52,9 +52,17 @@ Google Play policy URLs in this state.
 - EasyGo processes a Privy account identifier, provider login linkage, private
   profile data, public social content, a public EVM wallet address, Base chain
   verification, Orange and swap records, consent/audit records, and optional
-  quest/segment data. Authenticated post reports are retained as bounded
-  moderation records and the reporter identity is not shown to the reported
-  user.
+  quest/segment data. Authenticated post reports are retained as allow-listed,
+  per-reporter-rate-limited moderation records and the reporter identity is not
+  shown to the reported user. The default-off revision candidate source-enforces
+  a 250 pending-row ceiling per post across all revisions with locked admission
+  coalescing and bounded decision fan-out; target/CI/staging evidence,
+  monitoring, and abuse ownership remain unapproved. Its reporter relation is nullable and uses
+  `ON DELETE SET NULL` so account deletion preserves the moderation record
+  without retaining or deriving a long-lived reporter pseudonym. That does not
+  guarantee retention after a hard `Post` or `PostReport` deletion, whose
+  cascades can remove report/audit evidence; legal-hold rules, deletion
+  authority, and database privileges remain unapproved.
 - EasyGo never requests or stores a wallet private key or recovery phrase.
 - Other users' wallet addresses are excluded from public EasyGo profile
   responses. Public blockchain records remain independently public and
@@ -138,7 +146,11 @@ fail-closed. Revocation remains available independently of the grant gate.
       intentionally unimplemented. Google stable identity, recent reauth,
       provider cleanup, Android coverage, and the standalone web initiation
       path are also absent. Verify every stage on disposable staging accounts
-      before a separate activation review.
+      before a separate activation review. The current local purge can lock and
+      redact all owned posts in one transaction, while final user deletion can
+      fan out `reporterId=NULL` across all reports by that user. Neither path is
+      bounded/checkpointed for high-cardinality accounts, and the moderation
+      candidate does not resolve this independent deletion-latch blocker.
 - [ ] Operate the new authenticated, deduplicated post-report persistence with
       a separately protected moderation queue, assigned reviewer, response
       SLA, action/status workflow, user contact/escalation path, and reviewed
@@ -150,6 +162,58 @@ fail-closed. Revocation remains available independently of the grant gate.
       [`DEPLOY_CHECKLIST.md`](../backend/docs/DEPLOY_CHECKLIST.md#exact-69bf0bb-postreport-staging-rollout-2026-08-26-utc),
       but the protected queue, reviewer, SLA, action workflow, escalation path,
       and retention approval remain open.
+      The default-off design and operating blockers are now documented in
+      [`ADR-0011`](../backend/docs/adr/0011-protected-post-report-moderation.md)
+      and the
+      [`MODERATION_RUNBOOK`](../backend/docs/MODERATION_RUNBOOK.md). Those
+      source candidates do not authorize a migration, deployment, reviewer
+      credential, moderation action, user contact, or Guideline 1.2 readiness
+      claim. Workforce identity/RBAC, named ownership, retention, escalation,
+      appeal, staging proof, and qualified legal approval remain required.
+      The candidate distinguishes moderator removal (`CONTENT_REMOVED`) from
+      content already unavailable after ordinary deletion
+      (`CONTENT_UNAVAILABLE`/`CLOSE_UNAVAILABLE`) and returns a
+      server-generated audit receipt with integer content-revision transitions.
+      Author edits require carry-forward or `REBASE_REVISION` and re-review;
+      `CONTENT_SUPERSEDED` is permitted only when the same reporter has a linked
+      current-revision report, but the response exposes no linked/replacement
+      report locator. `DISMISS` affects only the assigned target; removal and
+      unavailability alone have post-wide fan-out. None of those technical
+      states determines that the author violated policy. Source admission,
+      migration, pending index, and decision rollback now enforce a 250 pending-
+      row ceiling per post across all revisions. Exact-target/CI/staging proof,
+      monitoring, and a named Sybil/abuse owner remain activation gates. The expand migration
+      must retain the legacy reporter/post unique index; dropping it is a later
+      contract migration requiring independent approval. Before expand, the
+      exact target database must prove every legacy report is `OPEN` and every
+      `reviewedAt` is `NULL`; the migration fails fast otherwise. Missing
+      evidence is not zero, and no backfill, status rewrite, or timestamp
+      clearing is approved by this document. While both unique indexes coexist,
+      the target-free `ON CONFLICT DO NOTHING` insert deliberately treats a
+      same-reporter later revision as duplicate until contract.
+      An activation-capable route and `/ready` must fail closed with sanitized
+      `503` unless dedicated reviewer auth, a named owner, approved SLA, approved
+      policy and retention-policy versions, and a credential-free escalation
+      contact are complete. These runtime checks do not themselves approve the
+      policy or contact. With complete configuration, `/ready` also verifies one
+      bounded migration receipt and named schema-object presence/readiness
+      attestation and returns sanitized `503` on mismatch, query failure, or
+      timeout. It does not compare every object definition or reject every extra
+      audit column, so exact target definition/privacy readback remains required.
+      Its source and disposable-PostgreSQL success/failure tests plus non-skipped
+      integration receipts are technical evidence only, not target deployment or
+      legal clearance.
+      Reporter deletion preserves the report/audit via `SET NULL`, but hard
+      post/report deletion, retention/legal hold, and database deletion
+      privileges remain unresolved. Moderation credential redaction must be
+      independently proven in both HTTP logs and Sentry on the exact release.
+      Source tests now cover embedded request-ID replacement, sanitized paths,
+      and recursive redaction of enumerable Sentry error-event, exception,
+      stack-path, and breadcrumb strings. `beforeSendTransaction` and its
+      regression test cover performance transaction/span strings; staging
+      evidence must remain synthetic and value-safe. These technical
+      distinctions do not approve the retention, user-contact, appeal, evidence,
+      abuse-response, or legal-hold policy and do not close Guideline 1.2.
 - [ ] Reconcile Apple App Privacy and Google Play Data safety answers with the
       final document and an SDK/data-flow inventory.
 - [ ] Obtain qualified legal review for privacy, consumer, UGC moderation,

@@ -767,15 +767,82 @@ wallet private key, or login code.
 - [x] Keep account deletion visible but fail-closed. Disabled and error copy
       now says that no request was sent and local/provider data remains
       unchanged; no source latch or runtime flag was enabled.
-- [ ] Apply the additive `PostReport` migration to an approved staging backup
-      target, deploy the exact reviewed SHA, and verify a second account can
-      submit one report, replay it idempotently, and receive success only after
-      the server receipt. Verify local Hide occurs only after that receipt and
-      does not cross an account switch.
+- [x] Apply the additive `PostReport` migration to an approved staging backup
+      target, deploy the exact reviewed SHA, and verify authenticated first,
+      replay, invalid, self-owned, deleted, persistence, and cleanup server
+      receipts. Exact `69bf0bb` evidence is recorded in the
+      [backend rollout checklist](../backend/docs/DEPLOY_CHECKLIST.md#exact-69bf0bb-postreport-staging-rollout-2026-08-26-utc).
+- [ ] On the physical internal build, verify a second account receives report
+      success only after the server receipt, local Hide happens only after that
+      receipt, and the hidden-post state does not cross an account switch.
+      EasyGo Privy test accounts remain temporarily enabled only for this open
+      device QA; disable them or renew the bounded approval afterward.
 - [ ] Provision an authenticated operator report queue and action workflow,
       assign an owner and response SLA, validate the user escalation/contact
       path, and complete the moderation/retention runbook. Do not mark App
-      Review Guideline 1.2 complete from report persistence alone.
+      Review Guideline 1.2 complete from report persistence alone. A
+      default-off source candidate now exists in
+      [ADR-0011](../backend/docs/adr/0011-protected-post-report-moderation.md)
+      and the
+      [moderation runbook](../backend/docs/MODERATION_RUNBOOK.md), but it has
+      not been migrated, deployed, activated, or exercised on a real report.
+      A future approved staging/device run must verify author edit, report
+      creation, and ordinary owner deletion serialize with moderation; replay is
+      revision-captured and idempotent for
+      `(postId, reporterId, postRevision)`; an old unlinked report is carried
+      forward on claim; and an edit after claim yields
+      `REBASE_REVISION` with `reviewRequired=true` before any decision. It must
+      also prove `CONTENT_SUPERSEDED` occurs only with a linked current-revision
+      report while exposing no linked/replacement report ID, `DISMISS` changes
+      only the assigned target with `affectedReportCount=1` while every sibling
+      and other reviewer claim stays unchanged, and unavailable content
+      terminally resolves every pending sibling as `CONTENT_UNAVAILABLE` with
+      `CLOSE_UNAVAILABLE`.
+      Every successful claim/decision must return the exact target audit receipt
+      with server `operationId`, action, from/to report version, integer
+      `fromPostRevision`/`toPostRevision`, and server timestamp. A client request
+      ID or missing feed card alone is not the receipt. Source code now enforces
+      250 pending rows per post across all revisions through locked admission
+      coalescing, migration fail-fast/pending index, and decision rollback at
+      251. The queue remains off until exact-target/CI/staging load receipts,
+      monitoring/alerts, and a named Sybil response owner are approved. Expand QA must also prove
+      reporter deletion sets `reporterId=NULL` without a durable pseudonym and
+      retains the legacy `(postId, reporterId)` unique index. Only a separately
+      approved later contract migration may drop that index and enable full
+      multi-revision admission; expand or activation approval is not its
+      authorization. Before expand, retain the exact target aggregate proving
+      every legacy report is `OPEN` and every `reviewedAt` is `NULL`; query
+      failure is unobserved, and no backfill/status rewrite/timestamp clearing is
+      authorized. During expand, verify the target-free `ON CONFLICT DO NOTHING`
+      insert still returns a same-reporter later revision as duplicate while both
+      unique constraints coexist.
+      The exact activation-capable SHA must have CI evidence from disposable
+      PostgreSQL after migration with the database integration suite not skipped.
+      Preserve the physical-catalog CI contract that exactly the two unique
+      indexes named by schema and migration exist, with aligned
+      `postRevision=0`. Add explicit executable cases for `OPEN` plus non-null
+      `reviewedAt` failure and nonempty all-`OPEN`/null success. An authenticated
+      moderation route and `/ready` must return sanitized `503` whenever
+      reviewer-key hashes, named owner, approved SLA, approved policy and
+      retention-policy versions, or credential-free escalation contact are
+      incomplete. With complete configuration, the one bounded `/ready` catalog
+      query must require the exact finished migration, required
+      named-column presence with selected defaults/nullability, exact enums,
+      nine named constraints plus two relevant FK actions, and ten named
+      valid/ready index entries including exactly two uniques. Source and
+      disposable-PostgreSQL tests cover success and a transactionally removed-
+      index failure. Because this does not compare every definition or exclude
+      every extra audit column, device/release QA still needs value-safe exact
+      target definition/privacy readback. Every attestation mismatch, error, or
+      timeout must remain sanitized `503 not_ready`.
+      Reporter deletion must preserve report/audit history via `SET NULL`, while
+      hard `Post`/`PostReport` deletion remains blocked until retention/legal
+      hold and database privileges are approved. Synthetic value-safe checks
+      must prove credential-shaped text is absent from HTTP logs and Sentry;
+      source regressions now cover embedded request IDs, request paths, and
+      enumerable Sentry error-event/breadcrumb strings without using a real key.
+      `beforeSendTransaction` regression coverage also sanitizes performance
+      transaction/span text.
 - [ ] Export the exact iOS release JavaScript, run `npm run
       appstore:bundle-check -- <ios-bundle>`, inspect the archive, and repeat
       the EASYEDU/Orange/Report checks on internal TestFlight. No external
@@ -788,7 +855,10 @@ wallet private key, or login code.
       secure revocation credentials and cleanup disposition, Google stable
       identity/reauth/cleanup, Android QA, and the public web deletion path all
       pass on disposable staging accounts. Gate activation is a separate
-      review.
+      review. The current purge has no bounded/checkpointed path for many owned
+      posts or for the `reporterId=NULL` foreign-key fan-out across many reports;
+      keep every deletion latch closed. The moderation candidate does not solve
+      this high-cardinality blocker.
 
 ## Dormant recent Apple reauthentication candidate
 

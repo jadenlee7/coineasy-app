@@ -13,6 +13,9 @@ import {
 } from '../src/lib/legal.js';
 import { PUSH_TOKEN_REGISTRATION_READY } from '../src/lib/push-token-gates.js';
 import { SWAP_EXECUTION_READY } from '../src/lib/swap-execution-gates.js';
+import { POST_MODERATION_READY } from '../src/lib/moderation-gates.js';
+import { parseModerationKeyHashes } from '../src/lib/moderation-auth.js';
+import { resolveModerationActivationConfig } from '../src/lib/moderation-config.js';
 
 const BOOLEAN_FLAGS = [
   'SIWE_AUTH_ENABLED',
@@ -20,6 +23,7 @@ const BOOLEAN_FLAGS = [
   'SEGMENTS_ENABLED',
   'QUESTS_ENABLED',
   'ADVERTISER_ADMIN_ENABLED',
+  'POST_MODERATION_ENABLED',
   'CONSENT_GRANTS_ENABLED',
   'ACCOUNT_DELETION_ENABLED',
   'ACCOUNT_DELETION_PROVIDER_CLEANUP_ENABLED',
@@ -206,6 +210,67 @@ export function validateDeployEnvironment(
       );
     } catch {
       add(false, 'advertiser key digests', 'ADVERTISER_API_KEY_HASHES_JSON must be valid JSON');
+    }
+  }
+
+  if (enabled(env, 'POST_MODERATION_ENABLED')) {
+    for (const name of [
+      'MODERATION_API_KEY_HASHES_JSON',
+      'MODERATION_RESPONSE_SLA_HOURS',
+      'MODERATION_POLICY_VERSION',
+      'MODERATION_RETENTION_POLICY_VERSION',
+      'MODERATION_OWNER',
+      'MODERATION_ESCALATION_CONTACT',
+    ]) requireValue(name);
+    try {
+      parseModerationKeyHashes(clean(env.MODERATION_API_KEY_HASHES_JSON));
+      add(true, 'moderation key digests', '');
+    } catch {
+      add(
+        false,
+        'moderation key digests',
+        'MODERATION_API_KEY_HASHES_JSON must map opaque reviewer IDs to unique lowercase SHA-256 digests',
+      );
+    }
+    configuredInteger('MODERATION_RESPONSE_SLA_HOURS', 24, 1, 168);
+    for (const name of ['MODERATION_POLICY_VERSION', 'MODERATION_RETENTION_POLICY_VERSION']) {
+      const value = clean(env[name]);
+      add(
+        /^[A-Za-z0-9._:-]{1,64}$/u.test(value)
+          && !/(?:candidate|draft|tbd|unknown|unapproved)/iu.test(value),
+        `${name} approval`,
+        `${name} must be an approved non-placeholder version`,
+      );
+    }
+    const moderationOwner = clean(env.MODERATION_OWNER);
+    add(
+      moderationOwner.length >= 3
+        && moderationOwner.length <= 100
+        && !/^(?:unassigned|undefined|tbd|unknown|none)$/iu.test(moderationOwner),
+      'moderation owner assignment',
+      'MODERATION_OWNER must identify an assigned owner rather than a placeholder',
+    );
+    const escalationContact = clean(env.MODERATION_ESCALATION_CONTACT);
+    add(
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(escalationContact)
+        || validUrl(escalationContact, { https: true }),
+      'moderation escalation contact',
+      'MODERATION_ESCALATION_CONTACT must be an email address or approved URL',
+    );
+    add(
+      POST_MODERATION_READY,
+      'post moderation implementation readiness',
+      'POST_MODERATION_ENABLED cannot be true until the owner, workforce identity, retention, escalation, migration, and QA gates are approved',
+    );
+    try {
+      resolveModerationActivationConfig(env);
+      add(true, 'moderation runtime contract parity', '');
+    } catch {
+      add(
+        false,
+        'moderation runtime contract parity',
+        'moderation activation settings must satisfy the exact runtime contract',
+      );
     }
   }
 

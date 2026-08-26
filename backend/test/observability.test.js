@@ -7,11 +7,16 @@ import {
   createLivenessHandler,
   createReadinessHandler,
   notFoundHandler,
+  requestPath,
   resolveRequestId,
 } from '../src/app.js';
 import { createShutdown } from '../src/lib/lifecycle.js';
 import { createLogger } from '../src/lib/logger.js';
-import { createNoopTelemetry, sanitizeSentryEvent } from '../src/lib/telemetry.js';
+import {
+  createNoopTelemetry,
+  sanitizeSentryEvent,
+  sanitizeSentryTransaction,
+} from '../src/lib/telemetry.js';
 
 const silentLogger = pino({ level: 'silent' });
 
@@ -108,10 +113,103 @@ test('readiness fails closed without exposing database errors', async () => {
   assert.equal(res.body.status, 'not_ready');
 });
 
+test('readiness blocks future moderation activation with an incomplete contract', async () => {
+  let databaseChecks = 0;
+  const res = response();
+  await createReadinessHandler({
+    db: { async $queryRawUnsafe() { databaseChecks += 1; return [1]; } },
+    env: {
+      SERVICE_NAME: 'easygo-test',
+      POST_MODERATION_ENABLED: 'true',
+      MODERATION_POLICY_VERSION: 'unapproved',
+    },
+    appLogger: silentLogger,
+    moderationReady: true,
+  })({ id: 'request-moderation-readiness' }, res);
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.status, 'not_ready');
+  assert.equal(databaseChecks, 0);
+  assert.equal(JSON.stringify(res.body).includes('unapproved'), false);
+});
+
+test('readiness requires the exact moderation database contract before activation', async () => {
+  const env = {
+    SERVICE_NAME: 'easygo-test',
+    POST_MODERATION_ENABLED: 'true',
+    MODERATION_API_KEY_HASHES_JSON: JSON.stringify({
+      'reviewer-one': 'a'.repeat(64),
+    }),
+    MODERATION_RESPONSE_SLA_HOURS: '24',
+    MODERATION_POLICY_VERSION: 'policy-v1',
+    MODERATION_RETENTION_POLICY_VERSION: 'retention-v1',
+    MODERATION_OWNER: 'EasyGo Trust Team',
+    MODERATION_ESCALATION_CONTACT: 'trust@example.com',
+  };
+
+  let failedContractChecks = 0;
+  const failed = response();
+  await createReadinessHandler({
+    db: {},
+    env,
+    appLogger: silentLogger,
+    moderationReady: true,
+    async verifyModerationContract() {
+      failedContractChecks += 1;
+      throw new Error('missing private migration details');
+    },
+  })({ id: 'request-moderation-db-failed' }, failed);
+  assert.equal(failed.statusCode, 503);
+  assert.equal(failedContractChecks, 1);
+  assert.equal(JSON.stringify(failed.body).includes('private migration'), false);
+
+  let acceptedContractChecks = 0;
+  const accepted = response();
+  await createReadinessHandler({
+    db: {},
+    env,
+    appLogger: silentLogger,
+    moderationReady: true,
+    async verifyModerationContract() {
+      acceptedContractChecks += 1;
+      return true;
+    },
+  })({ id: 'request-moderation-db-ready' }, accepted);
+  assert.equal(accepted.statusCode, 200);
+  assert.equal(accepted.body.status, 'ready');
+  assert.equal(acceptedContractChecks, 1);
+});
+
 test('request IDs accept conservative values and replace unsafe input', () => {
   assert.equal(resolveRequestId('request_1234'), 'request_1234');
   assert.notEqual(resolveRequestId('bad id with spaces'), 'bad id with spaces');
   assert.match(resolveRequestId(undefined), /^[0-9a-f-]{36}$/);
+
+  const credentialLikeId = `eg_mod_${'a'.repeat(32)}`;
+  for (const candidate of [
+    credentialLikeId,
+    credentialLikeId.toUpperCase(),
+    `prefix-${credentialLikeId}`,
+    `trace:${credentialLikeId}:suffix`,
+    [credentialLikeId, 'request_safe_1234'],
+  ]) {
+    const resolved = resolveRequestId(candidate);
+    assert.notEqual(resolved, Array.isArray(candidate) ? candidate[0] : candidate);
+    assert.match(
+      resolved,
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  }
+});
+
+test('request paths redact misplaced moderation credentials before logging', () => {
+  const credential = `eg_mod_${'Z'.repeat(48)}`;
+  const sanitized = requestPath(
+    `/moderation/reports/${credential}/claim?request=${credential}`,
+  );
+  assert.equal(sanitized, '/moderation/reports/[REDACTED]/claim');
+  assert.equal(sanitized.includes(credential), false);
+  assert.equal(requestPath('/posts/feed?token=private'), '/posts/feed');
 });
 
 test('logger redacts authentication, signatures, identity, and wallet fields', () => {
@@ -190,6 +288,7 @@ test('logger redacts authentication, signatures, identity, and wallet fields', (
 });
 
 test('Sentry events discard PII and query strings before transport', () => {
+  const moderationCredential = `eg_mod_${'q'.repeat(48)}`;
   const event = sanitizeSentryEvent({
     user: { email: 'private@example.com' },
     request: {
@@ -200,21 +299,55 @@ test('Sentry events discard PII and query strings before transport', () => {
       query_string: 'email=private%40example.com',
     },
     breadcrumbs: [{
+      message: `provider rejected ${moderationCredential}`,
       data: {
-        url: 'https://provider.example/read?wallet=0x123',
+        url: `https://provider.example/moderation/${moderationCredential}?wallet=0x123`,
         headers: { authorization: 'secret' },
         request_body: { wallet: '0x123' },
       },
     }],
+    message: `moderation failure for ${moderationCredential}`,
+    exception: {
+      values: [{
+        type: 'Error',
+        value: `unexpected key ${moderationCredential}`,
+        stacktrace: { frames: [{ filename: `/tmp/${moderationCredential}.js` }] },
+      }],
+    },
   });
 
   assert.equal(event.user, undefined);
   assert.equal(event.request.url, 'https://api.easygo.example/me');
   assert.equal(event.request.headers, undefined);
   assert.equal(event.request.data, undefined);
-  assert.equal(event.breadcrumbs[0].data.url, 'https://provider.example/read');
+  assert.equal(
+    event.breadcrumbs[0].data.url,
+    'https://provider.example/moderation/[REDACTED]',
+  );
+  assert.equal(JSON.stringify(event).includes(moderationCredential), false);
+  assert.equal(event.message, 'moderation failure for [REDACTED]');
+  assert.equal(event.breadcrumbs[0].message, 'provider rejected [REDACTED]');
+  assert.equal(event.exception.values[0].value, 'unexpected key [REDACTED]');
   assert.equal(event.breadcrumbs[0].data.headers, undefined);
   assert.equal(event.breadcrumbs[0].data.request_body, undefined);
+});
+
+test('Sentry transaction and span text redact moderation credentials before transport', () => {
+  const credential = `eg_mod_${'t'.repeat(48)}`;
+  const transaction = sanitizeSentryTransaction({
+    transaction: `POST /moderation/${credential}/decision`,
+    contexts: {
+      trace: { description: `fetch ${credential}` },
+    },
+    spans: [{
+      description: `SQL comment ${credential}`,
+      data: { route: `/moderation/${credential}` },
+    }],
+  });
+
+  assert.equal(JSON.stringify(transaction).includes(credential), false);
+  assert.equal(transaction.transaction, 'POST /moderation/[REDACTED]/decision');
+  assert.equal(transaction.spans[0].description, 'SQL comment [REDACTED]');
 });
 
 test('shutdown stops intake once and cleans bot, database, and telemetry', async () => {

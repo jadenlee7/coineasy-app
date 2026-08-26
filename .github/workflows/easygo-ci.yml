@@ -17,6 +17,23 @@ jobs:
   backend:
     name: Backend
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://easygo:easygo@127.0.0.1:5432/easygo
+      TEST_DATABASE_URL: postgresql://easygo:easygo@127.0.0.1:5432/easygo
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: easygo
+          POSTGRES_PASSWORD: easygo
+          POSTGRES_DB: easygo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U easygo -d easygo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: backend
@@ -35,12 +52,13 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
+      - name: Apply migrations to disposable PostgreSQL
+        run: npx prisma migrate deploy
+
       - name: Run backend tests
         run: npm test
 
       - name: Validate Prisma schema
-        env:
-          DATABASE_URL: postgresql://easygo:easygo@127.0.0.1:5432/easygo
         run: npx prisma validate
 
       - name: Run local deploy preflight

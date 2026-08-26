@@ -268,6 +268,7 @@ test('local purge redacts only the owner posts and preserves every reply row', a
       body: '',
       mediaUrl: null,
       deletedAt: now,
+      contentRevision: { increment: 1 },
     },
   });
   assert.equal(calls.some(([name]) => name === 'post.deleteMany'), false);
@@ -580,12 +581,22 @@ test('initial deletion refuses to purge without a stable provider identity', asy
 
 test('ordinary post deletion redacts one owned node instead of deleting its replies', async () => {
   let mutation;
-  const prisma = {
+  let lockKey;
+  const tx = {
+    async $queryRawUnsafe(sql, value) {
+      assert.match(sql, /pg_advisory_xact_lock/);
+      lockKey = value;
+    },
     post: {
       async updateMany(options) {
         mutation = options;
         return { count: 1 };
       },
+    },
+  };
+  const prisma = {
+    async $transaction(callback) {
+      return callback(tx);
     },
   };
   const now = new Date('2026-08-02T12:00:00.000Z');
@@ -596,8 +607,15 @@ test('ordinary post deletion redacts one owned node instead of deleting its repl
   }), true);
   assert.deepEqual(mutation, {
     where: { id: 'post_1', authorId: 'user_1', deletedAt: null },
-    data: { authorId: null, body: '', mediaUrl: null, deletedAt: now },
+    data: {
+      authorId: null,
+      body: '',
+      mediaUrl: null,
+      deletedAt: now,
+      contentRevision: { increment: 1 },
+    },
   });
+  assert.equal(lockKey, 'post-report-target:post_1');
 });
 
 test('a tombstone blocks guarded writes after the shared advisory lock', async () => {
