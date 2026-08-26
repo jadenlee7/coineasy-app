@@ -21,9 +21,11 @@ Verified on 2026-07-21 without printing secret values:
 The project's default `production` environment is empty. All three service
 instances and the database volume exist only in `staging`. Web is running the
 approved release at `https://easygo-web-staging-staging.up.railway.app`.
-Web and worker revisions are tracked independently. The current PR #58 record
-below is web only; the unchanged worker retains its prior reviewed release and
-exits cleanly while `SEGMENTS_ENABLED=false`.
+Web and worker revisions are tracked independently. The current web release is
+`69bf0bb35656b8a198fd42c582beae5b5b222e1d`; its exact staging receipt is
+recorded below. The unchanged worker retains its prior reviewed release and
+exits cleanly while `SEGMENTS_ENABLED=false`. PR #58 remains the minimum safe
+web rollback baseline.
 
 ## Current automated evidence
 
@@ -180,13 +182,20 @@ exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Document release SHA `f252761a217094942bc18e57e09467c01a8bc8ba`
   and previous known-good SHA `b1850d0`.
 - [x] Confirm an operator is available for the deployment and 15-minute watch.
-- [ ] Back up the approved target, apply the additive
-      `20260825120000_post_reports` migration once, and verify Prisma reports
-      no pending migration before deploying the post-report API.
-- [ ] Smoke one authenticated non-owner `POST /posts/:id/report`, one replay,
-      and the invalid/self/deleted cases against the exact staging SHA. Record
-      only status codes and request IDs; do not put reporter identity or report
-      content in release logs.
+- [x] Back up the approved target, apply the additive
+      `20260811110000_expo_push_tokens` and
+      `20260825120000_post_reports` migrations once, and verify Prisma reports
+      no pending migration before deploying the post-report API. The encrypted
+      backup and migration receipts are recorded in the exact-release section
+      below.
+- [x] Smoke one authenticated non-owner `POST /posts/:id/report`, one replay,
+      and the invalid/self/deleted cases against the exact staging SHA. The
+      release log below contains status codes and request IDs only; it contains
+      no reporter identity, credential, token, or report content.
+- [ ] Disable EasyGo Privy test accounts when this authenticated staging QA
+      campaign closes, or record renewed operator approval with an owner and
+      next review date before further use. Never distribute or record test
+      credential values.
 - [ ] Provision and verify a separately authenticated operator moderation
       queue, action/status workflow, owner, response SLA, and escalation
       runbook before an App Store submission that exposes UGC. Persistence and
@@ -262,6 +271,69 @@ exits cleanly while `SEGMENTS_ENABLED=false`.
 - [x] Notify the product/support owner that staging is ready for device QA and
   provide the exact TestFlight/device checklist.
 - [ ] Close the release only after the monitoring window completes.
+      The exact web stabilization window completed, but the overall release
+      remains open for the moderation, legal, bundle, and device gates above.
+
+### Exact 69bf0bb PostReport staging rollout (2026-08-26 UTC)
+
+- Scope was the additive staging Postgres migrations and web service only.
+  Production, the worker, EAS, TestFlight groups, and App Store review were
+  unchanged.
+- Before the migrations, `npm run backup:staging` created the owner-only,
+  encrypted custom-format backup
+  `easygo-staging-20260826T100102Z.dump.enc` at
+  `2026-08-26T10:01:02.296Z`. Its encrypted SHA-256 is
+  `a0d78c4b689ffbe6ca9bc00c5f1e9f978f24049d681a27337c050eaa6f106903`;
+  its in-memory decrypt/`PGDMP` round-trip passed, and its passphrase remains
+  only in macOS Keychain service
+  `easygo-staging-postgres-backup-20260826T100102Z`.
+- Controlled migration deploy applied
+  `20260811110000_expo_push_tokens` and
+  `20260825120000_post_reports` in order. The final Prisma status reported no
+  pending migration; no down-migration or rollback was run.
+- The deployed tuple is exact release
+  `69bf0bb35656b8a198fd42c582beae5b5b222e1d`, Railway deployment
+  `71cd7b0c-a056-412b-a7b4-caf82baf0d41`, and image digest
+  `sha256:a5dfad61f5863c232b628bf4f634e8d9ba6db661b2404e2f26fa73fde85ca819`.
+  A clean `git archive` of the exact release has SHA-256
+  `f8ddda74e350f9459a1669256d1f9e97a2469820084aced7dc209c0cd65a0ecb`;
+  this proves the reviewed Git tree archive, not a cryptographic binding to the
+  Railway image.
+- EasyGo Privy test accounts remain enabled under the 2026-08-26 operator
+  approval used for this staging QA. This records current state, not indefinite
+  approval: disable them when the authenticated staging QA campaign closes, or
+  record renewed approval with an owner and review date. Email authentication
+  was already enabled. Test credential values, OTPs, bearer tokens, and
+  reporter identity were not written to the repository, files, release logs,
+  or terminal output; the access token existed only in process memory.
+
+| Contract case | HTTP | Railway request ID | Application request ID |
+| --- | ---: | --- | --- |
+| First valid non-owner report | 201 | `rmGiGT3IS_6AtHuyAQeqjw` | `easygo-report-fe15787d1acf-valid_first` |
+| Replay of the same reporter/post pair | 200 | `2Sbrew0jSymx91H0JH0Vcg` | `easygo-report-fe15787d1acf-valid_replay` |
+| Invalid reason | 400 | `Ato8RYl7SpOnWM5WAQeqjw` | `easygo-report-fe15787d1acf-invalid_reason` |
+| Reporter-owned post | 409 | `xhNQHbtwSMyNdaZE0ubPiw` | `easygo-report-fe15787d1acf-self_post` |
+| Soft-deleted post | 404 | `QCnwji_yToe9-SOimrpb1w` | `easygo-report-fe15787d1acf-deleted_post` |
+
+- The first response was non-duplicate and the replay was duplicate. Before
+  cleanup, exactly one bounded `PostReport` row existed with the expected open
+  workflow state. Exact synthetic cleanup then removed three posts and two
+  users; global `PostReport`, orphan-report, synthetic-post, and synthetic-user
+  counts were all zero afterward.
+- The deployment stabilization window ran from the server-listen event at
+  `2026-08-26T10:05:09.508280381Z` through the final status response at
+  `2026-08-26T10:20:26.195358766Z` (15 minutes, 16.687 seconds). It contained
+  16 completed application requests, zero application 5xx responses, zero
+  `@level:error` events, and no `stopping` or `fatal` signal. A later
+  fixed-window Railway edge-log query was unavailable, so no edge-specific 5xx
+  claim is made.
+- At `2026-08-26T14:00:57Z`, `/health`, `/ready`, and `/social/status` each
+  returned HTTP 200; `/health` still reported the exact release and social mode
+  remained active. The post-smoke application-log review through
+  `2026-08-26T14:15:00Z` found no error or stop signal.
+- This rollout does not change the rollback floor. The minimum safe web target
+  remains release `0600f24d7b706aefb1a5215be559b7640d36a3e2`, Railway
+  deployment `10ba0998-ca2d-429b-8a94-527b4db47ab0`; do not down-migrate.
 
 ### PR #58 Railway staging web rollout (2026-08-24 UTC)
 

@@ -1,9 +1,11 @@
 # EasyGo backend operations runbook
 
-Status: S9 implementation, additive S2 migration, and the first staging deploy
-are complete. The recoverable staging database backup is verified. The
-remaining gates are the matched published privacy/terms version, security
-exceptions, real-device login, and rollback drills.
+Status: S9 implementation, all committed additive staging migrations, the
+exact `69bf0bb` web rollout, and authenticated PostReport API smoke are
+complete. The latest recoverable staging database backup is verified. The
+remaining gates include matched published privacy/terms, security exceptions,
+the protected moderation operation, release-bundle/device QA, and rollback
+drills.
 
 ## Railway staging target
 
@@ -15,12 +17,15 @@ The verified target is project `easygo-app-staging`
 - Web: `518ba3f5-486b-42a4-ad0c-27fb56e63b00`
 - Worker: `0ffb8648-fe59-4fb7-926f-3cc9445c133d`
 
-Postgres is running with a ready persistent volume and both migrations applied.
-Web is deployed from the reviewed staging branch and serves the public staging
-domain with `/ready` healthy. Web and worker revisions are deployed and rolled
-back independently. The current PR #58 record is web only; the unchanged
-worker remains on its prior reviewed revision and exits successfully while
-`SEGMENTS_ENABLED=false`. The project's default `production` environment
+Postgres is running with a ready persistent volume and all committed migrations
+through `20260825120000_post_reports` applied; Prisma reports no pending
+migration. Web serves the public staging domain from exact release
+`69bf0bb35656b8a198fd42c582beae5b5b222e1d`, with `/ready` healthy and the
+authenticated Report contract verified. The exact tuple and receipts are in
+[`DEPLOY_CHECKLIST.md`](./DEPLOY_CHECKLIST.md#exact-69bf0bb-postreport-staging-rollout-2026-08-26-utc).
+Web and worker revisions are deployed and rolled back independently. The
+unchanged worker remains on its prior reviewed revision and exits successfully
+while `SEGMENTS_ENABLED=false`. The project's default `production` environment
 remains empty; do not add services or variables there during staging work.
 
 Required staging configuration is present and the value-safe deployed preflight
@@ -122,12 +127,15 @@ plaintext dump. It then decrypts in memory to verify the `PGDMP` header and
 exact byte count. Encrypted files and metadata live in the Git-ignored
 `.secure-backups/` directory with owner-only permissions.
 
-The verified 2026-07-22 recovery point is
-`easygo-staging-20260722T090134Z.dump.enc`, SHA-256
-`5817cfafb9a661934de0107362cf59afd25647ee1ba5eb4bc2085708acc78a55`.
+The latest verified pre-migration recovery point is
+`easygo-staging-20260826T100102Z.dump.enc`, created at
+`2026-08-26T10:01:02.296Z`, with SHA-256
+`a0d78c4b689ffbe6ca9bc00c5f1e9f978f24049d681a27337c050eaa6f106903`.
 Its Keychain account is `coineasy` and service is
-`easygo-staging-postgres-backup-20260722T090134Z`. Keep the encrypted file and
-its adjacent JSON metadata together. Never paste or commit the passphrase.
+`easygo-staging-postgres-backup-20260826T100102Z`. The in-memory decrypt and
+`PGDMP` round-trip passed. Keep the encrypted file and its adjacent JSON
+metadata together. Never paste or commit the passphrase. The earlier verified
+2026-07-22 recovery point remains historical evidence in Git.
 
 For a recovery drill, retrieve the passphrase privately from macOS Keychain,
 verify the encrypted file's SHA-256 against its metadata, and decrypt directly
@@ -250,7 +258,8 @@ columns. Never use `npm audit fix --force` during incident response.
 
 Do not roll the web service below this baseline. If it is unhealthy and no
 newer verified gate-containing target exists, keep the gate closed and
-forward-fix.
+forward-fix. The newer `69bf0bb` rollout and Report smoke are recorded release
+evidence, but this operator rollback floor has not been promoted.
 
 ## Pre-production checklist
 

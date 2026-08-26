@@ -144,6 +144,12 @@ fail-closed. Revocation remains available independently of the grant gate.
       SLA, action/status workflow, user contact/escalation path, and reviewed
       retention schedule. Persistence alone does not close App Review
       Guideline 1.2.
+      The exact `69bf0bb` staging release passed authenticated first-report,
+      replay, invalid, self-report, deleted-post, persistence, and cleanup
+      smoke on 2026-08-26. This technical receipt is recorded in
+      [`DEPLOY_CHECKLIST.md`](../backend/docs/DEPLOY_CHECKLIST.md#exact-69bf0bb-postreport-staging-rollout-2026-08-26-utc),
+      but the protected queue, reviewer, SLA, action workflow, escalation path,
+      and retention approval remain open.
 - [ ] Reconcile Apple App Privacy and Google Play Data safety answers with the
       final document and an SDK/data-flow inventory.
 - [ ] Obtain qualified legal review for privacy, consumer, UGC moderation,
