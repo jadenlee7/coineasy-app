@@ -30,6 +30,18 @@ test('moderation schema has a deterministic queue, optimistic version, and ident
 });
 
 test('moderation migration is additive and enforces every report state', () => {
+  assert.equal((migration.match(/\bBEGIN;/gu) || []).length, 1);
+  assert.equal((migration.match(/\bCOMMIT;/gu) || []).length, 1);
+  assert.ok(migration.indexOf('BEGIN;') < migration.indexOf('DO $$'));
+  assert.ok(
+    migration.indexOf('LOCK TABLE "Post", "PostReport" IN ACCESS EXCLUSIVE MODE;')
+      < migration.indexOf('DO $$'),
+  );
+  assert.doesNotMatch(migration, /LOCK TABLE "PostReport"[^,]*$/mu);
+  assert.match(migration, /SET LOCAL lock_timeout = '10s';/u);
+  assert.match(migration, /SET LOCAL statement_timeout = '30s';/u);
+  assert.ok(migration.lastIndexOf('COMMIT;') > migration.lastIndexOf('ALTER TABLE'));
+  assert.match(migration, /COMMIT;\s*$/u);
   assert.match(migration, /easygo_moderation_expand_requires_open_unreviewed_reports/);
   assert.match(migration, /easygo_moderation_expand_pending_fanout_exceeds_250/);
   assert.ok(

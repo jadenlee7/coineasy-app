@@ -223,6 +223,27 @@ test('probe validation enforces readiness, active social mode, and request corre
     body: { status: 'alive' },
     requestId: '',
   }), /X-Request-Id/);
+  assert.throws(() => validateProbe({
+    path: '/health',
+    status: 200,
+    body: { status: 'alive' },
+    requestId: 'smoke-request',
+    expectedRelease: 'abc',
+  }), /release does not match/);
+  assert.throws(() => validateProbe({
+    path: '/ready',
+    status: 200,
+    body: { status: 'ready', release: 'different' },
+    requestId: 'smoke-request',
+    expectedRelease: 'abc',
+  }), /release does not match/);
+  assert.doesNotThrow(() => validateProbe({
+    path: '/social/status',
+    status: 200,
+    body: { mode: 'active' },
+    requestId: 'smoke-request',
+    expectedRelease: 'abc',
+  }));
 });
 
 test('read-only smoke checks liveness, readiness, and social capability', async () => {

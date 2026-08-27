@@ -6,6 +6,16 @@
 -- Do not invent that evidence during migration. Refuse the expand migration
 -- until the operator has proved the existing queue is entirely truthful OPEN
 -- state (or obtained a separately approved remediation contract).
+BEGIN;
+
+-- Match the runtime lock order (Post before PostReport), drain in-flight post
+-- reads/writes, and freeze new report writes before checking the legacy-state
+-- and fan-out preconditions. Both tables need ACCESS EXCLUSIVE later in this
+-- migration, so acquire the final lock strength up front without an upgrade.
+SET LOCAL lock_timeout = '10s';
+SET LOCAL statement_timeout = '30s';
+LOCK TABLE "Post", "PostReport" IN ACCESS EXCLUSIVE MODE;
+
 DO $$
 BEGIN
   IF EXISTS (
@@ -183,3 +193,5 @@ ALTER TABLE "PostReportAudit"
   ADD CONSTRAINT "PostReportAudit_reportId_fkey"
   FOREIGN KEY ("reportId") REFERENCES "PostReport"("id")
   ON DELETE CASCADE ON UPDATE CASCADE;
+
+COMMIT;

@@ -139,6 +139,22 @@ drop with expand deployment or infer approval from a gate-off smoke.
 
 The expand migration executes this semantic precondition before creating its
 first enum: every legacy row must be `OPEN` and have `reviewedAt IS NULL`.
+The committed SQL wraps that precondition and every following DDL statement in
+one explicit `BEGIN`/`COMMIT` transaction. A statement failure therefore rolls
+back the entire expand migration. It first takes a bounded
+`ACCESS EXCLUSIVE` lock on `Post` and then `PostReport` in the same order used
+by report/edit/delete flows. This drains in-flight post work and prevents a new
+report write from racing the legacy-state and fan-out checks without a lock
+upgrade deadlock. The ten-second limit bounds lock acquisition only; the locks
+remain held until commit or rollback. Every migration statement has a separate
+30-second timeout, but operators must still use an approved maintenance/traffic
+drain window and an outer controlled-job timeout. Post/report reads pause while
+the transaction holds the locks. Failure to acquire both locks or complete a
+statement within its bound rolls the transaction back. After any failed
+attempt, retain the exact error, run Prisma status plus the catalog readback,
+and stop; do not use `migrate resolve`, manual DDL, or a partial forward repair
+without a separately reviewed recovery approval.
+
 Before deployment, run the following exact read-only aggregate against the
 approved target database and record the successful readback, target identity,
 UTC timestamp, and counts without exporting any row or reporter identifier:
