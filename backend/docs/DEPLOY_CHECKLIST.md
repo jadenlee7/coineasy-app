@@ -220,13 +220,19 @@ verified.
       receipts are code-review inputs only. Audit
       identity is composite `(reportId, toVersion)` and records integer
       `fromPostRevision`/`toPostRevision`; client `X-Request-ID` is not stored in
-      the audit. The source readiness latch remains false; no migration, Railway
-      deployment, reviewer provisioning, endpoint activation, or real
-      moderation action is authorized. Workforce OIDC/MFA/RBAC, named owners,
+      the audit. The separately approved 2026-08-27 expand migration and exact
+      gate-off Railway deployment are the only newly completed protected-queue
+      state changes in this phase. The source readiness latch remains false; no
+      reviewer provisioning, endpoint activation, or real moderation action is
+      authorized. The gate-off exact-target readback and PR #65 CI receipt are
+      complete below. Workforce OIDC/MFA/RBAC, operator API rate limiting with
+      `429` plus `Retry-After`, an escaped and size-bounded non-persistent
+      reviewer client with media auto-fetch disabled, named owners,
       escalation/contact, retention, PostgreSQL concurrency proof,
-      exact-target/CI/staging receipts and monitoring for the source-enforced 250
-      pending-row ceiling per post across all revisions, a named abuse owner, and a newly
-      promoted rollback baseline remain unchecked stop-ship gates.
+      activation-capable exact-target/CI reruns, staging load/concurrency and
+      monitoring evidence for the source-enforced 250 pending-row ceiling per
+      post across all revisions, a named abuse owner, and a newly promoted
+      rollback baseline remain unchecked stop-ship gates.
       The additive expand migration must retain the legacy
       `(postId, reporterId)` unique index while adding nullable `reporterId` with
       `ON DELETE SET NULL`, revision fields, and audit state. Dropping that
@@ -462,10 +468,13 @@ verified.
   discarded rather than interpreted as zero.
 - This is gate-off technical evidence, not activation approval. The formal
   minimum safe reviewed web source floor remains
-  `0600f24d7b706aefb1a5215be559b7640d36a3e2` until a separate operator
-  decision promotes a fully enforcement-aware release. Its historical Railway
-  deployment is `REMOVED`; no runnable rollback snapshot is currently
-  verified. Do not down-migrate the additive moderation schema.
+  `0600f24d7b706aefb1a5215be559b7640d36a3e2` until all pre-promotion
+  prerequisites in the moderation runbook, including exact staging evidence
+  for that candidate release, pass and a separate operator decision promotes a
+  fully enforcement-aware release. Runtime activation remains a later separate
+  approval. The historical Railway deployment is `REMOVED`; no runnable
+  rollback snapshot is currently verified. Do not down-migrate the additive
+  moderation schema.
 
 ### Exact 69bf0bb PostReport staging rollout (2026-08-26 UTC)
 

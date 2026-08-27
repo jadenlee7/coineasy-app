@@ -62,16 +62,17 @@ column. Source and disposable-PostgreSQL tests cover success and a
 transactionally removed-index failure; exact target definition/privacy readback,
 migration, and deployment approval remain separate.
 
-Before any future activation, complete workforce OIDC/MFA/RBAC, named owner and
+Before any future activation, complete workforce OIDC/MFA/RBAC, operator API
+rate limiting with `429` plus `Retry-After`, an escaped and size-bounded
+non-persistent reviewer client with media auto-fetch disabled, named owner and
 backup coverage, approved SLA/escalation/contact/appeal, retention and legal
 hold policy, PostgreSQL concurrency/rollback tests, exact-target/CI/staging
 proof and monitoring for the source-enforced 250 pending-row ceiling per post
-across all revisions, a named Sybil/abuse owner,
-encrypted backup and additive migration verification, value-safe staging smoke,
-monitoring, and promotion of the exact enforcement-aware release as the new
-minimum safe web rollback baseline. Until then, authenticated report ingest
-remains independent and the protected moderation route must remain
-indistinguishable from absent.
+across all revisions, a named Sybil/abuse owner, encrypted backup and additive
+migration verification, value-safe staging smoke, monitoring, and promotion of
+the exact enforcement-aware release as the new minimum safe web rollback
+baseline. Until then, authenticated report ingest remains independent and the
+protected moderation route must remain indistinguishable from absent.
 
 The source candidate uses one post advisory-lock namespace across author edit,
 ordinary owner deletion, report creation, and moderation. It increments integer
@@ -400,7 +401,10 @@ migration, gate-off route isolation, exact-release smoke, and a 15-minute
 stabilization window, but `POST_MODERATION_READY=false` remains source-enforced
 and no real moderation decision has occurred. Neither newer receipt silently
 promotes the operator source floor or creates a runnable rollback snapshot;
-promotion requires a separate reviewed decision.
+promotion requires all pre-promotion prerequisites in the moderation runbook,
+including exact staging evidence for that candidate release, to pass before a
+separate reviewed decision. Runtime activation remains a later separate
+approval.
 
 ## Pre-production checklist
 

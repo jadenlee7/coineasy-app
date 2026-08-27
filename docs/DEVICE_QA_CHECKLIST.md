@@ -790,6 +790,9 @@ wallet private key, or login code.
       with a reviewer trust domain, or exercised on a real report. The exact
       technical receipt is in the
       [backend rollout checklist](../backend/docs/DEPLOY_CHECKLIST.md#exact-48bc35f-gate-off-moderation-expand-staging-rollout-2026-08-27-utc).
+      Workforce OIDC/MFA/RBAC, operator API rate limiting with `429` plus
+      `Retry-After`, and an escaped and size-bounded non-persistent reviewer
+      client with media auto-fetch disabled remain stop-ship gates.
       A future approved staging/device run must verify author edit, report
       creation, and ordinary owner deletion serialize with moderation; replay is
       revision-captured and idempotent for
@@ -823,13 +826,13 @@ wallet private key, or login code.
       PostgreSQL after migration with the database integration suite not skipped.
       Preserve the physical-catalog CI contract that exactly the two unique
       indexes named by schema and migration exist, with aligned
-      `postRevision=0`. Add explicit executable cases for `OPEN` plus non-null
-      `reviewedAt` failure and nonempty all-`OPEN`/null success. An authenticated
-      moderation route and `/ready` must return sanitized `503` whenever
-      reviewer-key hashes, named owner, approved SLA, approved policy and
-      retention-policy versions, or credential-free escalation contact are
-      incomplete. With complete configuration, the one bounded `/ready` catalog
-      query must require the exact finished migration, required
+      `postRevision=0`. Retain and re-run explicit executable cases for `OPEN`
+      plus non-null `reviewedAt` failure and nonempty all-`OPEN`/null success.
+      An authenticated moderation route and `/ready` must return sanitized
+      `503` whenever reviewer-key hashes, named owner, approved SLA, approved
+      policy and retention-policy versions, or credential-free escalation
+      contact are incomplete. With complete configuration, the one bounded
+      `/ready` catalog query must require the exact finished migration, required
       named-column presence with selected defaults/nullability, exact enums,
       nine named constraints plus two relevant FK actions, and ten named
       valid/ready index entries including exactly two uniques. Source and

@@ -495,7 +495,8 @@ release could ignore moderation state or restore inconsistent behavior.
    `POST_MODERATION_ENABLED=false`; prove routes and `/ready` return sanitized
    `503` whenever key, SLA, approved policy/retention, owner, or escalation
    configuration is incomplete, and whenever the bounded database-catalog
-   attestation is false, errors, or times out. Retain exact target-definition
+   attestation is false, errors, or times out. Require bounded operator API rate
+   limits to return `429` with `Retry-After`. Retain exact target-definition
    readback separately.
 5. [ ] In CI, apply all migrations to disposable PostgreSQL and run the database
    integration suite without a moderation skip. Validate the aligned
@@ -509,7 +510,8 @@ release could ignore moderation state or restore inconsistent behavior.
    rollback, actual post redaction, post-wide unavailable/removal fan-out,
    exact target receipts, composite audit identity, nullable reporter deletion,
    no-store responses, and credential/PII/UGC redaction in both HTTP logs and
-   Sentry events/breadcrumbs.
+   Sentry events/breadcrumbs. Verify the reviewer client escapes and bounds UGC,
+   persists no moderation response, and never auto-fetches media.
 7. [ ] Assign primary and backup owners; approve the SLA, monitoring,
    escalation, user-contact, and appeal procedures.
 8. [ ] Approve retention, deletion, legal-hold, backup, restricted-evidence,
@@ -527,9 +529,12 @@ release could ignore moderation state or restore inconsistent behavior.
 11. [ ] After expand compatibility is proven, separately review and approve any
    contract migration that drops the legacy `(postId, reporterId)` unique index;
    do not combine or infer that approval from expand deployment.
-12. [ ] Deploy only after separate approval, bind the exact release to Railway
-   evidence, complete staging smoke and monitoring, and promote an
-   enforcement-aware rollback baseline before the first real decision.
+12. [ ] Under separate approval, deploy the activation-capable release gate-off,
+   bind the exact release to Railway evidence, and complete every pre-promotion
+   prerequisite in the moderation runbook, including exact staging smoke and
+   monitoring for that release. Only then may a separate operator decision
+   promote an enforcement-aware rollback baseline. Runtime activation remains a
+   later separate approval before the first real decision.
 13. [ ] Reconcile the final operation with App Review Guideline 1.2, privacy
    disclosures, and the device/release checklists before exposing UGC in an App
    Store submission.
