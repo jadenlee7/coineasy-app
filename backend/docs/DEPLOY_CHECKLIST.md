@@ -8,7 +8,8 @@ are approved.
 
 ## Railway staging inventory
 
-Verified on 2026-07-21 without printing secret values:
+Inventory identifiers were first verified on 2026-07-21 and the live staging
+state was re-verified on 2026-08-27 without printing secret values:
 
 | Resource | Name | ID | State |
 | --- | --- | --- | --- |
@@ -22,14 +23,19 @@ The project's default `production` environment is empty. All three service
 instances and the database volume exist only in `staging`. Web is running the
 approved release at `https://easygo-web-staging-staging.up.railway.app`.
 Web and worker revisions are tracked independently. The current web release is
-`69bf0bb35656b8a198fd42c582beae5b5b222e1d`; its exact staging receipt is
-recorded below. The unchanged worker retains its prior reviewed release and
-exits cleanly while `SEGMENTS_ENABLED=false`. PR #58 remains the minimum safe
-web rollback baseline.
+`48bc35fca41fa8f693a95aee8c4b8dc339fee581`; its exact gate-off staging
+receipt is recorded below. The unchanged worker retains its prior reviewed
+release and exits cleanly while `SEGMENTS_ENABLED=false`. PR #58 remains the
+formal minimum safe reviewed web source floor until a separate operator
+decision promotes a newer enforcement-aware release. Its historical Railway
+deployment is now `REMOVED`, so no runnable rollback snapshot is currently
+verified.
 
 ## Current automated evidence
 
-- [x] Backend tests pass locally (86 pass, one DB-backed SIWE test skipped).
+- [x] Latest PR #65 Backend CI passes with PostgreSQL enabled (`331` pass,
+      `0` fail, `0` skip). The earlier local baseline was 86 pass with one
+      DB-backed SIWE test skipped.
 - [ ] Expo Doctor currently passes 15/17 checks. The remaining findings are
       the locally installed EAS CLI and transitive Expo config-package version
       drift; neither is newly introduced by build 94, but both remain explicit
@@ -227,7 +233,7 @@ web rollback baseline.
       legacy index is a later contract migration requiring its own review,
       rollback evidence, and explicit approval; no expand migration, deploy,
       smoke, or activation approval authorizes it.
-- [ ] Before applying the moderation expand migration, capture this exact
+- [x] Before applying the moderation expand migration, capture this exact
       aggregate from the exact target database and retain the value-safe
       readback with the release receipt:
 
@@ -254,6 +260,10 @@ web rollback baseline.
       failed/missing query is unobserved, not zero; no backfill, status rewrite,
       `reviewedAt` clearing, report deletion, or report coalescing is authorized
       without a separate data-remediation approval.
+      The exact 2026-08-27 target readback returned
+      `totalReports=0`, `nonOpenReports=0`, `reviewedReports=0`, and
+      `overCapPosts=0`; no remediation or backfill was used. See the exact
+      rollout receipt below.
 - [ ] For the exact activation-capable SHA, prove that an authenticated
       `/moderation/reports*` request and `/ready` each fail closed with sanitized
       `503` when any dedicated reviewer-key hash, named owner, approved response
@@ -269,7 +279,7 @@ web rollback baseline.
       index failure. Because this bounded attestation does not compare every
       definition or reject every extra audit column, retain separate exact-target
       definition/privacy readback.
-- [ ] Retain CI evidence that disposable PostgreSQL applied all migrations and
+- [x] Retain CI evidence that disposable PostgreSQL applied all migrations and
       ran the moderation PostgreSQL integration suite without a skip. Also prove
       target-free `INSERT ... ON CONFLICT DO NOTHING` treats a later revision as
       duplicate while both legacy and revision uniques coexist; do not use a
@@ -284,6 +294,12 @@ web rollback baseline.
       acquisition timeout, 30-second per-statement timeout, approved
       maintenance/traffic drain window, and outer controlled-job timeout before
       deployment.
+      PR #65 EasyGo CI run `33080997485` completed Backend and Mobile
+      successfully. Backend ran the PostgreSQL migration and moderation suites
+      with `331` pass, `0` fail, and `0` skip. The tested PR-head tree and
+      deployed merge tree are both
+      `59d9631a8f6c40148a01587962c6530d30b8fdcb`; the merge SHA itself has no
+      independent check run because the workflow triggers on pull requests.
 - [ ] Prove deletion of a reporter sets `reporterId=NULL` while preserving the
       report and audit. Separately approve retention/legal-hold behavior and
       database privileges that prevent unauthorized hard `Post` or `PostReport`
@@ -374,6 +390,83 @@ web rollback baseline.
       The exact web stabilization window completed, but the overall release
       remains open for the moderation, legal, bundle, and device gates above.
 
+### Exact 48bc35f gate-off moderation expand staging rollout (2026-08-27 UTC)
+
+- Scope was the separately approved additive moderation migration and staging
+  web service only. Production, the worker, EAS, TestFlight, App Store review,
+  reviewer-key provisioning, real moderation actions, and the later legacy-
+  index contract migration were unchanged.
+- The exact release was
+  `48bc35fca41fa8f693a95aee8c4b8dc339fee581`. PR #65 EasyGo CI run
+  `33080997485` passed Backend and Mobile; Backend reported `331` pass,
+  `0` fail, and `0` skip. The tested PR-head and merge-commit trees both equal
+  `59d9631a8f6c40148a01587962c6530d30b8fdcb`. The value-safe staging
+  preflight reported zero failures and three optional telemetry warnings.
+- Before the migration, the exact read-only target aggregate returned
+  `totalReports=0`, `nonOpenReports=0`, `reviewedReports=0`, and
+  `overCapPosts=0`. There were no other active database connections or long
+  transactions, and the representative counts were `User=5`, `Post=12`, and
+  `PostReport=0` with seven completed migrations.
+- The owner-only encrypted custom-format backup
+  `easygo-staging-20260827T144105Z.dump.enc` was created at
+  `2026-08-27T14:41:05.090Z`. Its encrypted SHA-256 is
+  `5329c39e6cfc3b053bf7238a75458fdeef49b206e9ab9fd328c07973ef6c885d`,
+  with `76816` encrypted bytes and `76791` raw bytes. The directory remained
+  mode `0700` and the backup plus metadata remained `0600`. Because the local
+  sandbox could read but not create a macOS Keychain item, the backup truthfully
+  records `keyReused=true` for the existing Keychain-held backup key; no
+  passphrase was printed or written to the repository.
+- Recovery validation decrypted the backup directly into a newly created,
+  isolated PostgreSQL 18 database with `pg_restore --exit-on-error
+  --single-transaction --no-owner --no-privileges`; no plaintext dump file was
+  created. The restored database matched `User=5`, `Post=12`,
+  `PostReport=0`, and the exact seven completed migration receipts. The
+  isolated restore database was then dropped and its absence rechecked.
+- The initial only-region `scale ...=0` maintenance attempt did not produce a
+  zero-replica drain and instead activated the service's stale connected source
+  `6a7e3451b0aa57e48f659f26c0d6019ccf20e4d5` as Railway deployment
+  `57838b53-aba3-4af7-bea9-9ab7f9191e24`, whose final state is `REMOVED`. It
+  was detected before the moderation migration ran. The exact known-good image
+  was restored through
+  rollback deployment `551e6cc4-ec7d-4019-a4da-2a5dcba8041e`, after which
+  the exact deployment was stopped and the public health request timed out as
+  the maintenance-drain proof. Database aggregates still matched the recorded
+  pre-migration baseline; this receipt makes no broader data-impact claim for
+  that interval.
+- One controlled migration job with a 15-minute whole-process timeout and no
+  automatic retry applied only `20260826144000_moderation_queue`. Final Prisma
+  status was current; the exact ledger readback was completed `1`, unfinished
+  `0`, rolled back `0`, and the total completed migration count became eight.
+  The bounded moderation catalog contract returned `contractReady=true`, both
+  unique indexes remained valid/ready, and representative row counts stayed
+  `User=5`, `Post=12`, `PostReport=0`.
+- The deployed tuple is exact release
+  `48bc35fca41fa8f693a95aee8c4b8dc339fee581`, Railway deployment
+  `a2b6bf2d-4042-420a-b5a7-bb4517ac8d1d`, and image digest
+  `sha256:13976802f7dd5a2977732204c9fdef0fc1d860c6dfcfaa4f9ebd6f4be065e08e`.
+  The final upload used an exact Git `backend` subtree archive with SHA-256
+  `6f2d51161c4ee4c5d9338ae8a6835aece3b11ab064644016f63c497ea6efc1e3`;
+  this proves the uploaded reviewed tree, not a cryptographic binding to the
+  Railway image.
+- `POST_MODERATION_READY=false` remained source-enforced and Railway
+  `POST_MODERATION_ENABLED=false` was set explicitly. `/health`, `/ready`, and
+  `/social/status` returned HTTP `200` with the exact release, while unauthenticated
+  `/moderation/reports` returned indistinguishable gate-off HTTP `404`.
+- The stabilization window ran from `2026-08-27T15:10:18Z` through
+  `2026-08-27T15:25:25Z`. All 16 samples reported the latest deployment as
+  `SUCCESS`, health and readiness as HTTP `200` with the exact release, and the
+  moderation route as HTTP `404`; uptime increased monotonically from `170` to
+  `1073` seconds. Successful Railway HTTP metrics reported 52 requests
+  (`35` 2xx, `17` 4xx, `0` 5xx), with zero application error, readiness-failure,
+  shutdown, fatal-shutdown, or restart signals. A failed raw HTTP-log query was
+  discarded rather than interpreted as zero.
+- This is gate-off technical evidence, not activation approval. The formal
+  minimum safe reviewed web source floor remains
+  `0600f24d7b706aefb1a5215be559b7640d36a3e2` until a separate operator
+  decision promotes a fully enforcement-aware release. Its historical Railway
+  deployment is `REMOVED`; no runnable rollback snapshot is currently
+  verified. Do not down-migrate the additive moderation schema.
+
 ### Exact 69bf0bb PostReport staging rollout (2026-08-26 UTC)
 
 - Scope was the additive staging Postgres migrations and web service only.
@@ -431,9 +524,10 @@ web rollback baseline.
   returned HTTP 200; `/health` still reported the exact release and social mode
   remained active. The post-smoke application-log review through
   `2026-08-26T14:15:00Z` found no error or stop signal.
-- This rollout does not change the rollback floor. The minimum safe web target
-  remains release `0600f24d7b706aefb1a5215be559b7640d36a3e2`, Railway
-  deployment `10ba0998-ca2d-429b-8a94-527b4db47ab0`; do not down-migrate.
+- This rollout did not change the minimum safe reviewed web source floor,
+  release `0600f24d7b706aefb1a5215be559b7640d36a3e2`. Historical Railway
+  deployment `10ba0998-ca2d-429b-8a94-527b4db47ab0` is now `REMOVED` and is
+  not a verified runnable rollback snapshot; do not down-migrate.
 
 ### PR #58 Railway staging web rollout (2026-08-24 UTC)
 
@@ -456,9 +550,11 @@ web rollback baseline.
   reported `SUCCESS`. The exact window contained zero HTTP 5xx responses, zero
   `@level:error` events, zero additional restart signals, and zero configured
   sensitive-pattern matches.
-- This is the first verified gate-containing web release and establishes the
-  minimum safe web rollback baseline. Pre-gate web revisions are no longer
-  eligible rollback targets.
+- This was the first verified gate-containing web release and establishes the
+  minimum safe reviewed web source floor. Pre-gate web revisions are no longer
+  eligible rollback sources. Deployment `10ba0998-ca2d-429b-8a94-527b4db47ab0`
+  is now `REMOVED`, so its identifier is a historical receipt rather than a
+  verified executable rollback snapshot.
 
 ### 2026-08-10 Telegram dependency security rollout
 
@@ -509,6 +605,6 @@ web rollback baseline.
 5. Re-run the read-only smoke test and preserve logs/error IDs for review.
 
 The PR #58 rollout recorded above satisfies the first gate-rollout evidence
-requirement. The current operator-facing minimum safe web rollback target is
-maintained in
+requirement. The current minimum safe reviewed web source floor and Railway
+snapshot-availability warning are maintained in
 [`OPERATIONS.md`](./OPERATIONS.md#minimum-safe-web-rollback-baseline).

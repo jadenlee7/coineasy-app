@@ -11,18 +11,20 @@ The deployed EasyGo ingest accepts an authenticated, allow-listed, idempotent
 report for a non-owner post. The exact `69bf0bb` staging release passed
 first-report, same reporter/post replay, invalid, self-report, deleted-post,
 persistence, and cleanup smoke. That historical receipt proves only that
-deployed ingest contract. The default-off source candidate in this ADR evolves
-report identity to an immutable content revision; it has not been migrated,
-deployed, or exercised by that receipt. Neither surface provides an activated
-protected queue, reviewer ownership, decision enforcement, response SLA,
-escalation, user contact, appeal, or retention operation.
+deployed ingest contract. A separate 2026-08-27 approval applied the additive
+moderation expand migration and deployed exact `48bc35f` with both the source
+and Railway gates false. That gate-off receipt proves migration/catalog
+compatibility, route isolation, and stabilization only; it did not provision a
+reviewer or exercise a moderation action. Neither surface provides an
+activated protected queue, workforce reviewer ownership, response SLA,
+escalation, user contact, appeal, or approved retention operation.
 
-The deployed `PostReport` model has `OPEN`, `REVIEWING`, `ACTIONED`, and
-`DISMISSED` states but lacks an activated reviewer workflow. The candidate adds
-reviewer attribution, optimistic versions, bounded decision codes, immutable
-content-revision identity, and append-only action audit. Mobile Hide, Block,
-and Mute remain owner-scoped device controls; they are not global content
-moderation.
+The deployed gate-off `PostReport` model has `OPEN`, `REVIEWING`, `ACTIONED`,
+and `DISMISSED` states plus reviewer attribution, optimistic versions, bounded
+decision codes, immutable content-revision identity, and append-only action
+audit, but it lacks an activated workforce reviewer workflow. Mobile Hide,
+Block, and Mute remain owner-scoped device controls; they are not global
+content moderation.
 
 EasyGo has three existing authentication domains, none of which is an
 acceptable moderation identity:
