@@ -7,6 +7,8 @@ import {
   MODERATION_DESTRUCTIVE_MFA_MAX_AGE_SECONDS,
 } from '../src/lib/moderation-principal.js';
 import { ModerationError } from '../src/lib/moderation-service.js';
+import { createModerationAuthorizer } from '../src/middleware/moderation-authorization.js';
+import { createModerationRateLimiter } from '../src/middleware/moderation-rate-limit.js';
 import { createModerationRouter } from '../src/routes/moderation.js';
 
 const ACTOR_ID = `wf_${'r'.repeat(32)}`;
@@ -112,13 +114,21 @@ async function invokeRoute(router, {
   return { req, res, nextError };
 }
 
-function enabledRouter({ service, authenticate = authenticateWorkforce, authorize } = {}) {
+const allowRateLimit = () => (_req, _res, next) => next();
+
+function enabledRouter({
+  service,
+  authenticate = authenticateWorkforce,
+  authorize,
+  limit = allowRateLimit,
+} = {}) {
   return createModerationRouter({
     db: {},
     env: {},
     phaseConfig: { POST_MODERATION_ENABLED: true },
     service,
     authenticate,
+    limit,
     ...(authorize ? { authorize } : {}),
   });
 }
@@ -127,6 +137,7 @@ test('all moderation routes apply no-store and keep the feature gate before auth
   let authCalls = 0;
   let authorizationCalls = 0;
   let serviceCalls = 0;
+  let rateLimitCalls = 0;
   const service = {
     list: async () => { serviceCalls += 1; },
     claim: async () => { serviceCalls += 1; },
@@ -140,6 +151,10 @@ test('all moderation routes apply no-store and keep the feature gate before auth
     authorizationCalls += 1;
     next();
   };
+  const limit = () => (_req, _res, next) => {
+    rateLimitCalls += 1;
+    next();
+  };
   const router = createModerationRouter({
     db: {},
     env: {},
@@ -147,6 +162,7 @@ test('all moderation routes apply no-store and keep the feature gate before auth
     service,
     authenticate,
     authorize,
+    limit,
   });
 
   for (const route of [
@@ -162,16 +178,22 @@ test('all moderation routes apply no-store and keep the feature gate before auth
   }
   assert.equal(authCalls, 0);
   assert.equal(authorizationCalls, 0);
+  assert.equal(rateLimitCalls, 0);
   assert.equal(serviceCalls, 0);
 });
 
 test('authentication runs before service lookup and cannot disclose report existence', async () => {
   let authorizationCalls = 0;
+  let rateLimitCalls = 0;
   let serviceCalls = 0;
   const router = enabledRouter({
     authenticate: (_req, res) => res.status(401).json({ error: 'invalid_moderation_key' }),
     authorize: () => (_req, _res, next) => {
       authorizationCalls += 1;
+      next();
+    },
+    limit: () => (_req, _res, next) => {
+      rateLimitCalls += 1;
       next();
     },
     service: {
@@ -191,12 +213,60 @@ test('authentication runs before service lookup and cannot disclose report exist
   assert.deepEqual(res.body, { error: 'invalid_moderation_key' });
   assert.equal(res.headers['cache-control'], 'no-store');
   assert.equal(authorizationCalls, 0);
+  assert.equal(rateLimitCalls, 0);
+  assert.equal(serviceCalls, 0);
+});
+
+test('rejected async authentication is forwarded before authorization on every route', async () => {
+  const rejection = new Error('injected authentication rejected');
+  let authorizationCalls = 0;
+  let rateLimitCalls = 0;
+  let serviceCalls = 0;
+  const router = enabledRouter({
+    authenticate: async () => { throw rejection; },
+    authorize: () => (_req, _res, next) => {
+      authorizationCalls += 1;
+      next();
+    },
+    limit: () => (_req, _res, next) => {
+      rateLimitCalls += 1;
+      next();
+    },
+    service: {
+      list: async () => { serviceCalls += 1; },
+      claim: async () => { serviceCalls += 1; },
+      decide: async () => { serviceCalls += 1; },
+    },
+  });
+
+  for (const route of [
+    {},
+    {
+      method: 'POST',
+      path: '/reports/:reportId/claim',
+      params: { reportId: 'report-claim' },
+      body: { expectedVersion: 0 },
+    },
+    {
+      method: 'POST',
+      path: '/reports/:reportId/decision',
+      params: { reportId: 'report-dismiss' },
+      body: { decision: 'DISMISS', expectedPostRevision: 0, expectedVersion: 1 },
+    },
+  ]) {
+    const result = await invokeRoute(router, route);
+    assert.equal(result.nextError, rejection);
+    assert.equal(result.res.headers['cache-control'], 'no-store');
+  }
+  assert.equal(authorizationCalls, 0);
+  assert.equal(rateLimitCalls, 0);
   assert.equal(serviceCalls, 0);
 });
 
 test('a valid legacy moderation key is rejected before every route service boundary', async () => {
   const legacyKey = `eg_mod_${'l'.repeat(32)}`;
   let serviceCalls = 0;
+  let rateLimitCalls = 0;
   const service = {
     list: async () => { serviceCalls += 1; },
     claim: async () => { serviceCalls += 1; },
@@ -210,6 +280,10 @@ test('a valid legacy moderation key is rejected before every route service bound
     },
     phaseConfig: { POST_MODERATION_ENABLED: true },
     service,
+    limit: () => (_req, _res, next) => {
+      rateLimitCalls += 1;
+      next();
+    },
   });
 
   const routes = [
@@ -247,6 +321,7 @@ test('a valid legacy moderation key is rejected before every route service bound
     assert.equal(serialized.includes(legacyKey), false);
   }
   assert.equal(serviceCalls, 0);
+  assert.equal(rateLimitCalls, 0);
 
   const unconfiguredRouter = createModerationRouter({
     db: {},
@@ -257,6 +332,10 @@ test('a valid legacy moderation key is rejected before every route service bound
       MODERATION_RESPONSE_SLA_HOURS: 'not-an-integer',
     },
     phaseConfig: { POST_MODERATION_ENABLED: true },
+    limit: () => (_req, _res, next) => {
+      rateLimitCalls += 1;
+      next();
+    },
   });
   for (const route of routes) {
     const { res } = await invokeRoute(unconfiguredRouter, {
@@ -266,6 +345,7 @@ test('a valid legacy moderation key is rejected before every route service bound
     assert.equal(res.statusCode, 403);
     assert.deepEqual(res.body, { error: 'moderation_forbidden' });
   }
+  assert.equal(rateLimitCalls, 0);
 });
 
 test('enabled injected routes pass only authenticated moderator inputs to the service', async () => {
@@ -325,8 +405,169 @@ test('enabled injected routes pass only authenticated moderator inputs to the se
   ]);
 });
 
+test('actor rate limits run after authorization and before each service boundary', async () => {
+  const events = [];
+  const baseAuthorize = createModerationAuthorizer();
+  const service = {
+    list: async () => {
+      events.push(['service', 'list']);
+      return { reports: [], nextCursor: null };
+    },
+    claim: async () => {
+      events.push(['service', 'claim']);
+      return { report: { id: 'report-claim', status: 'REVIEWING' } };
+    },
+    decide: async (_actorId, _reportId, body) => {
+      events.push(['service', body.decision]);
+      return { report: { id: 'report-decision', status: 'ACTIONED' } };
+    },
+  };
+  const limit = (value) => {
+    const scopes = Object.freeze([...(Array.isArray(value) ? value : [value])].sort());
+    return (req, _res, next) => {
+      events.push(['limit', req.moderator.actorId, scopes]);
+      next();
+    };
+  };
+  const authenticate = (req, _res, next) => {
+    events.push(['authenticate']);
+    req.moderator = workforceModerator();
+    next();
+  };
+  const authorize = (value, options) => {
+    const middleware = baseAuthorize(value, options);
+    return (req, res, next) => {
+      events.push(['authorize']);
+      return middleware(req, res, next);
+    };
+  };
+  const router = enabledRouter({ authenticate, authorize, limit, service });
+
+  await invokeRoute(router);
+  await invokeRoute(router, {
+    method: 'POST',
+    path: '/reports/:reportId/claim',
+    params: { reportId: 'report-claim' },
+    body: { expectedVersion: 0 },
+  });
+  await invokeRoute(router, {
+    method: 'POST',
+    path: '/reports/:reportId/decision',
+    params: { reportId: 'report-dismiss' },
+    body: { decision: 'DISMISS', expectedPostRevision: 0, expectedVersion: 1 },
+  });
+  await invokeRoute(router, {
+    method: 'POST',
+    path: '/reports/:reportId/decision',
+    params: { reportId: 'report-remove' },
+    body: { decision: 'REMOVE_POST', expectedPostRevision: 0, expectedVersion: 1 },
+  });
+
+  assert.deepEqual(events, [
+    ['authenticate'],
+    ['authorize'],
+    ['limit', ACTOR_ID, [MODERATION_CAPABILITIES.QUEUE_READ]],
+    ['service', 'list'],
+    ['authenticate'],
+    ['authorize'],
+    ['limit', ACTOR_ID, [MODERATION_CAPABILITIES.REPORT_CLAIM]],
+    ['service', 'claim'],
+    ['authenticate'],
+    ['authorize'],
+    ['limit', ACTOR_ID, [MODERATION_CAPABILITIES.REPORT_DECIDE]],
+    ['service', 'DISMISS'],
+    ['authenticate'],
+    ['authorize'],
+    ['limit', ACTOR_ID, [
+      MODERATION_CAPABILITIES.CONTENT_REMOVE,
+      MODERATION_CAPABILITIES.REPORT_DECIDE,
+    ]],
+    ['service', 'REMOVE_POST'],
+  ]);
+});
+
+test('the default rate limiter fails closed before service configuration is read', async () => {
+  let configReads = 0;
+  const env = {};
+  Object.defineProperty(env, 'MODERATION_RESPONSE_SLA_HOURS', {
+    get() {
+      configReads += 1;
+      throw new Error('service configuration must not be read');
+    },
+  });
+  const router = createModerationRouter({
+    db: {},
+    env,
+    phaseConfig: { POST_MODERATION_ENABLED: true },
+    authenticate: authenticateWorkforce,
+  });
+
+  const { res } = await invokeRoute(router);
+  assert.equal(res.statusCode, 503);
+  assert.deepEqual(res.body, { error: 'moderation_rate_limit_unconfigured' });
+  assert.equal(res.headers['cache-control'], 'no-store');
+  assert.equal(configReads, 0);
+});
+
+test('rate-limit denial returns Retry-After and never reaches the service', async () => {
+  let serviceCalls = 0;
+  const router = enabledRouter({
+    limit: createModerationRateLimiter({
+      consume: async () => ({ allowed: false, retryAfterSeconds: 19 }),
+    }),
+    service: {
+      claim: async () => { serviceCalls += 1; },
+    },
+  });
+
+  const { res } = await invokeRoute(router, {
+    method: 'POST',
+    path: '/reports/:reportId/claim',
+    params: { reportId: 'report-rate-limited' },
+    body: { expectedVersion: 0 },
+  });
+  assert.equal(res.statusCode, 429);
+  assert.deepEqual(res.body, { error: 'moderation_rate_limited' });
+  assert.equal(res.headers['retry-after'], '19');
+  assert.equal(res.headers['cache-control'], 'no-store');
+  assert.equal(serviceCalls, 0);
+});
+
+test('rejected async rate-limit middleware is forwarded on every Express 4 route', async () => {
+  const rejection = new Error('injected limiter rejected');
+  const router = enabledRouter({
+    limit: () => async () => { throw rejection; },
+    service: {
+      list: async () => assert.fail('service must not run'),
+      claim: async () => assert.fail('service must not run'),
+      decide: async () => assert.fail('service must not run'),
+    },
+  });
+
+  for (const route of [
+    {},
+    {
+      method: 'POST',
+      path: '/reports/:reportId/claim',
+      params: { reportId: 'report-claim' },
+      body: { expectedVersion: 0 },
+    },
+    {
+      method: 'POST',
+      path: '/reports/:reportId/decision',
+      params: { reportId: 'report-dismiss' },
+      body: { decision: 'DISMISS', expectedPostRevision: 0, expectedVersion: 1 },
+    },
+  ]) {
+    const result = await invokeRoute(router, route);
+    assert.equal(result.nextError, rejection);
+    assert.equal(result.res.headers['cache-control'], 'no-store');
+  }
+});
+
 test('queue, claim, decision, and irreversible removal capabilities remain distinct', async () => {
   const calls = [];
+  const rateLimitedRequests = [];
   const service = {
     list: async (...args) => {
       calls.push(['list', ...args]);
@@ -344,6 +585,10 @@ test('queue, claim, decision, and irreversible removal capabilities remain disti
   function routerFor(capabilities, principalOverrides = {}) {
     return enabledRouter({
       service,
+      limit: () => (req, _res, next) => {
+        rateLimitedRequests.push(req.params.reportId || 'list');
+        next();
+      },
       authenticate: (req, _res, next) => {
         req.moderator = workforceModerator(capabilities, principalOverrides);
         next();
@@ -469,11 +714,23 @@ test('queue, claim, decision, and irreversible removal capabilities remain disti
       expectedVersion: 1,
     }],
   ]);
+  assert.deepEqual(rateLimitedRequests, [
+    'list',
+    'report-claim',
+    'report-dismiss',
+    'report-remove-allowed',
+    'report-dismiss-stale-mfa',
+  ]);
 });
 
 test('unknown or malformed decisions fail before the service boundary', async () => {
   let serviceCalls = 0;
+  let rateLimitCalls = 0;
   const router = enabledRouter({
+    limit: () => (_req, _res, next) => {
+      rateLimitCalls += 1;
+      next();
+    },
     service: {
       list: async () => ({ reports: [], nextCursor: null }),
       claim: async () => ({ report: {} }),
@@ -500,6 +757,7 @@ test('unknown or malformed decisions fail before the service boundary', async ()
     assert.deepEqual(res.body, { error: 'bad_input' });
     assert.equal(res.headers['cache-control'], 'no-store');
   }
+  assert.equal(rateLimitCalls, 0);
   assert.equal(serviceCalls, 0);
 });
 
@@ -535,6 +793,7 @@ test('service configuration is resolved only after the feature gate and authenti
     env: malformedEnv,
     phaseConfig: { POST_MODERATION_ENABLED: true },
     authenticate: authenticateWorkforce,
+    limit: allowRateLimit,
   });
   const authenticatedResult = await invokeRoute(authenticated);
   assert.equal(authenticatedResult.res.statusCode, 503);
