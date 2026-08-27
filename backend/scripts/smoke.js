@@ -28,7 +28,11 @@ export function validateProbe({ path, status, body, requestId, expectedRelease }
   if (path === '/social/status' && body?.mode !== 'active') {
     throw new Error(`/social/status is ${body?.mode || 'unknown'}, expected active`);
   }
-  if (expectedRelease && body?.release && body.release !== expectedRelease) {
+  if (
+    expectedRelease
+    && ['/health', '/ready'].includes(path)
+    && body?.release !== expectedRelease
+  ) {
     throw new Error(`${path} release does not match EXPECTED_RELEASE`);
   }
 }

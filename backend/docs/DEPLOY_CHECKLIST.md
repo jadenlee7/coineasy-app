@@ -276,10 +276,14 @@ web rollback baseline.
       caught uniqueness error inside the transaction. Confirm the Prisma schema
       and migration SQL retain the same two named unique indexes and
       `postRevision=0`, and retain the CI physical-catalog assertion that exactly
-      those indexes exist after the full migration chain. Add explicit executable
-      cases for `OPEN` plus
-      non-null `reviewedAt` rejection and a nonempty all-`OPEN`/null success; the
-      existing non-`OPEN` failure test proves only one fail-fast branch.
+      those indexes exist after the full migration chain. The disposable
+      PostgreSQL suite now executes a nonempty all-`OPEN`/null success plus
+      separate `OPEN` with non-null `reviewedAt`, non-`OPEN`, and over-cap
+      rejection cases. Retain a non-skipped CI receipt for all four branches
+      plus the explicit single-transaction migration wrapper, ten-second lock
+      acquisition timeout, 30-second per-statement timeout, approved
+      maintenance/traffic drain window, and outer controlled-job timeout before
+      deployment.
 - [ ] Prove deletion of a reporter sets `reporterId=NULL` while preserving the
       report and audit. Separately approve retention/legal-hold behavior and
       database privileges that prevent unauthorized hard `Post` or `PostReport`
