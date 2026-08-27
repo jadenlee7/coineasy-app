@@ -1,10 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import {
+  MODERATION_DECISION,
+  MODERATION_DECISIONS,
+} from './moderation-decisions.js';
 import { PENDING_REPORTS_PER_POST_MAX } from './moderation-limits.js';
 
 const REPORT_STATUSES = ['OPEN', 'REVIEWING', 'ACTIONED', 'DISMISSED'];
 const TERMINAL_STATUSES = new Set(['ACTIONED', 'DISMISSED']);
-const DECISIONS = ['REMOVE_POST', 'DISMISS'];
 const POST_LOCK_SQL = (
   'SELECT pg_advisory_xact_lock(hashtextextended($1, 0)) IS NULL AS "lockAcquired"'
 );
@@ -80,7 +83,7 @@ const expectedVersionSchema = z.object({
   expectedVersion: z.number().int().min(0).max(2_147_483_647),
 }).strict();
 const decisionSchema = expectedVersionSchema.extend({
-  decision: z.enum(DECISIONS),
+  decision: z.enum(MODERATION_DECISIONS),
   expectedPostRevision: z.number().int().min(0).max(2_147_483_647),
 }).strict();
 const listLimitSchema = z.preprocess((value) => {
@@ -657,6 +660,12 @@ export function createModerationService({
   async function decide(moderatorKeyId, reportIdInput, input) {
     const reportId = parse(reportIdSchema, reportIdInput, 'invalid_report_id');
     const { expectedVersion, decision, expectedPostRevision } = parse(decisionSchema, input);
+    if (
+      decision !== MODERATION_DECISION.DISMISS
+      && decision !== MODERATION_DECISION.REMOVE_POST
+    ) {
+      throw new ModerationError('bad_input', { status: 400 });
+    }
     const currentTime = now();
     const operationId = createOperationId();
 
@@ -757,7 +766,7 @@ export function createModerationService({
         throw new ModerationError('stale_post_revision', { status: 409 });
       }
 
-      if (decision === 'DISMISS') {
+      if (decision === MODERATION_DECISION.DISMISS) {
         const updated = await tx.postReport.updateMany({
           where: {
             id: report.id,
@@ -843,4 +852,4 @@ export function createModerationService({
 }
 
 export const MODERATION_REPORT_STATUSES = Object.freeze([...REPORT_STATUSES]);
-export const MODERATION_DECISIONS = Object.freeze([...DECISIONS]);
+export { MODERATION_DECISIONS };

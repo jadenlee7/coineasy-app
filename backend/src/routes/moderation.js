@@ -2,8 +2,14 @@ import { Router } from 'express';
 import { prisma } from '../lib/db.js';
 import { createModerationAuth } from '../lib/moderation-auth.js';
 import { resolveModerationActivationConfig } from '../lib/moderation-config.js';
+import {
+  getModerationDecisionPolicy,
+  MODERATION_DECISIONS,
+} from '../lib/moderation-decisions.js';
+import { MODERATION_CAPABILITIES } from '../lib/moderation-principal.js';
 import { createModerationService, ModerationError } from '../lib/moderation-service.js';
 import { express4AsyncHandler } from '../lib/express-async.js';
+import { createModerationAuthorizer } from '../middleware/moderation-authorization.js';
 import { requirePhase } from '../middleware/phase.js';
 
 function noStore(_req, res, next) {
@@ -53,10 +59,31 @@ export function createModerationRouter({
   phaseConfig,
   service: injectedService,
   authenticate = createModerationAuth({ env }),
+  authorize = createModerationAuthorizer(),
 } = {}) {
   const router = Router();
   const enabled = requirePhase('POST_MODERATION_ENABLED', phaseConfig);
+  const requireQueueRead = authorize(MODERATION_CAPABILITIES.QUEUE_READ);
+  const requireReportClaim = authorize(MODERATION_CAPABILITIES.REPORT_CLAIM);
+  const requireReportDecision = authorize(MODERATION_CAPABILITIES.REPORT_DECIDE);
+  const decisionAuthorizers = new Map(MODERATION_DECISIONS.map((decision) => {
+    const policy = getModerationDecisionPolicy(decision);
+    const routeOptions = policy.maxMfaAgeSeconds === null
+      ? {}
+      : { maxMfaAgeSeconds: policy.maxMfaAgeSeconds };
+    return [decision, authorize(policy.requiredCapabilities, routeOptions)];
+  }));
   let service = injectedService;
+
+  function requireDecisionAuthorization(req, res, next) {
+    const policy = getModerationDecisionPolicy(req.body?.decision);
+    if (policy) {
+      return decisionAuthorizers.get(req.body.decision)(req, res, next);
+    }
+    return requireReportDecision(req, res, () => (
+      res.status(400).json({ error: 'bad_input' })
+    ));
+  }
 
   function resolveService() {
     if (service) return service;
@@ -73,9 +100,9 @@ export function createModerationRouter({
     }
   }
 
-  router.get('/reports', noStore, enabled, authenticate, express4AsyncHandler(async (req, res) => {
+  router.get('/reports', noStore, enabled, authenticate, requireQueueRead, express4AsyncHandler(async (req, res) => {
     try {
-      return res.json(await resolveService().list(req.moderator.keyId, req.query));
+      return res.json(await resolveService().list(req.moderator.actorId, req.query));
     } catch (error) {
       return sendModerationError(req, res, error);
     }
@@ -86,10 +113,11 @@ export function createModerationRouter({
     noStore,
     enabled,
     authenticate,
+    requireReportClaim,
     express4AsyncHandler(async (req, res) => {
       try {
         return res.json(await resolveService().claim(
-          req.moderator.keyId,
+          req.moderator.actorId,
           req.params.reportId,
           req.body,
         ));
@@ -104,10 +132,11 @@ export function createModerationRouter({
     noStore,
     enabled,
     authenticate,
+    requireDecisionAuthorization,
     express4AsyncHandler(async (req, res) => {
       try {
         return res.json(await resolveService().decide(
-          req.moderator.keyId,
+          req.moderator.actorId,
           req.params.reportId,
           req.body,
         ));
