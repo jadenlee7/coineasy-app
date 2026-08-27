@@ -784,8 +784,15 @@ wallet private key, or login code.
       default-off source candidate now exists in
       [ADR-0011](../backend/docs/adr/0011-protected-post-report-moderation.md)
       and the
-      [moderation runbook](../backend/docs/MODERATION_RUNBOOK.md), but it has
-      not been migrated, deployed, activated, or exercised on a real report.
+      [moderation runbook](../backend/docs/MODERATION_RUNBOOK.md). Its additive
+      expand migration and exact `48bc35f` web release are now deployed in
+      staging with both gates false, but it has not been activated, provisioned
+      with a reviewer trust domain, or exercised on a real report. The exact
+      technical receipt is in the
+      [backend rollout checklist](../backend/docs/DEPLOY_CHECKLIST.md#exact-48bc35f-gate-off-moderation-expand-staging-rollout-2026-08-27-utc).
+      Workforce OIDC/MFA/RBAC, operator API rate limiting with `429` plus
+      `Retry-After`, and an escaped and size-bounded non-persistent reviewer
+      client with media auto-fetch disabled remain stop-ship gates.
       A future approved staging/device run must verify author edit, report
       creation, and ordinary owner deletion serialize with moderation; replay is
       revision-captured and idempotent for
@@ -804,29 +811,28 @@ wallet private key, or login code.
       ID or missing feed card alone is not the receipt. Source code now enforces
       250 pending rows per post across all revisions through locked admission
       coalescing, migration fail-fast/pending index, and decision rollback at
-      251. The queue remains off until exact-target/CI/staging load receipts,
-      monitoring/alerts, and a named Sybil response owner are approved. Expand QA must also prove
-      reporter deletion sets `reporterId=NULL` without a durable pseudonym and
-      retains the legacy `(postId, reporterId)` unique index. Only a separately
-      approved later contract migration may drop that index and enable full
-      multi-revision admission; expand or activation approval is not its
-      authorization. Before expand, retain the exact target aggregate proving
-      every legacy report is `OPEN` and every `reviewedAt` is `NULL`; query
-      failure is unobserved, and no backfill/status rewrite/timestamp clearing is
-      authorized. During expand, verify the target-free `ON CONFLICT DO NOTHING`
-      insert still returns a same-reporter later revision as duplicate while both
-      unique constraints coexist.
+      251. The 2026-08-27 gate-off receipt completed the exact-target aggregate,
+      non-skipped PR #65 PostgreSQL CI, additive expand migration, retained
+      legacy/revision indexes, and bounded target catalog check with no
+      backfill. Source CI also proves reporter deletion sets `reporterId=NULL`
+      without creating a durable pseudonym. The queue remains off until an
+      activation-capable SHA repeats the required evidence and additionally
+      passes staging load/concurrency, monitoring/alerts, database-privilege and
+      retention review, plus named Sybil-response ownership. Only a separately
+      approved later contract migration may drop the legacy
+      `(postId, reporterId)` index and enable full multi-revision admission;
+      expand or activation approval is not its authorization.
       The exact activation-capable SHA must have CI evidence from disposable
       PostgreSQL after migration with the database integration suite not skipped.
       Preserve the physical-catalog CI contract that exactly the two unique
       indexes named by schema and migration exist, with aligned
-      `postRevision=0`. Add explicit executable cases for `OPEN` plus non-null
-      `reviewedAt` failure and nonempty all-`OPEN`/null success. An authenticated
-      moderation route and `/ready` must return sanitized `503` whenever
-      reviewer-key hashes, named owner, approved SLA, approved policy and
-      retention-policy versions, or credential-free escalation contact are
-      incomplete. With complete configuration, the one bounded `/ready` catalog
-      query must require the exact finished migration, required
+      `postRevision=0`. Retain and re-run explicit executable cases for `OPEN`
+      plus non-null `reviewedAt` failure and nonempty all-`OPEN`/null success.
+      An authenticated moderation route and `/ready` must return sanitized
+      `503` whenever reviewer-key hashes, named owner, approved SLA, approved
+      policy and retention-policy versions, or credential-free escalation
+      contact are incomplete. With complete configuration, the one bounded
+      `/ready` catalog query must require the exact finished migration, required
       named-column presence with selected defaults/nullability, exact enums,
       nine named constraints plus two relevant FK actions, and ten named
       valid/ready index entries including exactly two uniques. Source and

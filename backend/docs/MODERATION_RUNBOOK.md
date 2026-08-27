@@ -1,16 +1,21 @@
 # EasyGo protected post-report moderation runbook
 
-Status: **plan only; default off; not approved for activation**.
+Status: **staging expand deployed gate-off; not approved for activation**.
 
 This runbook defines the proposed operating boundary for the protected
-`/moderation/reports` queue. It does not authorize a database migration,
-deployment, Railway variable change, reviewer-key provisioning, moderation
-decision, user contact, App Store submission, or retention/deletion action.
+`/moderation/reports` queue. A separate 2026-08-27 approval authorized only the
+additive staging migration and exact gate-off web deployment recorded in the
+[`DEPLOY_CHECKLIST`](./DEPLOY_CHECKLIST.md#exact-48bc35f-gate-off-moderation-expand-staging-rollout-2026-08-27-utc).
+This runbook does not authorize source-latch or Railway gate activation,
+reviewer-key provisioning, moderation decisions, user contact, App Store
+submission, or retention/deletion actions.
 
-The exact `69bf0bb` staging release proves authenticated post-report ingest and
-persistence only. It does not contain a verified operator moderation operation.
-Keep `POST_MODERATION_ENABLED=false` or absent. A configured moderation-key
-digest does not activate the routes and is not evidence of readiness.
+The exact `48bc35f` staging release proves the reviewed expand migration,
+bounded database contract, gate-off route isolation, and stabilization window.
+It does not contain a verified operator moderation operation. Keep
+`POST_MODERATION_READY=false` in source and `POST_MODERATION_ENABLED=false` in
+Railway. A configured moderation-key digest does not activate the routes and is
+not evidence of readiness.
 
 ## Unresolved activation owners
 
@@ -496,8 +501,12 @@ the moderation candidate's shared lock does not close that blocker.
 
 ## Rollback boundary for a future release
 
-No rollout or rollback is authorized now. The current operator-facing minimum
-safe web rollback baseline remains the exact release recorded in
+No activation, real moderation action, or rollback-floor promotion is
+authorized now. The separately approved 2026-08-27 rollout completed the
+verified backup/restore, exact-target readback, additive expand migration, and
+gate-off web deploy/smoke/monitor steps only. The current operator-facing
+minimum safe reviewed web source floor and snapshot availability remain
+recorded in
 [`OPERATIONS.md`](./OPERATIONS.md#minimum-safe-web-rollback-baseline).
 
 For a future approved rollout:
@@ -556,11 +565,14 @@ or HTTP status alone is not a receipt.
       policies are approved and match public disclosures. Hard `Post` or
       `PostReport` deletion cannot bypass them, and database roles cannot perform
       an unapproved cascading purge of reports/audits.
-- [ ] The additive expand migration makes `reporterId` nullable with
+- [x] The additive expand migration makes `reporterId` nullable with
       `ON DELETE SET NULL`, adds revision/audit state, retains the legacy
       reporter/post unique index, and is independently reviewed, tested, and
       separately approved for staging deployment. The exact target SQL readback
       proves all legacy reports are `OPEN` and unreviewed; no backfill was used.
+      The exact 2026-08-27 receipt records zero legacy reports, the completed
+      non-rolled-back migration, both retained unique indexes, and
+      `contractReady=true`.
 - [ ] Any contract migration that drops the legacy reporter/post unique index
       has a later independent approval after expand compatibility and rollback
       evidence; it is not bundled with or inferred from expand.
@@ -570,12 +582,15 @@ or HTTP status alone is not a receipt.
       relation without creating a long-lived pseudonym. HTTP logs and optional
       Sentry request/breadcrumb events independently redact misplaced
       moderation credentials.
-- [ ] CI applies the full migration chain to disposable PostgreSQL and runs the
+- [x] CI applies the full migration chain to disposable PostgreSQL and runs the
       moderation integration suite with `TEST_DATABASE_URL` present and no
       database skip. It also asserts the physical catalog has exactly the two
       unique constraints named by schema and migration, verifies aligned
       `postRevision=0`, and explicitly exercises `OPEN` plus non-null
       `reviewedAt` rejection and a nonempty all-`OPEN`/null success.
+      PR #65 run `33080997485` reported Backend `331` pass, `0` fail, and
+      `0` skip. Its tested PR-head tree exactly equals the deployed merge tree;
+      the merge SHA has no independent workflow run.
 - [ ] PostgreSQL tests prove concurrent claim, stale decision, wrong reviewer,
       author-edit/ordinary-owner-delete/report-create shared locking,
       revision-scoped duplicate requests, claim carry-forward, linked-only
@@ -604,6 +619,10 @@ or HTTP status alone is not a receipt.
       request correlation, and 401/403/404/409/429/5xx behavior pass staging.
 - [ ] An exact enforcement-aware release is deployed with the gate off, smoked,
       monitored, and promoted as the minimum safe rollback baseline.
+      Exact `48bc35f` completed the deploy, gate-off smoke, and monitoring
+      substeps. It is not yet activation-capable because the source latch
+      remains false, and the rollback-floor promotion remains a separate
+      operator decision.
 - [ ] Disposable staging accounts pass reviewer and user device QA without
       exposing reporter identity or contacting a real user.
 - [ ] App Review Guideline 1.2, privacy disclosures, retention copy, and the

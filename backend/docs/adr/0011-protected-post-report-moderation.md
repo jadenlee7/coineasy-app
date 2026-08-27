@@ -11,18 +11,20 @@ The deployed EasyGo ingest accepts an authenticated, allow-listed, idempotent
 report for a non-owner post. The exact `69bf0bb` staging release passed
 first-report, same reporter/post replay, invalid, self-report, deleted-post,
 persistence, and cleanup smoke. That historical receipt proves only that
-deployed ingest contract. The default-off source candidate in this ADR evolves
-report identity to an immutable content revision; it has not been migrated,
-deployed, or exercised by that receipt. Neither surface provides an activated
-protected queue, reviewer ownership, decision enforcement, response SLA,
-escalation, user contact, appeal, or retention operation.
+deployed ingest contract. A separate 2026-08-27 approval applied the additive
+moderation expand migration and deployed exact `48bc35f` with both the source
+and Railway gates false. That gate-off receipt proves migration/catalog
+compatibility, route isolation, and stabilization only; it did not provision a
+reviewer or exercise a moderation action. Neither surface provides an
+activated protected queue, workforce reviewer ownership, response SLA,
+escalation, user contact, appeal, or approved retention operation.
 
-The deployed `PostReport` model has `OPEN`, `REVIEWING`, `ACTIONED`, and
-`DISMISSED` states but lacks an activated reviewer workflow. The candidate adds
-reviewer attribution, optimistic versions, bounded decision codes, immutable
-content-revision identity, and append-only action audit. Mobile Hide, Block,
-and Mute remain owner-scoped device controls; they are not global content
-moderation.
+The deployed gate-off `PostReport` model has `OPEN`, `REVIEWING`, `ACTIONED`,
+and `DISMISSED` states plus reviewer attribution, optimistic versions, bounded
+decision codes, immutable content-revision identity, and append-only action
+audit, but it lacks an activated workforce reviewer workflow. Mobile Hide,
+Block, and Mute remain owner-scoped device controls; they are not global
+content moderation.
 
 EasyGo has three existing authentication domains, none of which is an
 acceptable moderation identity:
@@ -493,7 +495,8 @@ release could ignore moderation state or restore inconsistent behavior.
    `POST_MODERATION_ENABLED=false`; prove routes and `/ready` return sanitized
    `503` whenever key, SLA, approved policy/retention, owner, or escalation
    configuration is incomplete, and whenever the bounded database-catalog
-   attestation is false, errors, or times out. Retain exact target-definition
+   attestation is false, errors, or times out. Require bounded operator API rate
+   limits to return `429` with `Retry-After`. Retain exact target-definition
    readback separately.
 5. [ ] In CI, apply all migrations to disposable PostgreSQL and run the database
    integration suite without a moderation skip. Validate the aligned
@@ -507,7 +510,8 @@ release could ignore moderation state or restore inconsistent behavior.
    rollback, actual post redaction, post-wide unavailable/removal fan-out,
    exact target receipts, composite audit identity, nullable reporter deletion,
    no-store responses, and credential/PII/UGC redaction in both HTTP logs and
-   Sentry events/breadcrumbs.
+   Sentry events/breadcrumbs. Verify the reviewer client escapes and bounds UGC,
+   persists no moderation response, and never auto-fetches media.
 7. [ ] Assign primary and backup owners; approve the SLA, monitoring,
    escalation, user-contact, and appeal procedures.
 8. [ ] Approve retention, deletion, legal-hold, backup, restricted-evidence,
@@ -525,9 +529,12 @@ release could ignore moderation state or restore inconsistent behavior.
 11. [ ] After expand compatibility is proven, separately review and approve any
    contract migration that drops the legacy `(postId, reporterId)` unique index;
    do not combine or infer that approval from expand deployment.
-12. [ ] Deploy only after separate approval, bind the exact release to Railway
-   evidence, complete staging smoke and monitoring, and promote an
-   enforcement-aware rollback baseline before the first real decision.
+12. [ ] Under separate approval, deploy the activation-capable release gate-off,
+   bind the exact release to Railway evidence, and complete every pre-promotion
+   prerequisite in the moderation runbook, including exact staging smoke and
+   monitoring for that release. Only then may a separate operator decision
+   promote an enforcement-aware rollback baseline. Runtime activation remains a
+   later separate approval before the first real decision.
 13. [ ] Reconcile the final operation with App Review Guideline 1.2, privacy
    disclosures, and the device/release checklists before exposing UGC in an App
    Store submission.

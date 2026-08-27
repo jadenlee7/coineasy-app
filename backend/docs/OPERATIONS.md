@@ -1,11 +1,12 @@
 # EasyGo backend operations runbook
 
-Status: S9 implementation, all committed additive staging migrations, the
-exact `69bf0bb` web rollout, and authenticated PostReport API smoke are
-complete. The latest recoverable staging database backup is verified. The
+Status: S9 implementation, all committed additive staging migrations through
+`20260826144000_moderation_queue`, the exact `48bc35f` gate-off web rollout,
+and authenticated PostReport ingest smoke are complete. The latest encrypted
+staging backup passed an actual isolated PostgreSQL 18 restore drill. The
 remaining gates include matched published privacy/terms, security exceptions,
-the protected moderation operation, release-bundle/device QA, and rollback
-drills.
+the protected moderation operation and workforce trust domain,
+release-bundle/device QA, and rollback drills.
 
 ## Railway staging target
 
@@ -18,27 +19,29 @@ The verified target is project `easygo-app-staging`
 - Worker: `0ffb8648-fe59-4fb7-926f-3cc9445c133d`
 
 Postgres is running with a ready persistent volume and all committed migrations
-through `20260825120000_post_reports` applied; Prisma reports no pending
+through `20260826144000_moderation_queue` applied; Prisma reports no pending
 migration. Web serves the public staging domain from exact release
-`69bf0bb35656b8a198fd42c582beae5b5b222e1d`, with `/ready` healthy and the
-authenticated Report contract verified. The exact tuple and receipts are in
-[`DEPLOY_CHECKLIST.md`](./DEPLOY_CHECKLIST.md#exact-69bf0bb-postreport-staging-rollout-2026-08-26-utc).
+`48bc35fca41fa8f693a95aee8c4b8dc339fee581`, with `/ready` healthy, the
+authenticated Report ingest contract verified, and the protected moderation
+surface gate-off at HTTP `404`. The exact tuple and receipts are in
+[`DEPLOY_CHECKLIST.md`](./DEPLOY_CHECKLIST.md#exact-48bc35f-gate-off-moderation-expand-staging-rollout-2026-08-27-utc).
 Web and worker revisions are deployed and rolled back independently. The
 unchanged worker remains on its prior reviewed revision and exits successfully
 while `SEGMENTS_ENABLED=false`. The project's default `production` environment
 remains empty; do not add services or variables there during staging work.
 
-### Protected moderation source candidate — not deployed
+### Protected moderation expand — deployed gate-off, not activated
 
 [`ADR-0011`](./adr/0011-protected-post-report-moderation.md) and the
 [`MODERATION_RUNBOOK`](./MODERATION_RUNBOOK.md) describe a default-off
-moderation queue candidate. It is not part of the current `69bf0bb` runtime or
-the applied staging migration set. `POST_MODERATION_READY=false` masks the
-runtime flag, and deploy preflight rejects activation even if candidate
-configuration is present. Do not apply
-`20260826144000_moderation_queue`, provision reviewer credentials, add Railway
-variables, deploy the candidate, or exercise a real moderation decision
-without separate approvals for each state change.
+moderation queue candidate. The separately approved 2026-08-27 expand rollout
+applied `20260826144000_moderation_queue` and deployed exact `48bc35f` after a
+verified backup and restore drill. `POST_MODERATION_READY=false` remains the
+source brake, Railway `POST_MODERATION_ENABLED=false` is explicit, and deploy
+preflight still rejects activation. Do not provision reviewer credentials,
+change the source latch, enable the Railway flag, expose an operator client, or
+exercise a real moderation decision without separate approvals for each state
+change.
 
 In a future activation-capable release, both an authenticated moderation route
 and `/ready` must return a sanitized `503` unless dedicated reviewer-key hashes,
@@ -46,7 +49,7 @@ an approved response SLA, approved policy and retention-policy versions, a
 named owner, and a credential-free escalation contact are all valid. Placeholder
 or default values do not satisfy the contract. The current source latch remains
 closed, so this readiness behavior is a future activation check rather than a
-claim about the deployed `69bf0bb` release.
+claim about the gate-off deployed `48bc35f` release.
 
 After that configuration validation, one bounded `/ready` catalog aggregate
 requires the exact completed/non-rolled-back migration receipt, required
@@ -59,16 +62,17 @@ column. Source and disposable-PostgreSQL tests cover success and a
 transactionally removed-index failure; exact target definition/privacy readback,
 migration, and deployment approval remain separate.
 
-Before any future activation, complete workforce OIDC/MFA/RBAC, named owner and
+Before any future activation, complete workforce OIDC/MFA/RBAC, operator API
+rate limiting with `429` plus `Retry-After`, an escaped and size-bounded
+non-persistent reviewer client with media auto-fetch disabled, named owner and
 backup coverage, approved SLA/escalation/contact/appeal, retention and legal
 hold policy, PostgreSQL concurrency/rollback tests, exact-target/CI/staging
 proof and monitoring for the source-enforced 250 pending-row ceiling per post
-across all revisions, a named Sybil/abuse owner,
-encrypted backup and additive migration verification, value-safe staging smoke,
-monitoring, and promotion of the exact enforcement-aware release as the new
-minimum safe web rollback baseline. Until then, authenticated report ingest
-remains independent and the protected moderation route must remain
-indistinguishable from absent.
+across all revisions, a named Sybil/abuse owner, encrypted backup and additive
+migration verification, value-safe staging smoke, monitoring, and promotion of
+the exact enforcement-aware release as the new minimum safe web rollback
+baseline. Until then, authenticated report ingest remains independent and the
+protected moderation route must remain indistinguishable from absent.
 
 The source candidate uses one post advisory-lock namespace across author edit,
 ordinary owner deletion, report creation, and moderation. It increments integer
@@ -151,6 +155,16 @@ same commit and `backend/` root. Set the web service config path to
 its health-check path is `/ready`. Scale and roll back the two services
 independently.
 
+Do not use `railway scale <only-region>=0` as a maintenance drain for this
+single-region web service. On 2026-08-27 it removed the configured region but
+Railway selected a default region and created a deployment from the stale
+connected Git source instead of leaving zero replicas. For an approved
+maintenance window, first preserve an exact known-good rollback source, stop
+the exact running deployment, and prove the public endpoint is unavailable
+before applying a database migration. Restart only by uploading the reviewed
+exact source archive; never use the stale connected branch or an implicit
+`redeploy`.
+
 Railway and the Procfile launch the Node entry points directly. Do not wrap
 these production commands in `npm start` or `npm run`: Railway sends `SIGTERM`
 to the top-level process during replacement, and the direct process contract is
@@ -211,8 +225,9 @@ and verifies request correlation and active social mode.
 
 ## Staging backup and recovery
 
-Railway native volume backups and point-in-time recovery require the Pro plan;
-the EasyGo staging project currently uses Hobby. From `backend/`, run:
+The approved EasyGo staging recovery path uses the repository's encrypted
+PostgreSQL backup script. Railway-native backup/PITR availability was not used
+as recovery evidence for the 2026-08-27 rollout. From `backend/`, run:
 
 ```bash
 npm run backup:staging
@@ -227,14 +242,17 @@ exact byte count. Encrypted files and metadata live in the Git-ignored
 `.secure-backups/` directory with owner-only permissions.
 
 The latest verified pre-migration recovery point is
-`easygo-staging-20260826T100102Z.dump.enc`, created at
-`2026-08-26T10:01:02.296Z`, with SHA-256
-`a0d78c4b689ffbe6ca9bc00c5f1e9f978f24049d681a27337c050eaa6f106903`.
-Its Keychain account is `coineasy` and service is
-`easygo-staging-postgres-backup-20260826T100102Z`. The in-memory decrypt and
-`PGDMP` round-trip passed. Keep the encrypted file and its adjacent JSON
-metadata together. Never paste or commit the passphrase. The earlier verified
-2026-07-22 recovery point remains historical evidence in Git.
+`easygo-staging-20260827T144105Z.dump.enc`, created at
+`2026-08-27T14:41:05.090Z`, with SHA-256
+`5329c39e6cfc3b053bf7238a75458fdeef49b206e9ab9fd328c07973ef6c885d`.
+The sandbox could read but not create a macOS Keychain item, so adjacent
+metadata truthfully records `keyReused=true` for the existing Keychain-held
+backup key. No passphrase was printed or written. The ciphertext was decrypted
+directly into an isolated PostgreSQL 18 database with no plaintext dump file;
+the restored `User=5`, `Post=12`, `PostReport=0`, and seven completed migration
+receipts matched the source snapshot. The isolated database was then dropped
+and its absence rechecked. Keep the encrypted file and adjacent JSON metadata
+together. Earlier verified recovery points remain historical evidence.
 
 For a recovery drill, retrieve the passphrase privately from macOS Keychain,
 verify the encrypted file's SHA-256 against its metadata, and decrypt directly
@@ -359,20 +377,34 @@ columns. Never use `npm audit fix --force` during incident response.
 
 ### Minimum safe web rollback baseline
 
+This table records the minimum safe reviewed source/archive floor. It does not
+assert that the historical Railway deployment remains a runnable rollback
+snapshot.
+
 | Field | Verified value |
 | --- | --- |
 | Effective after | `2026-08-24T20:31:56Z` |
 | Release SHA | `0600f24d7b706aefb1a5215be559b7640d36a3e2` |
-| Railway deployment | `10ba0998-ca2d-429b-8a94-527b4db47ab0` |
+| Railway deployment receipt | `10ba0998-ca2d-429b-8a94-527b4db47ab0` |
+| Current snapshot availability | `REMOVED`; no runnable rollback snapshot verified |
 | Image digest | `sha256:3a04c35286a2b51fde7009edfbfa4f86f78fcf98eb1f44872434b48a9035bc01` |
 | Release archive SHA-256 | `2c4319485d27b2af7728c590f6daccf75af2b5b35c87efb085e8b5daf6d0416a` |
 | Scope | Web only; worker and Postgres unchanged |
 | Evidence | [PR #58 staging rollout](./DEPLOY_CHECKLIST.md#pr-58-railway-staging-web-rollout-2026-08-24-utc) |
 
-Do not roll the web service below this baseline. If it is unhealthy and no
-newer verified gate-containing target exists, keep the gate closed and
-forward-fix. The newer `69bf0bb` rollout and Report smoke are recorded release
-evidence, but this operator rollback floor has not been promoted.
+Do not use source below this floor. Because its Railway deployment is removed,
+do not assume an executable rollback exists; keep the gate closed and prepare
+an exact reviewed-source redeploy or forward-fix under separate approval. The
+newer `69bf0bb` rollout and Report smoke are recorded release evidence. The
+still newer `48bc35f` rollout proves the additive moderation
+migration, gate-off route isolation, exact-release smoke, and a 15-minute
+stabilization window, but `POST_MODERATION_READY=false` remains source-enforced
+and no real moderation decision has occurred. Neither newer receipt silently
+promotes the operator source floor or creates a runnable rollback snapshot;
+promotion requires all pre-promotion prerequisites in the moderation runbook,
+including exact staging evidence for that candidate release, to pass before a
+separate reviewed decision. Runtime activation remains a later separate
+approval.
 
 ## Pre-production checklist
 
