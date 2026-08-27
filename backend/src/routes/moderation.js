@@ -10,11 +10,19 @@ import { MODERATION_CAPABILITIES } from '../lib/moderation-principal.js';
 import { createModerationService, ModerationError } from '../lib/moderation-service.js';
 import { express4AsyncHandler } from '../lib/express-async.js';
 import { createModerationAuthorizer } from '../middleware/moderation-authorization.js';
+import { createModerationRateLimiter } from '../middleware/moderation-rate-limit.js';
 import { requirePhase } from '../middleware/phase.js';
 
 function noStore(_req, res, next) {
   res.set('Cache-Control', 'no-store');
   return next();
+}
+
+function validateAsyncMiddleware(value, name) {
+  if (typeof value !== 'function') {
+    throw new TypeError(`moderation ${name} middleware is required`);
+  }
+  return value;
 }
 
 class ModerationServiceConfigError extends Error {
@@ -60,18 +68,35 @@ export function createModerationRouter({
   service: injectedService,
   authenticate = createModerationAuth({ env }),
   authorize = createModerationAuthorizer(),
+  limit = createModerationRateLimiter(),
 } = {}) {
   const router = Router();
   const enabled = requirePhase('POST_MODERATION_ENABLED', phaseConfig);
+  const requireAuthentication = express4AsyncHandler(
+    validateAsyncMiddleware(authenticate, 'authentication'),
+  );
   const requireQueueRead = authorize(MODERATION_CAPABILITIES.QUEUE_READ);
   const requireReportClaim = authorize(MODERATION_CAPABILITIES.REPORT_CLAIM);
   const requireReportDecision = authorize(MODERATION_CAPABILITIES.REPORT_DECIDE);
+  const requireQueueRateLimit = express4AsyncHandler(
+    validateAsyncMiddleware(limit(MODERATION_CAPABILITIES.QUEUE_READ), 'rate-limit'),
+  );
+  const requireClaimRateLimit = express4AsyncHandler(
+    validateAsyncMiddleware(limit(MODERATION_CAPABILITIES.REPORT_CLAIM), 'rate-limit'),
+  );
   const decisionAuthorizers = new Map(MODERATION_DECISIONS.map((decision) => {
     const policy = getModerationDecisionPolicy(decision);
     const routeOptions = policy.maxMfaAgeSeconds === null
       ? {}
       : { maxMfaAgeSeconds: policy.maxMfaAgeSeconds };
     return [decision, authorize(policy.requiredCapabilities, routeOptions)];
+  }));
+  const decisionRateLimits = new Map(MODERATION_DECISIONS.map((decision) => {
+    const policy = getModerationDecisionPolicy(decision);
+    return [
+      decision,
+      validateAsyncMiddleware(limit(policy.requiredCapabilities), 'rate-limit'),
+    ];
   }));
   let service = injectedService;
 
@@ -83,6 +108,13 @@ export function createModerationRouter({
     return requireReportDecision(req, res, () => (
       res.status(400).json({ error: 'bad_input' })
     ));
+  }
+
+  function requireDecisionRateLimit(req, res, next) {
+    const middleware = decisionRateLimits.get(req.body?.decision);
+    return middleware
+      ? middleware(req, res, next)
+      : res.status(400).json({ error: 'bad_input' });
   }
 
   function resolveService() {
@@ -100,20 +132,29 @@ export function createModerationRouter({
     }
   }
 
-  router.get('/reports', noStore, enabled, authenticate, requireQueueRead, express4AsyncHandler(async (req, res) => {
-    try {
-      return res.json(await resolveService().list(req.moderator.actorId, req.query));
-    } catch (error) {
-      return sendModerationError(req, res, error);
-    }
-  }));
+  router.get(
+    '/reports',
+    noStore,
+    enabled,
+    requireAuthentication,
+    requireQueueRead,
+    requireQueueRateLimit,
+    express4AsyncHandler(async (req, res) => {
+      try {
+        return res.json(await resolveService().list(req.moderator.actorId, req.query));
+      } catch (error) {
+        return sendModerationError(req, res, error);
+      }
+    }),
+  );
 
   router.post(
     '/reports/:reportId/claim',
     noStore,
     enabled,
-    authenticate,
+    requireAuthentication,
     requireReportClaim,
+    requireClaimRateLimit,
     express4AsyncHandler(async (req, res) => {
       try {
         return res.json(await resolveService().claim(
@@ -131,8 +172,9 @@ export function createModerationRouter({
     '/reports/:reportId/decision',
     noStore,
     enabled,
-    authenticate,
+    requireAuthentication,
     requireDecisionAuthorization,
+    express4AsyncHandler(requireDecisionRateLimit),
     express4AsyncHandler(async (req, res) => {
       try {
         return res.json(await resolveService().decide(
