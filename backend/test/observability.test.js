@@ -13,6 +13,9 @@ import {
 import { createShutdown } from '../src/lib/lifecycle.js';
 import { createLogger } from '../src/lib/logger.js';
 import {
+  verifyModerationActivationDatabaseContracts,
+} from '../src/lib/moderation-readiness.js';
+import {
   createNoopTelemetry,
   sanitizeSentryEvent,
   sanitizeSentryTransaction,
@@ -113,6 +116,35 @@ test('readiness fails closed without exposing database errors', async () => {
   assert.equal(res.body.status, 'not_ready');
 });
 
+test('readiness bypasses every moderation contract while the source gate is closed', async () => {
+  let basicDatabaseChecks = 0;
+  let moderationContractChecks = 0;
+  const res = response();
+  await createReadinessHandler({
+    db: {
+      async $queryRawUnsafe(query) {
+        basicDatabaseChecks += 1;
+        assert.equal(query, 'SELECT 1');
+        return [1];
+      },
+    },
+    env: {
+      SERVICE_NAME: 'easygo-test',
+      POST_MODERATION_ENABLED: 'true',
+    },
+    appLogger: silentLogger,
+    async verifyModerationContract() {
+      moderationContractChecks += 1;
+      throw new Error('must not run while source gate is closed');
+    },
+  })({ id: 'request-gate-off-readiness' }, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.status, 'ready');
+  assert.equal(basicDatabaseChecks, 1);
+  assert.equal(moderationContractChecks, 0);
+});
+
 test('readiness blocks future moderation activation with an incomplete contract', async () => {
   let databaseChecks = 0;
   const res = response();
@@ -133,7 +165,7 @@ test('readiness blocks future moderation activation with an incomplete contract'
   assert.equal(JSON.stringify(res.body).includes('unapproved'), false);
 });
 
-test('readiness requires the exact moderation database contract before activation', async () => {
+test('readiness requires the exact moderation database contracts before activation', async () => {
   const env = {
     SERVICE_NAME: 'easygo-test',
     POST_MODERATION_ENABLED: 'true',
@@ -178,6 +210,106 @@ test('readiness requires the exact moderation database contract before activatio
   assert.equal(accepted.statusCode, 200);
   assert.equal(accepted.body.status, 'ready');
   assert.equal(acceptedContractChecks, 1);
+});
+
+test('readiness default wiring requires both physical moderation contracts', async () => {
+  const env = {
+    SERVICE_NAME: 'easygo-test',
+    POST_MODERATION_ENABLED: 'true',
+    MODERATION_API_KEY_HASHES_JSON: JSON.stringify({
+      'reviewer-one': 'a'.repeat(64),
+    }),
+    MODERATION_RESPONSE_SLA_HOURS: '24',
+    MODERATION_POLICY_VERSION: 'policy-v1',
+    MODERATION_RETENTION_POLICY_VERSION: 'retention-v1',
+    MODERATION_OWNER: 'EasyGo Trust Team',
+    MODERATION_ESCALATION_CONTACT: 'trust@example.com',
+  };
+
+  for (const [rateLimitReady, expectedStatus] of [
+    [false, 503],
+    [true, 200],
+  ]) {
+    let queueChecks = 0;
+    let rateLimitChecks = 0;
+    const db = {
+      async $queryRawUnsafe() {
+        queueChecks += 1;
+        return [{ contractReady: true }];
+      },
+      async $transaction(callback, options) {
+        assert.deepEqual(options, { maxWait: 200, timeout: 1_400 });
+        let transactionQueries = 0;
+        return callback({
+          async $queryRawUnsafe() {
+            transactionQueries += 1;
+            if (transactionQueries === 1) {
+              return [{
+                idleTimeoutMs: 1_400,
+                lockTimeoutMs: 250,
+                statementTimeoutMs: 1_000,
+              }];
+            }
+            rateLimitChecks += 1;
+            return [{ contractReady: rateLimitReady }];
+          },
+        });
+      },
+    };
+    const res = response();
+    await createReadinessHandler({
+      db,
+      env,
+      appLogger: silentLogger,
+      moderationReady: true,
+    })({ id: `request-default-wiring-${rateLimitReady}` }, res);
+
+    assert.equal(res.statusCode, expectedStatus);
+    assert.equal(queueChecks, 1);
+    assert.equal(rateLimitChecks, 1);
+  }
+});
+
+test('composite moderation readiness sanitizes downstream contract failures', async () => {
+  const secret = `wf_${'s'.repeat(32)}`;
+  const warnings = [];
+  const res = response();
+  await createReadinessHandler({
+    db: {},
+    env: {
+      SERVICE_NAME: 'easygo-test',
+      POST_MODERATION_ENABLED: 'true',
+      MODERATION_API_KEY_HASHES_JSON: JSON.stringify({
+        'reviewer-one': 'a'.repeat(64),
+      }),
+      MODERATION_RESPONSE_SLA_HOURS: '24',
+      MODERATION_POLICY_VERSION: 'policy-v1',
+      MODERATION_RETENTION_POLICY_VERSION: 'retention-v1',
+      MODERATION_OWNER: 'EasyGo Trust Team',
+      MODERATION_ESCALATION_CONTACT: 'trust@example.com',
+    },
+    appLogger: {
+      warn(fields, message) { warnings.push({ fields, message }); },
+    },
+    moderationReady: true,
+    verifyModerationContract(db) {
+      return verifyModerationActivationDatabaseContracts(db, {
+        async verifyQueueContract() { throw new Error(secret); },
+        async verifyRateLimitContract() { return true; },
+      });
+    },
+  })({ id: 'request-composite-contract-failed' }, res);
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(JSON.stringify(res.body).includes(secret), false);
+  assert.deepEqual(warnings, [{
+    fields: {
+      requestId: 'request-composite-contract-failed',
+      errorType: 'ModerationActivationDatabaseContractsError',
+    },
+    message: 'service readiness check failed',
+  }]);
+  assert.equal(JSON.stringify(warnings).includes(secret), false);
 });
 
 test('request IDs accept conservative values and replace unsafe input', () => {

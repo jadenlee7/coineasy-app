@@ -7,8 +7,10 @@ import { prisma } from './lib/db.js';
 import { logger } from './lib/logger.js';
 import { createNoopTelemetry } from './lib/telemetry.js';
 import { resolveModerationActivationConfig } from './lib/moderation-config.js';
-import { verifyModerationDatabaseContract } from './lib/moderation-database.js';
 import { POST_MODERATION_READY } from './lib/moderation-gates.js';
+import {
+  verifyModerationActivationDatabaseContracts,
+} from './lib/moderation-readiness.js';
 import {
   containsModerationCredential,
   sanitizeRequestUrl,
@@ -87,7 +89,7 @@ export function createReadinessHandler({
   env = process.env,
   appLogger = logger,
   moderationReady = POST_MODERATION_READY,
-  verifyModerationContract = verifyModerationDatabaseContract,
+  verifyModerationContract = verifyModerationActivationDatabaseContracts,
 } = {}) {
   const timeoutMs = boundedTimeout(env.READINESS_TIMEOUT_MS);
 

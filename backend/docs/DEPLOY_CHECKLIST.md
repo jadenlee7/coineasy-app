@@ -224,8 +224,14 @@ verified.
       gate-off Railway deployment are the only newly completed protected-queue
       state changes in this phase. The source readiness latch remains false; no
       reviewer provisioning, endpoint activation, or real moderation action is
-      authorized. The gate-off exact-target readback and PR #65 CI receipt are
-      complete below. Workforce OIDC/MFA/RBAC, operator API rate limiting with
+      authorized. PR #69 merged the PostgreSQL GCRA schema, migration, bounded
+      consumer, catalog verifier, and tests as code-only merge
+      `7acef194f032c05a6370346bea3a367101a01407`; its Backend and Mobile checks
+      passed in CI run `33167864288`. That receipt does not mean the GCRA
+      migration was applied, a rate policy or retention schedule was approved,
+      or the release was deployed or activated. The gate-off exact-target
+      readback and PR #65 CI receipt are complete below. Workforce
+      OIDC/MFA/RBAC, operator API rate limiting with
       `429` plus `Retry-After`, an escaped and size-bounded non-persistent
       reviewer client with media auto-fetch disabled, named owners,
       escalation/contact, retention, PostgreSQL concurrency proof,
