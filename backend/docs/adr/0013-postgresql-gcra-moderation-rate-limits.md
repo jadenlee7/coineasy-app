@@ -204,6 +204,13 @@ cardinality. Revisit only if measured contention or latency requires it.
 
 ## Activation boundary and action items
 
+The source implementation was merged in PR #69 as merge
+`7acef194f032c05a6370346bea3a367101a01407`; PRs #70 and #71 added the
+source-only readiness and dormant composition boundaries. Those receipts prove
+reviewed code and CI, not target migration, deployment, approved thresholds,
+retention, or activation. Unless a separate target receipt says otherwise,
+target application remains unobserved rather than assumed.
+
 1. [ ] Product, Backend, Security, Privacy/Legal, and Operations accept this
    ADR and approve exact per-scope thresholds and policy version.
 2. [ ] Approve retention, cleanup batch/schedule, least-privilege role,

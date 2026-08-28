@@ -10,7 +10,7 @@
 moderation surface to use a separate workforce trust domain. The current source
 candidate still has a legacy hashed-key authenticator, and the strict workforce
 principal deliberately rejects that identity at the authorization boundary.
-It also has no shared operator rate-limit store.
+The production singleton also has no wired shared operator rate-limit store.
 
 Static reviewer keys do not provide session expiry, recent MFA evidence,
 individual offboarding, or server-owned role assignment. IP-based limits are
@@ -121,9 +121,12 @@ Queue, claim, decision, and removal limits remain separately configurable.
 Unauthenticated flood protection belongs at the managed edge and is not a
 substitute for this actor limit.
 
-The schema, migration, concrete GCRA consumer, thresholds, retention period,
-backup/restore evidence, and Railway rollout are deferred to a separate
-approved change.
+ADR-0013's schema, additive migration, concrete GCRA consumer, and catalog
+verifier now exist in merged source as a dormant foundation. That source
+receipt is not evidence that the migration was applied to a target, that a
+release was deployed, or that a rate policy was approved. Exact thresholds,
+retention, cleanup, backup/restore evidence, target migration, and Railway
+rollout remain separately approved work.
 
 ## Failure and privacy contract
 
@@ -188,11 +191,15 @@ independently reviewable.
    semantics, and pinned JWKS endpoint.
 3. [ ] Approve provisioned access storage, subject protection, offboarding,
    access review, and break-glass procedures.
-4. [ ] Approve GCRA thresholds, PostgreSQL schema/migration, cleanup, backup,
-   restore, and rollback plan.
-5. [ ] Implement and test the provider configuration parser, access resolver,
-   and PostgreSQL rate consumer without changing the source latch.
-6. [ ] Complete independent security review and the remaining ADR-0011 device,
+4. [ ] Approve GCRA thresholds, target migration, cleanup, backup, restore, and
+   rollback plan.
+5. [x] Implement and test the provider-neutral OIDC, RBAC, PostgreSQL GCRA,
+   readiness, and dormant runtime foundations without changing the source latch.
+   PRs #67 through #71 are source and CI receipts only.
+6. [ ] After ADR-0014 selects the required policy, implement and test the
+   provider configuration parser and access resolver without changing the
+   source latch or production singleton.
+7. [ ] Complete independent security review and the remaining ADR-0011 device,
    safe-UGC, legal, observability, and rollback evidence.
-7. [ ] Use a later explicit approval to change singleton wiring, deployment
+8. [ ] Use a later explicit approval to change singleton wiring, deployment
    configuration, migrations, or activation state.
