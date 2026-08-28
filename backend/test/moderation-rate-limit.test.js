@@ -3,6 +3,10 @@ import test from 'node:test';
 
 import { MODERATION_CAPABILITIES } from '../src/lib/moderation-principal.js';
 import {
+  MODERATION_RATE_LIMIT_DEPENDENCY_TIMEOUT_DEFAULT_MS,
+  bindModerationRateLimitConsumerDeadline,
+} from '../src/lib/moderation-rate-limit-deadline.js';
+import {
   createModerationRateLimiter,
   MODERATION_RATE_LIMIT_SCOPES,
 } from '../src/middleware/moderation-rate-limit.js';
@@ -27,8 +31,12 @@ async function run({
   log,
   scopes = MODERATION_RATE_LIMIT_SCOPES.QUEUE_READ,
 } = {}) {
+  const effectiveTimeoutMs = dependencyTimeoutMs
+    ?? MODERATION_RATE_LIMIT_DEPENDENCY_TIMEOUT_DEFAULT_MS;
   const middleware = createModerationRateLimiter({
-    consume,
+    consume: typeof consume === 'function'
+      ? bindModerationRateLimitConsumerDeadline(consume, effectiveTimeoutMs)
+      : consume,
     ...(dependencyTimeoutMs === undefined ? {} : { dependencyTimeoutMs }),
   })(scopes);
   const req = {
@@ -197,7 +205,11 @@ test('aborts and fails closed when rate storage does not settle', async () => {
 });
 
 test('rejects unknown or duplicate scopes during router construction', () => {
-  const factory = createModerationRateLimiter({ consume: async () => ({ allowed: true }) });
+  const boundConsume = bindModerationRateLimitConsumerDeadline(
+    async () => ({ allowed: true }),
+    MODERATION_RATE_LIMIT_DEPENDENCY_TIMEOUT_DEFAULT_MS,
+  );
+  const factory = createModerationRateLimiter({ consume: boundConsume });
   for (const scopes of [
     [],
     'unknown.scope',
@@ -209,10 +221,17 @@ test('rejects unknown or duplicate scopes during router construction', () => {
   for (const dependencyTimeoutMs of [0, 10_001, 1.5]) {
     assert.throws(
       () => createModerationRateLimiter({
-        consume: async () => ({ allowed: true }),
+        consume: bindModerationRateLimitConsumerDeadline(
+          async () => ({ allowed: true }),
+          dependencyTimeoutMs,
+        ),
         dependencyTimeoutMs,
       }),
       TypeError,
     );
   }
+  assert.throws(
+    () => createModerationRateLimiter({ consume: async () => ({ allowed: true }) }),
+    /deadline is unbound/u,
+  );
 });
