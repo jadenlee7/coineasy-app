@@ -391,6 +391,18 @@ model PostReportAudit {
   @@index([operationId, createdAt], map: "idx_post_report_audit_operation")
 }
 
+model ModerationRateLimitBucket {
+  actorId              String   @db.VarChar(64)
+  scope                String   @db.VarChar(32)
+  policyVersion        String   @db.VarChar(64)
+  policyFingerprint    String   @db.Char(64)
+  theoreticalArrivalAt DateTime @db.Timestamptz(6)
+  updatedAt            DateTime @db.Timestamptz(6)
+
+  @@id([actorId, scope], map: "ModerationRateLimitBucket_pkey")
+  @@index([updatedAt, theoreticalArrivalAt, actorId, scope], map: "idx_moderation_rate_bucket_cleanup")
+}
+
 model Follow {
   followerId String
   followeeId String

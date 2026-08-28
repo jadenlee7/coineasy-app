@@ -9,6 +9,10 @@ import {
 import { ModerationError } from '../src/lib/moderation-service.js';
 import { createModerationAuthorizer } from '../src/middleware/moderation-authorization.js';
 import { createModerationRateLimiter } from '../src/middleware/moderation-rate-limit.js';
+import {
+  MODERATION_RATE_LIMIT_DEPENDENCY_TIMEOUT_DEFAULT_MS,
+  bindModerationRateLimitConsumerDeadline,
+} from '../src/lib/moderation-rate-limit-deadline.js';
 import { createModerationRouter } from '../src/routes/moderation.js';
 
 const ACTOR_ID = `wf_${'r'.repeat(32)}`;
@@ -513,7 +517,10 @@ test('rate-limit denial returns Retry-After and never reaches the service', asyn
   let serviceCalls = 0;
   const router = enabledRouter({
     limit: createModerationRateLimiter({
-      consume: async () => ({ allowed: false, retryAfterSeconds: 19 }),
+      consume: bindModerationRateLimitConsumerDeadline(
+        async () => ({ allowed: false, retryAfterSeconds: 19 }),
+        MODERATION_RATE_LIMIT_DEPENDENCY_TIMEOUT_DEFAULT_MS,
+      ),
     }),
     service: {
       claim: async () => { serviceCalls += 1; },

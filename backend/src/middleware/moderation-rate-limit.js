@@ -1,4 +1,8 @@
 import { MODERATION_CAPABILITIES } from '../lib/moderation-principal.js';
+import {
+  MODERATION_RATE_LIMIT_DEPENDENCY_TIMEOUT_DEFAULT_MS,
+  readModerationRateLimitConsumerDeadline,
+} from '../lib/moderation-rate-limit-deadline.js';
 
 export const MODERATION_RATE_LIMIT_SCOPES = Object.freeze({
   QUEUE_READ: MODERATION_CAPABILITIES.QUEUE_READ,
@@ -10,7 +14,6 @@ export const MODERATION_RATE_LIMIT_SCOPES = Object.freeze({
 const ACTOR_ID_PATTERN = /^wf_[A-Za-z0-9_-]{22,60}$/u;
 const KNOWN_SCOPES = new Set(Object.values(MODERATION_RATE_LIMIT_SCOPES));
 const RETRY_AFTER_MAX_SECONDS = 3_600;
-const STORE_TIMEOUT_DEFAULT_MS = 2_000;
 const STORE_TIMEOUT_MAX_MS = 10_000;
 
 class ModerationRateLimitUnavailableError extends Error {
@@ -101,7 +104,7 @@ async function withStoreTimeout(operation, timeoutMs) {
 
 export function createModerationRateLimiter({
   consume,
-  dependencyTimeoutMs = STORE_TIMEOUT_DEFAULT_MS,
+  dependencyTimeoutMs = MODERATION_RATE_LIMIT_DEPENDENCY_TIMEOUT_DEFAULT_MS,
 } = {}) {
   if (
     !Number.isSafeInteger(dependencyTimeoutMs)
@@ -109,6 +112,13 @@ export function createModerationRateLimiter({
     || dependencyTimeoutMs > STORE_TIMEOUT_MAX_MS
   ) {
     throw new TypeError('moderation rate-limit timeout is invalid');
+  }
+  const consumerDeadlineMs = readModerationRateLimitConsumerDeadline(consume);
+  if (typeof consume === 'function' && consumerDeadlineMs === null) {
+    throw new TypeError('moderation rate-limit consumer deadline is unbound');
+  }
+  if (consumerDeadlineMs !== null && consumerDeadlineMs !== dependencyTimeoutMs) {
+    throw new TypeError('moderation rate-limit consumer deadline does not match middleware');
   }
 
   return function requireModerationRateLimit(value) {
