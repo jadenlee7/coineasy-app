@@ -617,6 +617,13 @@ or HTTP status alone is not a receipt.
       This moderation candidate is not that fix.
 - [ ] Bounded list, rate limit, `Cache-Control: no-store`, safe UGC rendering,
       request correlation, and 401/403/404/409/429/5xx behavior pass staging.
+- [ ] Future activation readiness requires both the protected-queue catalog
+      contract and the PostgreSQL GCRA catalog contract with strict AND
+      semantics. PR #69 merge
+      `7acef194f032c05a6370346bea3a367101a01407` supplies the gate-off GCRA
+      code and migration only; the migration is not recorded as applied, and
+      thresholds, retention, cleanup, deployment, and activation remain
+      separately approved work.
 - [ ] An exact enforcement-aware release is deployed with the gate off, smoked,
       monitored, and promoted as the minimum safe rollback baseline.
       Exact `48bc35f` completed the deploy, gate-off smoke, and monitoring
