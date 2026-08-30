@@ -548,6 +548,14 @@ or HTTP status alone is not a receipt.
 
 - [ ] ADR-0011 is accepted by Product, Backend, Security, Privacy/Legal, and a
       named moderation owner.
+- [ ] One exact candidate version in the
+      [policy approval packet](./MODERATION_WORKSPACE_WEBAUTHN_POLICY_APPROVAL_PACKET.md)
+      is jointly ratified for a separately approved non-production proof. The
+      proof receipts are then reviewed and the final exact Google,
+      opaque-session, WebAuthn, access, rate, retention, SLA, recovery, and
+      ownership values are jointly accepted. A proposal PR, merge, or candidate
+      ratification alone is not operating approval, and every external-proof,
+      unselected-stop, and human-name row is complete before implementation.
 - [ ] Workforce OIDC, MFA, short-lived sessions, deny-by-default RBAC,
       offboarding, access review, and break-glass handling pass security review.
 - [ ] Primary/backup owners, coverage schedule, approved SLA, alert targets,
@@ -641,6 +649,7 @@ Any unchecked item keeps the moderation gate closed.
 ## Related documents
 
 - [ADR-0011: Protected post-report moderation](./adr/0011-protected-post-report-moderation.md)
+- [Workspace OIDC and WebAuthn policy approval packet](./MODERATION_WORKSPACE_WEBAUTHN_POLICY_APPROVAL_PACKET.md)
 - [Backend deployment checklist](./DEPLOY_CHECKLIST.md)
 - [Backend operations runbook](./OPERATIONS.md)
 - [Secret rotation runbook](./SECRET_ROTATION_RUNBOOK.md)
