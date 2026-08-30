@@ -26,6 +26,12 @@ as a configured provider, approve a placeholder, provision a provider or
 reviewer, apply a migration, deploy a release, change a singleton, or open
 either gate.
 
+The concrete values currently proposed for review are collected in the
+[Workspace OIDC and WebAuthn policy approval packet](../MODERATION_WORKSPACE_WEBAUTHN_POLICY_APPROVAL_PACKET.md).
+That packet is a candidate matrix only. Its creation, review, approval as a PR,
+or merge does not select a value, satisfy this ADR's joint operating approval,
+or authorize implementation or activation.
+
 ## Current implementation receipt
 
 | Foundation | Merged source receipt | Operational meaning |
@@ -376,47 +382,53 @@ never deleted.
 ## Approval and activation sequence
 
 1. Product, Backend, Security, Privacy/Legal, Operations, and a named moderation
-   owner approve ADR-0011, ADR-0012, ADR-0013, this ADR, and every remaining
-   exact Google, session, WebAuthn, access, rate, retention, and ownership value
-   above. Recording this direction does not substitute for their acceptance.
+   owner jointly ratify one immutable candidate-packet version as suitable only
+   for non-production proof. Ratification requires named proof owners but does
+   not approve an operating value, configure a provider, or execute the proof.
 2. Under a separate provider-proof approval, provision only a dedicated
    non-production Google OAuth client and disposable WebAuthn test origin.
    Capture exact issuer/audience/JWKS/header/claim behavior, domain ownership,
    redirect/origin/RP behavior, and value-safe receipts. Do not provision a real
    reviewer or connect the proof to the production singleton.
-3. On a new source-latch-off branch, implement the Google bootstrap adapter,
+3. Product, Backend, Security, Privacy/Legal, Operations, and the named
+   moderation owner review those receipts and jointly accept ADR-0011,
+   ADR-0012, ADR-0013, this ADR, and every final exact Google, session,
+   WebAuthn, access, rate, retention, ownership, and recovery value. A failed
+   proof, unselected stop, missing human owner, or changed candidate starts a
+   new ratification and proof cycle.
+4. On a new source-latch-off branch, implement the Google bootstrap adapter,
    constrained bootstrap session, opaque operator-session rotation/revocation,
    WebAuthn credential/challenge stores, and access resolver. There is no Google
    bearer path, OIDC/session OR fallback, legacy fallback, import-time I/O,
    migration application, singleton change, or gate change.
-4. Complete independent security review, browser/session tests, and
+5. Complete independent security review, browser/session tests, and
    disposable-PostgreSQL CI. Prove state/nonce and CSRF rejection, bootstrap
    session confinement, session fixation resistance, exact origin/RP/UP/UV and
    signature checks, 900-second acceptance plus 901-second rejection,
    action/revision binding, replay and concurrent-replay rejection, atomic old
    session revocation, offboarding denial, privacy-minimized logs, and recovery
    fail-closed behavior.
-5. Under separate explicit approvals, use only the existing approved staging
+6. Under separate explicit approvals, use only the existing approved staging
    target to provision disposable workforce identities and access records,
    capture encrypted backup/restore and target identity receipts, drain traffic,
    and apply only the approved pending staging migration. Do not create another
    service or infer a production target from staging.
-6. Under a separate source-change approval, replace the production singleton
+7. Under a separate source-change approval, replace the production singleton
    and change the source readiness latch while the Railway runtime flag remains
    false. Run full review, disposable-PostgreSQL tests, mobile checks, and CI on
    that exact activation-capable SHA. This source change is not deployment or
    runtime activation.
-7. Under a separate deployment approval, deploy that exact SHA to the approved
+8. Under a separate deployment approval, deploy that exact SHA to the approved
    staging target with the Railway runtime flag still false. Prove gate-off
    isolation, health, release identity, log privacy, and rollback without a
    moderation request reaching OIDC, access, GCRA, or service dependencies.
-8. Under a separate controlled-staging-QA approval, enable only the isolated
+9. Under a separate controlled-staging-QA approval, enable only the isolated
    staging runtime flag with disposable identities and synthetic data. Verify
    OIDC bootstrap, opaque sessions, WebAuthn, access, GCRA, exact catalog
    contracts, privacy, concurrency, failure codes, audit receipts, and rollback
    on the same SHA; then close the flag, monitor, and promote that exact release
    as the minimum safe rollback floor.
-9. Complete device, safe-UGC, legal, access-review, offboarding, retention,
+10. Complete device, safe-UGC, legal, access-review, offboarding, retention,
    contact, appeal, monitoring, and on-call exercises. Under a separate
    production-target approval, resolve or provision the exact production
    project, environment, services, and database; capture value-safe identity,
@@ -424,7 +436,7 @@ never deleted.
    staging-qualified SHA with the production runtime flag false; then verify
    release, catalog, privacy, health, monitoring, and rollback evidence. An
    absent or unverified production target is a stop condition, never staging.
-10. Under a final separate approval, enable the verified production runtime
+11. Under a final separate approval, enable the verified production runtime
    flag. The first real moderation action requires an exact committed audit
    receipt.
 
@@ -452,20 +464,26 @@ value alone is not activation evidence.
 
 1. [x] Record the Google Workspace bootstrap plus EasyGo opaque-session and
    WebAuthn architecture direction. This is a documentation receipt only.
-2. [ ] Select and jointly approve every exact Google bootstrap field.
-3. [ ] Select and jointly approve every opaque-session, WebAuthn enrollment,
+2. [x] Publish one non-binding candidate packet that keeps proposed values,
+   external evidence, named owners, and later approval gates distinct.
+3. [ ] Jointly ratify one candidate version for a separately approved
+   non-production proof.
+4. [ ] Capture the separately approved external proof and jointly accept every
+   final exact Google bootstrap field.
+5. [ ] Select and jointly approve every opaque-session, WebAuthn enrollment,
    recovery, revocation, and break-glass field.
-4. [ ] Select and approve every access-registry field.
-5. [ ] Select and approve all four rate policies and transition evidence.
-6. [ ] Select and approve every retention and legal-hold field, including OIDC,
+6. [ ] Select and approve every access-registry field.
+7. [ ] Select and approve all four rate policies and transition evidence.
+8. [ ] Select and approve every retention and legal-hold field, including OIDC,
    session, and WebAuthn data.
-7. [ ] Name every operating owner and approve the SLA/escalation procedures.
-8. [ ] Keep `POST_MODERATION_READY=false`, `POST_MODERATION_ENABLED=false`, the
+9. [ ] Name every operating owner and approve the SLA/escalation procedures.
+10. [ ] Keep `POST_MODERATION_READY=false`, `POST_MODERATION_ENABLED=false`, the
    production singleton, environment surface, schema, and target state
    unchanged until their separately approved sequence step.
 
 ## References
 
+- [EasyGo Workspace OIDC and WebAuthn policy approval packet](../MODERATION_WORKSPACE_WEBAUTHN_POLICY_APPROVAL_PACKET.md)
 - [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect)
   for server flow, state/nonce, signed-token validation, immutable `sub`, and
   Workspace `hd` validation.
