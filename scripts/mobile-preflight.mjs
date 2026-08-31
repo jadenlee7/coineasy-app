@@ -2,6 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { normalizePublicSupportUrl } from '../utils/supportContact.mjs';
 
 function clean(value) {
   return String(value || '').trim();
@@ -359,6 +360,27 @@ export function versionedLegalEnvironment(env = {}) {
   };
 }
 
+export function supportEnvironment(env = {}, { requireBackendRoute = false } = {}) {
+  const supportUrl = clean(env.EXPO_PUBLIC_EASYGO_SUPPORT_URL);
+  const normalizedSupportUrl = normalizePublicSupportUrl(supportUrl);
+  let expectedBackendSupportUrl = null;
+  if (requireBackendRoute) {
+    try {
+      const backendUrl = new URL(clean(env.EXPO_PUBLIC_BACKEND_URL));
+      if (backendUrl.protocol === 'https:') {
+        expectedBackendSupportUrl = `${backendUrl.origin}/support`;
+      }
+    } catch {
+      // The separate backend URL check reports the malformed value.
+    }
+  }
+  return {
+    supportUrl,
+    supportUrlValid: Boolean(normalizedSupportUrl)
+      && (!requireBackendRoute || normalizedSupportUrl === expectedBackendSupportUrl),
+  };
+}
+
 export function validateMobileEnvironment(env, appConfig, {
   target = 'local',
   appSource,
@@ -389,6 +411,18 @@ export function validateMobileEnvironment(env, appConfig, {
   if (backendUrl) {
     add(validBackendUrl(backendUrl, staged), 'backend URL format', 'remote backend URLs must use HTTPS');
   }
+
+  const support = supportEnvironment(env, {
+    requireBackendRoute: target === 'production',
+  });
+  add(
+    support.supportUrlValid,
+    'EasyGo support URL',
+    target === 'production'
+      ? 'EXPO_PUBLIC_EASYGO_SUPPORT_URL must equal the HTTPS backend origin plus /support, without credentials, query, fragment, or another path'
+      : 'EXPO_PUBLIC_EASYGO_SUPPORT_URL must be a public, non-placeholder HTTPS /support page without credentials, query, or a fragment',
+    { warning: !staged },
+  );
 
   const legal = versionedLegalEnvironment(env);
   const legalMayRemainDormant = target === 'local';

@@ -214,7 +214,12 @@ Already defined in repo-root `.env.example` (PR #4):
   editing stays locked while either is missing, both resolve to the same URL,
   the version differs from the backend, or the backend returns
   `consent.grantsEnabled=false`.
-- `EXPO_PUBLIC_EASYGO_HELP_URL` — optional replacement for the current help link.
+- `EXPO_PUBLIC_EASYGO_SUPPORT_URL` — official user-facing support page. Settings
+  also exposes `contact@coineasy.xyz` directly. Staging and production reject a
+  missing, non-HTTPS, local/private, placeholder, credential-bearing,
+  query-bearing, fragment-bearing, nonstandard-port, or non-`/support` URL;
+  production additionally requires the configured backend origin plus exactly
+  `/support`. Local development warns instead.
 
 Run `npm run preflight` before local builds and `npm run preflight:staging`
 before an EAS staging build. Privy's native app allowlist must contain the

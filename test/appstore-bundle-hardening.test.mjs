@@ -31,6 +31,24 @@ test('mobile source exposes only the display-only Squid client', () => {
   assert.equal(existsSync(new URL('../screens/Navigation/InviteFriendScreen.js', import.meta.url)), false);
 });
 
+test('Settings exposes both the official support page and email contact actions', () => {
+  const settings = readFileSync(
+    new URL('../components/modals/SettingsModal.js', import.meta.url),
+    'utf8',
+  );
+  const support = readFileSync(
+    new URL('../utils/supportContact.mjs', import.meta.url),
+    'utf8',
+  );
+  assert.match(settings, /'Support center'/);
+  assert.match(settings, /'Email support'/);
+  assert.match(settings, /EASYGO_SUPPORT_CONTACT\.email/);
+  assert.match(settings, /EASYGO_SUPPORT_CONTACT\.mailtoUrl/);
+  assert.match(settings, /accessibilityRole="button"/);
+  assert.match(support, /contact@coineasy\.xyz/);
+  assert.match(support, /EXPO_PUBLIC_EASYGO_SUPPORT_URL/);
+});
+
 test('App Store Orange UI is progress-only and omits ad, invite, shop, and conversion surfaces', () => {
   const reward = readFileSync(
     new URL('../screens/Navigation/Oranges/OrangeReward.js', import.meta.url),
