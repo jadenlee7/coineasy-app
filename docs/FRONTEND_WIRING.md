@@ -40,8 +40,8 @@ See `EASYGO_BUILD_PLAN.md` §11 (data flow), §12 (backend endpoints), §13.2 (S
 | `useFeed('search', { query })` | `GET /posts?q=...` | Search root-post bodies without breaking pagination. |
 | Search people | `GET /profiles/search?q=...` | Discover profiles by username or display-name substring. |
 | `usePosts({ authorId })` | `GET /posts/by-author/:userId` | Read a user's root-post timeline. |
-| `usePosts.create(...)` | `POST /posts` | Publish a root text post and update mounted feeds. |
-| Post editor | `PUT /posts/:id` | Edit the authenticated author's post body/media URL. |
+| `usePosts.create(...)` | `POST /posts` | Publish a server-screened root text post and update mounted feeds; non-null remote media is rejected. |
+| Post editor | `PUT /posts/:id` | Apply the same server text policy; omit legacy media to preserve it or send `null` to remove it. |
 | Post report modal | `POST /posts/:id/report` | Persist one authenticated, bounded report per reporter/post pair; replay is idempotent and exposes no reporter identity or queue totals. |
 | `useReplies.create(...)` | `POST /posts` | Publish a reply using `parentPostId`. |
 | `useSocialProfile(userId)` | `GET /profiles/:userId` | Read public profile details and live post/follow counts. |

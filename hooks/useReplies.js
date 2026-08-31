@@ -246,8 +246,9 @@ export function useReplies(postId, { autoLoad = true, limit = 20 } = {}) {
       return created;
     } catch (cause) {
       if (!isCurrentLease(operationLease)) return null;
-      setError(cause instanceof Error ? cause : new Error(String(cause)));
-      return null;
+      const nextError = cause instanceof Error ? cause : new Error(String(cause));
+      setError(nextError);
+      throw nextError;
     }
   }, [isCurrentLease, lease, postId]);
 
