@@ -29,7 +29,7 @@ not infinite scrolling or time spent.
 | 3 | Scam Shield | Never share a seed phrase or private key | Identify a malicious seed-phrase link |
 | 4 | Gas Navigator | Gas pays for network computation | Identify Base mainnet chain ID `8453` |
 | 5 | Stablecoin Spotter | Price-stable design is not zero risk | Distinguish USDC from ETH and local XP |
-| 6 | Quote Reader | A quote is not an executed trade | Open the display-only Base quote preview |
+| 6 | Quote Reader | A quote is not an executed trade | Read minimum received, fees, and expiry in a fixed offline exercise |
 | 7 | Web3 Guide | Explain one concept without hype | Choose a safe one-sentence explanation |
 
 The optional Day 7 system share sheet appears only after completion. Sharing,
@@ -63,8 +63,9 @@ No wallet address or Privy DID is embedded in the AsyncStorage key.
 
 - Day 1 reads the current embedded wallet and Base chain attestation.
 - Day 2 opens a public BaseScan URL for the signed-in user's own address.
-- Day 6 may navigate to the existing quote preview. The preview remains
-  display-only: no transaction request, calldata, signing, or broadcast.
+- Day 6 stays inside Daily Run and uses fixed offline choices. It performs no
+  live quote request, navigation to a quote screen, transaction request,
+  calldata generation, signing, or broadcast.
 - Completing or sharing a Run never produces Orange or an onchain reward.
 - Guest progress never migrates into an authenticated account.
 
@@ -93,7 +94,8 @@ Physical device:
 3. Background/foreground during a Run retains only in-memory screen state and
    does not complete the lesson early.
 4. Day 2 opens the correct own-address BaseScan page.
-5. Day 6 opens preview-only UI and returning allows the user to finish.
+5. Day 6 completes the fixed offline quote-reading exercise without opening a
+   quote screen or making a live quote request.
 6. Completing twice on one date does not add XP.
 7. Apple -> Google -> Apple shows isolated progress for each account.
 8. Account deletion purges local Daily Run progress with other owner data.

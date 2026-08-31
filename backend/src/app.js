@@ -31,6 +31,7 @@ import { questsRouter } from './routes/quests.js';
 import { adminRouter } from './routes/admin.js';
 import { socialRouter } from './routes/social.js';
 import { legalRouter } from './routes/legal.js';
+import { supportRouter } from './routes/support.js';
 import { moderationRouter } from './routes/moderation.js';
 import { createLegacySocialGate } from './middleware/legacy-social.js';
 
@@ -165,6 +166,7 @@ export function createApp({
   app.get('/health', createLivenessHandler({ env }));
   app.get('/ready', createReadinessHandler({ db, env, appLogger }));
   app.use('/legal', legalRouter);
+  app.use('/support', supportRouter);
 
   app.use('/auth', authRouter);
   app.use('/orange', orangeRouter);
