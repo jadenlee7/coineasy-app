@@ -160,8 +160,8 @@ export const DAILY_RUN_CURRICULUM = Object.freeze([
     title: 'Swap 전에 “최소 수령액”부터 보기',
     meme: '예상 수령액만 본 나 / 수수료와 최소 수령액: 우리도 봐줘…',
     memePunchline: '좋은 견적 읽기는 큰 숫자 하나가 아니라 비용과 조건을 함께 보는 습관이에요.',
-    learn: 'Route 견적에는 예상 수령액, 최소 수령액, 수수료, 가격 영향, 만료 시간이 포함될 수 있습니다. EasyGo 견적 읽기 연습실은 표시 전용이며 거래를 서명하거나 전송하지 않습니다.',
-    takeaway: '견적 미리보기 ≠ 실제 거래 실행',
+    learn: 'Route 견적에는 예상 수령액, 최소 수령액, 수수료, 가격 영향, 만료 시간이 포함될 수 있습니다. 오늘 EasyGo 연습은 실시간 견적을 조회하지 않는 고정 오프라인 선택형 학습이며, 거래를 서명하거나 전송하지 않습니다.',
+    takeaway: '고정 견적 읽기 연습 ≠ 실시간 견적 조회·실제 거래 실행',
     quiz: Object.freeze({
       question: '견적을 볼 때 함께 확인해야 할 것은?',
       options: Object.freeze([
@@ -172,10 +172,15 @@ export const DAILY_RUN_CURRICULUM = Object.freeze([
       explanation: '정답! 실행 전에는 받을 수 있는 최소 금액과 총비용, 견적 유효 시간을 함께 확인해야 합니다.',
     }),
     action: Object.freeze({
-      kind: 'quote-preview',
-      title: 'Base Route Estimate Lab',
-      description: 'EasyGo의 Base ETH↔USDC 읽기 연습실에서 예상 수령액과 비용을 찾아보세요. 서명이나 거래는 없습니다.',
-      button: '견적 읽기 연습실 열기',
+      kind: 'choice',
+      title: '안전한 견적 읽기 순서',
+      description: '실시간 견적 조회나 거래 실행 없이, 고정된 보기에서 먼저 확인할 항목을 골라 보세요.',
+      options: Object.freeze([
+        Object.freeze({ id: 'minimum', label: '최소 수령액·수수료·만료 시간부터 확인', correct: true }),
+        Object.freeze({ id: 'largest', label: '가장 크게 보이는 숫자만 확인', correct: false }),
+        Object.freeze({ id: 'logo', label: '토큰 로고만 보고 결정', correct: false }),
+      ]),
+      success: '좋아요. 실제 실행 전에는 최소 수령액, 총비용, 견적 만료를 함께 확인해야 해요.',
     }),
   }),
   Object.freeze({

@@ -267,7 +267,7 @@ function RuntimeStatus({ runtime }) {
   );
 }
 
-function DoStage({ lesson, navigation, onReady, walletRuntime }) {
+function DoStage({ lesson, onReady, walletRuntime }) {
   const [selectedId, setSelectedId] = useState(null);
   const [actionReady, setActionReady] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -308,16 +308,12 @@ function DoStage({ lesson, navigation, onReady, walletRuntime }) {
         return;
       }
 
-      if (action.kind === 'quote-preview') {
-        setActionReady(true);
-        navigation?.navigate('SquidQuotePreview', { educationalEntry: true });
-      }
     } catch {
       Alert.alert('실전 화면을 열 수 없어요', '네트워크 상태를 확인한 뒤 다시 시도해 주세요.');
     } finally {
       setActionLoading(false);
     }
-  }, [action.kind, baseScanUrl, navigation, walletRuntime]);
+  }, [action.kind, baseScanUrl, walletRuntime]);
 
   return (
     <View style={styles.stage}>
@@ -609,7 +605,6 @@ function DailyRunExperience({ guestMode = false, navigation, onGuestClose }) {
         {stageIndex === 3 && (
           <DoStage
             lesson={lesson}
-            navigation={navigation}
             onReady={finish}
             walletRuntime={walletRuntime}
           />

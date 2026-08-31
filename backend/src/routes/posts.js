@@ -4,9 +4,9 @@
  * Phase 1 (Path C):
  *   - Post is the only content unit.
  *   - Replies are Posts with parentPostId pointing at the parent Post.
- *   - mediaUrl column exists in DB (PR #9 schema) but upload flow is
- *     deferred to PR #10. For now mediaUrl is accepted as a plain URL
- *     string if the client provides one.
+ *   - mediaUrl exists in the DB, but upload and server-authoritative media
+ *     screening are deferred. Create/edit reject every non-null media URL;
+ *     edit omission preserves legacy media and null removes it.
  *
  * Cursor pagination
  *   - Order: createdAt DESC, id DESC
@@ -33,6 +33,12 @@ import { prisma } from '../lib/db.js';
 import { redactOwnedPost } from '../lib/account-deletion.js';
 import { express4AsyncHandler } from '../lib/express-async.js';
 import { PENDING_REPORTS_PER_POST_MAX } from '../lib/moderation-limits.js';
+import {
+  inspectPostContentSafety,
+  inspectPostMediaSafety,
+  POST_CONTENT_SAFETY_REJECTION_CODE,
+  POST_MEDIA_SAFETY_REJECTION_CODE,
+} from '../lib/post-content-safety.js';
 import { resolveOptionalSocialViewer } from '../lib/social-viewer.js';
 import {
   isUserPairBlocked,
@@ -252,12 +258,38 @@ const createSchema = z.object({
   mediaUrl: z.string().url().max(500).optional().nullable(),
 });
 
-export function createPostHandler({ db = prisma, shape = shapePost } = {}) {
+function rejectUnsafePostValue(res, value, inspectValue, rejectionCode) {
+  const result = inspectValue(value);
+  if (result?.allowed === true) return false;
+  res.set('Cache-Control', 'no-store');
+  res.status(422).json({ error: rejectionCode });
+  return true;
+}
+
+export function createCreatePostHandler({
+  db = prisma,
+  shape = shapePost,
+  inspectContent = inspectPostContentSafety,
+  inspectMedia = inspectPostMediaSafety,
+} = {}) {
   return async function createPost(req, res) {
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: 'bad_input', details: parsed.error.issues });
     }
+    if (rejectUnsafePostValue(
+      res,
+      parsed.data.body,
+      inspectContent,
+      POST_CONTENT_SAFETY_REJECTION_CODE,
+    )) return res;
+    if (rejectUnsafePostValue(
+      res,
+      parsed.data.mediaUrl,
+      inspectMedia,
+      POST_MEDIA_SAFETY_REJECTION_CODE,
+    )) return res;
+
     const user = await db.user.findUnique({ where: { privyDid: req.user.privyDid } });
     if (!user) return res.status(404).json({ error: 'user_not_found' });
 
@@ -302,7 +334,15 @@ export function createPostHandler({ db = prisma, shape = shapePost } = {}) {
   };
 }
 
-postsRouter.post('/', requireAuth, express4AsyncHandler(createPostHandler()));
+// Keep the earlier injectable name for focused block-interaction tests and
+// downstream imports while the route uses the more explicit factory name.
+export const createPostHandler = createCreatePostHandler;
+
+postsRouter.post(
+  '/',
+  requireAuth,
+  express4AsyncHandler(createCreatePostHandler()),
+);
 
 // --- PUT /posts/:id (edit own post) --------------------------------
 const updateSchema = z.object({
@@ -313,12 +353,26 @@ const updateSchema = z.object({
 export function createUpdatePostHandler({
   db = prisma,
   shape = shapePost,
+  inspectContent = inspectPostContentSafety,
+  inspectMedia = inspectPostMediaSafety,
 } = {}) {
   return async function updatePost(req, res) {
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: 'bad_input', details: parsed.error.issues });
     }
+    if (rejectUnsafePostValue(
+      res,
+      parsed.data.body,
+      inspectContent,
+      POST_CONTENT_SAFETY_REJECTION_CODE,
+    )) return res;
+    if (rejectUnsafePostValue(
+      res,
+      parsed.data.mediaUrl,
+      inspectMedia,
+      POST_MEDIA_SAFETY_REJECTION_CODE,
+    )) return res;
 
     const user = await db.user.findUnique({ where: { privyDid: req.user.privyDid } });
     if (!user) return res.status(404).json({ error: 'user_not_found' });

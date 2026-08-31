@@ -88,6 +88,37 @@ export function createPostboxDraft(editedPost) {
     };
 }
 
+function postboxMediaUrl(media) {
+    const firstMedia = Array.isArray(media) ? media[0] : null;
+    if (typeof firstMedia === 'string') return firstMedia || null;
+    return firstMedia?.url || firstMedia?.[0]?.url || null;
+}
+
+export function createPostboxEditPayload(body, currentMedia, originalMedia) {
+    const payload = { body };
+    const currentMediaUrl = postboxMediaUrl(currentMedia);
+    const originalMediaUrl = postboxMediaUrl(originalMedia);
+    if (currentMediaUrl !== originalMediaUrl) payload.mediaUrl = currentMediaUrl;
+    return payload;
+}
+
+export function postboxSafetyAlert(error) {
+    const code = error?.body?.error;
+    if (code === 'post_content_rejected') {
+        return Object.freeze({
+            title: 'Post not published',
+            message: 'This text may violate EasyGo safety rules. Edit it and try again.',
+        });
+    }
+    if (code === 'post_media_rejected') {
+        return Object.freeze({
+            title: 'Remove media to continue',
+            message: 'EasyGo cannot screen or publish media yet. Remove it and try again.',
+        });
+    }
+    return null;
+}
+
 export default function Postbox({isReply = false, openGeneration = 0}) {
     const { 
         user, 
@@ -339,13 +370,16 @@ export default function Postbox({isReply = false, openGeneration = 0}) {
             return;
         }
 
-        const firstMedia = listMedia?.[0];
-        const mediaUrl = firstMedia?.url || firstMedia?.[0]?.url || null;
+        const editPayload = createPostboxEditPayload(
+            publishBody,
+            listMedia,
+            createPostboxDraft(operationEditedPost).media,
+        );
         const operation = beginComposeOperation(operationLease, operationTarget);
         if (!operation) return;
         setLoading(true);
         try {
-            const updated = await updatePost(postId, { body: publishBody, mediaUrl });
+            const updated = await updatePost(postId, editPayload);
             if (!isCurrentComposeOperation(operation)) return;
             if (!updated) {
                 Alert.alert('Could not edit post', 'Check the backend connection and try again.');
@@ -357,6 +391,13 @@ export default function Postbox({isReply = false, openGeneration = 0}) {
                 operationCategory || null
             );
             if (!operationEditedPost?.callback && isCurrentComposeOperation(operation)) hidePostbox();
+        } catch(error) {
+            if (!isCurrentComposeOperation(operation)) return;
+            const safetyAlert = postboxSafetyAlert(error);
+            Alert.alert(
+                safetyAlert?.title || 'Could not edit post',
+                safetyAlert?.message || 'Check the backend connection and try again.',
+            );
         } finally {
             finishComposeOperation(operation);
         }
@@ -715,8 +756,11 @@ export default function Postbox({isReply = false, openGeneration = 0}) {
             // hidePostbox()
         } catch(e) {
             if (!operation || !isCurrentComposeOperation(operation)) return;
-            console.log("Error sharing post: ", e);
-            Alert.alert('Could not publish', 'Please check your connection and try again.');
+            const safetyAlert = postboxSafetyAlert(e);
+            Alert.alert(
+                safetyAlert?.title || 'Could not publish',
+                safetyAlert?.message || 'Please check your connection and try again.',
+            );
         } finally {
             if (operation) finishComposeOperation(operation);
         }

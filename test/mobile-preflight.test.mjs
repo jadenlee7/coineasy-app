@@ -21,6 +21,7 @@ import {
   startupBoundaryProtectsApp,
   startupKeepsHealthyLaunchBranded,
   startupKeepsOnePrivyProvider,
+  supportEnvironment,
   targetFromArgs,
   validateMobileEnvironment,
   versionedLegalEnvironment,
@@ -69,6 +70,7 @@ test('local preflight accepts Privy IDs but warns while backend is disconnected'
   }, appConfig);
   assert.deepEqual(result.errors, []);
   assert.equal(result.warnings.some((item) => item.name === 'backend URL'), true);
+  assert.equal(result.warnings.some((item) => item.name === 'EasyGo support URL'), true);
 });
 
 test('staging preflight requires an HTTPS backend and preserves native identity', () => {
@@ -88,7 +90,8 @@ test('staging preflight requires an HTTPS backend and preserves native identity'
   const ready = validateMobileEnvironment({
     EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
     EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
-    EXPO_PUBLIC_BACKEND_URL: 'https://api.easygo.example',
+    EXPO_PUBLIC_BACKEND_URL: 'https://api.coineasy.xyz',
+    EXPO_PUBLIC_EASYGO_SUPPORT_URL: 'https://support.coineasy.xyz/support',
     EXPO_PUBLIC_EASYGO_CONSENT_VERSION: '2026-08-10-staging-v1',
     EXPO_PUBLIC_EASYGO_PRIVACY_URL: 'https://api.easygo.example/legal/2026-08-10-staging-v1/privacy',
     EXPO_PUBLIC_EASYGO_TERMS_URL: 'https://api.easygo.example/legal/2026-08-10-staging-v1/terms',
@@ -97,6 +100,60 @@ test('staging preflight requires an HTTPS backend and preserves native identity'
   assert.equal(
     ready.warnings.some((item) => item.name === 'EasyGo privacy policy URL'),
     false,
+  );
+});
+
+test('support URL configuration is release-mandatory and rejects unsafe placeholders', () => {
+  assert.deepEqual(supportEnvironment({}), {
+    supportUrl: '',
+    supportUrlValid: false,
+  });
+
+  const baseEnv = {
+    EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
+    EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
+    EXPO_PUBLIC_BACKEND_URL: 'https://api.coineasy.xyz',
+    EXPO_PUBLIC_EASYGO_CONSENT_VERSION: '2026-08-02-v1',
+    EXPO_PUBLIC_EASYGO_PRIVACY_URL: 'https://easygo.example/privacy/2026-08-02-v1',
+    EXPO_PUBLIC_EASYGO_TERMS_URL: 'https://easygo.example/terms/2026-08-02-v1',
+  };
+  for (const supportUrl of [
+    undefined,
+    'http://support.coineasy.xyz/support',
+    'https://easygo.example/support',
+    'https://localhost/support',
+    'https://user:pass@support.coineasy.xyz/support',
+    'https://support.coineasy.xyz/support?token=public-but-unsafe',
+    'https://support.coineasy.xyz/support#draft',
+    'https://support.coineasy.xyz/support/',
+    'https://support.coineasy.xyz/easygo',
+  ]) {
+    const result = validateMobileEnvironment({
+      ...baseEnv,
+      EXPO_PUBLIC_EASYGO_SUPPORT_URL: supportUrl,
+    }, appConfig, { target: 'staging' });
+    assert.equal(
+      result.errors.some((item) => item.name === 'EasyGo support URL'),
+      true,
+    );
+  }
+
+  const ready = validateMobileEnvironment({
+    ...baseEnv,
+    EXPO_PUBLIC_EASYGO_SUPPORT_URL: 'https://api.coineasy.xyz/support',
+  }, appConfig, { target: 'production' });
+  assert.equal(
+    ready.errors.some((item) => item.name === 'EasyGo support URL'),
+    false,
+  );
+
+  const wrongProductionOrigin = validateMobileEnvironment({
+    ...baseEnv,
+    EXPO_PUBLIC_EASYGO_SUPPORT_URL: 'https://support.coineasy.xyz/support',
+  }, appConfig, { target: 'production' });
+  assert.equal(
+    wrongProductionOrigin.errors.some((item) => item.name === 'EasyGo support URL'),
+    true,
   );
 });
 
@@ -113,7 +170,8 @@ test('legal policy configuration is fail-closed and mandatory for production', (
   const baseEnv = {
     EXPO_PUBLIC_PRIVY_APP_ID: 'app-id',
     EXPO_PUBLIC_PRIVY_CLIENT_ID: 'client-id',
-    EXPO_PUBLIC_BACKEND_URL: 'https://api.easygo.example',
+    EXPO_PUBLIC_BACKEND_URL: 'https://api.coineasy.xyz',
+    EXPO_PUBLIC_EASYGO_SUPPORT_URL: 'https://api.coineasy.xyz/support',
   };
   const missing = validateMobileEnvironment(baseEnv, appConfig, { target: 'production' });
   assert.equal(

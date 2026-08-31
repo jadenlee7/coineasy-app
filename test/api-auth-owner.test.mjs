@@ -235,13 +235,11 @@ test('privacy exports, consent writes, and course rewards are owner-bound before
       () => api.orangeRewardStatus({ expectedAuthUserId: 'privy:owner-a' }),
       () => api.orangeClaimFirstReward({ expectedAuthUserId: 'privy:owner-a' }),
       () => api.orangeClaimDailyCheckin({ expectedAuthUserId: 'privy:owner-a' }),
-      () => api.orangeClaimDailyActivity({ expectedAuthUserId: 'privy:owner-a' }),
       () => api.orangeClaimCourseQuiz({
         courseId: 'course-1',
         sectionId: 'section-1',
         expectedAuthUserId: 'privy:owner-a',
       }),
-      () => api.swapQuotePreview({}, { expectedAuthUserId: 'privy:owner-a' }),
       () => api.profiles.me({ expectedAuthUserId: 'privy:owner-a' }),
       () => api.profiles.updateMe({}, { expectedAuthUserId: 'privy:owner-a' }),
       () => api.profiles.get('user-1', { expectedAuthUserId: 'privy:owner-a' }),

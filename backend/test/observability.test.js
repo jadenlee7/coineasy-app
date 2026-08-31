@@ -359,6 +359,8 @@ test('logger redacts authentication, signatures, identity, and wallet fields', (
         'x-admin-secret': 'server-admin-value',
       },
       body: {
+        body: 'rejected-post-text',
+        mediaUrl: 'https://uploads.invalid/private.png?token=secret',
         signature: 'wallet-signature',
         answer: 'quiz-answer',
         expectedPrivyDid: 'did:privy:expected-owner',
@@ -393,6 +395,8 @@ test('logger redacts authentication, signatures, identity, and wallet fields', (
     'super-secret',
     'cookie-secret',
     'server-admin-value',
+    'rejected-post-text',
+    'https://uploads.invalid/private.png?token=secret',
     'wallet-signature',
     'quiz-answer',
     'did:privy:expected-owner',

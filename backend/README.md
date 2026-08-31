@@ -359,8 +359,9 @@ thread model: every content unit is a `Post`; replies are Posts with
   unique `(postId, reporterId, postRevision)` tuple, nullable reporter relation,
   and `OPEN`/review/action status lifecycle.
 
-`Post.mediaUrl` is reserved now to avoid a second migration when media
-upload lands in PR #10.
+`Post.mediaUrl` remains reserved to avoid a later migration, but current create
+and edit routes reject every non-null remote URL with `post_media_rejected`.
+An edit may omit the field to preserve legacy data or send `null` to remove it.
 
 ### Path C v2 S2 models (dormant)
 
@@ -494,8 +495,8 @@ lists).
 | GET | `/posts/by-author/:userId` | optional Bearer | User timeline (root posts), cursor |
 | GET | `/posts/:id` | optional Bearer | Single post + author summary |
 | GET | `/posts/:id/replies` | optional Bearer | Replies cursor |
-| POST | `/posts` | Bearer | Create root post or reply |
-| PUT | `/posts/:id` | Bearer | Edit own post body/media URL |
+| POST | `/posts` | Bearer | Create root post or reply after deterministic text screening; non-null media is rejected |
+| PUT | `/posts/:id` | Bearer | Edit own post after the same text screening; omit legacy media or clear it with `null` |
 | DELETE | `/posts/:id` | Bearer | Delete own post (403 if not author) |
 | POST | `/posts/:id/like` | Bearer | Like (idempotent) |
 | DELETE | `/posts/:id/like` | Bearer | Unlike (idempotent) |
@@ -506,6 +507,11 @@ lists).
 | POST | `/blocks/:targetUserId` | Bearer | Block account and remove follows in both directions (idempotent) |
 | DELETE | `/blocks/:targetUserId` | Bearer | Remove the caller's block (idempotent; follows are not restored) |
 | GET | `/notifications` | Bearer | Recent follows, likes, and replies derived from social tables |
+
+Post create/edit safety rejection responses are deliberately generic and
+non-cacheable: HTTP `422` with `post_content_rejected` for text or
+`post_media_rejected` for a non-null remote media URL. They never include the
+submitted text, URL, or internal rule ID.
 
 Notifications are derived at read time from `Follow`, `Like`, and reply `Post`
 rows. Phase 1 therefore needs no notification migration; durable read markers

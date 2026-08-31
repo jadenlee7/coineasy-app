@@ -8,7 +8,7 @@ import { useTailwind } from 'tailwind-rn';
 import useStatusBarHeight from '../../hooks/useStatusBarHeight';
 import OrangeReward from './Oranges/OrangeReward';
 import Header from '../../components/Header';
-import { api, ApiError } from '../../utils/api';
+import { api } from '../../utils/api';
 import { useOrange } from '../../hooks/useOrange';
 import { useDeviceAccountOperationLease } from '../../contexts/DeviceAccountDataContext';
 
@@ -16,7 +16,6 @@ import { useDeviceAccountOperationLease } from '../../contexts/DeviceAccountData
 const OrangeNavigation = ({navigation, route}) => {
     const { 
         user,
-        userData,
         setUserData,
     } = useContext(GlobalContext);
     const { lease, isCurrentLease } = useDeviceAccountOperationLease();
@@ -27,7 +26,6 @@ const OrangeNavigation = ({navigation, route}) => {
     const { balance, history, ready: orangeReady, refresh: refreshOrange } = useOrange(user?.id);
     
     const [openDailyCheckinModal, setOpenDailyCheckinModal] = useState(false)
-    const [openDailyActivityModal, setOpenDailyActivityModal] = useState(false)
     const rewardStatusRequestIdRef = useRef(0);
     const claimRequestIdRef = useRef(0);
     const claimQueueRef = useRef(Promise.resolve());
@@ -88,9 +86,7 @@ const OrangeNavigation = ({navigation, route}) => {
                     ? {
                         ...(current || {}),
                         numberOranges: status.balance,
-                        todayActivities: status.todayActivities,
                         dailyCheckin: status.dailyCheckin,
-                        dailyActivity: status.dailyActivity,
                     }
                     : current
             ));
@@ -172,35 +168,6 @@ const OrangeNavigation = ({navigation, route}) => {
         }
     };
 
-    const handleClaimDailyActivity = async () => {
-        const expectedLease = lease;
-        if (!expectedLease || !isCurrentLease(expectedLease)) return;
-        Haptics.selectionAsync();
-        try {
-            const result = await syncClaim(api.orangeClaimDailyActivity, 'dailyActivity', expectedLease);
-            if (!isCurrentLease(expectedLease)) return;
-            if (result?.claimed) setOpenDailyActivityModal(true);
-            else if (result) Alert.alert('Already updated', 'Today\'s participation progress is already recorded.');
-        } catch (error) {
-            if (!isCurrentLease(expectedLease)) return;
-            if (error instanceof ApiError && error.status === 409) {
-                const progress = error.body?.progress || {};
-                const targets = error.body?.targets || {};
-                setUserData((current) => (
-                    isCurrentLease(expectedLease)
-                        ? { ...(current || {}), todayActivities: progress }
-                        : current
-                ));
-                Alert.alert(
-                    'Progress not complete',
-                    `Post ${progress.posts || 0}/${targets.posts || 1} · Comments ${progress.comments || 0}/${targets.comments || 2} · Likes ${progress.likes || 0}/${targets.likes || 10}`,
-                );
-                return;
-            }
-            Alert.alert('Claim failed', 'Please try again in a moment.');
-        }
-    };
-
     return (
         <View style={[tailwind('flex flex-1')]}>
             <Header />
@@ -219,15 +186,14 @@ const OrangeNavigation = ({navigation, route}) => {
             <View style={[tailwind('flex flex-1 flex-col'),{backgroundColor: 'white',marginTop: statusBarHeight > 25 ? 65 + statusBarHeight : 80 + statusBarHeight}]}>
                 <OrangeReward
                     onClaimDailyCheckin={onClaimDailyCheckin}
-                    handleClaimDailyActivity={handleClaimDailyActivity}
                 />
             </View>
 
             <Modal 
                 animationType="slide"
                 transparent={true}
-                visible={openDailyCheckinModal || openDailyActivityModal}
-                onRequestClose={() => {setOpenDailyCheckinModal(false);setOpenDailyActivityModal(false)}}
+                visible={openDailyCheckinModal}
+                onRequestClose={() => {setOpenDailyCheckinModal(false)}}
             >
                 <View style={{flex: 1, justifyContent:'center',alignItems:'center',backgroundColor: "rgba(0,0,0,0.5)",}}>
                     <View style={{    
@@ -254,12 +220,12 @@ const OrangeNavigation = ({navigation, route}) => {
                                 source={require('../../assets/trophy/reward/daily_check_in_orange.png')}
                                 defaultSource={require('../../assets/trophy/reward/daily_check_in_orange.png')}
                             />  
-                            <Text style={{fontFamily:'GmarketMedium',marginTop: 10,fontSize: 18,}}>{openDailyCheckinModal ? "+20 points" : "+30 points"}</Text>
+                            <Text style={{fontFamily:'GmarketMedium',marginTop: 10,fontSize: 18,}}>+20 points</Text>
                         </View>
 
                         <TouchableOpacity
                             style={{backgroundColor: '#FF6B35', width:'90%', height: 50, borderRadius: 25,justifyContent:'center',alignItems:'center',}}
-                            onPress={() => {setOpenDailyCheckinModal(false);setOpenDailyActivityModal(false)}}
+                            onPress={() => {setOpenDailyCheckinModal(false)}}
                         >
                             <Text style={{color:'white',fontSize: Platform.OS == 'ios' ? 17 : 15,fontFamily:'GmarketBold'}}>GOOD</Text>
                         </TouchableOpacity>

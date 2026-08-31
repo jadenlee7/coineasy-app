@@ -169,14 +169,16 @@ test('postbox ignores account-A completions after the active lease changes', () 
   assertOrdered(edit, [
     'const operationLease = lease;',
     'const operationTarget = composeTarget;',
+    'const editPayload = createPostboxEditPayload(',
     'const operation = beginComposeOperation(operationLease, operationTarget);',
-    'await updatePost(postId',
+    'await updatePost(postId, editPayload)',
     'if (!isCurrentComposeOperation(operation)) return;',
     "Alert.alert('Could not edit post'",
     'operationEditedPost?.callback?.(',
     'isCurrentComposeOperation(operation)',
     'hidePostbox();',
   ], 'edit post');
+  assert.match(edit, /catch\(error\) \{\s*if \(!isCurrentComposeOperation\(operation\)\) return;[\s\S]*?postboxSafetyAlert\(error\)/);
   assert.match(edit, /finally \{\s*finishComposeOperation\(operation\);/);
 
   assertOrdered(send, [
@@ -191,7 +193,8 @@ test('postbox ignores account-A completions after the active lease changes', () 
     'if (!isCurrentComposeOperation(operation)) return;',
     'hidePostbox();',
   ], 'publish post');
-  assert.match(send, /catch\(e\) \{\s*if \(!operation \|\| !isCurrentComposeOperation\(operation\)\) return;[\s\S]*?Alert\.alert\('Could not publish'/);
+  assert.match(send, /catch\(e\) \{\s*if \(!operation \|\| !isCurrentComposeOperation\(operation\)\) return;[\s\S]*?postboxSafetyAlert\(e\)[\s\S]*?'Could not publish'/);
+  assert.doesNotMatch(send, /console\.(?:log|warn|error)\([^\n]*e\)/);
   assert.match(send, /finally \{\s*if \(operation\) finishComposeOperation\(operation\);/);
 });
 

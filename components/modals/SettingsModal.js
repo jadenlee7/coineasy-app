@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Platform,
   ScrollView,
   Share,
@@ -49,13 +50,32 @@ import {
   EASYGO_LEGAL_DOCUMENTS,
   getConsentDocumentReadiness,
 } from '../../utils/legalDocuments.mjs';
+import { EASYGO_SUPPORT_CONTACT } from '../../utils/supportContact.mjs';
 import Button from '../Button';
 
 const LEGAL_LINKS = [
-  { label: 'Help', document: EASYGO_LEGAL_DOCUMENTS.help },
   { label: 'Privacy policy', document: EASYGO_LEGAL_DOCUMENTS.privacy },
   { label: 'Terms of service', document: EASYGO_LEGAL_DOCUMENTS.terms },
 ];
+
+function showSupportOpenError() {
+  Alert.alert(
+    'Could not open support',
+    `Contact EasyGo at ${EASYGO_SUPPORT_CONTACT.email}.`,
+  );
+}
+
+function openSupportCenter() {
+  if (!EASYGO_SUPPORT_CONTACT.url) {
+    showSupportOpenError();
+    return;
+  }
+  WebBrowser.openBrowserAsync(EASYGO_SUPPORT_CONTACT.url).catch(showSupportOpenError);
+}
+
+function emailSupport() {
+  Linking.openURL(EASYGO_SUPPORT_CONTACT.mailtoUrl).catch(showSupportOpenError);
+}
 
 function openLegalDocument(document, label) {
   if (!document?.url) {
@@ -802,8 +822,11 @@ export default function SettingsModal() {
     );
   };
 
-  const row = (label, value, onPress, danger = false) => (
+  const row = (label, value, onPress, danger = false, accessibilityHint) => (
     <TouchableOpacity
+      accessibilityHint={accessibilityHint}
+      accessibilityLabel={label}
+      accessibilityRole="button"
       key={label}
       onPress={onPress}
       style={tailwind('flex flex-row items-center justify-between border-b border-slate-100 py-4')}
@@ -1028,7 +1051,25 @@ export default function SettingsModal() {
       )}
 
       <Text style={{ fontFamily: 'GmarketBold', fontSize: 12, color: '#64748B', marginTop: 24 }}>
-        ABOUT
+        SUPPORT
+      </Text>
+      {row(
+        'Support center',
+        EASYGO_SUPPORT_CONTACT.configured ? undefined : 'Pending',
+        openSupportCenter,
+        false,
+        'Opens the official EasyGo support page.',
+      )}
+      {row(
+        'Email support',
+        EASYGO_SUPPORT_CONTACT.email,
+        emailSupport,
+        false,
+        `Opens an email to ${EASYGO_SUPPORT_CONTACT.email}.`,
+      )}
+
+      <Text style={{ fontFamily: 'GmarketBold', fontSize: 12, color: '#64748B', marginTop: 24 }}>
+        LEGAL
       </Text>
       {LEGAL_LINKS.map((item) => row(
         item.label,

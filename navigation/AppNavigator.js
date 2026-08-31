@@ -18,7 +18,6 @@ import TrophiePresentation from '../screens/Navigation/Trophies/TrophiePresentat
 import OrangeNavigation from '../screens/Navigation/OrangeNavigation';
 import Search from '../screens/Search';
 import Categories from '../screens/Categories';
-import SquidQuotePreview from '../screens/Navigation/SquidQuotePreview';
 import DailyRun from '../screens/DailyRun';
 
 // const Stack = createNativeStackNavigator();
@@ -44,7 +43,6 @@ const AppNavigator = ({ navigationRef, onNavigationReady }) => {
                     <Stack.Screen name="TrophiePresentation" component={TrophiePresentation} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="Search" component={Search} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="Categories" component={Categories} options={{ headerShown: false, gestureEnabled: true }} />
-                    <Stack.Screen name="SquidQuotePreview" component={SquidQuotePreview} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="DailyRun" component={DailyRun} options={{ headerShown: false, gestureEnabled: true }} />
                 </Stack.Navigator>
             </NavigationContainer>

@@ -23,11 +23,9 @@ export function legalUrlIncludesVersion(value, version) {
 
 export function createLegalDocuments({
   consentVersion = '',
-  helpUrl = '',
   privacyUrl = '',
   termsUrl = '',
 } = {}) {
-  const configuredHelpUrl = normalizeHttpsUrl(helpUrl);
   const configuredPrivacyUrl = normalizeHttpsUrl(privacyUrl);
   const configuredTermsUrl = normalizeHttpsUrl(termsUrl);
   const version = clean(consentVersion);
@@ -36,10 +34,6 @@ export function createLegalDocuments({
 
   return {
     version,
-    help: {
-      url: configuredHelpUrl,
-      configured: Boolean(configuredHelpUrl),
-    },
     privacy: {
       url: configuredPrivacyUrl,
       configured: Boolean(configuredPrivacyUrl),
@@ -62,7 +56,6 @@ export function createLegalDocuments({
 // Keep these explicit instead of indexing process.env dynamically.
 export const EASYGO_LEGAL_DOCUMENTS = createLegalDocuments({
   consentVersion: process.env.EXPO_PUBLIC_EASYGO_CONSENT_VERSION,
-  helpUrl: process.env.EXPO_PUBLIC_EASYGO_HELP_URL,
   privacyUrl: process.env.EXPO_PUBLIC_EASYGO_PRIVACY_URL,
   termsUrl: process.env.EXPO_PUBLIC_EASYGO_TERMS_URL,
 });

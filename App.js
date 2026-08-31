@@ -852,34 +852,6 @@ function EasyGoApp({
         console.log("Enter defaultCallbackPostShared:", _post);
         let _posts = [_post, ...posts];
         setPosts(_posts);
-
-        const today = moment().format('YYYY-MM-DD');
-        const tempData = userData ?? {};
-        if (!tempData.todayActivities || tempData.todayActivities.date !== today) {
-            // Reset activities if date has changed
-            tempData.todayActivities = {
-                date: today,
-                posts: 0,
-                comments: 0,
-                likes: 0,
-            };
-        }
-
-        // Orange Reward
-        if(replyTo){
-            if (_post.content.body.length >= 20 || _post.content.media || _post.content.body.includes("http://") || _post.content.body.includes("https://")) {
-                if (tempData.todayActivities.comments < 3) {
-                    tempData.todayActivities.comments += 1;
-                }
-            }
-        }else{
-            if (_post.content.body.length >= 50 || _post.content.media || _post.content.body.includes("http://") || _post.content.body.includes("https://")) {
-                tempData.todayActivities.posts += 1;
-            }
-        }
-        
-        setUserData({...tempData})
-        
         hidePostbox()
     }
 

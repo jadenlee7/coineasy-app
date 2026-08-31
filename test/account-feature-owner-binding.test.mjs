@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import {
-  SQUID_ROUTE_LEASE_ERROR,
-  createSquidRouteLeaseRegistry,
-} from '../utils/squidRouteLease.mjs';
 import { adaptEasyGoProfileResponse } from '../hooks/easyChainProfileAdapter.mjs';
 
 function source(path) {
@@ -88,11 +84,11 @@ test('Orange reward actions carry the captured owner and drop stale UI effects',
   assert.match(contents, /api\.orangeRewardStatus\(\{\s*expectedAuthUserId: expectedLease\.ownerUserId,/);
   assert.match(contents, /const result = await claim\(\{\s*expectedAuthUserId: expectedLease\.ownerUserId,/);
   assert.match(contents, /syncClaim\(api\.orangeClaimDailyCheckin, 'dailyCheckin', expectedLease\)/);
-  assert.match(contents, /syncClaim\(api\.orangeClaimDailyActivity, 'dailyActivity', expectedLease\)/);
   assert.match(contents, /setUserData\(\(current\) => \(\s*isCurrentLease\(expectedLease\)/);
   assert.match(contents, /catch \(error\) \{\s*if \(!isCurrentLease\(expectedLease\)\) return;[\s\S]*?Alert\.alert/);
   assert.doesNotMatch(contents, /api\.orangeRewardStatus\(\)/);
-  assert.doesNotMatch(contents, /syncClaim\(api\.orangeClaim(?:DailyCheckin|DailyActivity), '[^']+'\)/);
+  assert.doesNotMatch(contents, /syncClaim\(api\.orangeClaimDailyCheckin, 'dailyCheckin'\)/);
+  assert.doesNotMatch(contents, /orangeClaimDailyActivity|handleClaimDailyActivity|todayActivities/);
 });
 
 test('Orange reads and claims reject older same-session completions', () => {
@@ -143,46 +139,18 @@ test('profile and first-reward modals suppress stale account updates and alerts'
   assert.doesNotMatch(newFeature, /orangeClaimFirstReward\(\)/);
 });
 
-test('the mobile Squid module is preview-only and owner-bound', () => {
-  const contents = source('../utils/squidPreview.js');
+test('the App Store mobile source omits the Squid preview capability', () => {
   const api = source('../utils/api.js');
+  const navigation = source('../navigation/AppNavigator.js');
 
-  assert.match(contents, /getSquidQuotePreview\(\{[\s\S]*?lease,[\s\S]*?isCurrentLease,[\s\S]*?signal,/);
-  assert.match(contents, /previewLeases\.requireCurrent\(lease, isCurrentLease\)/);
-  assert.match(contents, /api\.swapQuotePreview\([\s\S]*?expectedAuthUserId: operationLease\.ownerUserId/);
-  assert.doesNotMatch(contents, /sendTransaction|executeSquidRoute|swapLog|getSigner|getProvider/);
-  assert.doesNotMatch(api, /swapQuote:\s*\(|swapLog:\s*\(/);
-});
-
-test('a Squid quote capability cannot cross owner or same-DID session epochs', () => {
-  const registry = createSquidRouteLeaseRegistry();
-  const ownerA1 = Object.freeze({ ownerUserId: 'did:privy:a', sessionEpoch: 1 });
-  const ownerA2 = Object.freeze({ ownerUserId: 'did:privy:a', sessionEpoch: 2 });
-  const ownerB = Object.freeze({ ownerUserId: 'did:privy:b', sessionEpoch: 3 });
-  let current = ownerA1;
-  const isCurrentLease = (candidate) => candidate === current;
-  const route = { route: {}, tx: { to: '0x1' } };
-
-  registry.bind(route, ownerA1, isCurrentLease);
-  assert.equal(registry.requireBound(route, ownerA1, isCurrentLease), ownerA1);
-
-  current = ownerB;
-  assert.throws(
-    () => registry.requireBound(route, ownerA1, isCurrentLease),
-    { code: SQUID_ROUTE_LEASE_ERROR },
-  );
-  assert.throws(
-    () => registry.requireBound(route, ownerB, isCurrentLease),
-    { code: SQUID_ROUTE_LEASE_ERROR },
-  );
-
-  current = ownerA2;
-  assert.throws(
-    () => registry.requireBound(route, ownerA2, isCurrentLease),
-    { code: SQUID_ROUTE_LEASE_ERROR },
-  );
-  assert.throws(
-    () => registry.requireBound({ ...route }, ownerA2, isCurrentLease),
-    { code: SQUID_ROUTE_LEASE_ERROR },
-  );
+  assert.doesNotMatch(api, /swapQuotePreview|\/swap\/quote-preview|swapQuote:\s*\(|swapLog:\s*\(/);
+  assert.doesNotMatch(navigation, /SquidQuotePreview/);
+  for (const path of [
+    '../screens/Navigation/SquidQuotePreview.js',
+    '../utils/squidPreview.js',
+    '../utils/squidQuotePreview.mjs',
+    '../utils/squidRouteLease.mjs',
+  ]) {
+    assert.equal(existsSync(new URL(path, import.meta.url)), false, path);
+  }
 });
