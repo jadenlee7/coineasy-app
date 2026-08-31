@@ -9,7 +9,9 @@ are approved.
 ## Railway staging inventory
 
 Inventory identifiers were first verified on 2026-07-21 and the live staging
-state was re-verified on 2026-08-27 without printing secret values:
+web/database state was re-verified on 2026-08-31 without printing secret values.
+Worker/default-environment observations remain the prior inventory; neither was
+changed by the web-only rollout:
 
 | Resource | Name | ID | State |
 | --- | --- | --- | --- |
@@ -22,10 +24,12 @@ state was re-verified on 2026-08-27 without printing secret values:
 The project's default `production` environment is empty. All three service
 instances and the database volume exist only in `staging`. Web is running the
 approved release at `https://easygo-web-staging-staging.up.railway.app`.
-Web and worker revisions are tracked independently. The current web release is
-`48bc35fca41fa8f693a95aee8c4b8dc339fee581`; its exact gate-off staging
-receipt is recorded below. The unchanged worker retains its prior reviewed
-release and exits cleanly while `SEGMENTS_ENABLED=false`. PR #58 remains the
+Web and worker revisions are tracked independently. The latest observed web
+release is `db8b15fb2dd55008a2419f0082521c95e6e40dcd`, deployment
+`e52770fd-836d-4833-8e5f-472177f88505`; its
+[UserBlock rollout and authenticated QA receipt](./releases/2026-08-31-db8b15fb-userblock-staging-qa.md)
+supersedes the historical `48bc35f` web baseline. The unchanged worker retains
+its prior reviewed release and exits cleanly while `SEGMENTS_ENABLED=false`. PR #58 remains the
 formal minimum safe reviewed web source floor until a separate operator
 decision promotes a newer enforcement-aware release. Its historical Railway
 deployment is now `REMOVED`, so no runnable rollback snapshot is currently
@@ -33,7 +37,13 @@ verified.
 
 ## Current automated evidence
 
-- [x] Latest PR #65 Backend CI passes with PostgreSQL enabled (`331` pass,
+- [x] PR #79 Backend and Mobile CI succeeded in run
+      [`33407165762`](https://github.com/jadenlee7/coineasy-app/actions/runs/33407165762).
+      Tested head `2649f9c2dcffef5c57e91f9bf5422bd5eda827d0` and deployed merge
+      `db8b15fb2dd55008a2419f0082521c95e6e40dcd` share tree
+      `fa1125769c24067b0fafd09a069bcab423865cdb`; this is not a separate
+      merge-SHA CI run.
+- [x] Historical 2026-08-27 PR #65 Backend CI passed with PostgreSQL enabled (`331` pass,
       `0` fail, `0` skip). The earlier local baseline was 86 pass with one
       DB-backed SIWE test skipped.
 - [ ] Expo Doctor currently passes 15/17 checks. The remaining findings are
@@ -149,9 +159,12 @@ verified.
   `5817cfafb9a661934de0107362cf59afd25647ee1ba5eb4bc2085708acc78a55`.
 - [x] Run `npm run prisma:status` against staging and record existing migration
   state.
-- [x] Apply `npm run prisma:deploy` once from a controlled release job, not from
-  both web and worker services.
-- [x] Re-run `npm run prisma:status`; verify both migrations are applied.
+- [x] Initial Path C rollout: apply `npm run prisma:deploy` once from a
+  controlled release job, not from both web and worker services.
+- [x] Initial Path C rollout: re-run `npm run prisma:status`; verify its two
+  migrations are applied. This is historical evidence, not a no-pending claim
+  for later source. The 2026-08-31 rollout applied only UserBlock; do not run a
+  broad deploy against the separately unapproved GCRA migration.
 - [x] Keep `SIWE_AUTH_ENABLED`, `JUSTANAME_ENABLED`, `SEGMENTS_ENABLED`,
       `QUESTS_ENABLED`, and `ADVERTISER_ADMIN_ENABLED` false for the first deploy.
 - [x] Keep `LEGACY_SOCIAL_MODE=active`.
@@ -389,18 +402,44 @@ verified.
 
 - [x] Confirm `/health`, `/ready`, and `/social/status` remain nominal.
 - [x] Confirm the deployed release matches `EXPECTED_RELEASE`.
-- [x] Confirm database migration status reports no pending migration.
+- [x] Confirm the approved UserBlock migration receipt: nine completed,
+  zero unfinished, one exact UserBlock success row. The only pending migration
+  is `20260827193000_moderation_rate_limit_gcra`, intentionally unapproved and
+  unapplied; current staging is not migration-current with every committed file.
 - [x] Confirm logs contain request IDs but no auth header, email, Privy ID,
   wallet, signature, quiz answer, or query string.
 - [x] Record staging evidence and exceptions here. Railway recorded one
   transient `/health` 502 at `2026-07-21T20:03:02Z`; there were no further
-  web 5xx responses or application error logs in the latest 30-minute review,
-  and the current read-only smoke passes all three endpoints.
+  web 5xx responses or application error logs in that historical 30-minute
+  review. The separately dated 2026-08-31 receipt below records the latest
+  observed read-only smoke and its narrower log-query limits.
 - [x] Notify the product/support owner that staging is ready for device QA and
   provide the exact TestFlight/device checklist.
 - [ ] Close the release only after the monitoring window completes.
-      The exact web stabilization window completed, but the overall release
-      remains open for the moderation, legal, bundle, and device gates above.
+      The historical `48bc35f` stabilization window completed. The newer
+      `db8b15fb` log query is not an equivalent continuous monitoring or metrics
+      run; overall moderation, legal, bundle, and device gates remain open.
+
+### Exact db8b15fb UserBlock staging rollout (2026-08-31 UTC)
+
+- [x] Latest encrypted backup and actual isolated restore; single approved
+      `20260831120000_user_blocks` application; exact web deployment.
+- [x] Two-account, 45-request scoped server smoke: Block/Unblock idempotency,
+      self/missing targets, bidirectional profile/Follow/author-post isolation,
+      A-to-B Like/Reply rejection, filtered-post visibility, and both exports.
+- [x] Remove only newly created QA users/post/provider/credential, preserve the
+      original credential/provider, and verify zero reward issuance and matching
+      before/after aggregates. Final fixture residue was zero.
+- [x] Keep moderation and swap execution Ready/Enabled false, GCRA unapplied,
+      worker/production unchanged. No new EAS or TestFlight build occurred.
+- [ ] Before a new mobile build, review and verify preservation/import of
+      existing account-local blocks on first server sync, including an empty
+      server list; complete the separate physical-device gates.
+
+Exact SHA/CI, backup and migration checksums, request IDs, cleanup, export and
+monitoring limits, rollback caveats, and untested cases are recorded once in the
+[UserBlock staging QA receipt](./releases/2026-08-31-db8b15fb-userblock-staging-qa.md).
+No open release gate is closed by that scoped server result.
 
 ### Exact 48bc35f gate-off moderation expand staging rollout (2026-08-27 UTC)
 
