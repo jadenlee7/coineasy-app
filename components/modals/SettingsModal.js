@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Linking,
   Platform,
@@ -22,6 +23,7 @@ import { GlobalContext } from '../../contexts/GlobalContext';
 import { useDeviceAccountData } from '../../contexts/DeviceAccountDataContext';
 import useConsent from '../../hooks/useConsent';
 import { api, ApiError } from '../../utils/api';
+import { removeServerBlockedAccountId } from '../../utils/blockedAccounts.mjs';
 import { unregisterPushTokenBeforeLogout } from '../../utils/pushTokenRegistration.mjs';
 import {
   canConfirmAccountDeletion,
@@ -137,7 +139,6 @@ export default function SettingsModal() {
   const {
     accountLease: deviceAccountLease,
     blockedAccounts: listBlockedUser,
-    clearBlockedAccounts,
     clearExpoPushToken,
     clearHiddenPosts,
     clearMutedAccounts,
@@ -146,6 +147,7 @@ export default function SettingsModal() {
     mutedAccounts: listMutedUsers,
     ownerUserId: deviceOwnerUserId,
     isCurrentAccountLease,
+    saveBlockedAccounts,
     sealOwnerData,
     sessionEpoch: deviceSessionEpoch,
   } = useDeviceAccountData();
@@ -157,6 +159,13 @@ export default function SettingsModal() {
   const [deletionCapability, setDeletionCapability] = useState(null);
   const [walletRiskAcknowledged, setWalletRiskAcknowledged] = useState(false);
   const [deletionConfirmation, setDeletionConfirmation] = useState('');
+  const [blockedAccountsOpen, setBlockedAccountsOpen] = useState(false);
+  const [serverBlockedAccounts, setServerBlockedAccounts] = useState([]);
+  const [blockedAccountsCursor, setBlockedAccountsCursor] = useState(null);
+  const [blockedAccountsError, setBlockedAccountsError] = useState(null);
+  const [blockedAccountsLoading, setBlockedAccountsLoading] = useState(false);
+  const [unblockingUserId, setUnblockingUserId] = useState(null);
+  const blockedAccountsRequestRef = useRef(0);
   const deletionRequestRef = useRef(false);
   const deletionActionRef = useRef(null);
   const currentPrivyUserId = privy?.user?.id || null;
@@ -232,6 +241,11 @@ export default function SettingsModal() {
     || consentState.consent?.segmentingOptIn
     || consentState.consent?.marketingOptIn,
   );
+  const legacyBlockedDids = listBlockedUser.filter((entry) => (
+    typeof entry === 'string'
+    && entry.includes(':')
+    && !entry.startsWith('easygo:')
+  ));
 
   useEffect(() => {
     settingsMountedRef.current = true;
@@ -257,6 +271,16 @@ export default function SettingsModal() {
       };
     };
   }, [currentPrivyUserId, deviceOwnerUserId, deviceSessionEpoch, syncedAccountKey]);
+
+  useEffect(() => {
+    blockedAccountsRequestRef.current += 1;
+    setBlockedAccountsOpen(false);
+    setServerBlockedAccounts([]);
+    setBlockedAccountsCursor(null);
+    setBlockedAccountsError(null);
+    setBlockedAccountsLoading(false);
+    setUnblockingUserId(null);
+  }, [currentPrivyUserId, deviceOwnerUserId, deviceSessionEpoch]);
 
   useEffect(() => {
     if (Platform.OS !== 'ios' || !FileSystem.cacheDirectory) return;
@@ -303,6 +327,106 @@ export default function SettingsModal() {
         },
       },
     ]);
+  };
+
+  const loadBlockedAccounts = async ({ append = false } = {}) => {
+    const expectedOperation = accountOperationRef.current;
+    if (!isCurrentAccountOperation(expectedOperation) || blockedAccountsLoading) return;
+    const cursor = append ? blockedAccountsCursor : null;
+    const requestId = ++blockedAccountsRequestRef.current;
+    const isCurrentRequest = () => (
+      requestId === blockedAccountsRequestRef.current
+      && isCurrentAccountOperation(expectedOperation)
+    );
+    setBlockedAccountsLoading(true);
+    setBlockedAccountsError(null);
+    try {
+      const result = await api.blocks.list({
+        cursor,
+        limit: 100,
+        expectedAuthUserId: expectedOperation.ownerUserId,
+      });
+      if (!isCurrentRequest()) return;
+      const nextRows = Array.isArray(result?.rows) ? result.rows : [];
+      setServerBlockedAccounts((current) => {
+        if (!append) return nextRows;
+        const byId = new Map(current.map((item) => [item.id, item]));
+        nextRows.forEach((item) => byId.set(item.id, item));
+        return [...byId.values()];
+      });
+      setBlockedAccountsCursor(result?.nextCursor || null);
+    } catch (error) {
+      if (!isCurrentRequest()) return;
+      setBlockedAccountsError(error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      if (isCurrentRequest()) setBlockedAccountsLoading(false);
+    }
+  };
+
+  const toggleBlockedAccounts = () => {
+    Haptics.selectionAsync();
+    if (blockedAccountsOpen) {
+      blockedAccountsRequestRef.current += 1;
+      setBlockedAccountsOpen(false);
+      setBlockedAccountsLoading(false);
+      return;
+    }
+    setBlockedAccountsOpen(true);
+    loadBlockedAccounts();
+  };
+
+  const requestUnblock = (blockedAccount) => {
+    const expectedOperation = accountOperationRef.current;
+    if (!blockedAccount?.id || !isCurrentAccountOperation(expectedOperation)) return;
+    Haptics.selectionAsync();
+    Alert.alert(
+      `Unblock ${blockedAccount.username ? `@${blockedAccount.username}` : 'this account'}?`,
+      'Their public EasyGo profile and posts can appear again while you are signed in. Following is not restored automatically.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unblock',
+          onPress: async () => {
+            if (!isCurrentAccountOperation(expectedOperation)) return;
+            setUnblockingUserId(blockedAccount.id);
+            let serverUnblocked = false;
+            try {
+              const result = await api.blocks.unblock(blockedAccount.id, {
+                expectedAuthUserId: expectedOperation.ownerUserId,
+              });
+              if (!isCurrentAccountOperation(expectedOperation)) return;
+              if (result?.blocked !== false) throw new Error('unblock_not_persisted');
+              serverUnblocked = true;
+              setServerBlockedAccounts((current) => (
+                current.filter((item) => item.id !== blockedAccount.id)
+              ));
+              // Remove only this EasyGo account. Other server blocks and
+              // historical DID entries must keep filtering already-rendered UI.
+              try {
+                await saveBlockedAccounts(removeServerBlockedAccountId(
+                  listBlockedUser,
+                  blockedAccount.id,
+                ));
+              } catch {
+                // The server unblock is authoritative. A later complete block
+                // list synchronization repairs this owner-scoped cache.
+              }
+            } catch (error) {
+              if (!isCurrentAccountOperation(expectedOperation)) return;
+              if (serverUnblocked) return;
+              Alert.alert(
+                'Could not unblock account',
+                error instanceof ApiError && error.status === 401
+                  ? 'Your login expired. Sign in again and retry.'
+                  : 'EasyGo did not confirm the change. Check the connection and try again.',
+              );
+            } finally {
+              if (isCurrentAccountOperation(expectedOperation)) setUnblockingUserId(null);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const signOut = async () => {
@@ -754,9 +878,82 @@ export default function SettingsModal() {
       })}
 
       <Text style={{ fontFamily: 'GmarketBold', fontSize: 12, color: '#64748B', marginTop: 24 }}>
-        ON-DEVICE SAFETY LISTS
+        ACCOUNT SAFETY
       </Text>
-      {row('Blocked accounts', listBlockedUser.length, () => clearLocalList('blocked accounts', clearBlockedAccounts))}
+      {row(
+        'Blocked EasyGo accounts',
+        blockedAccountsOpen ? 'Hide' : 'Manage',
+        toggleBlockedAccounts,
+      )}
+      {blockedAccountsOpen && (
+        <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 12 }}>
+          <Text style={{ color: '#64748B', fontSize: 11, lineHeight: 16 }}>
+            Blocks follow your EasyGo account. Signed-in social views and new follows, likes and replies are separated in both directions. Public signed-out views may still show public content.
+          </Text>
+          {serverBlockedAccounts.map((blockedAccount) => (
+            <View
+              key={blockedAccount.id}
+              style={tailwind('flex flex-row items-center justify-between border-b border-slate-200 py-3')}
+            >
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={{ color: '#0F172A', fontFamily: 'GmarketMedium', fontSize: 13 }}>
+                  {blockedAccount.displayName || blockedAccount.username || 'EasyGo user'}
+                </Text>
+                {blockedAccount.username ? (
+                  <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 2 }}>
+                    @{blockedAccount.username}
+                  </Text>
+                ) : null}
+              </View>
+              <TouchableOpacity
+                disabled={unblockingUserId === blockedAccount.id}
+                onPress={() => requestUnblock(blockedAccount)}
+                style={{ paddingHorizontal: 10, paddingVertical: 7 }}
+              >
+                {unblockingUserId === blockedAccount.id ? (
+                  <ActivityIndicator size="small" color="#C2410C" />
+                ) : (
+                  <Text style={{ color: '#C2410C', fontFamily: 'GmarketBold', fontSize: 11 }}>
+                    Unblock
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          ))}
+          {!blockedAccountsLoading && !blockedAccountsError && serverBlockedAccounts.length === 0 ? (
+            <Text style={{ color: '#64748B', fontSize: 12, marginTop: 10 }}>
+              No blocked EasyGo accounts.
+            </Text>
+          ) : null}
+          {blockedAccountsError ? (
+            <TouchableOpacity onPress={() => loadBlockedAccounts()} style={{ marginTop: 10 }}>
+              <Text style={{ color: '#B42318', fontFamily: 'GmarketBold', fontSize: 11 }}>
+                Could not load the server list. Tap to retry.
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          {blockedAccountsLoading ? (
+            <ActivityIndicator style={{ marginTop: 12 }} size="small" color="#FF6813" />
+          ) : null}
+          {!blockedAccountsLoading && blockedAccountsCursor ? (
+            <TouchableOpacity onPress={() => loadBlockedAccounts({ append: true })} style={{ marginTop: 12 }}>
+              <Text style={{ color: '#C2410C', fontFamily: 'GmarketBold', fontSize: 11 }}>
+                Load more
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      )}
+
+      <Text style={{ fontFamily: 'GmarketBold', fontSize: 12, color: '#64748B', marginTop: 24 }}>
+        ON-DEVICE FILTERS
+      </Text>
+      {legacyBlockedDids.length > 0
+        ? row('Clear legacy block cache', legacyBlockedDids.length, () => clearLocalList(
+          'legacy block cache',
+          () => saveBlockedAccounts(listBlockedUser.filter((entry) => !legacyBlockedDids.includes(entry))),
+        ))
+        : null}
       {row('Muted accounts', listMutedUsers.length, () => clearLocalList('muted accounts', clearMutedAccounts))}
       {row('Hidden posts', listHiddenPost.length, () => clearLocalList('hidden posts', clearHiddenPosts))}
 

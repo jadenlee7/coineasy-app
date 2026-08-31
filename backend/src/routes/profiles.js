@@ -19,6 +19,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { prisma } from '../lib/db.js';
+import { express4AsyncHandler } from '../lib/express-async.js';
+import { resolveOptionalSocialViewer } from '../lib/social-viewer.js';
+import { userVisibleToViewerWhere } from '../lib/user-blocks.js';
 
 export const profilesRouter = Router();
 
@@ -53,28 +56,48 @@ export function profileFields(user, { includeWalletAddress = false } = {}) {
   };
 }
 
-async function profileWithCounts(user, options) {
+async function profileWithCounts(user, {
+  includeWalletAddress = false,
+  db = prisma,
+  viewerUserId = null,
+} = {}) {
   if (!user) return null;
   const [followers, following, posts] = await Promise.all([
-    prisma.follow.count({ where: { followeeId: user.id } }),
-    prisma.follow.count({ where: { followerId: user.id } }),
-    prisma.post.count({ where: { authorId: user.id, parentPostId: null } }),
+    db.follow.count({
+      where: {
+        followeeId: user.id,
+        ...(viewerUserId ? {
+          follower: { is: userVisibleToViewerWhere(viewerUserId) },
+        } : {}),
+      },
+    }),
+    db.follow.count({
+      where: {
+        followerId: user.id,
+        ...(viewerUserId ? {
+          followee: { is: userVisibleToViewerWhere(viewerUserId) },
+        } : {}),
+      },
+    }),
+    db.post.count({ where: { authorId: user.id, parentPostId: null } }),
   ]);
   return {
-    ...profileFields(user, options),
+    ...profileFields(user, { includeWalletAddress }),
     counts: { followers, following, posts },
   };
 }
 
-profilesRouter.get('/me', requireAuth, async (req, res) => {
+profilesRouter.get('/me', requireAuth, express4AsyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { privyDid: req.user.privyDid },
   });
   if (!user) return res.status(404).json({ error: 'not_found' });
-  res.json({ profile: await profileWithCounts(user, { includeWalletAddress: true }) });
-});
+  res.json({
+    profile: await profileWithCounts(user, { includeWalletAddress: true, viewerUserId: user.id }),
+  });
+}));
 
-profilesRouter.put('/me', requireAuth, async (req, res) => {
+profilesRouter.put('/me', requireAuth, express4AsyncHandler(async (req, res) => {
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) {
     return res
@@ -100,20 +123,24 @@ profilesRouter.put('/me', requireAuth, async (req, res) => {
     where: { id: user.id },
     data: parsed.data,
   });
-  res.json({ profile: await profileWithCounts(updated, { includeWalletAddress: true }) });
-});
+  res.json({
+    profile: await profileWithCounts(updated, { includeWalletAddress: true, viewerUserId: user.id }),
+  });
+}));
 
-profilesRouter.get('/search', async (req, res) => {
+profilesRouter.get('/search', express4AsyncHandler(async (req, res) => {
   const query = String(req.query.q || '').trim().replace(/^@/, '').slice(0, 50);
   const requestedLimit = Number(req.query.limit);
   const limit = Number.isFinite(requestedLimit) && requestedLimit > 0
     ? Math.min(Math.floor(requestedLimit), SEARCH_LIMIT_MAX)
     : SEARCH_LIMIT_DEFAULT;
 
+  const viewer = await resolveOptionalSocialViewer(req);
   if (query.length < 2) return res.json({ rows: [] });
 
   const users = await prisma.user.findMany({
     where: {
+      ...userVisibleToViewerWhere(viewer?.id),
       OR: [
         { username: { contains: query, mode: 'insensitive' } },
         { displayName: { contains: query, mode: 'insensitive' } },
@@ -122,24 +149,33 @@ profilesRouter.get('/search', async (req, res) => {
     orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
     take: limit,
   });
-  const rows = await Promise.all(users.map((user) => profileWithCounts(user)));
+  const rows = await Promise.all(users.map((user) => profileWithCounts(user, {
+    viewerUserId: viewer?.id,
+  })));
   res.json({ rows });
-});
+}));
 
-profilesRouter.get('/by-username/:username', async (req, res) => {
+profilesRouter.get('/by-username/:username', express4AsyncHandler(async (req, res) => {
   const username = String(req.params.username || '').toLowerCase();
+  const viewer = await resolveOptionalSocialViewer(req);
   if (!USERNAME_RE.test(username)) {
     return res.status(400).json({ error: 'bad_username' });
   }
-  const user = await prisma.user.findUnique({ where: { username } });
-  if (!user) return res.status(404).json({ error: 'not_found' });
-  res.json({ profile: await profileWithCounts(user) });
-});
-
-profilesRouter.get('/:userId', async (req, res) => {
-  const user = await prisma.user.findUnique({
-    where: { id: req.params.userId },
+  const user = await prisma.user.findFirst({
+    where: { username, ...userVisibleToViewerWhere(viewer?.id) },
   });
   if (!user) return res.status(404).json({ error: 'not_found' });
-  res.json({ profile: await profileWithCounts(user) });
-});
+  res.json({ profile: await profileWithCounts(user, { viewerUserId: viewer?.id }) });
+}));
+
+profilesRouter.get('/:userId', express4AsyncHandler(async (req, res) => {
+  const viewer = await resolveOptionalSocialViewer(req);
+  const user = await prisma.user.findFirst({
+    where: {
+      id: req.params.userId,
+      ...userVisibleToViewerWhere(viewer?.id),
+    },
+  });
+  if (!user) return res.status(404).json({ error: 'not_found' });
+  res.json({ profile: await profileWithCounts(user, { viewerUserId: viewer?.id }) });
+}));

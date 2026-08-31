@@ -36,6 +36,8 @@ import { SOCIAL_CATEGORIES } from './data/socialCategories';
 import { PrivyProvider, usePrivy } from '@privy-io/expo';
 import useAuthSync from './hooks/useAuthSync';
 import useAccountDeletionSessionGate from './hooks/useAccountDeletionSessionGate';
+import { api } from './utils/api';
+import { synchronizeServerBlockCache } from './utils/serverBlockCacheSync.mjs';
 import {
   fallbackPresentationData,
   profilePresentationData,
@@ -179,10 +181,64 @@ function AuthBridge({ accountDeletionGuard, onDeletionBlocked }) {
   const { setUser, setUserData } = useContext(GlobalContext);
   const deviceAccountData = useDeviceAccountData();
   const privyReady = Boolean(privy?.isReady);
+  const blockSyncGenerationRef = useRef(0);
 
   useEffect(() => {
     if (deletionBlocked && error?.code) onDeletionBlocked?.(error.code);
   }, [deletionBlocked, error?.code, onDeletionBlocked]);
+
+  useEffect(() => {
+    const generation = ++blockSyncGenerationRef.current;
+    const expectedLease = deviceAccountData.accountLease;
+    const expectedOwnerUserId = privyUserId;
+    const expectedRevision = deviceAccountData.blockCacheRevision;
+    const isCurrent = () => Boolean(
+      generation === blockSyncGenerationRef.current
+      && expectedOwnerUserId
+      && deviceAccountData.isCurrentAccountLease(expectedLease)
+      && deviceAccountData.isCurrentBlockCacheRevision(expectedLease, expectedRevision)
+    );
+    if (
+      !profile?.id
+      || !expectedOwnerUserId
+      || deviceAccountData.status !== 'ready'
+      || deviceAccountData.ownerUserId !== expectedOwnerUserId
+      || !isCurrent()
+    ) return undefined;
+
+    void synchronizeServerBlockCache({
+      currentEntries: deviceAccountData.blockedAccounts,
+      isCurrent,
+      listPage: ({ cursor, limit }) => api.blocks.list({
+        cursor,
+        limit,
+        expectedAuthUserId: expectedOwnerUserId,
+      }),
+      saveEntries: (entries) => deviceAccountData.saveServerBlockSnapshot(entries, {
+        expectedLease,
+        expectedRevision,
+      }),
+    }).then((synchronized) => {
+      if (synchronized && isCurrent()) {
+        deviceAccountData.confirmServerBlockSync(expectedLease, expectedRevision);
+      }
+    }).catch(() => {
+      // Preserve the last account-scoped cache when the server cannot confirm a
+      // complete list. Signed-in server reads still enforce the relationship.
+    });
+    return () => { blockSyncGenerationRef.current += 1; };
+  }, [
+    deviceAccountData.accountLease,
+    deviceAccountData.blockCacheRevision,
+    deviceAccountData.confirmServerBlockSync,
+    deviceAccountData.isCurrentBlockCacheRevision,
+    deviceAccountData.isCurrentAccountLease,
+    deviceAccountData.ownerUserId,
+    deviceAccountData.saveServerBlockSnapshot,
+    deviceAccountData.status,
+    privyUserId,
+    profile?.id,
+  ]);
 
   useEffect(() => {
     const profileMatchesPrivy = !profile?.privyDid

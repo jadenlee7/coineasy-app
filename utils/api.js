@@ -350,20 +350,28 @@ export const api = {
         expectedAuthUserId,
       })
     ),
-    // Public profile by userId (cuid).
-    get: (userId) => request('GET', `/profiles/${encodeURIComponent(userId)}`, {
-      auth: false,
-    }),
-    // Public profile by username (URL-safe).
-    byUsername: (username) =>
+    // Server routes retain an anonymous projection, but the signed-in EasyGo
+    // app binds viewer-relative reads so account block rules are enforced.
+    get: (userId, { signal, expectedAuthUserId } = {}) => (
+      request('GET', `/profiles/${encodeURIComponent(userId)}`, {
+        signal,
+        boundAuth: true,
+        expectedAuthUserId,
+      })
+    ),
+    byUsername: (username, { signal, expectedAuthUserId } = {}) =>
       request('GET', `/profiles/by-username/${encodeURIComponent(username)}`, {
-        auth: false,
+        signal,
+        boundAuth: true,
+        expectedAuthUserId,
       }),
     // Prefix/substring discovery across username and display name.
-    search: (query, { limit = 20 } = {}) =>
+    search: (query, { limit = 20, signal, expectedAuthUserId } = {}) =>
       request('GET', '/profiles/search', {
         query: { q: query, limit },
-        auth: false,
+        signal,
+        boundAuth: true,
+        expectedAuthUserId,
       }),
   },
 
@@ -484,16 +492,55 @@ export const api = {
         expectedAuthUserId,
       }),
     // Followers / following lists for a user (cursor pagination).
-    followers: (userId, { cursor, limit = 20 } = {}) =>
+    followers: (userId, {
+      cursor,
+      limit = 20,
+      signal,
+      expectedAuthUserId,
+    } = {}) =>
       request('GET', `/profiles/${encodeURIComponent(userId)}/followers`, {
         query: { cursor, limit },
-        auth: false,
+        signal,
+        boundAuth: true,
+        expectedAuthUserId,
       }),
-    following: (userId, { cursor, limit = 20 } = {}) =>
+    following: (userId, {
+      cursor,
+      limit = 20,
+      signal,
+      expectedAuthUserId,
+    } = {}) =>
       request('GET', `/profiles/${encodeURIComponent(userId)}/following`, {
         query: { cursor, limit },
-        auth: false,
+        signal,
+        boundAuth: true,
+        expectedAuthUserId,
       }),
+  },
+
+  blocks: {
+    list: ({ cursor, limit = 50, signal, expectedAuthUserId } = {}) => (
+      request('GET', '/blocks', {
+        query: { cursor, limit },
+        signal,
+        boundAuth: true,
+        expectedAuthUserId,
+      })
+    ),
+    block: (targetUserId, { signal, expectedAuthUserId } = {}) => (
+      request('POST', `/blocks/${encodeURIComponent(targetUserId)}`, {
+        signal,
+        boundAuth: true,
+        expectedAuthUserId,
+      })
+    ),
+    unblock: (targetUserId, { signal, expectedAuthUserId } = {}) => (
+      request('DELETE', `/blocks/${encodeURIComponent(targetUserId)}`, {
+        signal,
+        boundAuth: true,
+        expectedAuthUserId,
+      })
+    ),
   },
 
   notifications: {

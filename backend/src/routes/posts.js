@@ -39,6 +39,12 @@ import {
   POST_CONTENT_SAFETY_REJECTION_CODE,
   POST_MEDIA_SAFETY_REJECTION_CODE,
 } from '../lib/post-content-safety.js';
+import { resolveOptionalSocialViewer } from '../lib/social-viewer.js';
+import {
+  isUserPairBlocked,
+  lockUserPair,
+  userVisibleToViewerWhere,
+} from '../lib/user-blocks.js';
 
 export const postsRouter = Router();
 
@@ -79,9 +85,23 @@ export function publicPostContent(row) {
 }
 
 async function shapePost(row, viewerUserId) {
+  const visibleUserWhere = userVisibleToViewerWhere(viewerUserId);
+  const visibleLikeWhere = {
+    postId: row.id,
+    ...(viewerUserId ? { user: { is: visibleUserWhere } } : {}),
+  };
+  const visibleReplyWhere = {
+    parentPostId: row.id,
+    ...(viewerUserId ? {
+      OR: [
+        { authorId: null },
+        { author: { is: visibleUserWhere } },
+      ],
+    } : {}),
+  };
   const [likeCount, replyCount, likedByMe] = await Promise.all([
-    prisma.like.count({ where: { postId: row.id } }),
-    prisma.post.count({ where: { parentPostId: row.id } }),
+    prisma.like.count({ where: visibleLikeWhere }),
+    prisma.post.count({ where: visibleReplyWhere }),
     viewerUserId
       ? prisma.like.findUnique({
           where: { postId_userId: { postId: row.id, userId: viewerUserId } },
@@ -104,22 +124,6 @@ async function shapePost(row, viewerUserId) {
   };
 }
 
-async function viewerUserId(req) {
-  // Optional auth: if a valid bearer is present, resolve viewer id;
-  // otherwise treat as anonymous.
-  const header = req.headers.authorization || '';
-  if (!/^Bearer\s+/i.test(header)) return null;
-  try {
-    const { verifyAccessToken } = await import('../lib/privy.js');
-    const token = header.replace(/^Bearer\s+/i, '');
-    const { userId: privyDid } = await verifyAccessToken(token);
-    const user = await prisma.user.findUnique({ where: { privyDid } });
-    return user?.id || null;
-  } catch {
-    return null;
-  }
-}
-
 async function paginate({ where, limit, cursor }) {
   const rows = await prisma.post.findMany({
     where,
@@ -139,11 +143,14 @@ function optionalTextQuery(value, maxLength = 100) {
   return normalized ? normalized.slice(0, maxLength) : null;
 }
 
-export function createGlobalFeedWhere({ query, tag } = {}) {
+export function createGlobalFeedWhere({ query, tag, viewerUserId = null } = {}) {
   return {
     parentPostId: null,
     deletedAt: null,
     authorId: { not: null },
+    ...(viewerUserId ? {
+      author: { is: userVisibleToViewerWhere(viewerUserId) },
+    } : {}),
     ...(query ? { body: { contains: query, mode: 'insensitive' } } : {}),
     ...(tag ? { AND: [{ body: { contains: tag, mode: 'insensitive' } }] } : {}),
   };
@@ -155,13 +162,13 @@ postsRouter.get('/', express4AsyncHandler(async (req, res) => {
   const cursor = req.query.cursor ? String(req.query.cursor) : null;
   const query = optionalTextQuery(req.query.q);
   const tag = optionalTextQuery(req.query.tag, 50);
-  const viewer = await viewerUserId(req);
+  const viewer = await resolveOptionalSocialViewer(req);
   const { page, nextCursor } = await paginate({
-    where: createGlobalFeedWhere({ query, tag }),
+    where: createGlobalFeedWhere({ query, tag, viewerUserId: viewer?.id }),
     limit,
     cursor,
   });
-  const rows = await Promise.all(page.map((p) => shapePost(p, viewer)));
+  const rows = await Promise.all(page.map((p) => shapePost(p, viewer?.id)));
   res.json({ rows, nextCursor });
 }));
 
@@ -169,38 +176,78 @@ postsRouter.get('/', express4AsyncHandler(async (req, res) => {
 postsRouter.get('/by-author/:userId', express4AsyncHandler(async (req, res) => {
   const limit = parseLimit(req.query);
   const cursor = req.query.cursor ? String(req.query.cursor) : null;
-  const viewer = await viewerUserId(req);
+  const viewer = await resolveOptionalSocialViewer(req);
+  if (viewer?.id && await isUserPairBlocked(prisma, viewer.id, req.params.userId)) {
+    return res.status(404).json({ error: 'not_found' });
+  }
   const { page, nextCursor } = await paginate({
-    where: { authorId: req.params.userId, parentPostId: null },
+    where: {
+      authorId: req.params.userId,
+      parentPostId: null,
+      ...(viewer?.id ? {
+        author: { is: userVisibleToViewerWhere(viewer.id) },
+      } : {}),
+    },
     limit,
     cursor,
   });
-  const rows = await Promise.all(page.map((p) => shapePost(p, viewer)));
+  const rows = await Promise.all(page.map((p) => shapePost(p, viewer?.id)));
   res.json({ rows, nextCursor });
 }));
 
 // --- GET /posts/:id (single) ----------------------------------------
 postsRouter.get('/:id', express4AsyncHandler(async (req, res) => {
-  const viewer = await viewerUserId(req);
-  const post = await prisma.post.findUnique({
-    where: { id: req.params.id },
+  const viewer = await resolveOptionalSocialViewer(req);
+  const post = await prisma.post.findFirst({
+    where: {
+      id: req.params.id,
+      ...(viewer?.id ? {
+        OR: [
+          { authorId: null },
+          { author: { is: userVisibleToViewerWhere(viewer.id) } },
+        ],
+      } : {}),
+    },
     include: { author: { select: authorSummary } },
   });
   if (!post) return res.status(404).json({ error: 'not_found' });
-  res.json({ post: await shapePost(post, viewer) });
+  res.json({ post: await shapePost(post, viewer?.id) });
 }));
 
 // --- GET /posts/:id/replies -----------------------------------------
 postsRouter.get('/:id/replies', express4AsyncHandler(async (req, res) => {
   const limit = parseLimit(req.query);
   const cursor = req.query.cursor ? String(req.query.cursor) : null;
-  const viewer = await viewerUserId(req);
+  const viewer = await resolveOptionalSocialViewer(req);
+  const parent = await prisma.post.findFirst({
+    where: {
+      id: req.params.id,
+      ...(viewer?.id ? {
+        OR: [
+          { authorId: null },
+          { author: { is: userVisibleToViewerWhere(viewer.id) } },
+        ],
+      } : {}),
+    },
+    select: { authorId: true },
+  });
+  if (!parent) {
+    return res.status(404).json({ error: 'not_found' });
+  }
   const { page, nextCursor } = await paginate({
-    where: { parentPostId: req.params.id },
+    where: {
+      parentPostId: req.params.id,
+      ...(viewer?.id ? {
+        OR: [
+          { authorId: null },
+          { author: { is: userVisibleToViewerWhere(viewer.id) } },
+        ],
+      } : {}),
+    },
     limit,
     cursor,
   });
-  const rows = await Promise.all(page.map((p) => shapePost(p, viewer)));
+  const rows = await Promise.all(page.map((p) => shapePost(p, viewer?.id)));
   res.json({ rows, nextCursor });
 }));
 
@@ -246,23 +293,50 @@ export function createCreatePostHandler({
     const user = await db.user.findUnique({ where: { privyDid: req.user.privyDid } });
     if (!user) return res.status(404).json({ error: 'user_not_found' });
 
-    if (parsed.data.parentPostId) {
-      const parent = await db.post.findUnique({ where: { id: parsed.data.parentPostId } });
-      if (!parent) return res.status(404).json({ error: 'parent_not_found' });
+    const data = {
+      authorId: user.id,
+      body: parsed.data.body,
+      parentPostId: parsed.data.parentPostId ?? null,
+      mediaUrl: parsed.data.mediaUrl ?? null,
+    };
+    let outcome;
+    if (!parsed.data.parentPostId) {
+      outcome = {
+        created: await db.post.create({
+          data,
+          include: { author: { select: authorSummary } },
+        }),
+      };
+    } else {
+      outcome = await db.$transaction(async (tx) => {
+        const parent = await tx.post.findUnique({
+          where: { id: parsed.data.parentPostId },
+          select: { id: true, authorId: true, deletedAt: true },
+        });
+        if (!parent || parent.deletedAt || !parent.authorId) {
+          return { error: 'parent_not_found', status: 404 };
+        }
+        if (parent.authorId !== user.id) {
+          await lockUserPair(tx, user.id, parent.authorId);
+          if (await isUserPairBlocked(tx, user.id, parent.authorId)) {
+            return { error: 'blocked_interaction', status: 409 };
+          }
+        }
+        const created = await tx.post.create({
+          data,
+          include: { author: { select: authorSummary } },
+        });
+        return { created };
+      });
     }
-
-    const created = await db.post.create({
-      data: {
-        authorId: user.id,
-        body: parsed.data.body,
-        parentPostId: parsed.data.parentPostId ?? null,
-        mediaUrl: parsed.data.mediaUrl ?? null,
-      },
-      include: { author: { select: authorSummary } },
-    });
-    return res.status(201).json({ post: await shape(created, user.id) });
+    if (outcome.error) return res.status(outcome.status).json({ error: outcome.error });
+    return res.status(201).json({ post: await shape(outcome.created, user.id) });
   };
 }
+
+// Keep the earlier injectable name for focused block-interaction tests and
+// downstream imports while the route uses the more explicit factory name.
+export const createPostHandler = createCreatePostHandler;
 
 postsRouter.post(
   '/',
@@ -504,19 +578,43 @@ postsRouter.post(
 );
 
 // --- POST /posts/:id/like (idempotent) -------------------------------
-postsRouter.post('/:id/like', requireAuth, express4AsyncHandler(async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { privyDid: req.user.privyDid } });
-  if (!user) return res.status(404).json({ error: 'user_not_found' });
-  const post = await prisma.post.findUnique({ where: { id: req.params.id } });
-  if (!post) return res.status(404).json({ error: 'not_found' });
-  await prisma.like.upsert({
-    where: { postId_userId: { postId: post.id, userId: user.id } },
-    create: { postId: post.id, userId: user.id },
-    update: {},
-  });
-  const likes = await prisma.like.count({ where: { postId: post.id } });
-  res.json({ liked: true, likes });
-}));
+export function createLikePostHandler({ db = prisma } = {}) {
+  return async function likePost(req, res) {
+    const user = await db.user.findUnique({ where: { privyDid: req.user.privyDid } });
+    if (!user) return res.status(404).json({ error: 'user_not_found' });
+    const outcome = await db.$transaction(async (tx) => {
+      const post = await tx.post.findUnique({
+        where: { id: req.params.id },
+        select: { id: true, authorId: true, deletedAt: true },
+      });
+      if (!post || post.deletedAt || !post.authorId) {
+        return { error: 'not_found', status: 404 };
+      }
+      if (post.authorId !== user.id) {
+        await lockUserPair(tx, user.id, post.authorId);
+        if (await isUserPairBlocked(tx, user.id, post.authorId)) {
+          return { error: 'blocked_interaction', status: 409 };
+        }
+      }
+      await tx.like.upsert({
+        where: { postId_userId: { postId: post.id, userId: user.id } },
+        create: { postId: post.id, userId: user.id },
+        update: {},
+      });
+      return { postId: post.id };
+    });
+    if (outcome.error) return res.status(outcome.status).json({ error: outcome.error });
+    const likes = await db.like.count({
+      where: {
+        postId: outcome.postId,
+        user: { is: userVisibleToViewerWhere(user.id) },
+      },
+    });
+    return res.json({ liked: true, likes });
+  };
+}
+
+postsRouter.post('/:id/like', requireAuth, express4AsyncHandler(createLikePostHandler()));
 
 // --- DELETE /posts/:id/like (idempotent) -----------------------------
 postsRouter.delete('/:id/like', requireAuth, express4AsyncHandler(async (req, res) => {
@@ -525,6 +623,11 @@ postsRouter.delete('/:id/like', requireAuth, express4AsyncHandler(async (req, re
   await prisma.like
     .delete({ where: { postId_userId: { postId: req.params.id, userId: user.id } } })
     .catch(() => null); // ignore "not found" so endpoint is idempotent
-  const likes = await prisma.like.count({ where: { postId: req.params.id } });
+  const likes = await prisma.like.count({
+    where: {
+      postId: req.params.id,
+      user: { is: userVisibleToViewerWhere(user.id) },
+    },
+  });
   res.json({ liked: false, likes });
 }));

@@ -242,6 +242,9 @@ test('privacy exports, consent writes, and course rewards are owner-bound before
       }),
       () => api.profiles.me({ expectedAuthUserId: 'privy:owner-a' }),
       () => api.profiles.updateMe({}, { expectedAuthUserId: 'privy:owner-a' }),
+      () => api.profiles.get('user-1', { expectedAuthUserId: 'privy:owner-a' }),
+      () => api.profiles.byUsername('alice', { expectedAuthUserId: 'privy:owner-a' }),
+      () => api.profiles.search('ali', { expectedAuthUserId: 'privy:owner-a' }),
       () => api.posts.feed({ expectedAuthUserId: 'privy:owner-a' }),
       () => api.posts.timeline('user-1', { expectedAuthUserId: 'privy:owner-a' }),
       () => api.posts.get('post-1', { expectedAuthUserId: 'privy:owner-a' }),
@@ -255,6 +258,11 @@ test('privacy exports, consent writes, and course rewards are owner-bound before
       () => api.follows.follow('user-1', { expectedAuthUserId: 'privy:owner-a' }),
       () => api.follows.unfollow('user-1', { expectedAuthUserId: 'privy:owner-a' }),
       () => api.follows.status('user-1', { expectedAuthUserId: 'privy:owner-a' }),
+      () => api.follows.followers('user-1', { expectedAuthUserId: 'privy:owner-a' }),
+      () => api.follows.following('user-1', { expectedAuthUserId: 'privy:owner-a' }),
+      () => api.blocks.list({ expectedAuthUserId: 'privy:owner-a' }),
+      () => api.blocks.block('user-1', { expectedAuthUserId: 'privy:owner-a' }),
+      () => api.blocks.unblock('user-1', { expectedAuthUserId: 'privy:owner-a' }),
       () => api.notifications.list({ expectedAuthUserId: 'privy:owner-a' }),
     ];
     for (const attempt of attempts) {
@@ -276,12 +284,7 @@ test('privacy exports, consent writes, and course rewards are owner-bound before
       };
     };
     await api.socialStatus();
-    await api.profiles.get('user-1');
-    await api.profiles.byUsername('alice');
-    await api.profiles.search('ali');
-    await api.follows.followers('user-1');
-    await api.follows.following('user-1');
-    assert.equal(publicRequests.length, 6);
+    assert.equal(publicRequests.length, 1);
     assert.equal(tokenProviderCalls, 0);
     for (const request of publicRequests) {
       assert.equal(request.options.headers.Authorization, undefined);

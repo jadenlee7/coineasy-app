@@ -9,6 +9,8 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { prisma } from '../lib/db.js';
+import { express4AsyncHandler } from '../lib/express-async.js';
+import { userVisibleToViewerWhere } from '../lib/user-blocks.js';
 
 export const notificationsRouter = Router();
 
@@ -31,22 +33,32 @@ function compareNewest(left, right) {
   return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
 }
 
-notificationsRouter.get('/', requireAuth, async (req, res) => {
+notificationsRouter.get('/', requireAuth, express4AsyncHandler(async (req, res) => {
   const me = await prisma.user.findUnique({ where: { privyDid: req.user.privyDid } });
   if (!me) return res.status(404).json({ error: 'user_not_found' });
+  const visibleUserWhere = userVisibleToViewerWhere(me.id);
 
   const limit = parseLimit(req.query.limit);
   const sourceLimit = Math.min(limit * 2, MAX_LIMIT);
   const [follows, likes, replies] = await Promise.all([
     prisma.follow.findMany({
-      where: { followeeId: me.id, followerId: { not: me.id } },
+      where: {
+        followeeId: me.id,
+        followerId: {
+          not: me.id,
+        },
+        follower: { is: visibleUserWhere },
+      },
       orderBy: { createdAt: 'desc' },
       take: sourceLimit,
       include: { follower: { select: actorSummary } },
     }),
     prisma.like.findMany({
       where: {
-        userId: { not: me.id },
+        userId: {
+          not: me.id,
+        },
+        user: { is: visibleUserWhere },
         post: { authorId: me.id },
       },
       orderBy: { createdAt: 'desc' },
@@ -58,7 +70,10 @@ notificationsRouter.get('/', requireAuth, async (req, res) => {
     }),
     prisma.post.findMany({
       where: {
-        authorId: { not: me.id },
+        authorId: {
+          not: me.id,
+        },
+        author: { is: visibleUserWhere },
         parentPostId: { not: null },
         parent: { is: { authorId: me.id } },
       },
@@ -100,4 +115,4 @@ notificationsRouter.get('/', requireAuth, async (req, res) => {
   ].sort(compareNewest).slice(0, limit);
 
   res.json({ rows });
-});
+}));

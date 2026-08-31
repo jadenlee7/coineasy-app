@@ -150,8 +150,14 @@ export default function ProfileDetails({profile, refreshProfile, pfpMarginTop = 
         let active = true;
         setCommonFollowLoading(true);
         Promise.all([
-            api.follows.followers(targetUserId, { limit: 200 }),
-            api.follows.followers(ownUserId, { limit: 200 }),
+            api.follows.followers(targetUserId, {
+                limit: 200,
+                expectedAuthUserId: operationLease.ownerUserId,
+            }),
+            api.follows.followers(ownUserId, {
+                limit: 200,
+                expectedAuthUserId: operationLease.ownerUserId,
+            }),
         ]).then(([selectedResult, ownResult]) => {
             if (!active || !isCurrentLease(operationLease)) return;
             const ownFollowerIds = new Set((ownResult?.rows || []).map((item) => item.id));

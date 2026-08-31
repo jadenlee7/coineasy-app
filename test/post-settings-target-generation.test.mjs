@@ -129,10 +129,12 @@ test('post settings presentation identity includes target and a process-wide ope
   assert.match(source, /let activePostSettingsPresentation = null;/);
   assert.match(target, /postId: post\?\.easygo\?\.postId \|\| post\?\.stream_id \|\| null/);
   assert.match(target, /creatorDid: post\?\.creator_details\?\.did \|\| post\?\.creator \|\| null/);
+  assert.match(target, /authorUserId: post\?\.easygo\?\.authorId/);
   assertOrdered(begin, [
     'const target = createPostSettingsTarget(source);',
     'postId: target.postId,',
     'creatorDid: target.creatorDid,',
+    'authorUserId: target.authorUserId,',
     'openGeneration: ++nextPostSettingsOpenGeneration,',
     'activePostSettingsPresentation = presentation;',
   ], 'begin presentation');
@@ -140,6 +142,7 @@ test('post settings presentation identity includes target and a process-wide ope
     'activePostSettingsPresentation === candidate',
     'activePostSettingsPresentation.postId === candidate.postId',
     'activePostSettingsPresentation.creatorDid === candidate.creatorDid',
+    'activePostSettingsPresentation.authorUserId === candidate.authorUserId',
     'activePostSettingsPresentation.openGeneration === candidate.openGeneration',
   ], 'current presentation');
   assert.match(source, /presentationSourceRef\.current !== editedPost[\s\S]*?beginPostSettingsPresentation\(editedPost\)/);
@@ -161,6 +164,7 @@ test('operation capture combines the live account lease with immutable post pres
     'isCurrentPostSettingsPresentation(operation.expectedPresentation)',
     'operation.expectedPostId === operation.expectedPresentation.postId',
     'operation.expectedCreatorDid === operation.expectedPresentation.creatorDid',
+    'operation.expectedAuthorUserId === operation.expectedPresentation.authorUserId',
     'operation.expectedOpenGeneration === operation.expectedPresentation.openGeneration',
   ], 'operation freshness');
   assertOrdered(capture, [
@@ -171,6 +175,7 @@ test('operation capture combines the live account lease with immutable post pres
     'return Object.freeze({',
     'expectedPostId: expectedPresentation.postId,',
     'expectedCreatorDid: expectedPresentation.creatorDid,',
+    'expectedAuthorUserId: expectedPresentation.authorUserId,',
     'expectedOpenGeneration: expectedPresentation.openGeneration,',
     'source: expectedPresentation.source,',
   ], 'operation capture');
@@ -243,8 +248,13 @@ test('block, hide, and mute preserve the X mutation while suppressing stale Y UI
       'showMessage({',
       'hide(operation)',
     ], `${label} operation`);
-    assert.match(operation, /catch \{\s*if \(isCurrentOperation\(operation\)\) \{\s*setLoader\(false\);\s*Alert\.alert/);
+    assert.match(operation, /catch(?: \(error\))? \{\s*if \(isCurrentOperation\(operation\)\) \{\s*setLoader\(false\);\s*Alert\.alert/);
   }
+  const block = section('const blockUser = async', '    const hidePost = async');
+  assertOrdered(block, [
+    'await api.blocks.block(operation.expectedAuthorUserId',
+    'await saveBlockedAccounts(temp_list);',
+  ], 'server block before legacy cache');
 });
 
 test('persisted report and animation callbacks cannot mutate a replacement menu', () => {

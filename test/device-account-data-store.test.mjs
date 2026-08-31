@@ -330,7 +330,8 @@ test('provider actions capture their render lease instead of borrowing a later s
   );
 
   assert.match(source, /clearBlockedAccounts:\s*\(\) => clearList\(\s*lease,/);
-  assert.match(source, /saveBlockedAccounts:\s*\(next\) => saveList\(\s*lease,/);
+  assert.match(source, /const saveBlockedAccounts = useCallback\(\(next\) => \{[\s\S]*?const expectedLease = lease;/);
+  assert.match(source, /invalidateServerBlockSync\(expectedLease\)[\s\S]*?return saveList\(\s*expectedLease,/);
   assert.match(source, /saveCourseProgress:\s*\(next\) => saveList\(\s*lease,/);
   assert.match(source, /saveExpoPushToken:[\s\S]*?expectedLease:\s*lease,/);
   assert.match(source, /authenticated \? \(privy\?\.user\?\.id \?\? null\) : null/);

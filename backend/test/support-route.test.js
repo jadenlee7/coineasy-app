@@ -52,8 +52,12 @@ test('support page publishes fixed contact and safety guidance without collectio
   assert.match(res.body, /mailto:contact@coineasy\.xyz\?subject=EasyGo%20support/);
   assert.match(res.body, /Report/);
   assert.match(res.body, /Block/);
-  assert.match(res.body, /on-device safety list/);
-  assert.match(res.body, /resets the entire on-device list/);
+  assert.match(res.body, /follows your EasyGo account/);
+  assert.match(res.body, /Public signed-out views may still show public content/);
+  assert.match(res.body, /Blocked EasyGo accounts/);
+  assert.match(res.body, /one account at a time/);
+  assert.match(res.body, /does not restore previous follows/);
+  assert.doesNotMatch(res.body, /on-device safety list|resets the entire on-device list/);
   assert.doesNotMatch(res.body, /account deletion|Delete EasyGo account|Delete your account/i);
   assert.doesNotMatch(res.body, /<script|<form|http:\/\//i);
 });

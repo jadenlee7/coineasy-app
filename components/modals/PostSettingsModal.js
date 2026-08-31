@@ -20,6 +20,7 @@ import useGetUsername from "../../hooks/useGetUsername";
 import usePosts from "../../hooks/usePosts";
 import { getEasyGoUserId } from "../../utils/socialPostAdapter";
 import { api, ApiError } from '../../utils/api';
+import { addServerBlockedAccountId } from '../../utils/blockedAccounts.mjs';
 
 const list_report = [
     {code: 'SPAM', label: 'It\'s spam'},
@@ -41,6 +42,18 @@ function reportErrorMessage(error) {
     return 'EasyGo did not receive this report. Check the connection and try again.';
 }
 
+function blockErrorMessage(error) {
+    if (error instanceof ApiError) {
+        if (error.status === 401) return 'Your login expired. Sign in again before blocking.';
+        if (error.status === 404) return 'This EasyGo account is no longer available.';
+        if (error.status === 409 && error.body?.error === 'block_limit_reached') {
+            return 'Your blocked-account list is full. Unblock one account before adding another.';
+        }
+        if (error.status === 409) return 'This account cannot be blocked from the current profile.';
+    }
+    return 'EasyGo did not save this block. Check the connection and try again.';
+}
+
 let nextPostSettingsOpenGeneration = 0;
 let activePostSettingsPresentation = null;
 
@@ -49,6 +62,9 @@ function createPostSettingsTarget(source) {
     return Object.freeze({
         postId: post?.easygo?.postId || post?.stream_id || null,
         creatorDid: post?.creator_details?.did || post?.creator || null,
+        authorUserId: post?.easygo?.authorId
+            || post?.creator_details?.profile?.data?.easygoUserId
+            || null,
     });
 }
 
@@ -58,6 +74,7 @@ function beginPostSettingsPresentation(source) {
         source,
         postId: target.postId,
         creatorDid: target.creatorDid,
+        authorUserId: target.authorUserId,
         openGeneration: ++nextPostSettingsOpenGeneration,
     });
     activePostSettingsPresentation = presentation;
@@ -70,6 +87,7 @@ function isCurrentPostSettingsPresentation(candidate) {
         && activePostSettingsPresentation === candidate
         && activePostSettingsPresentation.postId === candidate.postId
         && activePostSettingsPresentation.creatorDid === candidate.creatorDid
+        && activePostSettingsPresentation.authorUserId === candidate.authorUserId
         && activePostSettingsPresentation.openGeneration === candidate.openGeneration
     );
 }
@@ -154,6 +172,7 @@ export default function PostSettingsModal() {
         && isCurrentPostSettingsPresentation(operation.expectedPresentation)
         && operation.expectedPostId === operation.expectedPresentation.postId
         && operation.expectedCreatorDid === operation.expectedPresentation.creatorDid
+        && operation.expectedAuthorUserId === operation.expectedPresentation.authorUserId
         && operation.expectedOpenGeneration === operation.expectedPresentation.openGeneration
     );
 
@@ -172,6 +191,7 @@ export default function PostSettingsModal() {
             expectedPresentation,
             expectedPostId: expectedPresentation.postId,
             expectedCreatorDid: expectedPresentation.creatorDid,
+            expectedAuthorUserId: expectedPresentation.authorUserId,
             expectedOpenGeneration: expectedPresentation.openGeneration,
             hiddenPostId: expectedPresentation.source?.value?.stream_id || expectedPresentation.postId,
             source: expectedPresentation.source,
@@ -379,34 +399,59 @@ export default function PostSettingsModal() {
     const blockUser = async () => {
         const operation = captureOperation();
         if (!operation) return;
+        if (!backendConfigured) {
+            Alert.alert('Backend not connected', 'EasyGo cannot save an account block without the backend.');
+            return;
+        }
+        if (!operation.expectedAuthorUserId) {
+            Alert.alert('Account unavailable', 'Close this menu and reopen the post before blocking.');
+            return;
+        }
         Haptics.selectionAsync()
         try {
             setLoader(true)
-    
-            const userInfo = operation.expectedCreatorDid;
-            const temp_list = listBlockedUser?.includes(userInfo)
-                ? listBlockedUser
-                : [...(listBlockedUser || []), userInfo];
-            const saved = await saveBlockedAccounts(temp_list);
-            if (!isCurrentOperation(operation)) return;
-            if (!saved) {
-                setLoader(false);
-                return;
+
+            const result = await api.blocks.block(operation.expectedAuthorUserId, {
+                expectedAuthUserId: operation.expectedLease.ownerUserId,
+            });
+            if (result?.blocked !== true) throw new Error('block_not_persisted');
+
+            // Retain the legacy device cache only for immediate filtering of
+            // already-rendered cards. The server relationship is authoritative.
+            if (isCurrentLease(operation.expectedLease)) {
+                if (operation.expectedAuthorUserId) {
+                    const temp_list = addServerBlockedAccountId(
+                        listBlockedUser,
+                        operation.expectedAuthorUserId,
+                    );
+                    try {
+                        await saveBlockedAccounts(temp_list);
+                    } catch {
+                        // The server block already follows the account. A
+                        // failed device cache write must not misreport it.
+                    }
+                }
+                try {
+                    operation.source?.callbackDelete?.();
+                } catch {
+                    // The next owner-bound refresh enforces the server block.
+                }
             }
+            if (!isCurrentOperation(operation)) return;
 
             setLoader(false)
             showMessage({
-                message: "@"+operation.username+" is now blocked !",
+                message: "@"+operation.username+" is blocked in your EasyGo account.",
                 type: "success",
                 floating: true,
                 backgroundColor: "#3D3D3D",
                 icon: () => <SuccessIcon style={{marginRight: 10,}}/>
             });
             hide(operation)
-        } catch {
+        } catch (error) {
             if (isCurrentOperation(operation)) {
                 setLoader(false);
-                Alert.alert('Could not block account', 'Please try again.');
+                Alert.alert('Could not block account', blockErrorMessage(error));
             }
         }
     }
@@ -591,7 +636,7 @@ export default function PostSettingsModal() {
 
                                 <Text style={styles.modalText}>Block @{username} ?</Text>
                                 <Text style={{marginTop: 10, color: '#959595', fontSize: 14,textAlign:'center'}}>
-                                    @{username} will no longer be able to follow or see your posts
+                                    Signed-in EasyGo feeds, profiles, follows, likes and replies will be separated. Existing follows are removed. Public signed-out views may still show public posts.
                                 </Text>
 
                                 <View style={[tailwind('flex items-center mt-5 flex-col w-full')]}>

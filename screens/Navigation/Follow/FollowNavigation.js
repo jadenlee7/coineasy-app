@@ -113,13 +113,25 @@ const FollowNavigation = ({navigation, route}) => {
         try {
             const ownRequests = operationOwnUserId
                 ? [
-                    api.follows.followers(operationOwnUserId, {limit: 200}),
-                    api.follows.following(operationOwnUserId, {limit: 200}),
+                    api.follows.followers(operationOwnUserId, {
+                        limit: 200,
+                        expectedAuthUserId: operationLease.ownerUserId,
+                    }),
+                    api.follows.following(operationOwnUserId, {
+                        limit: 200,
+                        expectedAuthUserId: operationLease.ownerUserId,
+                    }),
                 ]
                 : [Promise.resolve(null), Promise.resolve(null)];
             const [targetFollowersResult, targetFollowingResult, ownFollowersResult, ownFollowingResult] = await Promise.all([
-                api.follows.followers(operationTargetUserId, {limit: 200}),
-                api.follows.following(operationTargetUserId, {limit: 200}),
+                api.follows.followers(operationTargetUserId, {
+                    limit: 200,
+                    expectedAuthUserId: operationLease.ownerUserId,
+                }),
+                api.follows.following(operationTargetUserId, {
+                    limit: 200,
+                    expectedAuthUserId: operationLease.ownerUserId,
+                }),
                 ...ownRequests,
             ]);
             if (!isCurrentRequest()) return;

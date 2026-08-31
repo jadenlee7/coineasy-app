@@ -49,11 +49,20 @@ See `EASYGO_BUILD_PLAN.md` §11 (data flow), §12 (backend endpoints), §13.2 (S
 | Profile editor | `PUT /profiles/me` | Update the authenticated user's display name and bio; the private response retains their wallet address. |
 | `useFollow(userId)` | `GET/POST/DELETE /follows/:userId[/status]` | Read and update viewer-relative follow state. |
 | Profile mutual counts | `GET /profiles/:userId/followers` | Compare follower summaries for the selected and current user. |
+| Post menu / Settings safety list | `GET /blocks`; `POST/DELETE /blocks/:userId` | Persist an account-owned block, remove the selected card after server acceptance, and list/unblock it after relogin. |
 | `useNotifications()` | `GET /notifications` | Derive recent follows, likes, and replies for the authenticated user. |
 | `notifyTelegram(...)` | _(none — server-driven)_ | Backend reacts to domain events; client noop. |
 
 When the post composer is opened from a selected category, it appends the
 category hashtag at publish time if the body does not already contain it.
+
+After owner-bound auth sync, the app reads every `/blocks` page before replacing
+that owner's device cache. New entries are stored by EasyGo user ID, while
+historical DID entries remain readable until explicitly cleared. A partial
+request, account/session transition, or newer same-owner block mutation cannot
+commit an older snapshot. Feed cards,
+people results, and recent profiles re-check both identity forms immediately;
+one unblock removes only the selected EasyGo ID and never clears other blocks.
 
 ## Auth flow (Phase 1)
 
@@ -227,7 +236,11 @@ mobile client if that client is used on both platforms.
 - **Social mode**: `active` preserves current behavior. A future `read_only` mode returns `410` only for writes; `retired` returns `410` for all social routes. Both responses include `/me/social-export`.
 - **Privy not yet authenticated or account changed**: owner-bound requests fail
   locally before `fetch`; they never degrade into an anonymous request or use a
-  replacement account's bearer. Public endpoints remain explicitly anonymous.
+  replacement account's bearer. A social request with no Authorization header
+  still has the public anonymous projection; once a bearer is supplied, an
+  invalid, expired, or unsynced identity returns `401` and never falls back to
+  that projection. Signed-in mobile discovery reads always send the captured
+  owner so account block filtering applies.
 - **Wallet chain/account mismatch**: the profile displays a retryable warning
   instead of claiming Base connectivity. Transaction features must remain
   unavailable unless the same runtime attestation reports `ready`.

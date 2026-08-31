@@ -1,3 +1,10 @@
+const publicSocialUserSelect = {
+  id: true,
+  username: true,
+  displayName: true,
+  pfp: true,
+};
+
 const userDataSelect = {
   id: true,
   privyDid: true,
@@ -63,6 +70,15 @@ const userDataSelect = {
   likes: { orderBy: [{ createdAt: 'asc' }, { postId: 'asc' }] },
   following: { orderBy: [{ createdAt: 'asc' }, { followeeId: 'asc' }] },
   followers: { orderBy: [{ createdAt: 'asc' }, { followerId: 'asc' }] },
+  // Export only blocks chosen by this account. Inbound blocks belong to the
+  // other account's safety state and must not be disclosed here.
+  blocksMade: {
+    orderBy: [{ createdAt: 'asc' }, { blockedId: 'asc' }],
+    select: {
+      createdAt: true,
+      blocked: { select: publicSocialUserSelect },
+    },
+  },
   questCompletions: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
   segments: {
     orderBy: [{ matchedAt: 'asc' }, { segmentId: 'asc' }],
@@ -72,13 +88,6 @@ const userDataSelect = {
       },
     },
   },
-};
-
-const publicSocialUserSelect = {
-  id: true,
-  username: true,
-  displayName: true,
-  pfp: true,
 };
 
 const legacySocialDataSelect = {
@@ -118,6 +127,13 @@ const legacySocialDataSelect = {
       follower: { select: publicSocialUserSelect },
     },
   },
+  blocksMade: {
+    orderBy: [{ createdAt: 'asc' }, { blockedId: 'asc' }],
+    select: {
+      createdAt: true,
+      blocked: { select: publicSocialUserSelect },
+    },
+  },
 };
 
 export async function exportLocalUserData(prisma, privyDid, now = new Date()) {
@@ -147,6 +163,7 @@ export async function exportLegacySocialData(prisma, privyDid, now = new Date())
     likes,
     following,
     followers,
+    blocksMade,
     ...profile
   } = user;
   return {
@@ -159,6 +176,10 @@ export async function exportLegacySocialData(prisma, privyDid, now = new Date())
       likes,
       following: following.map((row) => ({ since: row.createdAt, user: row.followee })),
       followers: followers.map((row) => ({ since: row.createdAt, user: row.follower })),
+      blockedAccounts: blocksMade.map((row) => ({
+        since: row.createdAt,
+        user: row.blocked,
+      })),
     },
   };
 }

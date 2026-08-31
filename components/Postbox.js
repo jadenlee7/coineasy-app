@@ -266,8 +266,14 @@ export default function Postbox({isReply = false, openGeneration = 0}) {
 
         try {
             const [followersResult, followingResult] = await Promise.all([
-                api.follows.followers(operationUserId, { limit: 100 }),
-                api.follows.following(operationUserId, { limit: 100 }),
+                api.follows.followers(operationUserId, {
+                    limit: 100,
+                    expectedAuthUserId: operationLease.ownerUserId,
+                }),
+                api.follows.following(operationUserId, {
+                    limit: 100,
+                    expectedAuthUserId: operationLease.ownerUserId,
+                }),
             ]);
             if (!isCurrentRequest()) return;
             const followers = (followersResult?.rows || []).map((profile) => ({
