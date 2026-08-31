@@ -193,7 +193,8 @@ test('people search results are query-owned before the search effect runs', () =
   assert.match(source, /livePeopleQueryRef\.current === targetQuery/);
   assert.match(source, /setPeopleTargetQuery\(targetQuery\);/);
   assert.match(source, /const presentsPeopleQuery = peopleTargetQuery === trimmedQuery;/);
-  assert.match(source, /const visiblePeople = presentsPeopleQuery \? people : \[\];/);
+  assert.match(source, /const visiblePeople = presentsPeopleQuery[\s\S]*?people\.filter\(\(details\) => !isBlockedAccount\(listBlockedUser,/);
+  assert.match(source, /isBlockedAccount\(listBlockedUser, \{ userId, did: details\?\.did \}\)[\s\S]*?return;/);
   assert.match(source, /visiblePeople\.map\(\(details\) => renderUser\(details\)\)/);
   assert.match(source, /const currentViewerFollowingTargetKey = JSON\.stringify\(\[/);
   assert.match(source, /liveViewerFollowingTargetRef\.current = currentViewerFollowingTargetKey;/);

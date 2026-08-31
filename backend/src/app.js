@@ -23,6 +23,7 @@ import { profilesRouter } from './routes/profiles.js';
 import { postsRouter } from './routes/posts.js';
 import { followsRouter } from './routes/follows.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { blocksRouter } from './routes/blocks.js';
 import { meRouter } from './routes/me.js';
 import { pushTokensRouter } from './routes/push-tokens.js';
 import { identityRouter } from './routes/identity.js';
@@ -33,6 +34,8 @@ import { socialRouter } from './routes/social.js';
 import { legalRouter } from './routes/legal.js';
 import { moderationRouter } from './routes/moderation.js';
 import { createLegacySocialGate } from './middleware/legacy-social.js';
+import { socialReadCachePolicy } from './middleware/social-read-cache.js';
+import { SocialViewerAuthorizationError } from './lib/social-viewer-policy.js';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{8,128}$/;
 
@@ -173,13 +176,20 @@ export function createApp({
   app.use('/social', socialRouter);
 
   const legacySocialGate = createLegacySocialGate({ env });
+  app.use('/profiles', socialReadCachePolicy);
+  app.use('/posts', socialReadCachePolicy);
+  app.use('/follows', socialReadCachePolicy);
+  app.use('/notifications', socialReadCachePolicy);
+  app.use('/blocks', socialReadCachePolicy);
   app.use('/profiles', legacySocialGate);
   app.use('/posts', legacySocialGate);
   app.use('/follows', legacySocialGate);
   app.use('/notifications', legacySocialGate);
+  app.use('/blocks', legacySocialGate);
   app.use('/profiles', profilesRouter);
   app.use('/posts', postsRouter);
   app.use('/notifications', notificationsRouter);
+  app.use('/blocks', blocksRouter);
   app.use('/me/push-token', pushTokensRouter);
   app.use('/me', meRouter);
   app.use('/identity', identityRouter);
@@ -190,6 +200,18 @@ export function createApp({
   app.use('/', followsRouter);
 
   app.use(notFoundHandler);
+
+  app.use((error, req, res, next) => {
+    if (error instanceof SocialViewerAuthorizationError) {
+      req.log?.warn(
+        { requestId: req.id, errorType: error.name },
+        'optional social bearer rejected',
+      );
+      res.set('Cache-Control', 'no-store');
+      return res.status(401).json({ error: error.code, requestId: req.id });
+    }
+    return next(error);
+  });
 
   telemetry.setupErrorHandler(app);
   app.use((error, req, res, next) => {

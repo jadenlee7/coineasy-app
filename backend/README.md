@@ -353,6 +353,8 @@ thread model: every content unit is a `Post`; replies are Posts with
   and monotonic integer `contentRevision`.
 - `Follow` — composite PK `(followerId, followeeId)`.
 - `Like` — composite PK `(postId, userId)`.
+- `UserBlock` — directed composite PK `(blockerId, blockedId)` owned by the
+  blocking account; both user foreign keys cascade on account deletion.
 - `PostReport` — reporter/post-revision moderation record with an idempotent
   unique `(postId, reporterId, postRevision)` tuple, nullable reporter relation,
   and `OPEN`/review/action status lifecycle.
@@ -466,11 +468,16 @@ existing social schema and contains additive SQL only. Apply it once from a
 controlled staging release job after a backup; web and worker startup never run
 migrations. Do not create a second migration for the same schema changes.
 
+The later `20260831120000_user_blocks` migration is also additive and must go
+through the same backup/status/deploy/status/generate gate. Merely merging the
+application source does not apply or activate that database contract.
+
 ### Cursor pagination
 
 Lists return `{ rows, nextCursor }`. `nextCursor === null` means end of
 stream. Pass it back as `?cursor=...&limit=...` for the next page.
-Default limit 20 (50 for follow lists), max 100 (200 for follow lists).
+Default limit 20 (50 for follow and block lists), max 100 (200 for follow
+lists).
 
 ### API additions
 
@@ -478,11 +485,11 @@ Default limit 20 (50 for follow lists), max 100 (200 for follow lists).
 | --- | --- | --- | --- |
 | GET | `/profiles/me` | Bearer | Own profile + counts |
 | PUT | `/profiles/me` | Bearer | Edit username/displayName/pfp/bio |
-| GET | `/profiles/by-username/:username` | — | Public lookup by handle |
-| GET | `/profiles/search?q=...` | — | Search username/display name |
-| GET | `/profiles/:userId` | — | Public lookup by id |
-| GET | `/profiles/:userId/followers` | — | Paginated followers |
-| GET | `/profiles/:userId/following` | — | Paginated following |
+| GET | `/profiles/by-username/:username` | optional Bearer | Public lookup by handle; viewer block filter when authenticated |
+| GET | `/profiles/search?q=...` | optional Bearer | Search username/display name; viewer block filter when authenticated |
+| GET | `/profiles/:userId` | optional Bearer | Public lookup by id; viewer block filter when authenticated |
+| GET | `/profiles/:userId/followers` | optional Bearer | Paginated followers; viewer block filter when authenticated |
+| GET | `/profiles/:userId/following` | optional Bearer | Paginated following; viewer block filter when authenticated |
 | GET | `/posts` | optional Bearer | Global feed; optional `q`/`tag` filters, cursor |
 | GET | `/posts/by-author/:userId` | optional Bearer | User timeline (root posts), cursor |
 | GET | `/posts/:id` | optional Bearer | Single post + author summary |
@@ -495,15 +502,39 @@ Default limit 20 (50 for follow lists), max 100 (200 for follow lists).
 | POST | `/follows/:targetUserId` | Bearer | Follow (idempotent) |
 | DELETE | `/follows/:targetUserId` | Bearer | Unfollow (idempotent) |
 | GET | `/follows/:targetUserId/status` | Bearer | Viewer-relative follow state |
+| GET | `/blocks` | Bearer | Outgoing account blocks, privacy-minimized and paginated |
+| POST | `/blocks/:targetUserId` | Bearer | Block account and remove follows in both directions (idempotent) |
+| DELETE | `/blocks/:targetUserId` | Bearer | Remove the caller's block (idempotent; follows are not restored) |
 | GET | `/notifications` | Bearer | Recent follows, likes, and replies derived from social tables |
 
 Notifications are derived at read time from `Follow`, `Like`, and reply `Post`
 rows. Phase 1 therefore needs no notification migration; durable read markers
 and push subscriptions are deferred.
 
-`optional Bearer` means: a valid Bearer enriches the response (e.g.
-`likedByMe`); missing/invalid Bearer returns the public payload, never
-401.
+For authenticated reads, either direction of a `UserBlock` hides the other
+account's profile, posts, follower/following entries, replies, reactions, and
+notifications from that viewer. New follows, likes, and replies across the
+pair return `409 blocked_interaction`. Blocking is serialized with those three
+mutations and deletes existing follows in both directions. Unlike, unfollow,
+report, and owner delete actions remain available so safety/removal operations
+cannot be trapped behind the block.
+
+Viewer filtering uses indexed relation anti-joins rather than materializing an
+unbounded block-id array. An actor-scoped transaction advisory lock caps each
+outgoing block list at 500 rows without a concurrent-write overrun; idempotent
+replays at the cap still succeed. Follow-status returns the same generic `404`
+for a missing target or either block direction and never exposes who blocked
+whom. Every GET/HEAD under `/profiles`, `/posts`, `/follows`, `/notifications`,
+and `/blocks` sends `Cache-Control: no-store` and `Vary: Authorization`.
+
+Existing likes and replies are not erased, and public content is not made
+private. A request with no `Authorization` header therefore retains the public
+anonymous projection, so a signed-out visitor or third party may still see
+public profiles and posts. The mobile copy states this boundary and does not
+promise total internet invisibility. Once any Authorization header is supplied,
+however, malformed, expired, invalid, or valid-but-unsynced credentials return
+`401 invalid_token`; they never fall back to an anonymous response that could
+bypass a block.
 
 ### Frontend wiring
 

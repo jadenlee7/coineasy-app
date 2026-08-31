@@ -61,6 +61,13 @@ test('local data export is versioned and excludes ephemeral SIWE secrets', async
   });
   assert.equal(query.select.postReports.select.reviewerKeyId, undefined);
   assert.equal(query.select.postReports.select.audits, undefined);
+  assert.deepEqual(query.select.blocksMade.select, {
+    createdAt: true,
+    blocked: {
+      select: { id: true, username: true, displayName: true, pfp: true },
+    },
+  });
+  assert.equal(query.select.blocksTaken, undefined);
   assert.ok(query.select.questCompletions);
   assert.ok(query.select.segments);
 });
@@ -86,6 +93,10 @@ test('legacy social export is purpose-specific and excludes identity and wallet 
             followee: { id: 'user_2', username: 'friend', displayName: 'Friend', pfp: null },
           }],
           followers: [],
+          blocksMade: [{
+            createdAt: new Date('2026-01-05T00:00:00.000Z'),
+            blocked: { id: 'user_3', username: 'blocked', displayName: 'Blocked', pfp: null },
+          }],
         };
       },
     },
@@ -97,6 +108,7 @@ test('legacy social export is purpose-specific and excludes identity and wallet 
   assert.equal(result.scope, 'easygo_legacy_social');
   assert.equal(result.data.profile.username, 'easygo');
   assert.equal(result.data.following[0].user.username, 'friend');
+  assert.equal(result.data.blockedAccounts[0].user.username, 'blocked');
   assert.equal(query.select.privyDid, undefined);
   assert.equal(query.select.walletAddress, undefined);
   assert.equal(query.select.verifiedAddress, undefined);
@@ -104,6 +116,13 @@ test('legacy social export is purpose-specific and excludes identity and wallet 
   assert.equal(query.select.ledger, undefined);
   assert.equal(query.select.questCompletions, undefined);
   assert.equal(query.select.postReports, undefined);
+  assert.equal(query.select.blocksTaken, undefined);
+  assert.deepEqual(query.select.blocksMade.select, {
+    createdAt: true,
+    blocked: {
+      select: { id: true, username: true, displayName: true, pfp: true },
+    },
+  });
   const serialized = JSON.stringify(result);
   assert.equal(serialized.includes('did:privy'), false);
   assert.equal(serialized.includes('wallet'), false);

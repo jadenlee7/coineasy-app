@@ -17,14 +17,17 @@ import useFeed from '../hooks/useFeed';
 import useStatusBarHeight from '../hooks/useStatusBarHeight';
 import { api } from '../utils/api';
 import { adaptSocialProfile, getEasyGoUserId } from '../utils/socialPostAdapter';
+import { isBlockedAccount } from '../utils/blockedAccounts.mjs';
 
 const BACKEND_CONFIGURED = Boolean(process.env.EXPO_PUBLIC_BACKEND_URL);
 
 const Search = ({navigation}) => {
     const { user } = useContext(GlobalContext);
     const {
+        blockedAccounts: listBlockedUser,
         recentProfiles: storedRecentSearches,
         saveRecentProfiles,
+        serverBlocksSynchronized,
     } = useDeviceAccountData();
     const { isCurrentLease, lease } = useDeviceAccountOperationLease();
     const tailwind = useTailwind();
@@ -37,8 +40,12 @@ const Search = ({navigation}) => {
     const [peopleError, setPeopleError] = useState(null);
     const [peopleTargetQuery, setPeopleTargetQuery] = useState(null);
     const livePeopleQueryRef = useRef('');
-    const recentSearches = storedRecentSearches
+    const recentSearches = (serverBlocksSynchronized ? storedRecentSearches : [])
         .filter((item) => getEasyGoUserId(item?.details))
+        .filter((item) => !isBlockedAccount(listBlockedUser, {
+            userId: getEasyGoUserId(item?.details),
+            did: item?.details?.did,
+        }))
         .slice(0, 10);
     const ownUserId = getEasyGoUserId(user);
     const [viewerFollowingIds, setViewerFollowingIds] = useState(new Set());
@@ -87,7 +94,10 @@ const Search = ({navigation}) => {
         setViewerFollowingTargetKey(operationTargetKey);
         setViewerFollowingIds(new Set());
         if (!operationOwnUserId || !operationLease || !isCurrentLease(operationLease)) return;
-        api.follows.following(operationOwnUserId, {limit: 200}).then((result) => {
+        api.follows.following(operationOwnUserId, {
+            limit: 200,
+            expectedAuthUserId: operationLease.ownerUserId,
+        }).then((result) => {
             if (!isCurrentRequest()) return;
             setViewerFollowingIds(new Set((result?.rows || []).map((item) => item.id)));
         }).catch(() => {
@@ -116,24 +126,38 @@ const Search = ({navigation}) => {
         }
 
         const peopleQuery = targetQuery.replace(/^[@#]/, '');
+        const operationLease = lease;
+        if (!operationLease || !isCurrentLease(operationLease)) {
+            setPeople([]);
+            setPeopleLoading(false);
+            return;
+        }
         setPeople([]);
         setPeopleLoading(true);
         setPeopleError(null);
-        api.profiles.search(peopleQuery, {limit: 20}).then((result) => {
-            if (!isCurrentQuery()) return;
+        api.profiles.search(peopleQuery, {
+            limit: 20,
+            expectedAuthUserId: operationLease.ownerUserId,
+        }).then((result) => {
+            if (!isCurrentQuery() || !isCurrentLease(operationLease)) return;
             setPeople((result?.rows || []).map(adaptSocialProfile).filter(Boolean));
         }).catch((cause) => {
-            if (!isCurrentQuery()) return;
+            if (!isCurrentQuery() || !isCurrentLease(operationLease)) return;
             setPeople([]);
             setPeopleError(cause instanceof Error ? cause : new Error(String(cause)));
         }).finally(() => {
-            if (isCurrentQuery()) setPeopleLoading(false);
+            if (isCurrentQuery() && isCurrentLease(operationLease)) setPeopleLoading(false);
         });
         return () => { active = false; };
-    }, [searchActive, trimmedQuery]);
+    }, [isCurrentLease, lease, searchActive, trimmedQuery]);
 
     const presentsPeopleQuery = peopleTargetQuery === trimmedQuery;
-    const visiblePeople = presentsPeopleQuery ? people : [];
+    const visiblePeople = presentsPeopleQuery
+        ? people.filter((details) => !isBlockedAccount(listBlockedUser, {
+            userId: getEasyGoUserId(details),
+            did: details?.did,
+        }))
+        : [];
     const visiblePeopleLoading = presentsPeopleQuery ? peopleLoading : searchActive;
     const visiblePeopleError = presentsPeopleQuery ? peopleError : null;
 
@@ -146,6 +170,7 @@ const Search = ({navigation}) => {
         if (!isCurrentLease(expectedLease)) return;
         const userId = getEasyGoUserId(details);
         if (!userId) return;
+        if (isBlockedAccount(listBlockedUser, { userId, did: details?.did })) return;
         Haptics.selectionAsync();
         const next = [
             {details, date: new Date().toISOString()},

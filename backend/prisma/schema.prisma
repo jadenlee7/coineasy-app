@@ -67,6 +67,8 @@ model User {
   postReports PostReport[] @relation("PostReportReporter")
   following   Follow[]     @relation("Follower")
   followers   Follow[]     @relation("Followee")
+  blocksMade  UserBlock[]  @relation("UserBlockBlocker")
+  blocksTaken UserBlock[]  @relation("UserBlockBlocked")
 
   // Path C v2 ownership. All user-owned privacy/targeting records are
   // removed by the future S3 account-forget flow.
@@ -414,6 +416,22 @@ model Follow {
   @@id([followerId, followeeId])
   @@index([followeeId, createdAt])
   @@index([followerId, createdAt])
+}
+
+// Account-bound UGC safety control. A directed row records the account that
+// chose to block; authenticated social reads enforce the relationship in both
+// directions so neither side is presented to the other while the row exists.
+model UserBlock {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("UserBlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("UserBlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockerId, createdAt, blockedId])
+  @@index([blockedId, blockerId])
 }
 
 model Like {

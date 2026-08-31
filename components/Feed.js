@@ -13,6 +13,8 @@ import { RepostIcon } from "./Icons";
 import { GlobalContext } from "../contexts/GlobalContext";
 import { useDeviceAccountData } from '../contexts/DeviceAccountDataContext';
 import useStatusBarHeight from "../hooks/useStatusBarHeight";
+import { isBlockedAccount } from '../utils/blockedAccounts.mjs';
+import { getEasyGoUserId } from '../utils/socialPostAdapter';
 
 export default function Feed({posts = [], refreshing, refreshingBottom, onRefresh, loadMore, header, feedRef, error, backendConfigured = true, showBanner = true, emptyTitle, emptyDescription }) {
     const { homeFeedRef, scrollAnim } = useContext(GlobalContext);
@@ -34,7 +36,16 @@ export default function Feed({posts = [], refreshing, refreshingBottom, onRefres
     }
     
     const safePosts = Array.isArray(posts) ? posts : [];
-    let filteredPosts = safePosts.filter(e => !listBlockedUser?.includes(e.creator) && !listBlockedUser?.includes(e.reply_to_creator_details?.did))
+    let filteredPosts = safePosts.filter((post) => (
+        !isBlockedAccount(listBlockedUser, {
+            userId: post?.easygo?.authorId || getEasyGoUserId(post?.creator_details),
+            did: post?.creator,
+        })
+        && !isBlockedAccount(listBlockedUser, {
+            userId: getEasyGoUserId(post?.reply_to_creator_details),
+            did: post?.reply_to_creator_details?.did,
+        })
+    ))
     filteredPosts = filteredPosts.filter(e => !listHiddenPost?.includes(e.stream_id) && !listHiddenPost?.includes(e.reply_to))
     filteredPosts = filteredPosts.filter(e => !listMutedUsers?.includes(e.creator) && !listMutedUsers?.includes(e.reply_to_creator_details?.did))
 

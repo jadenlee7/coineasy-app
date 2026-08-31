@@ -125,6 +125,9 @@ export function DeviceAccountDataProvider({ children }) {
   const lease = leaseRef.current;
   const [reloadToken, setReloadToken] = useState(0);
   const [snapshot, setSnapshot] = useState(() => emptySnapshot(lease));
+  const blockCacheRevisionRef = useRef(0);
+  const [blockCacheRevision, setBlockCacheRevision] = useState(0);
+  const [serverBlockSyncState, setServerBlockSyncState] = useState(null);
   const visibleSnapshot = leaseErrorRef.current
     ? emptySnapshot(null, 'storage-error', 'device_account_owner_invalid')
     : (matchingLease(snapshot.lease, lease)
@@ -173,6 +176,13 @@ export function DeviceAccountDataProvider({ children }) {
 
     return () => { active = false; };
   }, [isCurrentLease, lease, rawOwnerUserId, reloadToken]);
+
+  useEffect(() => {
+    const nextRevision = blockCacheRevisionRef.current + 1;
+    blockCacheRevisionRef.current = nextRevision;
+    setBlockCacheRevision(nextRevision);
+    setServerBlockSyncState(null);
+  }, [lease]);
 
   const saveValue = useCallback(async ({ expectedLease, slot, field, value, serialized }) => {
     const current = visibleSnapshotRef.current;
@@ -296,6 +306,56 @@ export function DeviceAccountDataProvider({ children }) {
   }, []);
 
   const retry = useCallback(() => setReloadToken((value) => value + 1), []);
+  const isCurrentBlockCacheRevision = useCallback((expectedLease, expectedRevision) => (
+    isCurrentLease(expectedLease)
+    && blockCacheRevisionRef.current === expectedRevision
+  ), [isCurrentLease]);
+  const invalidateServerBlockSync = useCallback((expectedLease) => {
+    if (!isCurrentLease(expectedLease)) return false;
+    const nextRevision = blockCacheRevisionRef.current + 1;
+    blockCacheRevisionRef.current = nextRevision;
+    setBlockCacheRevision(nextRevision);
+    setServerBlockSyncState(null);
+    return true;
+  }, [isCurrentLease]);
+  const saveBlockedAccounts = useCallback((next) => {
+    const expectedLease = lease;
+    if (!Array.isArray(next) || !invalidateServerBlockSync(expectedLease)) {
+      return Promise.resolve(false);
+    }
+    return saveList(
+      expectedLease,
+      DEVICE_ACCOUNT_DATA_SLOT.blockedAccounts,
+      'blockedAccounts',
+      next,
+    );
+  }, [invalidateServerBlockSync, lease, saveList]);
+  const saveServerBlockSnapshot = useCallback(async (
+    next,
+    { expectedLease, expectedRevision } = {},
+  ) => {
+    if (
+      !Array.isArray(next)
+      || !isCurrentBlockCacheRevision(expectedLease, expectedRevision)
+    ) return false;
+    const saved = await saveList(
+      expectedLease,
+      DEVICE_ACCOUNT_DATA_SLOT.blockedAccounts,
+      'blockedAccounts',
+      next,
+    );
+    return Boolean(
+      saved && isCurrentBlockCacheRevision(expectedLease, expectedRevision),
+    );
+  }, [isCurrentBlockCacheRevision, saveList]);
+  const confirmServerBlockSync = useCallback((expectedLease, expectedRevision) => {
+    if (!isCurrentBlockCacheRevision(expectedLease, expectedRevision)) return false;
+    setServerBlockSyncState(Object.freeze({
+      lease: expectedLease,
+      revision: expectedRevision,
+    }));
+    return true;
+  }, [isCurrentBlockCacheRevision]);
   const value = useMemo(() => ({
     accountLease: lease,
     isCurrentAccountLease: isCurrentLease,
@@ -304,6 +364,15 @@ export function DeviceAccountDataProvider({ children }) {
     status: visibleSnapshot.status,
     errorCode: visibleSnapshot.errorCode,
     blockedAccounts: visibleSnapshot.data.blockedAccounts,
+    blockCacheRevision,
+    serverBlocksSynchronized: Boolean(
+      serverBlockSyncState
+      && matchingLease(serverBlockSyncState.lease, lease)
+      && serverBlockSyncState.revision === blockCacheRevision
+    ),
+    confirmServerBlockSync,
+    isCurrentBlockCacheRevision,
+    saveServerBlockSnapshot,
     courseProgress: visibleSnapshot.data.courseProgress,
     dailyRunProgress: visibleSnapshot.data.dailyRunProgress,
     expoPushToken: visibleSnapshot.data.expoPushToken,
@@ -332,12 +401,7 @@ export function DeviceAccountDataProvider({ children }) {
     ),
     purgeOwnerData,
     retry,
-    saveBlockedAccounts: (next) => saveList(
-      lease,
-      DEVICE_ACCOUNT_DATA_SLOT.blockedAccounts,
-      'blockedAccounts',
-      next,
-    ),
+    saveBlockedAccounts,
     saveCourseProgress: (next) => saveList(
       lease,
       DEVICE_ACCOUNT_DATA_SLOT.courseProgress,
@@ -389,13 +453,19 @@ export function DeviceAccountDataProvider({ children }) {
   }), [
     clearList,
     clearValue,
+    blockCacheRevision,
+    confirmServerBlockSync,
     isCurrentLease,
+    isCurrentBlockCacheRevision,
     lease,
     purgeOwnerData,
     retry,
+    saveBlockedAccounts,
     saveList,
+    saveServerBlockSnapshot,
     saveValue,
     sealOwnerData,
+    serverBlockSyncState,
     visibleSnapshot.data,
     visibleSnapshot.errorCode,
     visibleSnapshot.status,

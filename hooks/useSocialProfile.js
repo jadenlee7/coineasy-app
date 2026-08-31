@@ -1,6 +1,6 @@
 // hooks/useSocialProfile.js
 //
-// Public profile lookup hook for **other users** (read-only).
+// Viewer-relative profile lookup hook for **other users** (read-only).
 // Wired to EasyGo backend via api.profiles.get(userId).
 //
 // Note: this is intentionally distinct from useEasyChainProfile, which
@@ -11,6 +11,7 @@
 // helpers shipped in PR #10.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDeviceAccountOperationLease } from "../contexts/DeviceAccountDataContext";
 import { api } from "../utils/api";
 
 /**
@@ -26,6 +27,7 @@ import { api } from "../utils/api";
  * }}
  */
 export function useSocialProfile(userId) {
+  const { lease, isCurrentLease } = useDeviceAccountOperationLease();
   const [state, setState] = useState({
     targetUserId: null,
     profile: null,
@@ -36,23 +38,30 @@ export function useSocialProfile(userId) {
   // Guard against state updates after unmount or stale userId changes.
   const reqIdRef = useRef(0);
   const liveUserIdRef = useRef(userId);
+  const liveLeaseRef = useRef(lease);
   liveUserIdRef.current = userId;
+  liveLeaseRef.current = lease;
 
   const refresh = useCallback(async () => {
     const targetUserId = userId;
+    const operationLease = lease;
     const myReq = ++reqIdRef.current;
     const isCurrentRequest = () => (
       myReq === reqIdRef.current
       && liveUserIdRef.current === targetUserId
+      && liveLeaseRef.current === operationLease
+      && isCurrentLease(operationLease)
     );
 
-    if (!targetUserId) {
+    if (!targetUserId || !operationLease || !isCurrentLease(operationLease)) {
       setState({ targetUserId, profile: null, loading: false, error: null });
       return null;
     }
     setState({ targetUserId, profile: null, loading: true, error: null });
     try {
-      const res = await api.profiles.get(targetUserId);
+      const res = await api.profiles.get(targetUserId, {
+        expectedAuthUserId: operationLease.ownerUserId,
+      });
       // api.profiles.get returns null when EXPO_PUBLIC_BACKEND_URL is unset
       // (see utils/api.js helper contract). Treat that as "no data, no error".
       if (!isCurrentRequest()) return null;
@@ -69,7 +78,7 @@ export function useSocialProfile(userId) {
       });
       return null;
     }
-  }, [userId]);
+  }, [isCurrentLease, lease, userId]);
 
   // Auto-fetch on mount / when userId changes.
   useEffect(() => {
