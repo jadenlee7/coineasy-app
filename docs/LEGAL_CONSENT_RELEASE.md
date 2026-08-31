@@ -95,6 +95,7 @@ The next staging mobile artifact must use exactly:
 EXPO_PUBLIC_EASYGO_CONSENT_VERSION=2026-08-10-staging-v1
 EXPO_PUBLIC_EASYGO_PRIVACY_URL=https://easygo-web-staging-staging.up.railway.app/legal/2026-08-10-staging-v1/privacy
 EXPO_PUBLIC_EASYGO_TERMS_URL=https://easygo-web-staging-staging.up.railway.app/legal/2026-08-10-staging-v1/terms
+EXPO_PUBLIC_EASYGO_SUPPORT_URL=https://<approved-backend-origin>/support
 ```
 
 The staging web service must use:
@@ -105,9 +106,14 @@ CONSENT_GRANTS_ENABLED=false
 ```
 
 Mobile staging preflight rejects missing, insecure, same, or version-mismatched
-document URLs. Backend staging preflight rejects a server version that differs
-from the bundled candidate. It also rejects `CONSENT_GRANTS_ENABLED=true` while
-the bundled document status is not `approved`.
+document URLs. It separately rejects a missing, placeholder, local/private,
+credential-bearing, query-bearing, fragment-bearing, nonstandard-port,
+non-`/support`, or non-HTTPS support URL. Production additionally requires the
+support URL to equal the configured backend origin plus `/support`. The app
+Settings surface always exposes `contact@coineasy.xyz` as a direct email action.
+Backend staging preflight rejects a server version that differs from the bundled
+candidate. It also rejects `CONSENT_GRANTS_ENABLED=true` while the bundled
+document status is not `approved`.
 
 On 2026-08-11, the three mobile values above were added as public variables to
 the EAS `preview` environment only. The `production` environment was not given
@@ -119,6 +125,22 @@ missing field as `false`, so a backend/mobile rolling deployment remains
 fail-closed. Revocation remains available independently of the grant gate.
 
 ## Approval blockers
+
+- [ ] Deploy and approve the repository's static `/support` page on the official
+      HTTPS EasyGo host, then configure its exact URL as
+      `EXPO_PUBLIC_EASYGO_SUPPORT_URL` for the candidate EAS environment. This
+      repository change does not deploy the page, set the variable, or claim
+      the public URL is reachable.
+- [ ] From an unauthenticated external browser with redirects disabled, request
+      the exact candidate support URL and record `200`, `text/html`, the final
+      URL, release SHA, fixed `contact@coineasy.xyz` body, CSP, `no-referrer`,
+      `nosniff`, and the absence of scripts, forms, trackers, query strings, and
+      account-deletion claims. The URL must equal the production backend origin
+      plus `/support` byte for byte.
+- [ ] Read back App Store Connect's **Support URL** field after saving metadata
+      and verify it exactly equals both the approved live URL and
+      `EXPO_PUBLIC_EASYGO_SUPPORT_URL`. Preserve the metadata receipt separately;
+      this repository change does not update App Store Connect.
 
 - [ ] Confirm The Pivot Co., Ltd.'s exact registered name, registered/business
       address, country of establishment, and the jurisdictions where EasyGo

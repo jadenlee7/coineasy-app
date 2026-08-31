@@ -55,7 +55,6 @@ test('versioned legal documents require two HTTPS URLs and an exact server versi
 
   const missing = createLegalDocuments({ consentVersion: VERSION });
   assert.equal(missing.versioned, false);
-  assert.deepEqual(missing.help, { url: null, configured: false });
   assert.equal(getConsentDocumentReadiness(VERSION, missing).reason, 'documents_not_versioned');
   assert.equal(legalDocuments({ termsUrl: 'http://insecure.example' }).versioned, false);
   assert.equal(legalDocuments({ termsUrl: 'https://easygo.example/terms/wrong-version' }).versioned, false);
