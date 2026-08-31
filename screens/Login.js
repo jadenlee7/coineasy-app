@@ -1,7 +1,7 @@
 // screens/Login.js
 //
 // EasyGo-branded Privy entry screen, implemented from Figma node 20164:3802.
-// OAuth and passkey actions use Privy's headless Expo hooks so the UI remains
+// Apple and Google OAuth use Privy's headless Expo hooks so the UI remains
 // fully owned by EasyGo while Privy handles the authentication flow.
 
 import React, { useState } from 'react';
@@ -23,8 +23,6 @@ import { usePrivy, useLoginWithOAuth } from '@privy-io/expo';
 import AppleIcon from '../assets/easygo/apple.svg';
 import GoogleIcon from '../assets/easygo/google.svg';
 import LogoArrow from '../assets/easygo/logo-arrow.svg';
-import PasskeyIcon from '../assets/easygo/passkey.svg';
-import WalletIcon from '../assets/easygo/wallet.svg';
 import { EASYGO_LEGAL_DOCUMENTS } from '../utils/legalDocuments.mjs';
 import { getOAuthLoginErrorMessage } from '../utils/oauthLoginError.mjs';
 import { DailyRunGuestSample } from './DailyRun';
@@ -100,15 +98,6 @@ export default function Login() {
     return runAuth(provider, () => loginWithOAuth({ provider }));
   }
 
-  function handleWallet() {
-    setErrorMessage('');
-    Haptics.selectionAsync();
-    Alert.alert(
-      'Wallet 로그인 준비 중',
-      'Privy SIWE와 WalletConnect 연결은 다음 구현 단위에서 활성화됩니다.'
-    );
-  }
-
   if (showDailyRunSample) {
     return <DailyRunGuestSample onClose={() => setShowDailyRunSample(false)} />;
   }
@@ -176,19 +165,6 @@ export default function Login() {
           loading={pendingProvider === 'google'}
           onPress={() => handleOAuth('google')}
         />
-        <LoginOption
-          Icon={PasskeyIcon}
-          disabled
-          label="Passkey · 준비 중"
-          onPress={() => {}}
-        />
-        <LoginOption
-          Icon={WalletIcon}
-          disabled={!isReady || oauthLoading}
-          label="Sign up with Wallet"
-          onPress={handleWallet}
-        />
-
         {!isReady && <Text style={styles.statusText}>EasyGo를 준비하고 있어요…</Text>}
         {!!errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 

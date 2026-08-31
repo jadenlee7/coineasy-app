@@ -2,7 +2,13 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 export const FORBIDDEN_APPSTORE_BUNDLE_MARKERS = Object.freeze([
+  '/swap/quote-preview',
   '/swap/log',
+  '/orange/claims/daily-activity',
+  'Base Route Estimate Lab',
+  'Daily Participation',
+  'Passkey · 준비 중',
+  'Sign up with Wallet',
   'signer required (Privy embedded wallet not ready)',
   'swap log failed (reward may not credit)',
   'Watch AD',

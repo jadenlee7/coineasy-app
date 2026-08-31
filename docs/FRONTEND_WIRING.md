@@ -151,53 +151,27 @@ treated as account export/deletion data. Their asynchronous readers still
 capture the full account transition so an old continuation cannot open or
 close a modal for the next session.
 
-## Base Route Estimate Lab (educational preview only)
+## App Store MVP crypto surface
 
-The EASYEDU/Trophies lab is deliberately separate from any swap execution:
+The App Store client physically omits the Squid preview and execution screens,
+their API clients and lease helpers, and EasyGo-owned Squid signer/broadcast
+invocation code. Generic wallet primitives may still be bundled by the
+embedded-wallet SDK, but no EasyGo UI or API client invokes them for a Squid
+quote, transaction broadcast, or reward log. The client also omits the
+reward-log client, social-post activity claim capability, Invite reward screen,
+Ad reward claim surface, and Orange Shop/Gift/conversion screens. Day 6 of Daily
+Run uses an offline quote-reading exercise instead. Orange is presented only as
+non-transferable, non-redeemable in-app progress.
 
-```
-Client                                      Backend                         Squid
-  │ explicit Estimate route tap               │                              │
-  │ POST /swap/quote-preview {tokens,amount}   │                              │
-  ├───────────────────────────────────────────▶│ derive authenticated wallet  │
-  │                                             │ Base 8453 + quoteOnly route  │
-  │                                             ├─────────────────────────────▶│
-  │                                             │◀─────────────────────────────┤
-  │ { preview, defaultChain }                   │ sanitize display fields only │
-  │◀────────────────────────────────────────────┤                              │
-  │ render amount/minimum/fees/time/path        │                              │
-  │ clear after 20 s/background/session change  │                              │
-```
-
-The client cannot supply a sender, recipient, chain, slippage, or arbitrary
-token. The backend derives both addresses from the authenticated user's stored
-wallet, fixes both chains to Base `8453`, fixes slippage to 1%, and permits only
-the reviewed Base native ETH/USDC pair. Although Squid is asked for
-`quoteOnly:true`, the backend still treats the upstream response as untrusted
-and allowlists display scalars; transaction requests, targets, calldata, calls,
-quote IDs, and raw route params never cross the preview boundary. The screen
-does not import a signer or execution helper and never calls `/swap/log`, so a
-preview cannot award Orange. The public wallet address is disclosed to Squid
-only after the user explicitly taps the preview button, consistent with the
-published privacy copy.
-
-The App Store client physically omits the old quote-execution helper, wallet
-signer/broadcast code, execution API client, reward-log client, Invite reward
-screen, Ad reward claim surface, and Orange Shop/Gift/conversion screens.
-Orange is presented only as non-transferable, non-redeemable in-app progress;
-the daily participation design still requires a separate Guideline 3.1.5(v)
-classification before App Store submission. `utils/squidPreview.js` contains only the
-display-preview request and session-lease checks. Run `npm run
-appstore:bundle-check -- <ios-bundle>` as a release gate so execution and
-reward-log markers cannot return to the exported JavaScript bundle.
-
-Do not infer execution readiness from this lab. The server fail-closes both
-legacy endpoints with
-`SWAP_EXECUTION_READY=false` plus the default-off `SWAP_EXECUTION_ENABLED`
-runtime kill switch. An environment change cannot expose them until a
-separately reviewed release changes the compile-time brake after execution and
-reward verification are implemented. Railway deployment and runtime 404
-evidence remain separate checklist gates.
+The authenticated backend display-preview route remains separately dormant for
+future product work; its existence is not client readiness and must not be
+mentioned in App Review notes for a build that cannot reach it. Run `npm run
+appstore:bundle-check -- <ios-bundle>` as a release gate so Squid, social-post
+reward, execution, and reward-log markers cannot return to the exported
+JavaScript bundle. The server continues to fail-close both legacy execution
+endpoints with `SWAP_EXECUTION_READY=false` and the default-off
+`SWAP_EXECUTION_ENABLED` runtime kill switch. Railway deployment and runtime
+404 evidence remain separate release gates.
 
 ## Environment variables (client)
 
