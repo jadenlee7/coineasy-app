@@ -785,9 +785,11 @@ wallet private key, or login code.
       [ADR-0011](../backend/docs/adr/0011-protected-post-report-moderation.md)
       and the
       [moderation runbook](../backend/docs/MODERATION_RUNBOOK.md). Its additive
-      expand migration and exact `48bc35f` web release are now deployed in
-      staging with both gates false, but it has not been activated, provisioned
-      with a reviewer trust domain, or exercised on a real report. The exact
+      expand migration and exact `48bc35f` web release were deployed on
+      2026-08-27 with both gates false. The web baseline was superseded by
+      `db8b15fb` on 2026-08-31, with both gates still false, but moderation has
+      not been activated, provisioned with a reviewer trust domain, or exercised
+      on a real report. The exact
       technical receipt is in the
       [backend rollout checklist](../backend/docs/DEPLOY_CHECKLIST.md#exact-48bc35f-gate-off-moderation-expand-staging-rollout-2026-08-27-utc).
       Workforce OIDC/MFA/RBAC, operator API rate limiting with `429` plus
@@ -865,6 +867,36 @@ wallet private key, or login code.
       posts or for the `reporterId=NULL` foreign-key fan-out across many reports;
       keep every deletion latch closed. The moderation candidate does not solve
       this high-cardinality blocker.
+
+## Account-bound Block — server receipt and device gates (2026-08-31)
+
+- [x] Apply the single approved UserBlock migration after encrypted backup and
+  isolated restore; deploy exact staging web
+  `db8b15fb2dd55008a2419f0082521c95e6e40dcd`; complete the scoped two-account
+  server smoke and cleanup. The
+  [rollout receipt](../backend/docs/releases/2026-08-31-db8b15fb-userblock-staging-qa.md)
+  records all 45 request IDs, before/after aggregates, no Orange issuance,
+  credential preservation, and the limits of export/filtered-post evidence.
+- [ ] Before a new mobile build, decide and verify preservation/import of
+  existing account-local Block entries on first server sync. An empty server
+  list must not silently erase existing protection. This documentation-only
+  record does not implement or approve a backfill or reconciliation policy.
+- [ ] On an explicitly approved internal physical-device build, verify
+  Block/Unblock succeeds only after its server receipt and the correct profile,
+  post-list visibility, safety lists, and interaction controls update. Refresh
+  and relaunch, then confirm server state and local cache remain consistent.
+- [ ] Switch A→B→A while requests are pending and after relaunch. Confirm
+  account-scoped Block/Hide/Mute state and stale responses cannot cross owners;
+  neither inbound blocker identities nor another account's safety list appears.
+- [ ] Use separate approved fixtures for actual A-post reverse exclusion,
+  reverse Like/Reply, existing mutual-Follow removal/non-restoration, multi-page
+  and cap behavior, and populated push-token/stable-identity export redaction.
+  Exports after unblock were skipped in the recorded server run.
+
+No new EAS/TestFlight build or device pass is recorded here. Prior Build 102
+local-only safety and Build 110 lifecycle passes remain historical evidence,
+not proof of the new server synchronization path. Moderation, deletion, GCRA,
+production, and App Store activation gates remain separate and open.
 
 ## Dormant recent Apple reauthentication candidate
 

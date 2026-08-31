@@ -1,9 +1,12 @@
 # EasyGo backend operations runbook
 
-Status: S9 implementation, all committed additive staging migrations through
-`20260826144000_moderation_queue`, the exact `48bc35f` gate-off web rollout,
-and authenticated PostReport ingest smoke are complete. The latest encrypted
-staging backup passed an actual isolated PostgreSQL 18 restore drill. The
+Status observed 2026-08-31: S9 implementation, the approved UserBlock migration,
+exact `db8b15fb` staging web rollout, and scoped authenticated Block/Unblock and
+export smoke are complete. Earlier PostReport ingest evidence remains dated
+history. Nine migrations are complete; the separately unapproved GCRA migration
+is pending. The latest encrypted staging backup passed an actual isolated
+PostgreSQL 18.6 restore drill. Existing local-block preservation on first server
+sync must be reviewed before a new mobile build. The
 remaining gates include matched published privacy/terms, security exceptions,
 the protected moderation operation and workforce trust domain,
 release-bundle/device QA, and rollback drills.
@@ -18,13 +21,17 @@ The verified target is project `easygo-app-staging`
 - Web: `518ba3f5-486b-42a4-ad0c-27fb56e63b00`
 - Worker: `0ffb8648-fe59-4fb7-926f-3cc9445c133d`
 
-Postgres is running with a ready persistent volume and all committed migrations
-through `20260826144000_moderation_queue` applied; Prisma reports no pending
-migration. Web serves the public staging domain from exact release
-`48bc35fca41fa8f693a95aee8c4b8dc339fee581`, with `/ready` healthy, the
-authenticated Report ingest contract verified, and the protected moderation
-surface gate-off at HTTP `404`. The exact tuple and receipts are in
-[`DEPLOY_CHECKLIST.md`](./DEPLOY_CHECKLIST.md#exact-48bc35f-gate-off-moderation-expand-staging-rollout-2026-08-27-utc).
+The 2026-08-31 Postgres readback has nine completed migrations and zero
+unfinished. `20260831120000_user_blocks` is applied; the only pending migration
+is `20260827193000_moderation_rate_limit_gcra`. Do not apply it without separate
+approval or mistake its pending status for a failed UserBlock migration.
+Web serves the public staging domain from exact release
+`db8b15fb2dd55008a2419f0082521c95e6e40dcd`, deployment
+`e52770fd-836d-4833-8e5f-472177f88505`, with `/ready` healthy and moderation/swap
+Ready/Enabled all false. Scoped Block/Unblock/export smoke and cleanup passed;
+the prior authenticated Report and moderation-route receipts were not repeated
+as part of that smoke. Exact evidence and limits are in the
+[2026-08-31 rollout receipt](./releases/2026-08-31-db8b15fb-userblock-staging-qa.md).
 Web and worker revisions are deployed and rolled back independently. The
 unchanged worker remains on its prior reviewed revision and exits successfully
 while `SEGMENTS_ENABLED=false`. The project's default `production` environment
@@ -49,7 +56,7 @@ an approved response SLA, approved policy and retention-policy versions, a
 named owner, and a credential-free escalation contact are all valid. Placeholder
 or default values do not satisfy the contract. The current source latch remains
 closed, so this readiness behavior is a future activation check rather than a
-claim about the gate-off deployed `48bc35f` release.
+claim about either the historical `48bc35f` or current gate-off `db8b15fb` release.
 
 After that configuration validation, one bounded `/ready` catalog aggregate
 requires the exact completed/non-rolled-back migration receipt, required
@@ -227,7 +234,8 @@ and verifies request correlation and active social mode.
 
 The approved EasyGo staging recovery path uses the repository's encrypted
 PostgreSQL backup script. Railway-native backup/PITR availability was not used
-as recovery evidence for the 2026-08-27 rollout. From `backend/`, run:
+as recovery evidence for the 2026-08-31 rollout. Under an approved backup scope,
+from `backend/`, run:
 
 ```bash
 npm run backup:staging
@@ -242,17 +250,17 @@ exact byte count. Encrypted files and metadata live in the Git-ignored
 `.secure-backups/` directory with owner-only permissions.
 
 The latest verified pre-migration recovery point is
-`easygo-staging-20260827T144105Z.dump.enc`, created at
-`2026-08-27T14:41:05.090Z`, with SHA-256
-`5329c39e6cfc3b053bf7238a75458fdeef49b206e9ab9fd328c07973ef6c885d`.
-The sandbox could read but not create a macOS Keychain item, so adjacent
-metadata truthfully records `keyReused=true` for the existing Keychain-held
-backup key. No passphrase was printed or written. The ciphertext was decrypted
-directly into an isolated PostgreSQL 18 database with no plaintext dump file;
-the restored `User=5`, `Post=12`, `PostReport=0`, and seven completed migration
-receipts matched the source snapshot. The isolated database was then dropped
-and its absence rechecked. Keep the encrypted file and adjacent JSON metadata
-together. Earlier verified recovery points remain historical evidence.
+`easygo-staging-20260831T153656Z.dump.enc`, created at
+`2026-08-31T15:36:56.567Z`, with SHA-256
+`3cd8bfa0d337a9b82cbcbba445978af4c1877caa45740ec4221af7b8c480f29b`.
+The isolated PostgreSQL 18.6 restore matched eight completed migrations and
+representative source counts, then rehearsed UserBlock application. The
+isolated database was removed and absence verified; keep the encrypted file
+and its private adjacent metadata together. Backup permissions, byte counts,
+and exact restore/migration limits are in the
+[latest receipt](./releases/2026-08-31-db8b15fb-userblock-staging-qa.md#backup-restore-and-the-single-approved-migration).
+The 2026-08-27 recovery point remains historical evidence in its dated
+[rollout record](./DEPLOY_CHECKLIST.md#exact-48bc35f-gate-off-moderation-expand-staging-rollout-2026-08-27-utc).
 
 For a recovery drill, retrieve the passphrase privately from macOS Keychain,
 verify the encrypted file's SHA-256 against its metadata, and decrypt directly
@@ -404,7 +412,11 @@ promotes the operator source floor or creates a runnable rollback snapshot;
 promotion requires all pre-promotion prerequisites in the moderation runbook,
 including exact staging evidence for that candidate release, to pass before a
 separate reviewed decision. Runtime activation remains a later separate
-approval.
+approval. The 2026-08-31 `db8b15fb` UserBlock receipt likewise does not promote
+this floor. Its immediate predecessor `48bc35f` deployment is also `REMOVED`;
+any separately approved code fallback must preserve the additive UserBlock
+table/ledger and explicitly account for loss of server Block enforcement on
+pre-UserBlock code. It is not a transparent safety-preserving rollback.
 
 ## Pre-production checklist
 
