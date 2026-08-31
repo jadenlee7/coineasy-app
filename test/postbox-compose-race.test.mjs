@@ -112,6 +112,60 @@ test('a reopened post or reply draft contains none of the prior edit body, media
   }), true);
 });
 
+test('edit payload omits unchanged legacy media, clears removed media, and submits changed media for server screening', async () => {
+  const { createPostboxEditPayload } = await loadComposeHelpers();
+  const originalMedia = [{ url: 'https://legacy.easygo.example/original.png' }];
+
+  assert.deepEqual(
+    createPostboxEditPayload('unchanged media', [{ url: originalMedia[0].url }], originalMedia),
+    { body: 'unchanged media' },
+  );
+  assert.deepEqual(
+    createPostboxEditPayload('remove media', [], originalMedia),
+    { body: 'remove media', mediaUrl: null },
+  );
+  assert.deepEqual(
+    createPostboxEditPayload(
+      'change media',
+      [{ url: 'https://new.easygo.example/rejected.png' }],
+      originalMedia,
+    ),
+    { body: 'change media', mediaUrl: 'https://new.easygo.example/rejected.png' },
+  );
+  assert.deepEqual(createPostboxEditPayload('no media', [], []), { body: 'no media' });
+});
+
+test('postbox maps only stable safety codes to generic alerts without rejected content or rule details', async () => {
+  const { postboxSafetyAlert } = await loadComposeHelpers();
+  const contentAlert = postboxSafetyAlert({
+    body: {
+      error: 'post_content_rejected',
+      rejectedText: 'private rejected input',
+      ruleId: 'private_rule',
+    },
+  });
+  const mediaAlert = postboxSafetyAlert({
+    body: {
+      error: 'post_media_rejected',
+      mediaUrl: 'https://private.example/rejected.png',
+    },
+  });
+
+  assert.deepEqual(contentAlert, {
+    title: 'Post not published',
+    message: 'This text may violate EasyGo safety rules. Edit it and try again.',
+  });
+  assert.deepEqual(mediaAlert, {
+    title: 'Remove media to continue',
+    message: 'EasyGo cannot screen or publish media yet. Remove it and try again.',
+  });
+  assert.equal(postboxSafetyAlert({ body: { error: 'bad_input' } }), null);
+  assert.doesNotMatch(
+    JSON.stringify({ contentAlert, mediaAlert }),
+    /private rejected input|private_rule|private\.example/i,
+  );
+});
+
 test('an X completion fails the same comparator after Y opens and performs no continuation effects', async () => {
   const { createPostboxComposeTarget, samePostboxComposeTarget } = await loadComposeHelpers();
   const gate = deferred();
@@ -232,14 +286,16 @@ test('send and edit fence every clear, callback, close, error, and loading compl
   assertOrdered(edit, [
     'const operationTarget = composeTarget;',
     'const operationEditedPost = editedPost;',
+    'const editPayload = createPostboxEditPayload(',
     'const operation = beginComposeOperation(operationLease, operationTarget);',
-    'await updatePost(postId',
+    'await updatePost(postId, editPayload)',
     'if (!isCurrentComposeOperation(operation)) return;',
     'operationEditedPost?.callback?.(',
     'isCurrentComposeOperation(operation)',
     'hidePostbox();',
     'finishComposeOperation(operation);',
   ], 'edit continuation');
+  assert.match(edit, /catch\(error\) \{\s*if \(!isCurrentComposeOperation\(operation\)\) return;[\s\S]*?postboxSafetyAlert\(error\)/);
 
   assertOrdered(send, [
     'const operationTarget = composeTarget;',
@@ -254,5 +310,30 @@ test('send and edit fence every clear, callback, close, error, and loading compl
     'hidePostbox();',
   ], 'send continuation');
   assert.match(send, /catch\(e\) \{\s*if \(!operation \|\| !isCurrentComposeOperation\(operation\)\) return;/);
+  assert.match(send, /postboxSafetyAlert\(e\)[\s\S]*?'Could not publish'/);
+  assert.doesNotMatch(send, /console\.(?:log|warn|error)\([^\n]*e\)/);
   assert.match(send, /finally \{\s*if \(operation\) finishComposeOperation\(operation\);/);
+});
+
+test('post and reply create/update hooks preserve current-lease API errors for the postbox safety UI', () => {
+  const postsSource = read('../hooks/usePosts.js');
+  const repliesSource = read('../hooks/useReplies.js');
+  const createPost = section(postsSource, '  const create = useCallback(async (payload) => {', '  const remove = useCallback');
+  const updatePost = section(postsSource, '  const update = useCallback(async (postId, payload) => {', '  useEffect(() => {');
+  const createReply = section(repliesSource, '  const create = useCallback(async (payload) => {', '  const remove = useCallback');
+
+  for (const [label, source] of [
+    ['create post', createPost],
+    ['update post', updatePost],
+    ['create reply', createReply],
+  ]) {
+    assertOrdered(source, [
+      'catch (cause) {',
+      'if (!isCurrentLease(operationLease)) return null;',
+      'const nextError = cause instanceof Error ? cause : new Error(String(cause));',
+      'setError(nextError);',
+      'throw nextError;',
+    ], label);
+    assert.doesNotMatch(source, /setError\(nextError\);\s*return null;/);
+  }
 });

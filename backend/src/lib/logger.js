@@ -11,6 +11,8 @@ export const LOGGER_REDACT_PATHS = Object.freeze([
   'req.headers.authorization',
   'req.headers.cookie',
   'req.headers["x-admin-secret"]',
+  'req.body.body',
+  'req.body.mediaUrl',
   'req.body.message',
   'req.body.signature',
   'req.body.answer',
