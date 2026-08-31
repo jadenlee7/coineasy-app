@@ -323,13 +323,6 @@ export const api = {
       expectedAuthUserId,
     })
   ),
-  orangeClaimDailyActivity: ({ signal, expectedAuthUserId } = {}) => (
-    request('POST', '/orange/claims/daily-activity', {
-      signal,
-      boundAuth: true,
-      expectedAuthUserId,
-    })
-  ),
   orangeClaimCourseQuiz: ({ courseId, sectionId, signal, expectedAuthUserId }) =>
     request('POST', '/orange/claims/course-quiz', {
       body: { courseId, sectionId },
@@ -337,16 +330,6 @@ export const api = {
       boundAuth: true,
       expectedAuthUserId,
     }),
-
-  // Display-only Base route estimate. No executable quote/log clients ship in mobile.
-  swapQuotePreview: (params, { signal, expectedAuthUserId } = {}) => (
-    request('POST', '/swap/quote-preview', {
-      body: params,
-      signal,
-      boundAuth: true,
-      expectedAuthUserId,
-    })
-  ),
   // -------------------------------------------------------------------------
   // social (PR #9 backend: profiles, posts, follows, likes)
   // All endpoints return shapes documented in backend/README.md "Social (PR #9)".
