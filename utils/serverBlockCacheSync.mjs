@@ -6,6 +6,22 @@ import {
 const PAGE_LIMIT = 100;
 const PAGE_MAX = 6;
 
+function validServerId(value) {
+  return typeof value === 'string' && value.length > 0 && value.length <= 512
+    && !/[\s:\u0000-\u001f\u007f]/u.test(value);
+}
+
+function validatePage(result, pageLimit) {
+  if (
+    !result || typeof result !== 'object' || Array.isArray(result)
+    || !Array.isArray(result.rows) || result.rows.length > pageLimit
+    || result.rows.some((row) => (
+      !row || typeof row !== 'object' || Array.isArray(row) || !validServerId(row.id)
+    ))
+    || (result.nextCursor !== null && !validServerId(result.nextCursor))
+  ) throw new Error('server_block_page_invalid');
+}
+
 export async function synchronizeServerBlockCache({
   currentEntries,
   isCurrent,
@@ -23,14 +39,9 @@ export async function synchronizeServerBlockCache({
   for (let page = 0; page < pageMax; page += 1) {
     const result = await listPage({ cursor, limit: pageLimit });
     if (!isCurrent()) return false;
-    for (const row of Array.isArray(result?.rows) ? result.rows : []) {
-      if (typeof row?.id === 'string' && row.id.trim() === row.id && row.id) {
-        ids.push(row.id);
-      }
-    }
-    const nextCursor = typeof result?.nextCursor === 'string' && result.nextCursor
-      ? result.nextCursor
-      : null;
+    validatePage(result, pageLimit);
+    ids.push(...result.rows.map((row) => row.id));
+    const nextCursor = result.nextCursor;
     if (!nextCursor) {
       const nextEntries = reconcileServerBlockedAccountIds(currentEntries, ids);
       if (sameBlockedAccountEntries(currentEntries, nextEntries)) return true;

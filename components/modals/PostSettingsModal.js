@@ -420,8 +420,8 @@ export default function PostSettingsModal() {
             // already-rendered cards. The server relationship is authoritative.
             if (isCurrentLease(operation.expectedLease)) {
                 if (operation.expectedAuthorUserId) {
-                    const temp_list = addServerBlockedAccountId(
-                        listBlockedUser,
+                    const temp_list = (entries) => addServerBlockedAccountId(
+                        entries,
                         operation.expectedAuthorUserId,
                     );
                     try {

@@ -65,18 +65,31 @@ export function removeServerBlockedAccountId(entries, userId) {
   );
 }
 
+// Released local-only writers stored creator DIDs (including easygo:<id>).
+// Raw ids were introduced for server-confirmed blocks. Keep that distinction
+// in the existing array format; never silently turn a device filter into a POST.
+export function localBlockedAccountEntries(entries) {
+  return uniqueEntries(entries).filter((entry) => entry.includes(':'));
+}
+
+export function removeLocalBlockedAccountEntries(entries) {
+  return uniqueEntries(entries).filter((entry) => !entry.includes(':'));
+}
+
 /**
- * Replace server-owned ids after a complete paginated read while retaining
- * only historical non-EasyGo DIDs that cannot safely be mapped server-side.
+ * Replace server-owned ids only after a complete, validated paginated read.
+ * Preserve local DIDs absent from the server. A confirmed matching server id
+ * takes over its easygo: alias so a later account-wide unblock can remove it.
  */
 export function reconcileServerBlockedAccountIds(entries, serverUserIds) {
-  const legacyDids = uniqueEntries(entries).filter((entry) => (
-    entry.includes(':') && !entry.startsWith('easygo:')
-  ));
   const serverIds = uniqueEntries(serverUserIds)
     .map(easyGoIdFromEntry)
     .filter(Boolean);
-  return uniqueEntries([...legacyDids, ...serverIds]);
+  const confirmedIds = new Set(serverIds);
+  const localDids = localBlockedAccountEntries(entries).filter((entry) => (
+    !entry.startsWith('easygo:') || !confirmedIds.has(easyGoIdFromEntry(entry))
+  ));
+  return uniqueEntries([...localDids, ...serverIds]);
 }
 
 export function sameBlockedAccountEntries(left, right) {

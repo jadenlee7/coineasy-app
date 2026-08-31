@@ -877,10 +877,33 @@ wallet private key, or login code.
   [rollout receipt](../backend/docs/releases/2026-08-31-db8b15fb-userblock-staging-qa.md)
   records all 45 request IDs, before/after aggregates, no Orange issuance,
   credential preservation, and the limits of export/filtered-post evidence.
-- [ ] Before a new mobile build, decide and verify preservation/import of
-  existing account-local Block entries on first server sync. An empty server
-  list must not silently erase existing protection. This documentation-only
-  record does not implement or approve a backfill or reconciliation policy.
+- [ ] Before a new mobile build, review and device-verify the local preservation
+  candidate on `agent/easygo-preserve-local-blocks` (base
+  `0eeea333e04976fe3deea6974629097ff871408b`). Released local-only writers stored
+  creator DIDs, including `easygo:<id>`; raw IDs were introduced for
+  server-confirmed blocks. Keep the existing owner-scoped array format:
+  preserve local DIDs absent from a complete valid server list, and hand off a
+  matching `easygo:<id>` only when the server confirms that ID. Subsequent
+  server omission then removes that raw cache ID. No automatic POST/backfill,
+  follow change, new storage namespace, or global-list import is implemented.
+  This cannot recover entries already erased by an older sync.
+
+  - [ ] Upgrade/reopen with pre-existing owner-local EasyGo and other DID blocks.
+    Confirm empty/unrelated server lists, offline/failed reads, and partial or
+    malformed pages preserve them. Verify they still filter feed and search.
+  - [ ] Settings shows account-wide blocks separately from on-device blocks.
+    Cancel leaves both unchanged; confirm on-device clear removes only local
+    filters, makes no server mutation, and preserves account-wide blocks.
+    Reopen after clearing to check that a concurrent sync cannot restore them.
+  - [ ] Confirm a matching server block takes over its local alias; unblock on
+    another session, refresh/relaunch, and confirm it does not reappear locally.
+    Delayed alerts and storage writes during A→B→A must not mutate the new session.
+
+  Local regression tests cover preservation, complete-response validation,
+  serialized deltas, pending-mutation sync pauses, and stale-write rollback;
+  they are not a physical-device pass. No merge, deploy, EAS build or TestFlight
+  submission is authorized by this candidate record.
+
 - [ ] On an explicitly approved internal physical-device build, verify
   Block/Unblock succeeds only after its server receipt and the correct profile,
   post-list visibility, safety lists, and interaction controls update. Refresh
