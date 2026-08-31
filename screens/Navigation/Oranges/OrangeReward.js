@@ -18,7 +18,7 @@ import useCountdown from '../../../hooks/useCountdown';
 const OrangeReward = (props) => {
     const { userData } = useContext(GlobalContext);
 
-    const { onClaimDailyCheckin, handleClaimDailyActivity } = props
+    const { onClaimDailyCheckin } = props
 
     const navigation = useNavigation()
 
@@ -30,13 +30,6 @@ const OrangeReward = (props) => {
     const isDailyCheckinAvailable = !nextAvailable || now >= nextAvailable;
 
     const timeLeftDailyCheckin = useCountdown(userData?.dailyCheckin?.nextAvailable);
-    const timeLeftDailyActivity = useCountdown(userData?.dailyActivity?.nextAvailable);
-    const isDailyActivityReady = (
-        (userData?.todayActivities?.posts ?? 0) >= 1
-        && (userData?.todayActivities?.comments ?? 0) >= 2
-        && (userData?.todayActivities?.likes ?? 0) >= 10
-        && !timeLeftDailyActivity
-    );
 
     const RewardCard = ({logo, title, description, points, buttonText, buttonType = 'primary', disabled = false, onPress, children }) => {
         return (
@@ -106,22 +99,6 @@ const OrangeReward = (props) => {
         );
     };
 
-    const ProgressBar = ({ current, max, label }) => {
-        const progress = Math.min((current / max) * 100, 100);
-        
-        return (
-            <View style={{marginBottom: 16,}}>
-                <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom: 5}}>
-                    <Text style={{fontSize: 14,color: '#333333',marginBottom: 0,}}>{label}</Text>
-                    <Text style={{fontSize: 12,color: '#232323',}}>{current}/{max}</Text>
-                </View>
-                <View style={{height: 8,backgroundColor: '#DDD',borderRadius: 3,}}>
-                    <View style={{ width: `${progress}%`,  height: '100%',backgroundColor: '#FF6B35',borderRadius: 3 }} />
-                </View>
-            </View>
-        );
-    };
-
     return (
         <View style={{flex: 1}}>
             {/* Header */}
@@ -156,23 +133,6 @@ const OrangeReward = (props) => {
                     disabled={!isDailyCheckinAvailable}
                     onPress={isDailyCheckinAvailable ? onClaimDailyCheckin : null}
                 />
-
-                {/* Daily participation progress */}
-                <RewardCard
-                    logo={require('../../../assets/trophy/reward/daily_activity.png')}
-                    title="Daily Participation"
-                    description="Track daily participation with non-transferable in-app progress points."
-                    points="30"
-                    buttonText={!timeLeftDailyActivity ? `Add progress` : timeLeftDailyActivity || "Wait..."}
-                    buttonType={isDailyActivityReady ? "primary" : "secondary"}
-                    disabled={!isDailyActivityReady}
-                    // buttonType={userData.todayActivities?.posts == 1 && userData.todayActivities?.comments == 2 && userData.todayActivities?.likes == 10 ? "primary" : "secondary"}
-                    onPress={isDailyActivityReady ? handleClaimDailyActivity : null}
-                >
-                    <ProgressBar current={userData?.todayActivities?.posts ?? 0} max={1} label="Post" />
-                    <ProgressBar current={userData?.todayActivities?.comments ?? 0} max={2} label="Comments" />
-                    <ProgressBar current={userData?.todayActivities?.likes ?? 0} max={10} label="Likes" />
-                </RewardCard>
 
                 <View style={{height: 30}} />
             </ScrollView>
