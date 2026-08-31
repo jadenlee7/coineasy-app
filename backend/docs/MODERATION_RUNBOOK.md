@@ -19,19 +19,22 @@ not evidence of readiness.
 
 ## Unresolved activation owners
 
-| Responsibility | Current owner | Activation requirement |
+| Responsibility | Nomination/current status | Activation requirement |
 | --- | --- | --- |
-| Primary moderation queue | **Unassigned** | Named person or staffed function with coverage schedule |
-| Backup/on-call reviewer | **Unassigned** | Named backup and handoff procedure |
-| Security/auth escalation | **Unassigned** | Workforce identity, credential-loss, and access-review owner |
+| Primary moderation queue | **Seung Hyun Lee nominated; acceptance unobserved** | Dated acceptance, training, contact path, and coverage schedule |
+| Backup/on-call reviewer | **Hy Jong Kang nominated; acceptance unobserved** | Dated acceptance, training, contact path, and independent handoff procedure |
+| Security/auth escalation | **Hy Jong Kang nominated; acceptance unobserved** | Dated acceptance plus a qualified independent backup for workforce identity, credential loss, and access review |
 | Privacy/Legal escalation | **Unassigned** | Jurisdiction, evidence, retention, and urgent-content owner |
-| User contact | **Undefined** | Approved templates, sender, delivery channel, and privacy review |
-| Appeal handling | **Undefined** | Intake, independent reviewer, deadline, and restoration limits |
+| User contact | **Undefined; no nominee recorded** | Approved owner/backup, templates, sender, delivery receipt, channel, and privacy review |
+| Appeal handling | **Option A direction nominated; owner and exact contract unselected** | Unified notice/appeal clock, atomic privacy-minimized recipient/outbox, independent reviewer, no original-content restoration, owner acceptance, and Privacy/Legal approval |
 | Response SLA | **24 hours proposed** | Product/operations approval, staffing proof, alert destination, and breach procedure |
 | Per-post pending abuse bound | **250 source-enforced; activation unapproved** | Shared-lock admission/coalescing, migration and decision fail-fast, monitoring, Sybil response, and owner |
 
-Every unresolved row is a stop condition. The 24-hour proposal is measured from
-`PostReport.createdAt`; it is not a published or approved service commitment.
+Every unresolved or nomination-only row is a stop condition. The 24-hour
+proposal is measured from `PostReport.createdAt`; it is not a published or
+approved service commitment. A named candidate without dated acceptance,
+backup, durable contact path, and exercise receipt is still unassigned for
+activation purposes.
 
 ## Trust boundary
 
@@ -406,9 +409,20 @@ If the content became unavailable after claim, the service performs the
    operation/report ID for an accepted mutation or HTTP request ID for a failed
    request. Do not patch content, status, version, or audit rows manually.
 
-Restoration, author sanctions, evidence for appeal, and user notification are
-unresolved. Do not infer behavior or perform those operations until a reviewed
-contract exists.
+Appeal Option A is now the proposed no-original-restoration direction, but its
+exact operating contract is still `UNSELECTED_STOP`. The current `REMOVE_POST`
+transaction clears the author link, body, and media URL, so the original post
+cannot be restored from moderation state. It also leaves no appeal-notice
+recipient. A future design must create a privacy-minimized recipient/outbox
+atomically before redaction, define one bounded notice/appeal clock including
+urgent and failed-delivery cases, and use a reviewer independent from the
+original removal. A future upheld appeal would append a privacy-minimized
+overturn audit, notify the user, and permit a new compliant repost; it would not
+automatically republish or claim to restore the removed post. Author sanctions
+remain out of scope. Do not send a notice, accept or decide an appeal, create a
+repost, or perform any restoration operation until that contract and its
+owners are jointly accepted and the later implementation is separately
+approved.
 
 ## Conflict, outage, and credential response
 
@@ -450,16 +464,19 @@ Proposed monitoring uses only aggregate counts:
   post/revision count approaching the still-to-be-approved hard bound.
 
 The alert destinations, warning threshold, urgent-content categories, after-
-hours coverage, Privacy/Legal contact, law-enforcement process, user contact,
-and appeal owner are not yet approved. Alerts and tickets must contain only
-opaque report/operation IDs for accepted mutations, HTTP request IDs for
-failures, and aggregate state/age counts, never UGC, reporter identity, or
-credentials. Any urgent case before approval is a stop condition, not
-permission to invent an escalation channel.
+hours coverage, Privacy/Legal contact, law-enforcement process, user-contact
+channel, and appeal owner are not yet assigned or approved. Alerts and tickets
+must contain only opaque report/operation IDs for accepted mutations, HTTP
+request IDs for failures, and aggregate state/age counts, never UGC, reporter
+identity, or credentials. Any urgent case before approval is a stop condition,
+not permission to invent an escalation channel.
 
 ## Retention and deletion
 
-No moderation retention schedule is approved. Do not create a purge job,
+No moderation retention schedule is approved. Option A does not yet define a
+bounded appeal closure, so terminal report/audit retention remains
+`UNSELECTED_STOP`; 180 days after a later terminal/appeal event is only a
+starting candidate and is not purge authorization. Do not create a purge job,
 snapshot raw UGC, extend log retention, or promise evidence preservation from
 this runbook. The candidate's reporter relation is intentionally nullable with
 `ON DELETE SET NULL`; do not replace it with cascade deletion or a durable

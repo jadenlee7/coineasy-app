@@ -2,9 +2,9 @@
 
 **Status:** Proposed candidates only; all operating approvals are pending
 
-**Packet date:** 2026-08-30
+**Packet date:** 2026-08-31
 
-**Source baseline:** `0ad21796ed8dff4d48590047fc8ad35bbb0e854a`
+**Source baseline:** `977c6125cefa5b12cd0eff929ad21f3b8ee0cc4b`
 
 **Required deciders:** Product, Backend, Security, Privacy/Legal, Operations,
 and a named moderation owner
@@ -65,13 +65,27 @@ Candidate ratification and final operating acceptance are different decisions:
 This order avoids treating unobserved provider facts as approved while still
 allowing those facts to be measured safely.
 
+## 2026-08-31 nomination and appeal candidate amendment
+
+The task owner accepted the role-mapping recommendation and appeal Option A as
+candidate input. That direction is not evidence that any named nominee accepted
+the role, that Privacy/Legal reviewed the policy, or that any discipline
+ratified this packet. Contact paths, backups marked pending, dated acceptance
+receipts, and every decision in the ratification tables remain required.
+
+The prior `2026-08-30-v1` identifiers were never ratified. Whether any matching
+string was copied into an external environment remains unobserved. The
+candidate changes below create a new `2026-08-31-v2` documentation proposal
+rather than treating the earlier proposal as an accepted record or runtime
+receipt.
+
 ## Candidate policy records
 
 | Record | Candidate immutable version | Status |
 | --- | --- | --- |
-| Integrated moderation policy | `easygo-moderation-policy-2026-08-30-v1` | `PROPOSED_CANDIDATE` |
-| Retention policy | `easygo-moderation-retention-2026-08-30-v1` | `PROPOSED_CANDIDATE` |
-| Actor-rate policy | `easygo-moderation-rate-2026-08-30-v1` | `PROPOSED_CANDIDATE` |
+| Integrated moderation policy | `easygo-moderation-policy-2026-08-31-v2` | `PROPOSED_CANDIDATE` |
+| Retention policy | `easygo-moderation-retention-2026-08-31-v2` | `PROPOSED_CANDIDATE` |
+| Actor-rate policy | `easygo-moderation-rate-2026-08-31-v2` | `PROPOSED_CANDIDATE` |
 
 These strings are proposal identifiers only. They must not be set as
 `MODERATION_POLICY_VERSION` or `MODERATION_RETENTION_POLICY_VERSION` unless the
@@ -311,7 +325,7 @@ or audit records outside the approved purge worker.
 | Enrollment/recovery/security event | 180 days | Privacy-minimized event only; no credential material | `PROPOSED_CANDIDATE` |
 | Expired GCRA bucket | TAT elapsed plus seven days | Hourly bounded cleanup; never delete a future TAT | `PROPOSED_CANDIDATE` |
 | Open/reviewing report | Unselected; the 30-day unresolved threshold is a P0 gate-off escalation candidate, not a purge or automatic decision | No age-based purge; final acceptance stops until a bounded, independently approved resolution path exists | `UNSELECTED_STOP` |
-| Terminal `PostReport` and moderation audit | Proposed 180 days after the later of terminal action and approved appeal closure | Weekly bounded purge through an approved role; exact appeal intake/closure definition remains a stop condition | `UNSELECTED_STOP` |
+| Terminal `PostReport` and moderation audit | Option A direction proposes 180 days after the later of terminal action and bounded appeal closure, but no exact bounded closure contract exists yet | No age-based purge; no raw UGC copy is created for restoration | `UNSELECTED_STOP`; exact notice/appeal clock, Privacy/Legal owner, purge authority, and overdue-case treatment are unresolved |
 | Privacy-minimized logs and ordinary alerts | 30 days | Daily provider-side expiry | `PROPOSED_CANDIDATE` |
 | Security incident record | 180 days after closure | Restricted incident store; not ordinary logs | `PROPOSED_CANDIDATE` |
 | Encrypted database backup | 37-day hard maximum: 30-day rolling access window plus no more than seven days to physical purge | Disable restore access at day 30, prove physical purge by day 37, and run a quarterly restore drill | `PROPOSED_CANDIDATE` |
@@ -343,7 +357,65 @@ privilege proof remains `EXTERNAL_PROOF_REQUIRED`.
 | Routine coverage | Daily 09:00–21:00 `Asia/Dubai`; queue checked at least every four hours | `PROPOSED_CANDIDATE` plus staffing proof |
 | Security/offboarding coverage | 24/7 reachable roster for the 15-minute local-deny SLA | `PROPOSED_CANDIDATE` plus exercise receipt |
 | Urgent-content classification/SLA | Unselected | Privacy/Legal and Product decision required |
-| Appeal intake and closure | Unselected; starting candidate is 30 days to file and 30 days to decide | `UNSELECTED_STOP`; notice trigger, failed delivery, independent reviewer, restoration limit, and legal exceptions require approval |
+| Appeal intake and closure | Option A direction: no original-content restoration; an upheld appeal records an overturn and permits a new compliant repost. Thirty days to file and 30 days to decide remain planning targets | `UNSELECTED_STOP`; exact recipient/outbox, unified clock, urgent-case treatment, independent reviewer, Privacy/Legal owner, and jurisdiction review are unresolved |
+
+### Appeal Option A direction and remaining exact contract
+
+Option A minimizes retained harmful content and matches the current destructive
+`REMOVE_POST` behavior. The task-owner direction selects the
+no-original-restoration, overturn-record, and new-compliant-repost model for
+further design, with 30-day filing and 30-day decision periods as planning
+targets. It does not select the exact operating clock, user-facing promise,
+retention period, or implemented workflow.
+
+Before final operating acceptance, one exact independently reviewed contract
+must define all of the following together:
+
+- a privacy-minimized notice recipient or inbox target created atomically
+  before `REMOVE_POST` clears `Post.authorId`, with no raw email or UGC in the
+  moderation audit and with bounded account-deletion/retention behavior;
+- one coherent clock covering the latest notice-attempt time, successful and
+  failed delivery, valid appeal receipt, decision start, tolling, breach
+  escalation, and overdue records. Thirty-day filing and decision periods are
+  starting candidates only; timeout must neither auto-deny an appeal nor purge
+  an unresolved record;
+- notice and appeal behavior for every removal, including any urgent class. An
+  exception requires an independently approved Privacy/Legal basis rather than
+  being inferred by an operator;
+- a reviewer who did not make the original removal decision; self-review is
+  prohibited;
+- no retention or reconstruction of the removed body, media, or author link
+  merely to make restoration possible; and
+- an upheld result that appends a privacy-minimized overturn audit, notifies
+  the user, and permits a new compliant repost without automatically
+  republishing or claiming to restore the removed post.
+
+The current schema and service have no appeal, overturn, notice-delivery, or
+repost authorization state. Those additive contracts, user experience,
+contact-channel ownership, legal exceptions, and purge behavior must be
+designed and jointly accepted before source implementation. Implemented schema,
+tests, privacy review, and exercises are later activation gates. Until then, no
+operator may send an appeal notice, record an overturn, or restore/repost
+content on a user's behalf.
+
+## Nominated role mapping, not acceptance
+
+Names in this table are candidate assignments only. No acceptance date,
+durable contact path, on-call exercise, or ratification receipt is observed.
+
+| Discipline | Nominated primary | Nominated backup | Status |
+| --- | --- | --- | --- |
+| Product | Seung Hyun Lee | Hy Jong Kang | Nominated; both acceptance receipts pending |
+| Backend | Hy Jong Kang | `HUMAN_NAME_REQUIRED` third technical reviewer | Primary acceptance and qualified backup pending |
+| Security | Hy Jong Kang | `HUMAN_NAME_REQUIRED` independent security backup | Primary acceptance and qualified backup pending |
+| Privacy/Legal | `HUMAN_NAME_REQUIRED` | `HUMAN_NAME_REQUIRED` | No qualified reviewer nominated |
+| Operations | Seung Hyun Lee | Hy Jong Kang | Nominated; both acceptance receipts pending |
+| Moderation owner | Seung Hyun Lee | Hy Jong Kang | Nominated; acceptance, training, and independent-appeal handoff pending |
+
+Hy Jong Kang and Seung Hyun Lee are distinct nominees for the Security and
+Operations sides of a future genesis ceremony. That does not select or execute
+the genesis design, and neither may approve their own credential, access
+change, removal action, or appeal decision.
 
 Every row below requires an actual person, backup, durable contact path, and
 dated acceptance. A team name or job title alone is insufficient.
@@ -427,12 +499,12 @@ records the proposal and does not fill this table or run the proof.
 
 | Discipline | Named decider | Ratification decision | Date | Evidence/meeting ID |
 | --- | --- | --- | --- | --- |
-| Product | `HUMAN_NAME_REQUIRED` | Pending | Pending | Pending |
-| Backend | `HUMAN_NAME_REQUIRED` | Pending | Pending | Pending |
-| Security | `HUMAN_NAME_REQUIRED` | Pending | Pending | Pending |
+| Product | Seung Hyun Lee (nominated) | Pending | Pending | Acceptance and meeting receipt pending |
+| Backend | Hy Jong Kang (nominated) | Pending | Pending | Acceptance, backup, and meeting receipt pending |
+| Security | Hy Jong Kang (nominated) | Pending | Pending | Acceptance, backup, and meeting receipt pending |
 | Privacy/Legal | `HUMAN_NAME_REQUIRED` | Pending | Pending | Pending |
-| Operations | `HUMAN_NAME_REQUIRED` | Pending | Pending | Pending |
-| Moderation owner | `HUMAN_NAME_REQUIRED` | Pending | Pending | Pending |
+| Operations | Seung Hyun Lee (nominated) | Pending | Pending | Acceptance and meeting receipt pending |
+| Moderation owner | Seung Hyun Lee (nominated) | Pending | Pending | Acceptance, training, and meeting receipt pending |
 
 Ratification requires all rows to say `Ratified for proof` for the exact same
 version. It authorizes neither provider changes nor proof execution without the
