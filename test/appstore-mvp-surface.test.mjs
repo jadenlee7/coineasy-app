@@ -17,11 +17,16 @@ test('the App Store MVP login surface exposes only working OAuth choices', () =>
 test('the App Store MVP has no reachable Squid preview route', () => {
   const navigation = source('../navigation/AppNavigator.js');
   const dailyRun = source('../screens/DailyRun.js');
+  const practiceMissions = source('../screens/DailyRunPracticeMissions.js');
+  const practiceData = source('../data/practiceMissions.mjs');
   const curriculum = source('../data/dailyRunCurriculum.mjs');
   const trophies = source('../screens/Navigation/Trophies/TrophieCoineasy.js');
 
   assert.doesNotMatch(navigation, /SquidQuotePreview/);
   assert.doesNotMatch(dailyRun, /SquidQuotePreview|quote-preview/);
+  assert.doesNotMatch(practiceMissions, /SquidQuotePreview|quote-preview|\/swap\/quote/);
+  assert.doesNotMatch(practiceData, /SquidQuotePreview|quote-preview|\/swap\/quote/);
+  assert.match(practiceMissions, /NOT LIVE MARKET DATA/);
   assert.match(curriculum, /실시간 견적을 조회하지 않는 고정 오프라인 선택형 학습/);
   assert.match(curriculum, /실시간 견적 조회나 거래 실행 없이, 고정된 보기/);
   assert.doesNotMatch(curriculum, /kind: 'quote-preview'|Base Route Estimate Lab|견적 미리보기|견적 읽기 연습실/);

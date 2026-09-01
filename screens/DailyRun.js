@@ -416,7 +416,7 @@ function RewardCelebration() {
   );
 }
 
-function RewardStage({ guestMode, lesson, onClose, progress, onShare }) {
+function RewardStage({ guestMode, lesson, onClose, onPractice, progress, onShare }) {
   return (
     <View style={[styles.stage, styles.rewardStage]}>
       <RewardCelebration />
@@ -445,6 +445,13 @@ function RewardStage({ guestMode, lesson, onClose, progress, onShare }) {
         label={guestMode ? '로그인하고 7일 여정 시작' : '홈으로 돌아가기'}
         onPress={onClose}
       />
+      {!guestMode && (
+        <PrimaryButton
+          label="Practice Arcade · 3개 미션"
+          onPress={onPractice}
+          secondary
+        />
+      )}
       {!guestMode && lesson.day === 7 && (
         <PrimaryButton
           label="학습 카드 공유 · 선택"
@@ -456,7 +463,7 @@ function RewardStage({ guestMode, lesson, onClose, progress, onShare }) {
   );
 }
 
-function JourneyComplete({ onClose, progress }) {
+function JourneyComplete({ onClose, onPractice, progress }) {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={[styles.stage, styles.rewardStage]}>
@@ -481,6 +488,7 @@ function JourneyComplete({ onClose, progress }) {
           </View>
         </View>
         <PrimaryButton label="홈으로 돌아가기" onPress={onClose} />
+        <PrimaryButton label="Practice Arcade · 3개 미션" onPress={onPractice} secondary />
       </View>
     </SafeAreaView>
   );
@@ -607,8 +615,19 @@ function DailyRunExperience({ guestMode = false, navigation, onGuestClose }) {
     }
   }, []);
 
+  const openPracticeMissions = useCallback(() => {
+    Haptics.selectionAsync();
+    navigation?.navigate('DailyRunPracticeMissions');
+  }, [navigation]);
+
   if (!guestMode && summary.status === 'journey-complete') {
-    return <JourneyComplete onClose={close} progress={summary.progress} />;
+    return (
+      <JourneyComplete
+        onClose={close}
+        onPractice={openPracticeMissions}
+        progress={summary.progress}
+      />
+    );
   }
 
   if (!lesson || (!guestMode && storageStatus !== 'ready')) {
@@ -656,6 +675,7 @@ function DailyRunExperience({ guestMode = false, navigation, onGuestClose }) {
             guestMode={guestMode}
             lesson={lesson}
             onClose={close}
+            onPractice={openPracticeMissions}
             onShare={shareCompletion}
             progress={summary.progress}
           />
