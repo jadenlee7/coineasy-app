@@ -341,6 +341,47 @@ export function createOwnerScopedDeviceAccountDataStore({
     });
   }
 
+  // Apply deltas to the latest persisted value inside the same owner FIFO as
+  // writes/removals. Captured React lists must not erase another completed edit.
+  async function update(lease, slot, updater, { isCurrentLease } = {}) {
+    const owner = normalizeDeviceAccountOwner(lease?.ownerUserId);
+    normalizedEpoch(lease?.sessionEpoch);
+    const normalizedDataSlot = normalizedSlot(slot);
+    if (typeof updater !== 'function') {
+      throw new DeviceAccountDataError('device_account_value_invalid');
+    }
+    const state = ownerQueueState(ownerStates, owner);
+    assertCurrentLease(lease, isCurrentLease);
+    assertWritable(state);
+
+    return enqueue(state, async () => {
+      assertCurrentLease(lease, isCurrentLease);
+      assertWritable(state);
+      const key = await keyForOwner(owner, normalizedDataSlot);
+      assertCurrentLease(lease, isCurrentLease);
+      assertWritable(state);
+      try {
+        const previousValue = await getItem(key);
+        assertCurrentLease(lease, isCurrentLease);
+        assertWritable(state);
+        const value = updater(previousValue ?? null);
+        if (typeof value !== 'string') {
+          throw new DeviceAccountDataError('device_account_value_invalid');
+        }
+        assertCurrentLease(lease, isCurrentLease);
+        assertWritable(state);
+        await setItem(key, value);
+        if (!currentLeaseGuard(isCurrentLease)(lease)) {
+          await restoreStaleMutation(state, key, previousValue);
+        }
+        return value;
+      } catch (error) {
+        if (error instanceof DeviceAccountDataError) throw error;
+        throw new DeviceAccountDataError('device_account_write_failed', error);
+      }
+    });
+  }
+
   async function remove(lease, slot, { isCurrentLease } = {}) {
     const owner = normalizeDeviceAccountOwner(lease?.ownerUserId);
     normalizedEpoch(lease?.sessionEpoch);
@@ -420,6 +461,7 @@ export function createOwnerScopedDeviceAccountDataStore({
     remove,
     sanitizeLegacyUnscopedData,
     seal,
+    update,
     write,
   });
 }

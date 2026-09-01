@@ -29,13 +29,13 @@ test('new blocks use raw EasyGo ids and one unblock preserves every other entry'
   );
 });
 
-test('complete server reconciliation replaces server ids but retains unmappable legacy DIDs', () => {
+test('complete server reconciliation replaces server ids but retains local creator DIDs', () => {
   assert.deepEqual(
     reconcileServerBlockedAccountIds(
       ['stale_user', 'easygo:stale_user_2', 'did:legacy:keep'],
       ['server_a', 'server_b'],
     ),
-    ['did:legacy:keep', 'server_a', 'server_b'],
+    ['easygo:stale_user_2', 'did:legacy:keep', 'server_a', 'server_b'],
   );
 });
 

@@ -41,6 +41,7 @@ test('post menu persists the server block before using the device cache', () => 
   assert.match(block, /expectedAuthUserId: operation\.expectedLease\.ownerUserId/);
   assert.match(block, /result\?\.blocked !== true/);
   assert.match(block, /addServerBlockedAccountId\([\s\S]*?operation\.expectedAuthorUserId/);
+  assert.match(block, /const temp_list = \(entries\) => addServerBlockedAccountId/);
   assert.doesNotMatch(block, /saveBlockedAccounts\([\s\S]*?expectedCreatorDid/);
   assert.match(block, /operation\.source\?\.callbackDelete\?\.\(\)/);
   assert.match(source, /Public signed-out views may still show public posts\./);
@@ -56,11 +57,39 @@ test('settings manages the server list and describes unblock without restoring f
   assert.match(load, /expectedAuthUserId: expectedOperation\.ownerUserId/);
   assert.match(unblock, /api\.blocks\.unblock\(blockedAccount\.id/);
   assert.match(unblock, /removeServerBlockedAccountId\([\s\S]*?blockedAccount\.id/);
+  assert.match(unblock, /saveBlockedAccounts\(\(entries\) => removeServerBlockedAccountId/);
   assert.doesNotMatch(unblock, /clearBlockedAccounts\(\)/);
   assert.match(unblock, /Following is not restored automatically\./);
   assert.match(source, /Public signed-out views may still show public content\./);
   assert.match(source, /Load more/);
   assert.doesNotMatch(source, /ON-DEVICE SAFETY LISTS/);
+});
+
+test('local-only clear is owner-bound, uses latest entries and makes no server mutation', () => {
+  const source = read('../components/modals/SettingsModal.js');
+  const clear = section(source, 'const clearDeviceOnlyBlocks =', '  const loadBlockedAccounts');
+  assert.match(source, /localBlockedAccountEntries\(listBlockedUser\)/);
+  assert.match(clear, /saveBlockedAccounts\(removeLocalBlockedAccountEntries\)/);
+  assert.ok((clear.match(/isCurrentAccountOperation\(expectedOperation\)/g) || []).length >= 3);
+  assert.match(clear, /if \(!saved &&/);
+  assert.doesNotMatch(clear, /api\.|listBlockedUser|clearBlockedAccounts/);
+  assert.match(source, /No account-wide blocks\./);
+  assert.match(source, /not automatically added to your account-wide list/);
+});
+
+test('block deltas pause sync and snapshots pass their revision guard through storage awaits', () => {
+  const source = read('../contexts/DeviceAccountDataContext.js');
+  const save = section(source, 'const saveBlockedAccounts =', '  const saveServerBlockSnapshot');
+  const snapshot = section(source, 'const saveServerBlockSnapshot =', '  const confirmServerBlockSync');
+  const write = section(source, 'const saveValue =', '  const saveList');
+  assert.match(save, /ownerDataStore\.update\(/);
+  assert.match(save, /updateList\(Object\.freeze\(parsedList\(previous\)\)\)/);
+  assert.match(save, /pendingBlockMutationsRef\.current\.add\(operation\)/);
+  assert.match(save, /finally\s*\{[\s\S]*pendingBlockMutationsRef\.current\.delete\(operation\);[\s\S]*invalidateServerBlockSync\(expectedLease\)/);
+  assert.match(source, /pendingBlockMutationsRef\.current\]\.some/);
+  assert.match(snapshot, /\(\) => isCurrentBlockCacheRevision\(expectedLease, expectedRevision\)/);
+  assert.match(write, /isCurrentLease: operationGuard/);
+  assert.match(write, /if \(!operationGuard\(expectedLease\)\) return false/);
 });
 
 test('already-rendered feed and search caches enforce EasyGo ids plus legacy DIDs', () => {

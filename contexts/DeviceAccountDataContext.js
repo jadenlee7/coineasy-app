@@ -126,6 +126,7 @@ export function DeviceAccountDataProvider({ children }) {
   const [reloadToken, setReloadToken] = useState(0);
   const [snapshot, setSnapshot] = useState(() => emptySnapshot(lease));
   const blockCacheRevisionRef = useRef(0);
+  const pendingBlockMutationsRef = useRef(new Set());
   const [blockCacheRevision, setBlockCacheRevision] = useState(0);
   const [serverBlockSyncState, setServerBlockSyncState] = useState(null);
   const visibleSnapshot = leaseErrorRef.current
@@ -184,20 +185,28 @@ export function DeviceAccountDataProvider({ children }) {
     setServerBlockSyncState(null);
   }, [lease]);
 
-  const saveValue = useCallback(async ({ expectedLease, slot, field, value, serialized }) => {
+  const saveValue = useCallback(async ({
+    expectedLease, slot, field, value, serialized, isCurrentOperation,
+  }) => {
+    const operationGuard = (candidate) => isCurrentLease(candidate)
+      && (!isCurrentOperation || isCurrentOperation());
     const current = visibleSnapshotRef.current;
     if (
       !expectedLease
+      || !operationGuard(expectedLease)
       || current.status !== 'ready'
       || !sameDeviceAccountLease(current.lease, expectedLease)
     ) return false;
 
     try {
-      await ownerDataStore.write(expectedLease, slot, serialized, { isCurrentLease });
-      if (!isCurrentLease(expectedLease)) return false;
+      await ownerDataStore.write(expectedLease, slot, serialized, {
+        isCurrentLease: operationGuard,
+      });
+      if (!operationGuard(expectedLease)) return false;
       setSnapshot((existing) => {
         if (
           existing.status !== 'ready'
+          || !operationGuard(expectedLease)
           || !sameDeviceAccountLease(existing.lease, expectedLease)
         ) return existing;
         return Object.freeze({
@@ -217,7 +226,7 @@ export function DeviceAccountDataProvider({ children }) {
     }
   }, [isCurrentLease]);
 
-  const saveList = useCallback((expectedLease, slot, field, value) => {
+  const saveList = useCallback((expectedLease, slot, field, value, isCurrentOperation) => {
     if (!Array.isArray(value)) return Promise.resolve(false);
     const copy = Object.freeze([...value]);
     return saveValue({
@@ -226,6 +235,7 @@ export function DeviceAccountDataProvider({ children }) {
       field,
       value: copy,
       serialized: JSON.stringify(copy),
+      isCurrentOperation,
     });
   }, [saveValue]);
 
@@ -309,6 +319,9 @@ export function DeviceAccountDataProvider({ children }) {
   const isCurrentBlockCacheRevision = useCallback((expectedLease, expectedRevision) => (
     isCurrentLease(expectedLease)
     && blockCacheRevisionRef.current === expectedRevision
+    && ![...pendingBlockMutationsRef.current].some((operation) => (
+      sameDeviceAccountLease(operation.lease, expectedLease)
+    ))
   ), [isCurrentLease]);
   const invalidateServerBlockSync = useCallback((expectedLease) => {
     if (!isCurrentLease(expectedLease)) return false;
@@ -320,16 +333,63 @@ export function DeviceAccountDataProvider({ children }) {
   }, [isCurrentLease]);
   const saveBlockedAccounts = useCallback((next) => {
     const expectedLease = lease;
-    if (!Array.isArray(next) || !invalidateServerBlockSync(expectedLease)) {
+    const current = visibleSnapshotRef.current;
+    if (
+      (!Array.isArray(next) && typeof next !== 'function')
+      || !isCurrentLease(expectedLease)
+      || current.status !== 'ready'
+      || !sameDeviceAccountLease(current.lease, expectedLease)
+    ) {
       return Promise.resolve(false);
     }
-    return saveList(
-      expectedLease,
-      DEVICE_ACCOUNT_DATA_SLOT.blockedAccounts,
-      'blockedAccounts',
-      next,
-    );
-  }, [invalidateServerBlockSync, lease, saveList]);
+    const operation = { lease: expectedLease };
+    // Pause snapshots until all deltas finish. A new GET started mid-clear must
+    // not reuse the pre-clear render and resurrect an on-device block.
+    pendingBlockMutationsRef.current.add(operation);
+    invalidateServerBlockSync(expectedLease);
+    const updateList = typeof next === 'function' ? next : () => [...next];
+    return (async () => {
+      try {
+        const serialized = await ownerDataStore.update(
+          expectedLease,
+          DEVICE_ACCOUNT_DATA_SLOT.blockedAccounts,
+          (previous) => {
+            const updated = updateList(Object.freeze(parsedList(previous)));
+            if (!Array.isArray(updated)) {
+              throw new DeviceAccountDataError('device_account_value_invalid');
+            }
+            return JSON.stringify(updated);
+          },
+          { isCurrentLease },
+        );
+        if (!isCurrentLease(expectedLease)) return false;
+        const blockedAccounts = Object.freeze(parsedList(serialized));
+        setSnapshot((existing) => {
+          if (
+            existing.status !== 'ready'
+            || !isCurrentLease(expectedLease)
+            || !sameDeviceAccountLease(existing.lease, expectedLease)
+          ) return existing;
+          return Object.freeze({
+            ...existing,
+            data: Object.freeze({ ...existing.data, blockedAccounts }),
+          });
+        });
+        return true;
+      } catch (error) {
+        if (currentLeaseError(error) || !isCurrentLease(expectedLease)) return false;
+        setSnapshot(emptySnapshot(
+          expectedLease,
+          'storage-error',
+          error?.code || 'device_account_write_failed',
+        ));
+        return false;
+      } finally {
+        pendingBlockMutationsRef.current.delete(operation);
+        invalidateServerBlockSync(expectedLease);
+      }
+    })();
+  }, [invalidateServerBlockSync, isCurrentLease, lease]);
   const saveServerBlockSnapshot = useCallback(async (
     next,
     { expectedLease, expectedRevision } = {},
@@ -343,6 +403,7 @@ export function DeviceAccountDataProvider({ children }) {
       DEVICE_ACCOUNT_DATA_SLOT.blockedAccounts,
       'blockedAccounts',
       next,
+      () => isCurrentBlockCacheRevision(expectedLease, expectedRevision),
     );
     return Boolean(
       saved && isCurrentBlockCacheRevision(expectedLease, expectedRevision),

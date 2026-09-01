@@ -23,7 +23,11 @@ import { GlobalContext } from '../../contexts/GlobalContext';
 import { useDeviceAccountData } from '../../contexts/DeviceAccountDataContext';
 import useConsent from '../../hooks/useConsent';
 import { api, ApiError } from '../../utils/api';
-import { removeServerBlockedAccountId } from '../../utils/blockedAccounts.mjs';
+import {
+  localBlockedAccountEntries,
+  removeLocalBlockedAccountEntries,
+  removeServerBlockedAccountId,
+} from '../../utils/blockedAccounts.mjs';
 import { unregisterPushTokenBeforeLogout } from '../../utils/pushTokenRegistration.mjs';
 import {
   canConfirmAccountDeletion,
@@ -241,11 +245,7 @@ export default function SettingsModal() {
     || consentState.consent?.segmentingOptIn
     || consentState.consent?.marketingOptIn,
   );
-  const legacyBlockedDids = listBlockedUser.filter((entry) => (
-    typeof entry === 'string'
-    && entry.includes(':')
-    && !entry.startsWith('easygo:')
-  ));
+  const localBlockedDids = localBlockedAccountEntries(listBlockedUser);
 
   useEffect(() => {
     settingsMountedRef.current = true;
@@ -329,6 +329,30 @@ export default function SettingsModal() {
     ]);
   };
 
+  const clearDeviceOnlyBlocks = () => {
+    const expectedOperation = accountOperationRef.current;
+    if (!isCurrentAccountOperation(expectedOperation)) return;
+    Haptics.selectionAsync();
+    Alert.alert(
+      'Remove on-device blocks?',
+      'Accounts filtered by older app versions may appear again on this device. Account-wide blocks and following are unchanged.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            if (!isCurrentAccountOperation(expectedOperation)) return;
+            const saved = await saveBlockedAccounts(removeLocalBlockedAccountEntries);
+            if (!saved && isCurrentAccountOperation(expectedOperation)) {
+              Alert.alert('Could not remove on-device blocks', 'Please reopen EasyGo and try again.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const loadBlockedAccounts = async ({ append = false } = {}) => {
     const expectedOperation = accountOperationRef.current;
     if (!isCurrentAccountOperation(expectedOperation) || blockedAccountsLoading) return;
@@ -403,8 +427,8 @@ export default function SettingsModal() {
               // Remove only this EasyGo account. Other server blocks and
               // historical DID entries must keep filtering already-rendered UI.
               try {
-                await saveBlockedAccounts(removeServerBlockedAccountId(
-                  listBlockedUser,
+                await saveBlockedAccounts((entries) => removeServerBlockedAccountId(
+                  entries,
                   blockedAccount.id,
                 ));
               } catch {
@@ -881,7 +905,7 @@ export default function SettingsModal() {
         ACCOUNT SAFETY
       </Text>
       {row(
-        'Blocked EasyGo accounts',
+        'Account-wide blocks',
         blockedAccountsOpen ? 'Hide' : 'Manage',
         toggleBlockedAccounts,
       )}
@@ -922,7 +946,7 @@ export default function SettingsModal() {
           ))}
           {!blockedAccountsLoading && !blockedAccountsError && serverBlockedAccounts.length === 0 ? (
             <Text style={{ color: '#64748B', fontSize: 12, marginTop: 10 }}>
-              No blocked EasyGo accounts.
+              No account-wide blocks.
             </Text>
           ) : null}
           {blockedAccountsError ? (
@@ -948,12 +972,14 @@ export default function SettingsModal() {
       <Text style={{ fontFamily: 'GmarketBold', fontSize: 12, color: '#64748B', marginTop: 24 }}>
         ON-DEVICE FILTERS
       </Text>
-      {legacyBlockedDids.length > 0
-        ? row('Clear legacy block cache', legacyBlockedDids.length, () => clearLocalList(
-          'legacy block cache',
-          () => saveBlockedAccounts(listBlockedUser.filter((entry) => !legacyBlockedDids.includes(entry))),
-        ))
-        : null}
+      {localBlockedDids.length > 0 ? (
+        <>
+          {row('Clear on-device blocks', localBlockedDids.length, clearDeviceOnlyBlocks)}
+          <Text style={{ color: '#64748B', fontSize: 11, lineHeight: 16 }}>
+            Blocks from older app versions remain on this device. They are not automatically added to your account-wide list.
+          </Text>
+        </>
+      ) : null}
       {row('Muted accounts', listMutedUsers.length, () => clearLocalList('muted accounts', clearMutedAccounts))}
       {row('Hidden posts', listHiddenPost.length, () => clearLocalList('hidden posts', clearHiddenPosts))}
 
