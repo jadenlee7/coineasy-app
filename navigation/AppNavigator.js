@@ -19,6 +19,7 @@ import OrangeNavigation from '../screens/Navigation/OrangeNavigation';
 import Search from '../screens/Search';
 import Categories from '../screens/Categories';
 import DailyRun from '../screens/DailyRun';
+import DailyRunPracticeMissions from '../screens/DailyRunPracticeMissions';
 
 // const Stack = createNativeStackNavigator();
 
@@ -44,6 +45,7 @@ const AppNavigator = ({ navigationRef, onNavigationReady }) => {
                     <Stack.Screen name="Search" component={Search} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="Categories" component={Categories} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="DailyRun" component={DailyRun} options={{ headerShown: false, gestureEnabled: true }} />
+                    <Stack.Screen name="DailyRunPracticeMissions" component={DailyRunPracticeMissions} options={{ headerShown: false, gestureEnabled: true }} />
                 </Stack.Navigator>
             </NavigationContainer>
 
