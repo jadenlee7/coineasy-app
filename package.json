@@ -74,7 +74,6 @@
     "moment-timezone": "^0.5.45",
     "react": "18.2.0",
     "react-native": "0.74.5",
-    "react-native-confetti-cannon": "^1.5.2",
     "react-native-countdown-circle-timer": "^3.2.1",
     "react-native-countdown-timer-hooks": "^1.0.5",
     "react-native-dotenv": "^3.4.11",

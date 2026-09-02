@@ -42,6 +42,11 @@ test('a first completion records XP and opens the next lesson on the next day', 
     getDailyRunState(first.progress, '2026-08-25').status,
     'complete-today',
   );
+  const restored = JSON.parse(JSON.stringify(first.progress));
+  const restoredToday = getDailyRunState(restored, '2026-08-25');
+  assert.equal(restoredToday.status, 'complete-today');
+  assert.equal(restoredToday.progress.totalXp, 20);
+  assert.equal(restoredToday.progress.streak, 1);
 
   const tomorrow = getDailyRunState(first.progress, '2026-08-26');
   assert.equal(tomorrow.status, 'available');
@@ -160,8 +165,22 @@ test('Daily Run never imports a transaction or Orange claim client', () => {
     new URL('../screens/DailyRun.js', import.meta.url),
     'utf8',
   );
+  const appSource = readFileSync(new URL('../App.js', import.meta.url), 'utf8');
+  const packageJson = JSON.parse(readFileSync(
+    new URL('../package.json', import.meta.url),
+    'utf8',
+  ));
+  const packageLock = JSON.parse(readFileSync(
+    new URL('../package-lock.json', import.meta.url),
+    'utf8',
+  ));
 
   assert.doesNotMatch(source, /orangeClaim|swapQuote|sendTransaction|executeSquidRoute/);
+  assert.doesNotMatch(source, /react-native-confetti-cannon|ConfettiCannon/);
+  assert.doesNotMatch(appSource, /react-native-confetti-cannon|ConfettiCannon/);
+  assert.equal(packageJson.dependencies['react-native-confetti-cannon'], undefined);
+  assert.equal(packageLock.packages['node_modules/react-native-confetti-cannon'], undefined);
+  assert.match(source, /function RewardCelebration/);
   assert.match(source, /맛보기는 XP나 Orange를 지급하거나 저장하지 않습니다/);
   assert.match(source, /lesson\.day === 7/);
   assert.match(source, /학습 카드 공유 · 선택/);

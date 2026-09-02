@@ -8,7 +8,6 @@ import { StatusBar } from 'expo-status-bar';
 import { TailwindProvider } from 'tailwind-rn';
 import * as SplashScreen from 'expo-splash-screen';
 import { useSharedValue } from 'react-native-reanimated';
-import ConfettiCannon from 'react-native-confetti-cannon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createNavigationContainerRef } from '@react-navigation/native';
 
@@ -484,7 +483,6 @@ function EasyGoApp({
   const [scrolled, setScrolled] = useState(0);
   const translateY = useSharedValue(0);
 
-  const confetti = useRef();
   const responseListener = useRef();
   const homeFeedRef = useRef();
   const categoryFeedRef = useRef();
@@ -1106,7 +1104,6 @@ function EasyGoApp({
             <StatusBar translucent={true} backgroundColor="#00000000" style="black"/>
             <GestureHandlerRootView onLayout={onLayoutRootView} style={{width: "100%", height: "100%"}}>
                 <GlobalContext.Provider value={{ 
-                        confetti,
                         refreshing,
                         categories,
                         postboxVis,
@@ -1265,7 +1262,6 @@ function EasyGoApp({
                             <Login />
                         ) : null}
 
-                        {/* <Confetti confetti={confetti}/> */}
                     </TailwindProvider>
                 </GlobalContext.Provider>
             </GestureHandlerRootView>
@@ -1278,12 +1274,6 @@ function EasyGoApp({
         </DeviceAccountDataProvider>
       </EasyGoPrivyBoundary>
     );
-}
-
-const Confetti = ({confetti}) => {
-    return(
-        <ConfettiCannon fadeOut={true} fallSpeed={2500} count={150} origin={{x: -400, y: 0}} autoStart={false} ref={confetti} />
-    )
 }
 
 const styles = StyleSheet.create({

@@ -23,7 +23,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import ConfettiCannon from 'react-native-confetti-cannon';
 
 import { GlobalContext } from '../contexts/GlobalContext';
 import {
@@ -367,17 +366,60 @@ function DoStage({ lesson, onReady, walletRuntime }) {
   );
 }
 
+function RewardCelebration() {
+  const entrance = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    entrance.setValue(0);
+    const animation = Animated.spring(entrance, {
+      damping: 9,
+      mass: 0.7,
+      stiffness: 160,
+      toValue: 1,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [entrance]);
+
+  const scale = entrance.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.72, 1],
+  });
+  const opacity = entrance.interpolate({
+    extrapolate: 'clamp',
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+  const translateY = entrance.interpolate({
+    inputRange: [0, 1],
+    outputRange: [18, 0],
+  });
+
+  return (
+    <Animated.View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      pointerEvents="none"
+      style={[
+        styles.rewardCelebration,
+        {
+          opacity,
+          transform: [{ translateY }, { scale }],
+        },
+      ]}
+    >
+      <Text style={styles.rewardSparkles}>✦  ✦  ✦</Text>
+      <Text style={styles.rewardEmoji}>🍊</Text>
+      <Text style={styles.rewardCelebrationLabel}>RUN COMPLETE!</Text>
+    </Animated.View>
+  );
+}
+
 function RewardStage({ guestMode, lesson, onClose, progress, onShare }) {
   return (
     <View style={[styles.stage, styles.rewardStage]}>
-      <ConfettiCannon
-        autoStart
-        count={45}
-        fadeOut
-        fallSpeed={2600}
-        origin={{ x: 180, y: -20 }}
-      />
-      <Text style={styles.rewardEmoji}>🍊</Text>
+      <RewardCelebration />
       <Text style={styles.rewardTitle}>{guestMode ? '첫 개념 완료!' : '오늘도 EasyGo!'}</Text>
       <Text style={styles.rewardSubtitle}>
         {guestMode
@@ -787,8 +829,17 @@ const styles = StyleSheet.create({
   progressSegment: { backgroundColor: '#E8D9CF', borderRadius: 3, flex: 1, height: 6 },
   progressSegmentActive: { backgroundColor: BRAND.orange },
   progressTrack: { flexDirection: 'row', gap: 4 },
-  rewardEmoji: { fontSize: 76, marginBottom: 8 },
+  rewardCelebration: { alignItems: 'center', marginBottom: 8 },
+  rewardCelebrationLabel: {
+    color: BRAND.orangeDark,
+    fontFamily: 'GmarketBold',
+    fontSize: 11,
+    letterSpacing: 1.6,
+    marginTop: 2,
+  },
+  rewardEmoji: { fontSize: 76, marginTop: -10 },
   rewardGrid: { flexDirection: 'row', gap: 10, marginBottom: 16, width: '100%' },
+  rewardSparkles: { color: BRAND.orange, fontSize: 28, letterSpacing: 10 },
   rewardStage: { alignItems: 'center', justifyContent: 'center', minHeight: 600 },
   rewardStat: {
     alignItems: 'center',
