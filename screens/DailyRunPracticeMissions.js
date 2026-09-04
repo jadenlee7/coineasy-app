@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import { PRACTICE_MISSIONS, getPracticeMission } from '../data/practiceMissions.mjs';
+import { WEEKLY_ONCHAIN_BOSS_W0_ENABLED } from '../data/weeklyOnchainBoss.mjs';
 import {
   advancePracticeRound,
   answerPracticeRound,
@@ -98,7 +99,7 @@ function MissionCard({ best, mission, onPress }) {
   );
 }
 
-function MissionHub({ bestResults, onSelect }) {
+function MissionHub({ bestResults, onOpenWeeklyBoss, onSelect }) {
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.hero}>
@@ -118,6 +119,26 @@ function MissionHub({ bestResults, onSelect }) {
           onPress={() => onSelect(mission.id)}
         />
       ))}
+      {WEEKLY_ONCHAIN_BOSS_W0_ENABLED ? (
+        <TouchableOpacity
+          accessibilityHint="네 개의 고정 훈련 ACT로 구성된 오프라인 레이드를 시작합니다"
+          accessibilityLabel="Weekly Onchain Boss W0"
+          accessibilityRole="button"
+          activeOpacity={0.86}
+          onPress={onOpenWeeklyBoss}
+          style={styles.weeklyBossCard}
+        >
+          <View style={styles.weeklyBossIcon}>
+            <Text style={styles.weeklyBossEmoji}>🐲</Text>
+          </View>
+          <View style={styles.weeklyBossCopy}>
+            <Text style={styles.weeklyBossEyebrow}>WEEKLY RAID · W0 OFFLINE</Text>
+            <Text style={styles.weeklyBossTitle}>Weekly Onchain Boss</Text>
+            <Text style={styles.weeklyBossSubtitle}>계정·영수증·사기·견적을 잇는 4 ACT 안전 레이드</Text>
+          </View>
+          <Ionicons color="#6E4AFF" name="flash" size={30} />
+        </TouchableOpacity>
+      ) : null}
       <View style={styles.feedbackPrompt}>
         <Text style={styles.feedbackPromptTitle}>재미 확인 기준</Text>
         <Text style={styles.feedbackPromptText}>
@@ -463,6 +484,11 @@ export default function DailyRunPracticeMissions({ navigation }) {
     navigation?.goBack();
   }, [navigation]);
 
+  const openWeeklyBoss = useCallback(() => {
+    Haptics.selectionAsync();
+    navigation?.navigate('WeeklyOnchainBoss');
+  }, [navigation]);
+
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
       <Header onClose={close} title={mission?.title || 'Practice Arcade'} />
@@ -470,7 +496,11 @@ export default function DailyRunPracticeMissions({ navigation }) {
         <SafetyBanner compact />
       ) : null}
       {!mission || !session ? (
-        <MissionHub bestResults={bestResults} onSelect={startMission} />
+        <MissionHub
+          bestResults={bestResults}
+          onOpenWeeklyBoss={openWeeklyBoss}
+          onSelect={startMission}
+        />
       ) : result ? (
         <MissionResult
           mission={mission}
@@ -584,4 +614,11 @@ const styles = StyleSheet.create({
   timerText: { color: BRAND.orangeDark, fontFamily: 'GmarketBold', fontSize: 11 },
   timerTextExpired: { color: '#FFF' },
   trainingNote: { color: '#88786E', fontFamily: 'GmarketMedium', fontSize: 10, lineHeight: 16, marginTop: 11, textAlign: 'center' },
+  weeklyBossCard: { alignItems: 'center', backgroundColor: '#1D1628', borderColor: '#6E4AFF', borderRadius: 19, borderWidth: 2, flexDirection: 'row', gap: 11, marginBottom: 11, minHeight: 128, padding: 13 },
+  weeklyBossCopy: { flex: 1 },
+  weeklyBossEmoji: { fontSize: 31 },
+  weeklyBossEyebrow: { color: '#B6A2FF', fontFamily: 'GmarketBold', fontSize: 9, letterSpacing: 1 },
+  weeklyBossIcon: { alignItems: 'center', backgroundColor: '#302247', borderRadius: 25, height: 50, justifyContent: 'center', width: 50 },
+  weeklyBossSubtitle: { color: '#D5CDE0', fontFamily: 'GmarketMedium', fontSize: 10, lineHeight: 15, marginTop: 4 },
+  weeklyBossTitle: { color: '#FFF', fontFamily: 'GmarketBold', fontSize: 16, marginTop: 3 },
 });

@@ -213,11 +213,12 @@ test('receipt and quote fields map to explicit choices and quote data is clearly
 });
 
 test('Practice Arcade has no wallet, execution, network, persistence, or external-action capability', () => {
-  const combined = [
-    source('../screens/DailyRunPracticeMissions.js'),
+  const screen = source('../screens/DailyRunPracticeMissions.js');
+  const practiceCore = [
     source('../data/practiceMissions.mjs'),
     source('../utils/dailyRunPracticeEngine.mjs'),
   ].join('\n');
+  const combined = [screen, practiceCore].join('\n');
 
   assert.doesNotMatch(
     combined,
@@ -232,7 +233,9 @@ test('Practice Arcade has no wallet, execution, network, persistence, or externa
     /Linking|WebView|TextInput|Clipboard|AsyncStorage|SecureStore|saveDailyRunProgress|completeDailyRun/,
   );
   assert.deepEqual(findForbiddenAppStoreMarkers(combined), []);
-  assert.doesNotMatch(combined, /Weekly Onchain Boss/);
+  assert.doesNotMatch(practiceCore, /weeklyOnchainBoss|Weekly Onchain Boss/);
+  assert.match(screen, /WEEKLY_ONCHAIN_BOSS_W0_ENABLED/);
+  assert.match(screen, /navigation\?\.navigate\('WeeklyOnchainBoss'\)/);
 });
 
 test('the authenticated completion screen is the only Practice Arcade entry point', () => {
