@@ -66,7 +66,7 @@ export default function Feed({posts = [], refreshing, refreshingBottom, onRefres
                         style={tailwind('w-full')}
                         data={filteredPosts}
                         ListHeaderComponent={header}
-                        ListHeaderComponentStyle={tailwind('flex flex-1')}
+                        ListHeaderComponentStyle={header ? tailwind('flex') : undefined}
                         renderItem={({item, index}) => {
                             if(index == 0 && showBanner){
                                 return (
@@ -139,7 +139,7 @@ export default function Feed({posts = [], refreshing, refreshingBottom, onRefres
                                 refreshing={refreshing}
                                 onRefresh={onRefresh}
                                 progressViewOffset={showBanner ? 120 + statusBarHeight : 0}
-                                style={{marginTop: showBanner ? 120 + statusBarHeight : 0}}
+                                style={{marginTop: header ? 0 : showBanner ? 120 + statusBarHeight : 0}}
                             />
                         }
                         onScroll={Animated.event(

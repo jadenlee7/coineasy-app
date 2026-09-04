@@ -205,11 +205,20 @@ test('receipt and quote fields map to explicit choices and quote data is clearly
   }
 
   const screen = source('../screens/DailyRunPracticeMissions.js');
+  assert.match(screen, /BASE EXPLORER PRACTICE/);
+  assert.match(screen, /SIMULATED CHAT · TRAINING ONLY/);
+  assert.match(screen, /OFFLINE SWAP PREVIEW/);
   assert.match(screen, /PRACTICE SNAPSHOT/);
   assert.match(screen, /NOT LIVE MARKET DATA/);
   assert.match(screen, /고정 연습 데이터 · 실제 가격\/견적 아님 · 서명·전송·자산 이동 없음/);
   assert.match(screen, /BONUS TIMER · 견적 만료와 무관 · 점수 영향 없음/);
+  assert.match(screen, /QUOTE DETAILS · 검토할 항목을 탭하세요/);
   assert.match(screen, /100 - \(correctHits \* 34\)/);
+  assert.match(screen, /연습 채팅 · 입력과 링크는 비활성화됨/);
+  assert.match(screen, /'receipt-success': '0x7A82…C19F'/);
+  assert.match(screen, /'receipt-pending': '0x4D20…8BEE'/);
+  assert.match(screen, /'receipt-failed': '0x91A8…74CA'/);
+  assert.doesNotMatch(screen, /choice\.id === 'verify' \? '#5271FF'/);
 });
 
 test('Practice Arcade has no wallet, execution, network, persistence, or external-action capability', () => {

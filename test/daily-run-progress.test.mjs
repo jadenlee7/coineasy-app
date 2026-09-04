@@ -215,6 +215,25 @@ test('an open Run detects a local midnight boundary before completion', () => {
   assert.match(cardSource, /AppState\.addEventListener\('change'/);
 });
 
+test('the Home Daily Run card does not receive duplicate Dynamic Island spacing', () => {
+  const homeSource = readFileSync(
+    new URL('../screens/Home.js', import.meta.url),
+    'utf8',
+  );
+  const feedSource = readFileSync(
+    new URL('../components/Feed.js', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(homeSource, /paddingTop: homeHeaderHeight/);
+  assert.match(feedSource, /ListHeaderComponentStyle=\{header \? tailwind\('flex'\) : undefined\}/);
+  assert.match(
+    feedSource,
+    /style=\{\{marginTop: header \? 0 : showBanner \? 120 \+ statusBarHeight : 0\}\}/,
+  );
+  assert.doesNotMatch(feedSource, /ListHeaderComponentStyle=\{tailwind\('flex flex-1'\)\}/);
+});
+
 test('Daily Run storage is account-bound and purged with the owner namespace', () => {
   const storeSource = readFileSync(
     new URL('../utils/deviceAccountDataStore.mjs', import.meta.url),
