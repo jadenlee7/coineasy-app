@@ -20,6 +20,8 @@ import Search from '../screens/Search';
 import Categories from '../screens/Categories';
 import DailyRun from '../screens/DailyRun';
 import DailyRunPracticeMissions from '../screens/DailyRunPracticeMissions';
+import WeeklyOnchainBoss from '../screens/WeeklyOnchainBoss';
+import { WEEKLY_ONCHAIN_BOSS_W0_ENABLED } from '../data/weeklyOnchainBoss.mjs';
 
 // const Stack = createNativeStackNavigator();
 
@@ -46,6 +48,9 @@ const AppNavigator = ({ navigationRef, onNavigationReady }) => {
                     <Stack.Screen name="Categories" component={Categories} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="DailyRun" component={DailyRun} options={{ headerShown: false, gestureEnabled: true }} />
                     <Stack.Screen name="DailyRunPracticeMissions" component={DailyRunPracticeMissions} options={{ headerShown: false, gestureEnabled: true }} />
+                    {WEEKLY_ONCHAIN_BOSS_W0_ENABLED ? (
+                        <Stack.Screen name="WeeklyOnchainBoss" component={WeeklyOnchainBoss} options={{ headerShown: false, gestureEnabled: true }} />
+                    ) : null}
                 </Stack.Navigator>
             </NavigationContainer>
 

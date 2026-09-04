@@ -1,9 +1,9 @@
-# EasyGo Weekly Onchain Boss — Design Only
+# EasyGo Weekly Onchain Boss — W0 Candidate
 
-- **Status:** Proposed; not implemented
-- **Runtime route:** None
+- **Status:** W0 candidate implemented locally; activation blocked
+- **Runtime route:** Registered only when `WEEKLY_ONCHAIN_BOSS_W0_ENABLED=true`
 - **API or wallet wiring:** None
-- **Implementation gate:** Practice Missions fun and safety test must pass
+- **Activation gate:** Practice Missions fun and safety test plus owner approvals must be recorded
 
 ## Concept
 
@@ -11,6 +11,38 @@
 Arcade interaction with a four-act Web3 safety story. It should feel like a
 weekly raid, but the user wins by noticing evidence and choosing when to stop,
 not by spending money or executing a transaction.
+
+## ADR — W0 implementation boundary
+
+- **Status:** Proposed for Build 113; runtime closed
+- **Date:** 2026-09-03
+- **Decision:** Implement the four-act W0 raid as an isolated local feature
+  slice while keeping its single compile-time activation flag `false`.
+- **Deciders still required for activation:** Product, Security,
+  Privacy/Legal, and Moderation owners.
+
+The candidate uses an immutable fixture, a React-free canonical state machine,
+and an in-memory screen. It is separate from the three-mission Practice engine
+so its four-act lifecycle cannot change Daily Run score, streak, XP, Orange, or
+practice results. The authenticated Practice Arcade is its only proposed entry
+point. Backgrounding or changing the account lease destroys the current raid.
+
+Options considered:
+
+| Option | Safety | Product value | Decision |
+| --- | --- | --- | --- |
+| W0 fixed offline fixture | Highest; no identity or network data | Tests the complete raid loop | Selected |
+| W1 own-address read-only data | Adds privacy, provider, and lifecycle risk | More personal | Deferred; not authorized |
+| Real quote or transaction ending | Signing, asset, and App Store risk | Not needed to teach the stop decision | Rejected |
+
+Consequences:
+
+- The complete UI and engine can be reviewed and tested without contacting a
+  provider or creating persistent account data.
+- A later one-line flag change is still insufficient on its own: the fun-test,
+  owner approval, bundle scan, and physical-device QA receipts remain required.
+- The candidate intentionally has no badge, reward, telemetry, weekly reset,
+  remote content, or live Base activity.
 
 ## Four-act raid
 
@@ -31,8 +63,11 @@ Mint ending.
 ### W0 — Curated raid fixture
 
 - Fixed Base receipt, message, and quote snapshots bundled with the app.
-- No network, wallet provider, storage, or account address.
+- No network, wallet provider, storage, or live/current-user account address;
+  only a clearly truncated training address is bundled in the fixture.
 - Best first implementation if Practice Missions pass the fun gate.
+- Candidate implementation files are `data/weeklyOnchainBoss.mjs`,
+  `utils/weeklyOnchainBossEngine.mjs`, and `screens/WeeklyOnchainBoss.js`.
 
 ### W1 — Own-address read-only raid
 
@@ -56,9 +91,9 @@ W1 is not authorized by this document.
 - The only possible reward is a non-transferable local learning badge, subject
   to a later reward-policy approval. No reward exists in the current design.
 
-## Implementation gate
+## Activation gate
 
-Implementation may start only when all are true:
+Runtime activation and a Build 113 release may occur only when all are true:
 
 1. At least five beginner playtests meet the thresholds in
    `EASYGO_DAILY_RUN_PHASE2_PRACTICE_MISSIONS.md`.
@@ -67,9 +102,9 @@ Implementation may start only when all are true:
    signature, block, report, or quote.
 4. Product, Security, Privacy/Legal, and Moderation owners approve the raid
    content and read-only data boundary.
-5. A separate implementation request defines whether the first build is W0 or
-   W1 and explicitly approves any runtime, API, wallet, persistence, or release
-   work.
+5. A separate W0 activation/release approval explicitly authorizes the closed
+   feature flag and Build 113 work. W1 remains a later, separately approved
+   runtime-data phase.
 
 ## Suggested playtest decision
 
@@ -82,9 +117,28 @@ Implementation may start only when all are true:
 - If no mission reaches 3.5/5 fun or 80% help-free completion, revise Phase 2
   instead of implementing the weekly raid.
 
+## Activation action items
+
+- [ ] Record the Build 112 founder smoke for all three Practice Missions.
+- [ ] Record at least five beginner playtests and confirm every fun and safety
+  threshold in `EASYGO_DAILY_RUN_PHASE2_PRACTICE_MISSIONS.md`.
+- [ ] Select the strongest interaction and confirm that the W0 candidate still
+  reflects the observed result.
+- [ ] Record Product, Security, Privacy/Legal, and Moderation approval.
+- [ ] Re-run mobile tests, the iOS App Store bundle scan, and physical-device
+  lifecycle QA with the exact release commit.
+- [ ] Enable `WEEKLY_ONCHAIN_BOSS_W0_ENABLED` only in a separate reviewed
+  activation change before preparing Build 113.
+
 ## Current repository boundary
 
-This document does not authorize or add a screen, navigation route, API call,
-feature flag, database model, migration, job, contract, deployment, or EAS
-build. The phrase `Weekly Onchain Boss` must remain documentation-only until a
-new implementation approval is recorded.
+The W0 candidate now includes a screen, pure engine, fixed fixture, and a route
+that is conditionally registered behind
+`WEEKLY_ONCHAIN_BOSS_W0_ENABLED=false`. The Practice Arcade CTA uses the same
+closed flag. The candidate adds no API call, wallet provider, persistent
+storage, database model, migration, job, contract, deployment, or EAS build.
+
+This change does not claim that the five-person beginner test or owner approval
+gate has passed. It does not authorize changing the flag, merging the feature,
+incrementing Build 113, submitting to TestFlight, enabling W1, or adding any
+signature, transfer, Squid execution, live quote, or real-address lookup.
