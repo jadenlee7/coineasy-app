@@ -1,5 +1,68 @@
 # EasyGo staging device QA
 
+## Build 114 preparation — Case Files 2.0 (2026-09-06)
+
+Status: preparation candidate only, not an installed or submitted build.
+Source baseline: PR #89 merge `0fded122daf17e9e39d7640c6a8dba31cc2231b4`.
+Candidate app version is `2.0.3 (114)`; Android remains `versionCode 65`.
+The existing `testflight` profile targets staging / preview and retains
+`testFlightInternalTestingOnly: true`. W0 remains disabled. No credentials,
+environment values, dependencies, backend code, or DB schema change here.
+
+PR #89's Case Files source passed 322 local mobile tests, Mobile/Backend CI,
+and a local browser interaction preview. Those receipts are not physical QA
+for Build 114. See [Case Files specification](EASYGO_CASE_FILES_V2.md) for the
+original prototype evidence and browser-adapter limitations.
+
+Build 114 preparation checks on 2026-09-06: 322/322 mobile tests passed;
+local preflight had 0 failures and 6 warnings (clean-checkout backend/support/
+legal configuration absent, plus the native allowlist reminder). Local iOS
+export passed with 2,695 modules / 125 assets. This is not an EAS binary,
+staging environment readback, or physical-device pass.
+
+### Separate release gates (all pending)
+
+- [ ] Approve and merge the Build 114 preparation PR; record its exact merge SHA.
+- [ ] Approve EAS internal TestFlight build from that SHA. Revalidate preview
+  public configuration (including support and versioned legal URLs) before
+  upload; never record secret values. Record EAS build ID and inspect the IPA.
+- [ ] Approve internal-only Apple submission; record submission ID and actual
+  Apple processing/beta state. Do not add an external group or App Store review.
+- [ ] Install `2.0.3 (114)` and record device, iOS version, account type and time.
+
+### Physical-device priorities (not yet observed)
+
+- [ ] Cold launch and existing Apple/Google account flow work without startup
+  recovery or wallet mismatch; Daily Run completion opens Practice Arcade.
+- [ ] Case Files opens from the hub; original Practice missions still open;
+  `연습 모드 · 가상 자산` remains visible. W0 has no new entry.
+- [ ] Missing USDC: inspect status/network/full addresses, switch Ethereum to
+  Base, and reveal the existing balance without creating another transaction.
+- [ ] Look-alike address: compare the middle of both full addresses, reject
+  the incorrect answer, and finish without claiming funds were recovered.
+- [ ] First delivery: wrong network/token/address/amount remains editable;
+  review the corrected request, confirm once, verify one virtual debit and
+  recipient credit plus separate ETH gas, then inspect the receipt to finish.
+- [ ] Double-tap confirmation; edit or leave review; background/lock and return.
+  No duplicate debit and no confirmation using a stale review are allowed.
+- [ ] Replay changes the authored contact/amount/address variant; leaving Case
+  Files clears session-only stamps. Account changes show no prior case state.
+- [ ] Keyboard, large text, VoiceOver and safe areas allow full-address reading
+  and all controls; errors and the case-closed result are immediately visible.
+- [ ] No native signing/transaction prompt or Orange reward change occurs.
+  Without connectivity, the already-open case remains playable with fixtures.
+- [ ] Founder fun check: record favorite case, one confusing moment and whether
+  a second case/replay was voluntarily started; do not infer retention from QA.
+
+Stop rollout if the app crashes, account state crosses sessions, a native
+signing prompt appears, or virtual balances debit twice. Pause further
+submission/distribution and diagnose; reinstall an earlier internal build only
+after confirming its availability. Do not reset accounts or change backend/DB
+as a rollback shortcut. No build, submission, deployment or migration is
+authorized by this checklist.
+
+## Historical device QA baseline
+
 Use this checklist for the internal-only wallet-runtime TestFlight candidate
 `2.0.3 (106)`, its social-author/edit predecessor `2.0.3 (104)`, the
 legal-consent predecessor `2.0.3 (103)`, and the existing Android preview build
