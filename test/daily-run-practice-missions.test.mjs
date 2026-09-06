@@ -252,7 +252,7 @@ test('the authenticated completion screen is the only Practice Arcade entry poin
   const dailyRun = source('../screens/DailyRun.js');
 
   assert.match(navigation, /DailyRunPracticeMissions/);
-  assert.match(dailyRun, /!guestMode && \([\s\S]*?Practice Arcade · 3개 미션/);
+  assert.match(dailyRun, /!guestMode && \([\s\S]*?Practice Arcade · 실전 연습/);
   assert.match(dailyRun, /navigation\?\.navigate\('DailyRunPracticeMissions'\)/);
   assert.doesNotMatch(dailyRun, /guestMode \? ['"]Practice Arcade/);
 });
