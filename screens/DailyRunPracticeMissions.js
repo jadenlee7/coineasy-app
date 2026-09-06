@@ -105,18 +105,36 @@ function MissionCard({ best, mission, onPress }) {
   );
 }
 
-function MissionHub({ bestResults, onOpenWeeklyBoss, onSelect }) {
+function MissionHub({ bestResults, onOpenCaseFiles, onOpenWeeklyBoss, onSelect }) {
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.hero}>
-        <Text style={styles.heroKicker}>PHASE 2 · FUN TEST</Text>
+        <Text style={styles.heroKicker}>LEARN BY DOING</Text>
         <Text style={styles.heroTitle}>실전 전에,{`\n`}게임으로 감 잡기</Text>
         <Text style={styles.heroBody}>
-          서로 다른 세 가지 조작을 직접 해보고 어떤 미션이 가장 다시 하고 싶은지 골라 주세요.
+          영수증부터 연습 지갑까지, 내 손으로 사건을 해결해요.
         </Text>
       </View>
       <SafetyBanner />
       <Text style={styles.sectionTitle}>오늘 열려 있는 미션</Text>
+      <TouchableOpacity
+        accessibilityLabel="Case Files 2.0, 연습 지갑으로 세 가지 사건 해결하기"
+        accessibilityRole="button"
+        activeOpacity={0.86}
+        onPress={onOpenCaseFiles}
+        style={[styles.missionCard, { borderColor: BRAND.orange }]}
+      >
+        <View style={[styles.missionIcon, { backgroundColor: BRAND.cream }]}>
+          <Text style={styles.missionEmoji}>🗂️</Text>
+        </View>
+        <View style={styles.missionCopy}>
+          <Text style={[styles.missionEyebrow, { color: BRAND.orangeDark }]}>NEW · 3개의 사건</Text>
+          <Text style={styles.missionTitle}>Case Files 2.0</Text>
+          <Text style={styles.missionSubtitle}>친구의 의뢰를 받고, 지갑을 열고, 직접 해결!</Text>
+          <Text style={styles.missionMeta}>사건당 약 60–90초 · 가상 자산</Text>
+        </View>
+        <Ionicons color={BRAND.orange} name="arrow-forward-circle" size={34} />
+      </TouchableOpacity>
       {PRACTICE_MISSIONS.map((mission) => (
         <MissionCard
           best={bestResults[mission.id]}
@@ -631,6 +649,7 @@ export default function DailyRunPracticeMissions({ navigation }) {
       {!mission || !session ? (
         <MissionHub
           bestResults={bestResults}
+          onOpenCaseFiles={() => navigation?.navigate('CaseFiles')}
           onOpenWeeklyBoss={openWeeklyBoss}
           onSelect={startMission}
         />

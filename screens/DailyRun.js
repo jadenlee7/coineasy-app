@@ -447,7 +447,7 @@ function RewardStage({ guestMode, lesson, onClose, onPractice, progress, onShare
       />
       {!guestMode && (
         <PrimaryButton
-          label="Practice Arcade · 3개 미션"
+          label="Practice Arcade · 실전 연습"
           onPress={onPractice}
           secondary
         />
@@ -488,7 +488,7 @@ function JourneyComplete({ onClose, onPractice, progress }) {
           </View>
         </View>
         <PrimaryButton label="홈으로 돌아가기" onPress={onClose} />
-        <PrimaryButton label="Practice Arcade · 3개 미션" onPress={onPractice} secondary />
+        <PrimaryButton label="Practice Arcade · 실전 연습" onPress={onPractice} secondary />
       </View>
     </SafeAreaView>
   );
