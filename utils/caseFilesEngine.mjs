@@ -22,7 +22,7 @@ export function createCaseSession(caseId, variant = 0) {
     caseId, variant: variant % 3,
     phase: caseId === 'first-delivery' ? 'draft' : 'investigate',
     selectedNetwork: file.initialNetwork, receiptOpened: false,
-    expanded: { request: false, to: false }, inspected: [],
+    expanded: { request: false, to: false }, inspected: [], requestRead: false,
     draft: { network: 'Ethereum', token: 'USDC', address: '', amount: '' },
     review: null, transferCount: 0, notice: null, result: null,
   };
@@ -77,7 +77,7 @@ export function transitionCaseSession(state, event) {
       const expanded = { ...state.expanded, [event.field]: !state.expanded[event.field] };
       const inspected = expanded.request && expanded.to && state.receiptOpened
         ? [...new Set([...state.inspected, 'to'])] : state.inspected;
-      return { ...state, expanded, inspected, notice: null };
+      return { ...state, expanded, inspected, requestRead: state.requestRead || expanded.request, notice: null };
     }
     case 'INSPECT_FIELD':
       if (!state.receiptOpened || !['status', 'network', 'to'].includes(event.field)) return state;

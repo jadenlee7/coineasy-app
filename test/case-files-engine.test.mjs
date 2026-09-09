@@ -163,7 +163,7 @@ test('out-of-order actions and changed review snapshots cannot simulate a transf
 });
 
 test('Case Files modules have no account, network, signing, storage or clipboard capability', () => {
-  const sources = ['../data/caseFiles.mjs', '../utils/caseFilesEngine.mjs', '../screens/CaseFiles.js']
+  const sources = ['../data/caseFiles.mjs', '../utils/caseFilesEngine.mjs', '../utils/caseQuestProgress.mjs', '../utils/caseQuestFeedback.mjs', '../components/PracticeBrand.js', '../screens/CaseFiles.js']
     .map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n');
   assert.doesNotMatch(sources, /\bfetch\s*\(|axios|@privy-io|utils\/api|AsyncStorage|SecureStore|Clipboard|Linking|WebView|sendTransaction|signMessage|signTypedData|writeContract|executeSquidRoute/);
   assert.doesNotMatch(sources, /completeDailyRun|saveDailyRunProgress|\/orange\//);
