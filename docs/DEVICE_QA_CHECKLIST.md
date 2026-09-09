@@ -1,6 +1,101 @@
 # EasyGo staging device QA
 
-## Build 114 preparation — Case Files 2.0 (2026-09-06)
+## Build 115 preparation — Case Files quests (2026-09-09)
+
+Status: source preparation only. No Build 115 EAS job, Apple submission or
+installed binary is created by this PR. Preparation branch:
+`agent/easygo-build-115-prep`, from PR #91 merge
+`9ee10935b8b15810be894139b1a28686c38da2ae`.
+
+Only iOS `buildNumber` changes 114 → 115, with the matching release-guard test
+and this QA document. App version stays `2.0.3`, Android stays `versionCode 65`,
+bundle identifier stays `com.coineasy.coineasysocial`, and URL scheme stays
+`coineasyapp`. The existing TestFlight profile still targets staging / preview
+and `testFlightInternalTestingOnly: true`. Runtime, credentials, environment,
+dependencies, backend, DB, W0 and other feature gates are unchanged.
+
+Read-only EAS check on 2026-09-09: the latest iOS build in the linked project was
+`24832011-6593-44a2-9293-abbcc2a8bba3`, version `2.0.3 (114)`, FINISHED, from
+`bb881a18791b9a57d721c138360ed1f4e7d178af`. A separate iOS build-number-115 query
+returned no entries. This does not reserve 115 or prove App Store Connect has
+no separately uploaded build; recheck before build/submission execution.
+
+PR #91's head `da4d19d40ea1a4e4bbdb9ba0602aaa4472392a4d` passed Backend and
+Mobile CI in run [34317844427](https://github.com/jadenlee7/coineasy-app/actions/runs/34317844427).
+The merge and tested head share tree `e98899f12de963360db946d308907c90c2d77257`.
+This is source evidence, not a separate merge-SHA CI run or Build 115 device QA.
+See [quest notes](EASYGO_CASE_FILES_QUESTS.md) for the original 335-test,
+browser-preview and asset-provenance evidence.
+
+### Preparation verification
+
+- [x] All 335 mobile tests pass, including the Build 115 Internal Only guard.
+- [x] Local preflight: 0 failures / 6 warnings with public Privy IDs. Warnings
+  cover clean-checkout API/support/consent/policy settings and native allowlist
+  review; this does not verify the EAS preview environment.
+- [x] Local iOS export and App Store bundle guard pass. Bundle:
+  `entrypoint-5472fd90bb2e2fb1d60f26c5b4a6d279.js`; no IPA/EAS job created.
+- [x] Resolved Expo config reports 2.0.3 / iOS 115 / Android 65 and the same
+  owner, slug, bundle IDs, scheme, JSC and appVersion runtime policy. A deep
+  app.json comparison confirms that only ios.buildNumber changed.
+- [ ] Push preparation commit and create Draft PR; record CI receipts in the PR.
+
+### Separate release gates
+
+- [ ] Approve Draft removal and merge of the preparation PR; record exact merge SHA.
+- [ ] Separately approve EAS internal TestFlight build from that SHA. Recheck
+  number availability and the preview public environment (API/support/consent/
+  versioned policy URLs), plus identifiers/allowlist. Do not log secrets.
+- [ ] Inspect the resulting IPA for version/build, identifiers and Internal Only
+  export evidence; record the EAS build ID and status.
+- [ ] Separately approve Apple internal-only submission, then record submission
+  ID and Apple processing/beta state. No external group or App Store review.
+- [ ] Install exact `2.0.3 (115)`; record device, iOS version, account type and time.
+
+### Physical-device priorities — all unobserved for Build 115
+
+- [ ] Cold launch, Apple/Google login, profile/feed/Orange/Base state and Daily
+  Run completion work without startup recovery, crash or wallet mismatch.
+- [ ] Case Files catalog shows three quests and 0/3; each has a current goal,
+  progress checklist and an explicit finish. Original Practice missions remain
+  available and W0 has no new entry. Practice/virtual-asset label stays visible.
+- [ ] Missing USDC: read the request, collect status/network/full-address clues,
+  see immediate 1/3 → 3/3 feedback, switch to Base, and see the exact practice
+  balance. No transfer is created. Finish opens a dedicated completion screen.
+- [ ] Look-alike address: compare the full address middles; a wrong verdict
+  gives a correction without erasing clues. Correct verdict completes the quest.
+- [ ] Delivery: wrong network/token/address/amount stays correctable. Valid
+  review says not sent yet; confirm once and immediately see virtual success,
+  one debit/credit and separate simulated ETH fee. Receipt checks are still
+  required before the quest-complete action.
+- [ ] Double tap, draft edit, tab leave, background/lock and resume never create
+  a second virtual debit or allow a stale review to be confirmed.
+- [ ] Completed delivery → reopen receipt → wallet still says completed; it
+  must not show the old unfinished warning. Return-to-completion works.
+- [ ] All three complete → 3/3 and explicit exit, no automatic loop. Optional
+  replay changes the authored variant without duplicating stamps. Catalog keeps
+  session stamps; closing/blurring/account switching clears practice state.
+- [ ] iPhone safe areas, keyboard, large text and VoiceOver keep full addresses,
+  next steps and finish controls reachable. Feedback appears without scrolling
+  back. Reduced motion suppresses the pulse; normal mode never blocks input.
+- [ ] CoinEasy orange and provider logos appear correctly, with no online asset
+  request or misleading live-wallet/provider affiliation.
+- [ ] No signing prompt, real transaction, Squid execution or Orange payout.
+  An already-open fixture case remains playable without connectivity.
+- [ ] Without a walkthrough, record whether the player knows the next action,
+  notices its immediate result and recognizes final completion. Ask for the
+  favorite quest and one confusing moment; fun/retention is not established yet.
+
+Stop further rollout for a crash, cross-account state, real signing prompt,
+double debit, or unreachable/misleading completion. Diagnose before building or
+submitting again; do not reset accounts, deploy backend or change DB as a
+shortcut. A prior internal build is an option only after availability and its
+remaining limitations are checked. This checklist does not authorize release.
+
+## Historical Build 114 preparation snapshot — Case Files 2.0 (2026-09-06)
+
+The following section preserves the preparation-time evidence and unchecked
+gates; it is not the current EAS/Apple status of Build 114.
 
 Status: preparation candidate only, not an installed or submitted build.
 Source baseline: PR #89 merge `0fded122daf17e9e39d7640c6a8dba31cc2231b4`.
