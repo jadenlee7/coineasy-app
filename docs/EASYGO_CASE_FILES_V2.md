@@ -1,5 +1,10 @@
 # Case Files 2.0 — playable prototype
 
+The 2026-09-07 [quest completion candidate](EASYGO_CASE_FILES_QUESTS.md) updates
+the Build 114 flow with explicit objectives, terminal completion screens and
+official token/network marks. The prototype/build-number evidence below is
+historical; it is not the release status of that new candidate.
+
 ## Product decision
 
 Build 113 founder feedback: Receipt Detective / Case File 01 felt closest to a
