@@ -1,0 +1,61 @@
+name: EAS iOS Release
+
+# Runs the EAS CLI from CI so an iOS build can be started and submitted to
+# TestFlight from the GitHub web UI, without a local terminal. Requires the
+# repository secret EXPO_TOKEN (expo.dev -> Account settings -> Access tokens).
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: What to run
+        required: true
+        default: submit-latest
+        type: choice
+        options:
+          - submit-latest
+          - build-and-submit
+      profile:
+        description: EAS build/submit profile
+        required: true
+        default: production
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eas-ios-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: EAS iOS ${{ inputs.mode }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the release
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      - name: Set up EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # Submits the most recent finished iOS build for the profile. EAS holds
+      # the App Store Connect credentials, so nothing sensitive lives here.
+      - name: Submit the latest iOS build to TestFlight
+        if: inputs.mode == 'submit-latest'
+        run: eas submit --platform ios --profile ${{ inputs.profile }} --latest --non-interactive
+
+      # Queues a build on EAS and lets EAS submit it when the build finishes,
+      # so the runner does not idle for the whole build.
+      - name: Build iOS and auto-submit
+        if: inputs.mode == 'build-and-submit'
+        run: eas build --platform ios --profile ${{ inputs.profile }} --auto-submit --non-interactive --no-wait
