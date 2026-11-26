@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AppState, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -8,7 +8,7 @@ import { useDeviceAccountData } from '../contexts/DeviceAccountDataContext';
 import { dailyRunDateKey, getDailyRunState } from '../utils/dailyRunProgress.mjs';
 
 export default function DailyRunHomeCard({ onPress }) {
-  const { dailyRunProgress } = useDeviceAccountData();
+  const { dailyRunProgress, status, accountLease, isCurrentAccountLease } = useDeviceAccountData();
   const [dateKey, setDateKey] = useState(() => dailyRunDateKey());
   useFocusEffect(useCallback(() => {
     setDateKey(dailyRunDateKey());
@@ -37,7 +37,18 @@ export default function DailyRunHomeCard({ onPress }) {
       ? `${state.progress.streak}일 스트릭 · 내일 새 Run이 열려요.`
       : '밈 → 20초 학습 → 퀴즈 → 안전한 실전';
 
+  const passportCode = status === 'ready' && accountLease && completed >= 1 && completed <= 7
+    ? `E1-${completed}`
+    : null;
+  const openPassport = () => {
+    if (!passportCode || !isCurrentAccountLease(accountLease)) return;
+    Linking.openURL(`https://learn.coineasy.xyz/world/#mobile=${passportCode}`).catch(() => {
+      Alert.alert('여권을 열지 못했어요', `내 코인이지의 모바일 게임 기록에 ${passportCode}를 입력하세요.`);
+    });
+  };
+
   return (
+    <View>
     <TouchableOpacity
       accessibilityHint="오늘의 게임형 Web3 학습을 엽니다"
       accessibilityLabel={title}
@@ -75,10 +86,20 @@ export default function DailyRunHomeCard({ onPress }) {
         </View>
       </LinearGradient>
     </TouchableOpacity>
+    {passportCode && (
+      <TouchableOpacity accessibilityRole="button" onPress={openPassport} style={styles.passport}>
+        <Text style={styles.passportTitle}>수업 {completed}개 · 내 코인이지 여권에서 확인하기 →</Text>
+        <Text style={styles.passportNote}>기록 코드 {passportCode} · 여권에서 확인하면 저장돼요.</Text>
+      </TouchableOpacity>
+    )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  passport: { marginHorizontal: 14, paddingHorizontal: 12, paddingVertical: 10, minHeight: 48 },
+  passportTitle: { color: '#432B20', fontFamily: 'GmarketBold', fontSize: 13 },
+  passportNote: { color: '#625349', fontSize: 12, marginTop: 4 },
   card: {
     borderColor: '#17120F',
     borderRadius: 20,
